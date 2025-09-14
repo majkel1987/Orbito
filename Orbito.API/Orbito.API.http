@@ -1,0 +1,6 @@
+@Orbito.API_HostAddress = http://localhost:5211
+
+GET {{Orbito.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
