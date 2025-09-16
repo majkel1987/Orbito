@@ -68,7 +68,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 // Use CORS
-app.UseCors("AllowReactApp");
+app.UseCors("Orbito_test");
 
 app.UseAuthorization();
 

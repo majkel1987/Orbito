@@ -79,11 +79,7 @@ namespace Orbito.Infrastructure
                 .WithConfigurationStore();
 
             services.AddAuthorization();
-            services.AddScoped<UserManager<ApplicationUser>>();
-            services.AddScoped<SignInManager<ApplicationUser>>();
-            services.AddScoped<RoleManager<ApplicationRole>>();
-
-
+            
             return services;
         }
     }
