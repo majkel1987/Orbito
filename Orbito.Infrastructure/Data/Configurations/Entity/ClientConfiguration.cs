@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Orbito.Domain.Entities;
 using System;
@@ -23,7 +23,8 @@ namespace Orbito.Infrastructure.Data.Configurations.Entity
                 .HasConversion(
                     tenantId => tenantId.Value,
                     guid => Domain.ValueObjects.TenantId.Create(guid))
-                .IsRequired();
+                .IsRequired()
+                .HasColumnName("TenantId");
 
             // Optional Identity User relationship
             builder.Property(c => c.UserId);
@@ -72,12 +73,14 @@ namespace Orbito.Infrastructure.Data.Configurations.Entity
             builder.HasIndex(c => c.CreatedAt)
                 .HasDatabaseName("IX_Clients_CreatedAt");
 
-            // Relationships
+            // Relationships - POPRAWIONE!
+            // Relacja przez surowy Guid używając shadow property
             builder.HasOne(c => c.Provider)
                 .WithMany(p => p.Clients)
-                .HasForeignKey(c => c.TenantId)
+                .HasForeignKey("TenantId") // Używamy nazwy kolumny, nie właściwości
                 .HasPrincipalKey(p => p.Id)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_Clients_Providers_TenantId");
 
             builder.HasOne(c => c.User)
                 .WithOne(u => u.ClientProfile)
