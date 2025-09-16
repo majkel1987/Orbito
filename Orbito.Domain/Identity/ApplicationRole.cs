@@ -38,5 +38,11 @@ namespace Orbito.Domain.Identity
                 Description = description
             };
         }
+
+        public ApplicationRole SetId(Guid id)
+        {
+            Id = id;
+            return this;
+        }
     }
 }
