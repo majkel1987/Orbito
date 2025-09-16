@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Orbito.Domain.Entities;
 
@@ -18,7 +18,8 @@ namespace Orbito.Infrastructure.Data.Configurations.Entity
                 .HasConversion(
                     tenantId => tenantId.Value,
                     guid => Domain.ValueObjects.TenantId.Create(guid))
-                .IsRequired();
+                .IsRequired()
+                .HasColumnName("TenantId");
 
             // Basic Properties
             builder.Property(p => p.Name)
@@ -86,10 +87,10 @@ namespace Orbito.Infrastructure.Data.Configurations.Entity
             builder.HasIndex(p => new { p.TenantId, p.SortOrder })
                 .HasDatabaseName("IX_SubscriptionPlans_TenantId_SortOrder");
 
-            // Relationships
+            // Relationships - POPRAWIONE!
             builder.HasOne(p => p.Provider)
                 .WithMany(pr => pr.Plans)
-                .HasForeignKey(p => p.TenantId)
+                .HasForeignKey("TenantId") // Używamy nazwy kolumny
                 .HasPrincipalKey(pr => pr.Id)
                 .OnDelete(DeleteBehavior.Cascade);
 
