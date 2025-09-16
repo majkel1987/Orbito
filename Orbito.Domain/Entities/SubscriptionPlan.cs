@@ -31,28 +31,29 @@ namespace Orbito.Domain.Entities
 
         private SubscriptionPlan() { } // EF Core
 
-        public static SubscriptionPlan Create(
-            TenantId tenantId,
-            string name,
-            Money price,
-            BillingPeriod billingPeriod,
-            string? description = null,
-            int trialDays = 0)
+       public static SubscriptionPlan Create(
+        TenantId tenantId,
+        string name,
+        decimal amount,
+        string currency,
+        BillingPeriodType billingPeriodType,
+        string? description = null,
+        int trialDays = 0)
+    {
+        return new SubscriptionPlan
         {
-            return new SubscriptionPlan
-            {
-                TenantId = tenantId,
-                Name = name,
-                Description = description,
-                Price = price,
-                BillingPeriod = billingPeriod,
-                TrialDays = trialDays,
-                IsActive = true,
-                IsPublic = true,
-                SortOrder = 0,
-                CreatedAt = DateTime.UtcNow
-            };
-        }
+            TenantId = tenantId,
+            Name = name,
+            Description = description,
+            Price = Money.Create(amount, currency),
+            BillingPeriod = BillingPeriod.Create(1, billingPeriodType),
+            TrialDays = trialDays,
+            IsActive = true,
+            IsPublic = true,
+            SortOrder = 0,
+            CreatedAt = DateTime.UtcNow
+        };
+    }
 
         public void UpdatePrice(Money newPrice)
         {

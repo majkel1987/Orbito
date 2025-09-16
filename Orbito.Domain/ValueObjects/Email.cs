@@ -35,7 +35,7 @@
             }
         }
 
-        public string GetDomain() => Value.Split('@')[21];
+        public string GetDomain() => Value.Split('@')[1];
 
         public bool Equals(Email? other) => other is not null && Value == other.Value;
         public override bool Equals(object? obj) => obj is Email other && Equals(other);

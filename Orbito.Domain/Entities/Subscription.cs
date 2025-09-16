@@ -47,7 +47,7 @@ namespace Orbito.Domain.Entities
         {
             var startDate = DateTime.UtcNow;
             var isInTrial = trialDays > 0;
-            var trialEndDate = isInTrial ? startDate.AddDays(trialDays) : null;
+            var trialEndDate = isInTrial ? startDate.AddDays(trialDays) : (DateTime?)null;
             var nextBillingDate = isInTrial
                 ? trialEndDate!.Value
                 : billingPeriod.GetNextBillingDate(startDate);

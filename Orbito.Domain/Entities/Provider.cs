@@ -1,4 +1,5 @@
-﻿using Orbito.Domain.Interfaces;
+﻿using Orbito.Domain.Identity;
+using Orbito.Domain.Interfaces;
 using Orbito.Domain.ValueObjects;
 
 namespace Orbito.Domain.Entities
@@ -8,11 +9,11 @@ namespace Orbito.Domain.Entities
         public Guid Id { get; set; }
         public TenantId TenantId => TenantId.Create(Id);
 
+        public ApplicationUser? User { get; set; }
+        public Guid? UserId { get; set; }
+
         // Business Profile
         public string BusinessName { get; set; }
-        public Email Email { get; set; }
-        public string FirstName { get; set; }
-        public string LastName { get; set; }
         public string? Description { get; set; }
         public string? Avatar { get; set; }
 
@@ -32,20 +33,16 @@ namespace Orbito.Domain.Entities
         public ICollection<Subscription> Subscriptions { get; set; } = [];
 
         private Provider() { }
-        public static Provider Create(
+        
+        public static Provider Create(Guid userId,
             string businessName,
-            Email email,
-            string firstName,
-            string lastName,
             string subdomainSlug)
         {
             return new Provider
             {
                 Id = Guid.NewGuid(),
+                UserId = userId,
                 BusinessName = businessName,
-                Email = email,
-                FirstName = firstName,
-                LastName = lastName,
                 SubdomainSlug = subdomainSlug,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow,
