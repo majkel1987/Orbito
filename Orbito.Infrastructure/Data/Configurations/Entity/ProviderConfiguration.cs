@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Orbito.Domain.Entities;
 using System;
@@ -17,6 +17,9 @@ namespace Orbito.Infrastructure.Data.Configurations.Entity
 
             // Primary Key
             builder.HasKey(p => p.Id);
+
+            // TenantId jako computed property - ignorujemy przy mapowaniu
+            builder.Ignore(p => p.TenantId);
 
             // Basic Properties
             builder.Property(p => p.BusinessName)
@@ -82,20 +85,24 @@ namespace Orbito.Infrastructure.Data.Configurations.Entity
                 .HasForeignKey<Provider>(p => p.UserId)
                 .OnDelete(DeleteBehavior.SetNull);
 
+            // POPRAWIONE relacje - używamy Provider.Id jako principal key
             builder.HasMany(p => p.Plans)
                 .WithOne(plan => plan.Provider)
-                .HasForeignKey(plan => plan.TenantId)
-                .HasPrincipalKey(p => p.Id);
+                .HasForeignKey("TenantId")
+                .HasPrincipalKey(p => p.Id)
+                .OnDelete(DeleteBehavior.Cascade);
 
             builder.HasMany(p => p.Clients)
                 .WithOne(c => c.Provider)
-                .HasForeignKey(c => c.TenantId)
-                .HasPrincipalKey(p => p.Id);
+                .HasForeignKey("TenantId")
+                .HasPrincipalKey(p => p.Id)
+                .OnDelete(DeleteBehavior.Cascade);
 
             builder.HasMany(p => p.Subscriptions)
                 .WithOne()
-                .HasForeignKey(s => s.TenantId)
-                .HasPrincipalKey(p => p.Id);
+                .HasForeignKey("TenantId")
+                .HasPrincipalKey(p => p.Id)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }
