@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Orbito.Domain.Entities;
 
@@ -18,7 +18,8 @@ namespace Orbito.Infrastructure.Data.Configurations.Entity
                 .HasConversion(
                     tenantId => tenantId.Value,
                     guid => Domain.ValueObjects.TenantId.Create(guid))
-                .IsRequired();
+                .IsRequired()
+                .HasColumnName("TenantId");
 
             // Foreign Keys
             builder.Property(s => s.ClientId).IsRequired();
