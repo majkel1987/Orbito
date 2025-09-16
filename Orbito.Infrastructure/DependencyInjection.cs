@@ -1,12 +1,15 @@
 ﻿using Finbuckle.MultiTenant;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 using Orbito.Domain.Identity;
 using Orbito.Infrastructure.Data;
+using System.Text;
 
 namespace Orbito.Infrastructure
 {
@@ -40,23 +43,46 @@ namespace Orbito.Infrastructure
                         .SetMinimumLevel(LogLevel.Information)));
             });
 
-            services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
+            // Add Identity after DbContext is registered
+            services.AddIdentity<ApplicationUser, ApplicationRole>(options => {
+                options.Password.RequireDigit = true;
+                options.Password.RequireLowercase = true;
+                options.Password.RequireUppercase = true;
+                options.Password.RequireNonAlphanumeric = true;
+                options.Password.RequiredLength = 8;
+            }).AddEntityFrameworkStores<ApplicationDbContext>();
+
+             services.AddAuthentication(options => {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultSignInScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultSignOutScheme = JwtBearerDefaults.AuthenticationScheme;
+            }).AddJwtBearer(options => {
+            options.TokenValidationParameters = new TokenValidationParameters
                 {
-                    options.Password.RequireDigit = true;
-                    options.Password.RequireLowercase = true;
-                    options.Password.RequireNonAlphanumeric = true;
-                    options.Password.RequireUppercase = true;
-                    options.Password.RequiredLength = 6;
-                    options.User.RequireUniqueEmail = true;
-                })
-                .AddEntityFrameworkStores<ApplicationDbContext>()
-                .AddDefaultTokenProviders();
+                ValidateIssuer = true,
+                ValidIssuer = configuration["Jwt:Issuer"],
+                ValidateAudience = true,
+                ValidAudience = configuration["Jwt:Audience"],
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"])),
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero
+                };
+            });
 
             services.AddMultiTenant<TenantInfo>()
                 .WithHostStrategy()
                 .WithHeaderStrategy("X-Tenant-ID")
                 .WithRouteStrategy("tenant")
                 .WithConfigurationStore();
+
+            services.AddAuthorization();
+            services.AddScoped<UserManager<ApplicationUser>>();
+            services.AddScoped<SignInManager<ApplicationUser>>();
+            services.AddScoped<RoleManager<ApplicationRole>>();
+
 
             return services;
         }
