@@ -1,7 +1,31 @@
 using Microsoft.OpenApi.Models;
+using Orbito.Application;
 using Orbito.Infrastructure;
+using Serilog;
+using Serilog.Events;
+using System.Security.Claims;
+
+// Configure Serilog
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Debug()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .WriteTo.File("logs/info-.txt", 
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 30,
+        restrictedToMinimumLevel: LogEventLevel.Information)
+    .WriteTo.File("logs/errors-.txt", 
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 30,
+        restrictedToMinimumLevel: LogEventLevel.Error)
+    .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Use Serilog
+builder.Host.UseSerilog();
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
@@ -51,6 +75,7 @@ builder.Services.AddSwaggerGen(option =>
 });
 
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddApplication(builder.Configuration);
 
 var app = builder.Build();
 
@@ -70,6 +95,8 @@ app.UseHttpsRedirection();
 // Use CORS
 app.UseCors("Orbito_test");
 
+// Add authentication and authorization
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
@@ -85,4 +112,16 @@ app.MapGet("/", () => Results.Ok(new
 app.MapHealthChecks("/health");
 app.MapHealthChecksUI();
 
-app.Run();
+try
+{
+    Log.Information("Starting Orbito API");
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}

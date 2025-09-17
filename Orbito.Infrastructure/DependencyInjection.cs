@@ -1,5 +1,5 @@
-﻿using Finbuckle.MultiTenant;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
@@ -42,7 +42,7 @@ namespace Orbito.Infrastructure
                         .SetMinimumLevel(LogLevel.Information)));
             });
 
-            // Add Identity after DbContext is registered
+            // Add Identity services
             services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
             {
                 options.Password.RequireDigit = true;
@@ -50,16 +50,19 @@ namespace Orbito.Infrastructure
                 options.Password.RequireUppercase = true;
                 options.Password.RequireNonAlphanumeric = true;
                 options.Password.RequiredLength = 8;
-            }).AddEntityFrameworkStores<ApplicationDbContext>();
+                options.User.RequireUniqueEmail = true;
+            })
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddDefaultTokenProviders();
 
+            // Add JWT Authentication
             services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultSignInScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultSignOutScheme = JwtBearerDefaults.AuthenticationScheme;
-            }).AddJwtBearer(options =>
+            })
+            .AddJwtBearer(options =>
             {
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
@@ -68,19 +71,15 @@ namespace Orbito.Infrastructure
                     ValidateAudience = true,
                     ValidAudience = configuration["Jwt:Audience"],
                     ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"])),
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not found"))),
                     ValidateLifetime = true,
                     ClockSkew = TimeSpan.Zero
                 };
             });
 
-            services.AddMultiTenant<TenantInfo>()
-                .WithHostStrategy()
-                .WithHeaderStrategy("X-Tenant-ID")
-                .WithRouteStrategy("tenant")
-                .WithConfigurationStore();
-
-            services.AddAuthorization();
+            // Add Health Checks
+            services.AddHealthChecks()
+                .AddDbContextCheck<ApplicationDbContext>();
 
             return services;
         }

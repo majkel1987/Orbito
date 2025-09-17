@@ -7,7 +7,7 @@ namespace Orbito.Domain.Entities
     public class Provider : IMustHaveTenant
     {
         public Guid Id { get; set; }
-        public TenantId TenantId => TenantId.Create(Id);
+        public TenantId TenantId { get; set; }
 
         public ApplicationUser? User { get; set; }
         public Guid? UserId { get; set; }
@@ -38,9 +38,11 @@ namespace Orbito.Domain.Entities
             string businessName,
             string subdomainSlug)
         {
+            var id = Guid.NewGuid();
             return new Provider
             {
-                Id = Guid.NewGuid(),
+                Id = id,
+                TenantId = TenantId.Create(id),
                 UserId = userId,
                 BusinessName = businessName,
                 SubdomainSlug = subdomainSlug,
