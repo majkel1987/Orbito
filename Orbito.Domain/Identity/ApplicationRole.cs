@@ -1,11 +1,12 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Orbito.Domain.Entities;
+using Orbito.Domain.ValueObjects;
 
 namespace Orbito.Domain.Identity
 {
     public class ApplicationRole : IdentityRole<Guid>
     {
-        public Guid? TenantId { get; set; }
+        public TenantId? TenantId { get; set; }
         public string? Description { get; set; }
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -15,7 +16,7 @@ namespace Orbito.Domain.Identity
 
         public ApplicationRole() : base() { }
 
-        public ApplicationRole(string roleName, Guid? tenantId = null) : base(roleName)
+        public ApplicationRole(string roleName, TenantId? tenantId = null) : base(roleName)
         {
             Id = Guid.NewGuid();
             TenantId = tenantId;
@@ -31,7 +32,7 @@ namespace Orbito.Domain.Identity
             };
         }
 
-        public static ApplicationRole CreateForTenant(string name, Guid tenantId, string? description = null)
+        public static ApplicationRole CreateForTenant(string name, TenantId tenantId, string? description = null)
         {
             return new ApplicationRole(name, tenantId)
             {

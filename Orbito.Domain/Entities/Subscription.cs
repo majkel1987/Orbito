@@ -11,7 +11,7 @@ namespace Orbito.Domain.Entities
 
         // Subscription Details
         public Guid ClientId { get; set; }
-        public int PlanId { get; set; }
+        public Guid PlanId { get; set; }
         public SubscriptionStatus Status { get; set; }
 
         // Billing Information
@@ -40,7 +40,7 @@ namespace Orbito.Domain.Entities
         public static Subscription Create(
             TenantId tenantId,
             Guid clientId,
-            int planId,
+            Guid planId,
             Money price,
             BillingPeriod billingPeriod,
             int trialDays = 0)
@@ -76,7 +76,7 @@ namespace Orbito.Domain.Entities
             UpdatedAt = DateTime.UtcNow;
         }
 
-        public void ChangePlan(int newPlanId, Money newPrice)
+        public void ChangePlan(Guid newPlanId, Money newPrice)
         {
             PlanId = newPlanId;
             CurrentPrice = newPrice;

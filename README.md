@@ -146,11 +146,219 @@ Log.Logger = new LoggerConfiguration()
 
 ## 🏢 Multi-Tenancy
 
-Aplikacja obsługuje multi-tenancy poprzez:
+Aplikacja implementuje wzorzec **Multi-Tenancy** pozwalający jednej instancji aplikacji obsługiwać wielu "najemców" (tenantów) - różnych klientów, organizacji lub grup użytkowników.
 
-- **TenantId** Value Object
-- **Provider** jako główny tenant
+### 🎯 Architektura Multi-Tenancy
+
+#### Tenant Model
+
+- **Provider** - główny tenant (dostawca usług)
+- **TenantId** - Value Object identyfikujący tenant
 - **Automatyczne filtrowanie** danych według tenant
+- **Izolacja danych** na poziomie bazy danych
+
+#### Hierarchia Tenantów
+
+```
+Platform (Global)
+├── Provider A (TenantId: Guid-A)
+│   ├── Clients
+│   ├── SubscriptionPlans
+│   ├── Subscriptions
+│   └── Payments
+├── Provider B (TenantId: Guid-B)
+│   ├── Clients
+│   ├── SubscriptionPlans
+│   ├── Subscriptions
+│   └── Payments
+└── ...
+```
+
+### 🔧 Implementacja Multi-Tenancy
+
+#### 1. TenantId Value Object
+
+```csharp
+public sealed class TenantId : IEquatable<TenantId>
+{
+    public Guid Value { get; }
+
+    public static TenantId Create(Guid value)
+    public static TenantId New()
+    public static implicit operator Guid(TenantId tenantId)
+}
+```
+
+#### 2. IMustHaveTenant Interface
+
+```csharp
+public interface IMustHaveTenant
+{
+    TenantId TenantId { get; }
+}
+```
+
+#### 3. Entity Configurations
+
+Wszystkie encje domenowe implementują `IMustHaveTenant`:
+
+- **Provider** - główny tenant
+- **Client** - klienci providera
+- **SubscriptionPlan** - plany subskrypcji
+- **Subscription** - aktywne subskrypcje
+- **Payment** - płatności
+
+#### 4. Query Filters
+
+```csharp
+// Automatyczne filtrowanie danych według tenant
+builder.Entity<Provider>()
+    .HasQueryFilter(p => p.TenantId.Value == currentTenantId);
+
+builder.Entity<Client>()
+    .HasQueryFilter(c => c.TenantId.Value == currentTenantId);
+```
+
+#### 5. Identity Integration
+
+- **ApplicationUser** - może należeć do konkretnego tenanta
+- **ApplicationRole** - role globalne (TenantId = null) lub tenant-specific
+- **Automatyczne przypisywanie** TenantId dla nowych użytkowników
+
+### 🗄️ Struktura Bazy Danych
+
+#### Tabele Multi-Tenant
+
+```sql
+-- Główne tabele z TenantId
+Providers (TenantId PK)
+Clients (TenantId FK -> Providers.TenantId)
+SubscriptionPlans (TenantId FK -> Providers.TenantId)
+Subscriptions (TenantId FK -> Providers.TenantId)
+Payments (TenantId FK -> Providers.TenantId)
+
+-- Identity z opcjonalnym TenantId
+AspNetUsers (TenantId nullable)
+AspNetRoles (TenantId nullable)
+```
+
+#### Indeksy Multi-Tenancy
+
+```sql
+-- Główne indeksy dla wydajności
+IX_Providers_TenantId (UNIQUE)
+IX_Clients_TenantId
+IX_SubscriptionPlans_TenantId
+IX_Subscriptions_TenantId
+IX_Payments_TenantId
+
+-- Indeksy złożone
+IX_Clients_TenantId_DirectEmail
+IX_Subscriptions_TenantId_Status
+IX_Payments_TenantId_Status
+```
+
+### 🔐 Bezpieczeństwo Multi-Tenancy
+
+#### 1. Izolacja Danych
+
+- **Query Filters** - automatyczne filtrowanie na poziomie EF Core
+- **TenantId Validation** - sprawdzanie zgodności tenant w operacjach
+- **Foreign Key Constraints** - relacje między encjami tego samego tenanta
+
+#### 2. Autoryzacja
+
+```csharp
+// Sprawdzanie dostępu do zasobów tenanta
+public async Task<bool> CanAccessResource(Guid resourceId, TenantId userTenantId)
+{
+    var resource = await _context.Resources
+        .FirstOrDefaultAsync(r => r.Id == resourceId && r.TenantId == userTenantId);
+
+    return resource != null;
+}
+```
+
+#### 3. Middleware Multi-Tenancy
+
+```csharp
+// Automatyczne ustawianie kontekstu tenanta
+public class TenantMiddleware
+{
+    public async Task InvokeAsync(HttpContext context, RequestDelegate next)
+    {
+        var tenantId = ExtractTenantFromRequest(context);
+        _tenantContext.SetTenant(tenantId);
+        await next(context);
+    }
+}
+```
+
+### 📊 Monitorowanie Multi-Tenancy
+
+#### 1. Metryki Tenant
+
+- **Liczba aktywnych klientów** per tenant
+- **Przychody miesięczne** per tenant
+- **Aktywne subskrypcje** per tenant
+- **Wydajność zapytań** per tenant
+
+#### 2. Logowanie Multi-Tenant
+
+```csharp
+// Logi z kontekstem tenanta
+_logger.LogInformation("User {UserId} from tenant {TenantId} accessed resource {ResourceId}",
+    userId, tenantId, resourceId);
+```
+
+### 🚀 Korzyści Multi-Tenancy
+
+#### 1. Skalowalność
+
+- **Jedna instancja** aplikacji dla wielu klientów
+- **Współdzielone zasoby** (serwer, baza danych)
+- **Automatyczne skalowanie** bez duplikacji infrastruktury
+
+#### 2. Koszty
+
+- **Niższe koszty** operacyjne
+- **Współdzielona infrastruktura**
+- **Efektywne wykorzystanie** zasobów
+
+#### 3. Zarządzanie
+
+- **Centralne zarządzanie** wszystkimi tenantami
+- **Jednolite aktualizacje** dla wszystkich klientów
+- **Uproszczone wdrożenia**
+
+### 🔄 Workflow Multi-Tenancy
+
+#### 1. Rejestracja Nowego Tenanta
+
+```csharp
+// 1. Utworzenie Provider (główny tenant)
+var provider = Provider.Create(userId, businessName, subdomainSlug);
+
+// 2. Automatyczne przypisanie TenantId
+provider.TenantId = TenantId.Create(provider.Id);
+
+// 3. Utworzenie domyślnych planów subskrypcji
+var basicPlan = SubscriptionPlan.Create(provider.TenantId, "Basic", 29.99m, "PLN", BillingPeriodType.Monthly);
+```
+
+#### 2. Dodawanie Klienta do Tenanta
+
+```csharp
+// Klient automatycznie otrzymuje TenantId providera
+var client = Client.CreateWithUser(provider.TenantId, userId, companyName);
+```
+
+#### 3. Zarządzanie Subskrypcjami
+
+```csharp
+// Subskrypcja automatycznie dziedziczy TenantId
+var subscription = Subscription.Create(provider.TenantId, clientId, planId, price, billingPeriod);
+```
 
 ## 📈 Monitorowanie Wydajności
 
@@ -198,12 +406,19 @@ Aplikacja obsługuje multi-tenancy poprzez:
 - [x] Pipeline Behaviors (Logging, Validation, Performance)
 - [x] Health Checks
 - [x] Swagger dokumentacja
+- [x] **Multi-Tenancy Architecture** - kompletna implementacja
+- [x] **Entity Configurations** - wszystkie encje skonfigurowane
+- [x] **Value Objects** - TenantId, Money, Email, BillingPeriod
+- [x] **Database Schema** - struktura multi-tenant
+- [x] **Identity Integration** - ApplicationUser/ApplicationRole z TenantId
 
 ### 🔄 W Trakcie
 
 - [ ] Implementacja CQRS Commands/Queries
 - [ ] Testy jednostkowe
 - [ ] Testy integracyjne
+- [ ] **Tenant Middleware** - automatyczne wykrywanie tenanta z requestu
+- [ ] **Tenant Context Service** - zarządzanie kontekstem tenanta
 
 ### 📅 Planowane
 

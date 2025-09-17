@@ -1,11 +1,12 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Orbito.Domain.Entities;
+using Orbito.Domain.ValueObjects;
 
 namespace Orbito.Domain.Identity
 {
     public class ApplicationUser : IdentityUser<Guid>
     {
-        public Guid? TenantId { get; set; }
+        public TenantId? TenantId { get; set; }
 
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;

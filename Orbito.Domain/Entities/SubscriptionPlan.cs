@@ -5,7 +5,7 @@ namespace Orbito.Domain.Entities
 {
     public class SubscriptionPlan : IMustHaveTenant
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; }
         public TenantId TenantId { get; set; }
 
         // Plan Details
@@ -42,6 +42,7 @@ namespace Orbito.Domain.Entities
     {
         return new SubscriptionPlan
         {
+            Id = Guid.NewGuid(),
             TenantId = tenantId,
             Name = name,
             Description = description,
