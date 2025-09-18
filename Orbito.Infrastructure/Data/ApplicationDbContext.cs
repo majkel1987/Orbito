@@ -49,20 +49,21 @@ namespace Orbito.Infrastructure.Data
                 .HasQueryFilter(u => u.TenantId == null); // Will be overridden at runtime with actual tenant context
 
             // For domain entities - all must have tenant
+            // Note: We use EF.Property<Guid> to access the underlying Guid value for query filters
             builder.Entity<Provider>()
-                .HasQueryFilter(p => p.TenantId.Value == Guid.Empty); // Will be overridden at runtime
+                .HasQueryFilter(p => EF.Property<Guid>(p, "TenantId") == Guid.Empty); // Will be overridden at runtime
 
             builder.Entity<Client>()
-                .HasQueryFilter(c => c.TenantId.Value == Guid.Empty); // Will be overridden at runtime
+                .HasQueryFilter(c => EF.Property<Guid>(c, "TenantId") == Guid.Empty); // Will be overridden at runtime
 
             builder.Entity<SubscriptionPlan>()
-                .HasQueryFilter(p => p.TenantId.Value == Guid.Empty); // Will be overridden at runtime
+                .HasQueryFilter(p => EF.Property<Guid>(p, "TenantId") == Guid.Empty); // Will be overridden at runtime
 
             builder.Entity<Subscription>()
-                .HasQueryFilter(s => s.TenantId.Value == Guid.Empty); // Will be overridden at runtime
+                .HasQueryFilter(s => EF.Property<Guid>(s, "TenantId") == Guid.Empty); // Will be overridden at runtime
 
             builder.Entity<Payment>()
-                .HasQueryFilter(p => p.TenantId.Value == Guid.Empty); // Will be overridden at runtime
+                .HasQueryFilter(p => EF.Property<Guid>(p, "TenantId") == Guid.Empty); // Will be overridden at runtime
         }
 
         private void SeedDefaultData(ModelBuilder builder)

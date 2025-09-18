@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Domain.Entities;
@@ -11,15 +12,18 @@ namespace Orbito.Application.Providers.Commands.CreateProvider
     public class CreateProviderCommandHandler : IRequestHandler<CreateProviderCommand, CreateProviderResult>
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IProviderRepository _providerRepository;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<CreateProviderCommandHandler> _logger;
 
         public CreateProviderCommandHandler(
             IUnitOfWork unitOfWork,
+            IProviderRepository providerRepository,
             UserManager<ApplicationUser> userManager,
             ILogger<CreateProviderCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
+            _providerRepository = providerRepository;
             _userManager = userManager;
             _logger = logger;
         }
@@ -44,8 +48,7 @@ namespace Orbito.Application.Providers.Commands.CreateProvider
                 }
 
                 // Sprawdź czy subdomain jest dostępny
-                var existingProvider = await _unitOfWork.GetRepository<Provider>()
-                    .FirstOrDefaultAsync(p => p.SubdomainSlug == request.SubdomainSlug, cancellationToken);
+                var existingProvider = await _providerRepository.GetBySubdomainSlugAsync(request.SubdomainSlug, cancellationToken);
                 
                 if (existingProvider != null)
                 {
@@ -69,7 +72,7 @@ namespace Orbito.Application.Providers.Commands.CreateProvider
                     provider.CustomDomain = request.CustomDomain;
 
                 // Zapisz providera
-                await _unitOfWork.GetRepository<Provider>().AddAsync(provider, cancellationToken);
+                await _providerRepository.AddAsync(provider, cancellationToken);
 
                 // Zaktualizuj użytkownika - przypisz TenantId i rolę Provider
                 user.TenantId = provider.TenantId;

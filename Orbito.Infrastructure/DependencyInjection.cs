@@ -26,10 +26,11 @@ namespace Orbito.Infrastructure
                 options.UseSqlServer(connectionString, sqlOptions =>
                 {
                     sqlOptions.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName);
-                    sqlOptions.EnableRetryOnFailure(
-                        maxRetryCount: 3,
-                        maxRetryDelay: TimeSpan.FromSeconds(10),
-                        errorNumbersToAdd: null);
+                    // Wyłączamy retry strategy, aby uniknąć konfliktu z ręcznymi transakcjami
+                    // sqlOptions.EnableRetryOnFailure(
+                    //     maxRetryCount: 3,
+                    //     maxRetryDelay: TimeSpan.FromSeconds(10),
+                    //     errorNumbersToAdd: null);
                 });
 
                 options.ConfigureWarnings(warnings =>
@@ -84,6 +85,7 @@ namespace Orbito.Infrastructure
                 .AddDbContextCheck<ApplicationDbContext>();
 
             services.AddScoped<IUnitOfWork, UnitOfWork>();
+            services.AddScoped<IProviderRepository, ProviderRepository>();
 
             return services;
         }
