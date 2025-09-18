@@ -33,6 +33,11 @@ Orbito/
   - `LoggingBehaviour` - logowanie żądań
   - `ValidationBehaviour` - walidacja
   - `PerformanceBehaviour` - monitorowanie wydajności
+- **Commands/Queries**:
+  - `CreateProviderCommand` - tworzenie nowego providera z automatycznym TenantId
+- **Services**:
+  - `TenantContext` - zarządzanie kontekstem tenanta
+  - `DateTimeService` - abstrakcja dla operacji na czasie
 
 #### Orbito.Domain
 
@@ -47,6 +52,8 @@ Orbito/
 - **ASP.NET Core Identity**
 - **JWT Bearer Authentication**
 - **Health Checks** z EF Core
+- **Repository Pattern** - UnitOfWork z generycznymi repozytoriami
+- **Tenant Middleware** - automatyczne wykrywanie kontekstu tenanta
 
 ## 🚀 Uruchomienie Aplikacji
 
@@ -96,6 +103,17 @@ dotnet run --project Orbito.API
 - **Health Check**: `https://localhost:5211/health`
 - **Health Check UI**: `https://localhost:5211/healthchecks-ui`
 
+### 🔐 Endpointy Uwierzytelniania
+
+#### AccountController
+
+- `POST /api/account/register-platform-admin` - Rejestracja administratora platformy
+- `POST /api/account/login` - Logowanie użytkownika
+
+#### ProvidersController
+
+- `POST /api/providers` - Tworzenie nowego providera (wymaga roli PlatformAdmin)
+
 ## 📊 Logowanie
 
 Aplikacja wykorzystuje **Serilog** z konfiguracją do oddzielnych plików:
@@ -143,6 +161,19 @@ Log.Logger = new LoggerConfiguration()
 - **PlatformAdmin** - Administrator platformy
 - **Provider** - Dostawca usług
 - **Client** - Klient
+
+### JWT Claims
+
+Token JWT zawiera następujące claims:
+
+- `sub` - ID użytkownika
+- `email` - adres email
+- `name` - pełne imię i nazwisko
+- `role` - rola użytkownika
+- `tenant_id` - ID tenanta (pusty dla PlatformAdmin)
+- `user_role` - rola użytkownika (duplikat dla kompatybilności)
+- `jti` - unikalny identyfikator tokenu
+- `iat` - czas utworzenia tokenu
 
 ## 🏢 Multi-Tenancy
 
@@ -281,16 +312,43 @@ public async Task<bool> CanAccessResource(Guid resourceId, TenantId userTenantId
 
 #### 3. Middleware Multi-Tenancy
 
+Aplikacja implementuje `TenantMiddleware` który automatycznie wykrywa i ustawia kontekst tenanta na podstawie:
+
+1. **JWT Claims** - `tenant_id` claim z tokenu JWT
+2. **HTTP Headers** - `X-Tenant-Id` header
+3. **Query Parameters** - `tenantId` query parameter
+
 ```csharp
 // Automatyczne ustawianie kontekstu tenanta
 public class TenantMiddleware
 {
-    public async Task InvokeAsync(HttpContext context, RequestDelegate next)
+    public async Task InvokeAsync(HttpContext context, ITenantContext tenantContext)
     {
-        var tenantId = ExtractTenantFromRequest(context);
-        _tenantContext.SetTenant(tenantId);
+        // Sprawdź JWT claims
+        var tenantIdClaim = context.User.FindFirst("tenant_id")?.Value;
+
+        // Sprawdź HTTP header
+        var tenantHeader = context.Request.Headers["X-Tenant-Id"].FirstOrDefault();
+
+        // Sprawdź query parameter
+        var tenantQuery = context.Request.Query["tenantId"].FirstOrDefault();
+
+        // Ustaw kontekst tenanta
+        tenantContext.SetTenant(tenantId);
         await next(context);
     }
+}
+```
+
+#### 4. Tenant Context Service
+
+```csharp
+public interface ITenantContext
+{
+    TenantId? CurrentTenantId { get; }
+    void SetTenant(TenantId? tenantId);
+    void ClearTenant();
+    bool HasTenant { get; }
 }
 ```
 
@@ -336,14 +394,34 @@ _logger.LogInformation("User {UserId} from tenant {TenantId} accessed resource {
 #### 1. Rejestracja Nowego Tenanta
 
 ```csharp
-// 1. Utworzenie Provider (główny tenant)
+// 1. Rejestracja PlatformAdmin
+POST /api/account/register-platform-admin
+{
+    "email": "admin@example.com",
+    "password": "SecurePassword123!",
+    "firstName": "Jan",
+    "lastName": "Kowalski"
+}
+
+// 2. Logowanie PlatformAdmin
+POST /api/account/login
+{
+    "email": "admin@example.com",
+    "password": "SecurePassword123!"
+}
+
+// 3. Tworzenie Provider (główny tenant)
+POST /api/providers
+{
+    "userId": "user-guid",
+    "businessName": "Moja Firma",
+    "subdomainSlug": "moja-firma",
+    "description": "Opis firmy"
+}
+
+// 4. Automatyczne przypisanie TenantId w CreateProviderCommand
 var provider = Provider.Create(userId, businessName, subdomainSlug);
-
-// 2. Automatyczne przypisanie TenantId
-provider.TenantId = TenantId.Create(provider.Id);
-
-// 3. Utworzenie domyślnych planów subskrypcji
-var basicPlan = SubscriptionPlan.Create(provider.TenantId, "Basic", 29.99m, "PLN", BillingPeriodType.Monthly);
+// TenantId jest automatycznie ustawiony na provider.Id
 ```
 
 #### 2. Dodawanie Klienta do Tenanta
@@ -411,14 +489,19 @@ var subscription = Subscription.Create(provider.TenantId, clientId, planId, pric
 - [x] **Value Objects** - TenantId, Money, Email, BillingPeriod
 - [x] **Database Schema** - struktura multi-tenant
 - [x] **Identity Integration** - ApplicationUser/ApplicationRole z TenantId
+- [x] **AccountController** - rejestracja PlatformAdmin i logowanie
+- [x] **JWT Claims** - TenantId i Role w tokenach JWT
+- [x] **CreateProviderCommand** - CQRS command do tworzenia providerów
+- [x] **Tenant Middleware** - automatyczne wykrywanie tenanta z requestu
+- [x] **Tenant Context Service** - zarządzanie kontekstem tenanta
+- [x] **Repository Pattern** - implementacja UnitOfWork z repozytoriami
 
 ### 🔄 W Trakcie
 
-- [ ] Implementacja CQRS Commands/Queries
 - [ ] Testy jednostkowe
 - [ ] Testy integracyjne
-- [ ] **Tenant Middleware** - automatyczne wykrywanie tenanta z requestu
-- [ ] **Tenant Context Service** - zarządzanie kontekstem tenanta
+- [ ] **Dodatkowe Commands/Queries** - rozszerzenie CQRS pattern
+- [ ] **Provider Management** - pełne zarządzanie providerami
 
 ### 📅 Planowane
 
@@ -452,6 +535,33 @@ W przypadku problemów lub pytań:
 2. Sprawdź Health Check endpoint
 3. Sprawdź dokumentację Swagger
 4. Utwórz issue w repozytorium
+
+## 🎉 Podsumowanie Implementacji
+
+### ✅ Zrealizowane Funkcjonalności
+
+1. **Rejestracja PlatformAdmin** - endpoint do tworzenia administratorów platformy z walidacją
+2. **JWT Claims** - rozszerzone tokeny JWT o TenantId i Role dla multi-tenancy
+3. **CreateProviderCommand** - komenda CQRS do tworzenia providerów z automatycznym przypisaniem TenantId
+4. **Tenant Middleware** - middleware automatycznie wykrywający kontekst tenanta z JWT, headers i query parameters
+5. **Repository Pattern** - implementacja UnitOfWork z generycznymi repozytoriami
+6. **Tenant Context Service** - serwis do zarządzania kontekstem tenanta w aplikacji
+
+### 🔧 Architektura
+
+- **Clean Architecture** z podziałem na warstwy
+- **CQRS** z MediatR dla separacji komend i zapytań
+- **Multi-Tenancy** z automatyczną izolacją danych
+- **JWT Authentication** z rozszerzonymi claims
+- **Repository Pattern** dla abstrakcji dostępu do danych
+
+### 🚀 Następne Kroki
+
+1. **Testy jednostkowe** dla nowych komponentów
+2. **Testy integracyjne** dla endpointów API
+3. **Rozszerzenie CQRS** o dodatkowe komendy i zapytania
+4. **Frontend aplikacja** w React/Next.js
+5. **Docker containerization** i CI/CD pipeline
 
 ---
 

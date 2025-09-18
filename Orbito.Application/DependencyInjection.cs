@@ -30,6 +30,7 @@ namespace Orbito.Application
             
             // Add common services
             services.AddScoped<IDateTime, DateTimeService>();
+            services.AddScoped<ITenantContext, TenantContext>();
 
             return services;
         }

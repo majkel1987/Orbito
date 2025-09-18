@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Orbito.Domain.Entities;
 using Orbito.Domain.Identity;
 using Orbito.Domain.ValueObjects;
 
@@ -69,13 +70,13 @@ namespace Orbito.Infrastructure.Data.Configurations.Identity
             // Relationships
             builder.HasOne(u => u.Provider)
                 .WithOne(p => p.User)
-                .HasForeignKey<ApplicationUser>(u => u.Id)
+                .HasForeignKey<Provider>(p => p.UserId)
                 .OnDelete(DeleteBehavior.NoAction);
 
             builder.HasOne(u => u.ClientProfile)
                 .WithOne(c => c.User)
-                .HasForeignKey<ApplicationUser>(u => u.Id)
-                .OnDelete(DeleteBehavior.NoAction);
+                .HasForeignKey<Client>(c => c.UserId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             // Table name
             builder.ToTable("AspNetUsers");

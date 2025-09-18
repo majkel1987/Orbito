@@ -6,8 +6,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
+using Orbito.Application.Common.Interfaces;
 using Orbito.Domain.Identity;
 using Orbito.Infrastructure.Data;
+using Orbito.Infrastructure.Persistance;
 using System.Text;
 
 namespace Orbito.Infrastructure
@@ -80,6 +82,8 @@ namespace Orbito.Infrastructure
             // Add Health Checks
             services.AddHealthChecks()
                 .AddDbContextCheck<ApplicationDbContext>();
+
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             return services;
         }

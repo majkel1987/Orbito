@@ -1,4 +1,5 @@
 using Microsoft.OpenApi.Models;
+using Orbito.API.Middleware;
 using Orbito.Application;
 using Orbito.Infrastructure;
 using Serilog;
@@ -94,6 +95,9 @@ app.UseHttpsRedirection();
 
 // Use CORS
 app.UseCors("Orbito_test");
+
+// Add tenant middleware
+app.UseMiddleware<TenantMiddleware>();
 
 // Add authentication and authorization
 app.UseAuthentication();

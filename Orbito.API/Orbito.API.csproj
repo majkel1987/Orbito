@@ -27,8 +27,4 @@
     <ProjectReference Include="..\Orbito.Infrastructure\Orbito.Infrastructure.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Controllers\" />
-  </ItemGroup>
-
 </Project>
