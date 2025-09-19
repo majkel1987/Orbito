@@ -1,19 +1,12 @@
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
-using Orbito.Domain.Identity;
 using Orbito.Domain.Enums;
+using Orbito.Domain.Identity;
 
 namespace Orbito.Application.Common.Services
 {
-    public interface IAdminSetupService
-    {
-        Task<bool> IsAdminSetupRequiredAsync();
-        Task<bool> CreateInitialAdminAsync(string email, string password, string firstName, string lastName);
-        Task<bool> IsAdminSetupEnabledAsync();
-    }
 
     public class AdminSetupService : IAdminSetupService
     {
@@ -91,7 +84,7 @@ namespace Orbito.Application.Common.Services
                 var result = await _userManager.CreateAsync(user, password);
                 if (!result.Succeeded)
                 {
-                    _logger.LogError("Błąd podczas tworzenia użytkownika admina: {Errors}", 
+                    _logger.LogError("Błąd podczas tworzenia użytkownika admina: {Errors}",
                         string.Join(", ", result.Errors.Select(e => e.Description)));
                     return false;
                 }
@@ -117,7 +110,7 @@ namespace Orbito.Application.Common.Services
                 // Sprawdź zmienną środowiskową lub konfigurację
                 var setupEnabled = _configuration.GetValue<bool>("AdminSetup:Enabled", false);
                 var environment = _configuration.GetValue<string>("ASPNETCORE_ENVIRONMENT", "Production");
-                
+
                 // W Development zawsze pozwól na setup
                 if (environment == "Development")
                 {

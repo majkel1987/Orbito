@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
-using Orbito.Application.Common.Services;
+using Orbito.Application.Common.Interfaces;
 using Orbito.Application.Providers.Commands.RegisterProvider;
 using Orbito.Domain.Enums;
 using Orbito.Domain.Identity;

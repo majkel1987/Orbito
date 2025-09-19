@@ -32,6 +32,7 @@ namespace Orbito.Application
             services.AddScoped<IDateTime, DateTimeService>();
             services.AddScoped<ITenantContext, TenantContext>();
             services.AddScoped<IAdminSetupService, AdminSetupService>();
+            services.AddScoped<IProviderService, ProviderService>();
 
             return services;
         }

@@ -1,6 +1,4 @@
 using MediatR;
-using Orbito.Application.Common.Interfaces;
-using Orbito.Domain.ValueObjects;
 
 namespace Orbito.Application.Providers.Commands.RegisterProvider
 {

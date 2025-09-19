@@ -60,5 +60,48 @@ namespace Orbito.Domain.Entities
 
             MonthlyRevenue = revenue;
         }
+
+        public void UpdateBusinessProfile(string businessName, string? description = null, string? avatar = null)
+        {
+            if (string.IsNullOrWhiteSpace(businessName))
+                throw new ArgumentException("Business name cannot be empty", nameof(businessName));
+
+            BusinessName = businessName;
+            Description = description;
+            Avatar = avatar;
+        }
+
+        public void UpdatePlatformSettings(string subdomainSlug, string? customDomain = null)
+        {
+            if (string.IsNullOrWhiteSpace(subdomainSlug))
+                throw new ArgumentException("Subdomain slug cannot be empty", nameof(subdomainSlug));
+
+            SubdomainSlug = subdomainSlug;
+            CustomDomain = customDomain;
+        }
+
+        public void Activate()
+        {
+            IsActive = true;
+        }
+
+        public void Deactivate()
+        {
+            IsActive = false;
+        }
+
+        public void UpdateActiveClientsCount(int count)
+        {
+            if (count < 0)
+                throw new ArgumentException("Active clients count cannot be negative", nameof(count));
+
+            ActiveClientsCount = count;
+        }
+
+        public bool CanBeDeleted()
+        {
+            // Provider can be deleted only if there are no active clients or subscriptions
+            return ActiveClientsCount == 0 && !Subscriptions.Any(s => s.Status == Domain.Enums.SubscriptionStatus.Active);
+        }
     }
 }

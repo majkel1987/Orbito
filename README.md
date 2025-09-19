@@ -35,9 +35,16 @@ Orbito/
   - `PerformanceBehaviour` - monitorowanie wydajności
 - **Commands/Queries**:
   - `CreateProviderCommand` - tworzenie nowego providera z automatycznym TenantId
+  - `UpdateProviderCommand` - aktualizacja informacji providera
+  - `DeleteProviderCommand` - usuwanie providera (soft/hard delete)
+  - `GetProviderByIdQuery` - pobieranie providera po ID
+  - `GetAllProvidersQuery` - pobieranie wszystkich providerów z paginacją
+  - `GetProviderByUserIdQuery` - pobieranie providera po ID użytkownika
 - **Services**:
   - `TenantContext` - zarządzanie kontekstem tenanta
   - `DateTimeService` - abstrakcja dla operacji na czasie
+  - `AdminSetupService` - bezpieczna rejestracja administratora
+  - `ProviderService` - logika biznesowa i walidacja providerów
 
 #### Orbito.Domain
 
@@ -114,7 +121,12 @@ dotnet run --project Orbito.API
 
 #### ProvidersController
 
+- `GET /api/providers` - Pobiera wszystkich providerów z paginacją (wymaga roli PlatformAdmin)
+- `GET /api/providers/{id}` - Pobiera providera po ID
+- `GET /api/providers/by-user/{userId}` - Pobiera providera po ID użytkownika
 - `POST /api/providers` - Tworzenie nowego providera (wymaga roli PlatformAdmin)
+- `PUT /api/providers/{id}` - Aktualizuje informacje providera
+- `DELETE /api/providers/{id}` - Usuwa providera (soft/hard delete, wymaga roli PlatformAdmin)
 
 ## 📊 Logowanie
 
@@ -498,6 +510,34 @@ POST /api/providers
 }
 ```
 
+#### 4. Zarządzanie Providerami (CRUD Operations)
+
+```csharp
+// 1. Pobieranie wszystkich providerów (PlatformAdmin)
+GET /api/providers?pageNumber=1&pageSize=10&activeOnly=false
+
+// 2. Pobieranie providera po ID
+GET /api/providers/{providerId}
+
+// 3. Pobieranie providera po ID użytkownika
+GET /api/providers/by-user/{userId}
+
+// 4. Aktualizacja providera
+PUT /api/providers/{providerId}
+{
+    "businessName": "Nowa nazwa firmy",
+    "description": "Zaktualizowany opis",
+    "subdomainSlug": "nowy-subdomain",
+    "customDomain": "moja-firma.com"
+}
+
+// 5. Soft delete (deaktywacja)
+DELETE /api/providers/{providerId}
+
+// 6. Hard delete (permanentne usunięcie)
+DELETE /api/providers/{providerId}?hardDelete=true
+```
+
 #### 2. Dodawanie Klienta do Tenanta
 
 ```csharp
@@ -573,6 +613,11 @@ var subscription = Subscription.Create(provider.TenantId, clientId, planId, pric
 - [x] **AdminSetupService** - bezpieczna rejestracja administratora z kontrolą środowiska
 - [x] **RegisterProviderCommand** - CQRS command do rejestracji providerów
 - [x] **Bezpieczne Endpointy** - usunięcie publicznego dostępu do tworzenia administratorów
+- [x] **📋 Pełne CRUD dla Provider** - kompletne operacje Create, Read, Update, Delete
+- [x] **ProviderService** - logika biznesowa i walidacja providerów
+- [x] **Rozszerzone Repository** - pełne operacje CRUD w ProviderRepository
+- [x] **CQRS Queries** - GetById, GetAll, GetByUserId z paginacją
+- [x] **FluentValidation** - walidatory dla wszystkich operacji Provider
 
 ### 🔄 W Trakcie
 
@@ -643,6 +688,102 @@ W przypadku problemów lub pytań:
 3. **Rozszerzenie CQRS** o dodatkowe komendy i zapytania
 4. **Frontend aplikacja** w React/Next.js
 5. **Docker containerization** i CI/CD pipeline
+
+## 📋 Provider CRUD Operations
+
+### 🏗️ Architektura CRUD dla Provider
+
+Aplikacja implementuje **pełne operacje CRUD** dla Provider z wykorzystaniem wzorców Clean Architecture:
+
+#### 1. Repository Pattern
+
+```csharp
+public interface IProviderRepository
+{
+    // Read operations
+    Task<Provider?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<Provider?> GetBySubdomainSlugAsync(string subdomainSlug, CancellationToken cancellationToken = default);
+    Task<Provider?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<IEnumerable<Provider>> GetAllAsync(int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken = default);
+    Task<IEnumerable<Provider>> GetActiveProvidersAsync(int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken = default);
+
+    // Create operations
+    Task<Provider> AddAsync(Provider provider, CancellationToken cancellationToken = default);
+
+    // Update operations
+    Task UpdateAsync(Provider provider, CancellationToken cancellationToken = default);
+
+    // Delete operations
+    Task DeleteAsync(Provider provider, CancellationToken cancellationToken = default);
+    Task SoftDeleteAsync(Provider provider, CancellationToken cancellationToken = default);
+
+    // Validation operations
+    Task<bool> IsSubdomainAvailableAsync(string subdomainSlug, Guid? excludeProviderId = null, CancellationToken cancellationToken = default);
+}
+```
+
+#### 2. CQRS Commands & Queries
+
+**Commands (Write Operations):**
+
+- `CreateProviderCommand` - tworzenie nowego providera
+- `UpdateProviderCommand` - aktualizacja informacji providera
+- `DeleteProviderCommand` - usuwanie providera (soft/hard delete)
+
+**Queries (Read Operations):**
+
+- `GetProviderByIdQuery` - pobieranie providera po ID
+- `GetAllProvidersQuery` - pobieranie wszystkich providerów z paginacją
+- `GetProviderByUserIdQuery` - pobieranie providera po ID użytkownika
+
+#### 3. Business Logic Service
+
+```csharp
+public interface IProviderService
+{
+    Task<bool> ValidateSubdomainAsync(string subdomainSlug, Guid? excludeProviderId = null, CancellationToken cancellationToken = default);
+    Task<bool> CanProviderBeDeletedAsync(Guid providerId, CancellationToken cancellationToken = default);
+    Task<Provider?> GetProviderWithMetricsAsync(Guid providerId, CancellationToken cancellationToken = default);
+    Task UpdateProviderMetricsAsync(Guid providerId, CancellationToken cancellationToken = default);
+    Task<bool> IsProviderActiveAsync(Guid providerId, CancellationToken cancellationToken = default);
+}
+```
+
+#### 4. Domain Methods
+
+```csharp
+public class Provider : IMustHaveTenant
+{
+    // Business operations
+    public void UpdateBusinessProfile(string businessName, string? description = null, string? avatar = null);
+    public void UpdatePlatformSettings(string subdomainSlug, string? customDomain = null);
+    public void Activate();
+    public void Deactivate();
+    public void UpdateActiveClientsCount(int count);
+    public bool CanBeDeleted();
+}
+```
+
+#### 5. Validation & Security
+
+- **FluentValidation** - walidacja wszystkich operacji
+- **Role-based Authorization** - różne uprawnienia dla różnych ról
+- **Soft/Hard Delete** - bezpieczne usuwanie z walidacją
+- **Subdomain Validation** - sprawdzanie dostępności subdomain
+- **Transaction Management** - UnitOfWork dla spójności danych
+
+### 🔐 Autoryzacja Provider Operations
+
+| Endpoint                              | PlatformAdmin | Provider | Client |
+| ------------------------------------- | ------------- | -------- | ------ |
+| `GET /api/providers`                  | ✅            | ❌       | ❌     |
+| `GET /api/providers/{id}`             | ✅            | ✅\*     | ❌     |
+| `GET /api/providers/by-user/{userId}` | ✅            | ✅\*     | ❌     |
+| `POST /api/providers`                 | ✅            | ❌       | ❌     |
+| `PUT /api/providers/{id}`             | ✅            | ✅\*     | ❌     |
+| `DELETE /api/providers/{id}`          | ✅            | ❌       | ❌     |
+
+\*Provider może operować tylko na swoim własnym providerze
 
 ## 🔒 Bezpieczeństwo Aplikacji
 
