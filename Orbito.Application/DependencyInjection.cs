@@ -31,6 +31,7 @@ namespace Orbito.Application
             // Add common services
             services.AddScoped<IDateTime, DateTimeService>();
             services.AddScoped<ITenantContext, TenantContext>();
+            services.AddScoped<IAdminSetupService, AdminSetupService>();
 
             return services;
         }

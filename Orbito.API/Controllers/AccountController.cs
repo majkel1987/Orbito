@@ -1,7 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using Orbito.Application.Common.Services;
+using Orbito.Application.Providers.Commands.RegisterProvider;
 using Orbito.Domain.Enums;
 using Orbito.Domain.Identity;
 using Orbito.Domain.ValueObjects;
@@ -19,71 +22,147 @@ namespace Orbito.API.Controllers
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IConfiguration _configuration;
         private readonly ILogger<AccountController> _logger;
+        private readonly IAdminSetupService _adminSetupService;
+        private readonly IMediator _mediator;
 
         public AccountController(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             IConfiguration configuration,
-            ILogger<AccountController> logger)
+            ILogger<AccountController> logger,
+            IAdminSetupService adminSetupService,
+            IMediator mediator)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _configuration = configuration;
             _logger = logger;
+            _adminSetupService = adminSetupService;
+            _mediator = mediator;
         }
 
         /// <summary>
-        /// Rejestracja administratora platformy
+        /// Sprawdza czy setup administratora jest wymagany
         /// </summary>
-        [HttpPost("register-platform-admin")]
+        [HttpGet("admin-setup-status")]
         [AllowAnonymous]
-        public async Task<IActionResult> RegisterPlatformAdmin([FromBody] RegisterPlatformAdminRequest request)
+        public async Task<IActionResult> GetAdminSetupStatus()
         {
             try
             {
-                // Sprawdź czy użytkownik już istnieje
-                var existingUser = await _userManager.FindByEmailAsync(request.Email);
-                if (existingUser != null)
+                var isSetupRequired = await _adminSetupService.IsAdminSetupRequiredAsync();
+                var isSetupEnabled = await _adminSetupService.IsAdminSetupEnabledAsync();
+
+                return Ok(new
                 {
-                    return BadRequest(new { message = "Użytkownik z tym adresem email już istnieje" });
-                }
-
-                // Utwórz nowego użytkownika
-                var user = new ApplicationUser
-                {
-                    Id = Guid.NewGuid(),
-                    UserName = request.Email,
-                    Email = request.Email,
-                    FirstName = request.FirstName,
-                    LastName = request.LastName,
-                    TenantId = null, // PlatformAdmin nie ma TenantId
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                var result = await _userManager.CreateAsync(user, request.Password);
-                if (!result.Succeeded)
-                {
-                    return BadRequest(new { 
-                        message = "Błąd podczas tworzenia użytkownika", 
-                        errors = result.Errors.Select(e => e.Description) 
-                    });
-                }
-
-                // Dodaj rolę PlatformAdmin
-                await _userManager.AddToRoleAsync(user, UserRole.PlatformAdmin.ToString());
-
-                _logger.LogInformation("PlatformAdmin zarejestrowany: {Email}", request.Email);
-
-                return Ok(new { 
-                    message = "Administrator platformy został pomyślnie zarejestrowany",
-                    userId = user.Id
+                    isSetupRequired,
+                    isSetupEnabled,
+                    message = isSetupRequired ? "Setup administratora jest wymagany" : "Administrator już istnieje"
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Błąd podczas rejestracji PlatformAdmin: {Email}", request.Email);
-                return StatusCode(500, new { message = "Wystąpił błąd podczas rejestracji" });
+                _logger.LogError(ex, "Błąd podczas sprawdzania statusu setup administratora");
+                return StatusCode(500, new { message = "Wystąpił błąd podczas sprawdzania statusu" });
+            }
+        }
+
+        /// <summary>
+        /// Bezpieczna rejestracja początkowego administratora platformy (tylko przy pierwszym uruchomieniu)
+        /// </summary>
+        [HttpPost("setup-admin")]
+        [AllowAnonymous]
+        public async Task<IActionResult> SetupAdmin([FromBody] SetupAdminRequest request)
+        {
+            try
+            {
+                // Sprawdź czy setup jest włączony
+                var isSetupEnabled = await _adminSetupService.IsAdminSetupEnabledAsync();
+                if (!isSetupEnabled)
+                {
+                    return BadRequest(new { message = "Setup administratora jest wyłączony" });
+                }
+
+                // Sprawdź czy setup jest wymagany
+                var isSetupRequired = await _adminSetupService.IsAdminSetupRequiredAsync();
+                if (!isSetupRequired)
+                {
+                    return BadRequest(new { message = "Administrator już istnieje. Setup nie jest wymagany." });
+                }
+
+                // Utwórz administratora
+                var success = await _adminSetupService.CreateInitialAdminAsync(
+                    request.Email, 
+                    request.Password, 
+                    request.FirstName, 
+                    request.LastName);
+
+                if (!success)
+                {
+                    return BadRequest(new { message = "Nie udało się utworzyć administratora" });
+                }
+
+                _logger.LogInformation("Początkowy administrator został utworzony: {Email}", request.Email);
+
+                return Ok(new { 
+                    message = "Administrator platformy został pomyślnie utworzony",
+                    email = request.Email
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Błąd podczas setup administratora: {Email}", request.Email);
+                return StatusCode(500, new { message = "Wystąpił błąd podczas tworzenia administratora" });
+            }
+        }
+
+        /// <summary>
+        /// Rejestracja nowego providera
+        /// </summary>
+        [HttpPost("register-provider")]
+        [AllowAnonymous]
+        public async Task<IActionResult> RegisterProvider([FromBody] RegisterProviderRequest request)
+        {
+            try
+            {
+                var command = new RegisterProviderCommand(
+                    request.Email,
+                    request.Password,
+                    request.FirstName,
+                    request.LastName,
+                    request.BusinessName,
+                    request.SubdomainSlug,
+                    request.Description,
+                    request.Avatar,
+                    request.CustomDomain);
+
+                var result = await _mediator.Send(command);
+
+                if (!result.Success)
+                {
+                    return BadRequest(new
+                    {
+                        message = result.Message,
+                        errors = result.Errors
+                    });
+                }
+
+                _logger.LogInformation("Provider zarejestrowany: {Email} (ID: {ProviderId})", 
+                    request.Email, result.ProviderId);
+
+                return Ok(new
+                {
+                    message = result.Message,
+                    userId = result.UserId,
+                    providerId = result.ProviderId,
+                    businessName = result.BusinessName,
+                    subdomainSlug = result.SubdomainSlug
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Błąd podczas rejestracji providera: {Email}", request.Email);
+                return StatusCode(500, new { message = "Wystąpił błąd podczas rejestracji providera" });
             }
         }
 
@@ -169,12 +248,25 @@ namespace Orbito.API.Controllers
         }
     }
 
-    public class RegisterPlatformAdminRequest
+    public class SetupAdminRequest
     {
         public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
+    }
+
+    public class RegisterProviderRequest
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string BusinessName { get; set; } = string.Empty;
+        public string SubdomainSlug { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public string? Avatar { get; set; }
+        public string? CustomDomain { get; set; }
     }
 
     public class LoginRequest

@@ -1,11 +1,9 @@
 using MediatR;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Domain.Entities;
 using Orbito.Domain.Identity;
-using Orbito.Domain.ValueObjects;
 
 namespace Orbito.Application.Providers.Commands.CreateProvider
 {
@@ -49,7 +47,7 @@ namespace Orbito.Application.Providers.Commands.CreateProvider
 
                 // Sprawdź czy subdomain jest dostępny
                 var existingProvider = await _providerRepository.GetBySubdomainSlugAsync(request.SubdomainSlug, cancellationToken);
-                
+
                 if (existingProvider != null)
                 {
                     throw new InvalidOperationException($"Subdomain '{request.SubdomainSlug}' jest już zajęty");
@@ -64,10 +62,10 @@ namespace Orbito.Application.Providers.Commands.CreateProvider
                 // Ustaw dodatkowe właściwości
                 if (!string.IsNullOrEmpty(request.Description))
                     provider.Description = request.Description;
-                
+
                 if (!string.IsNullOrEmpty(request.Avatar))
                     provider.Avatar = request.Avatar;
-                
+
                 if (!string.IsNullOrEmpty(request.CustomDomain))
                     provider.CustomDomain = request.CustomDomain;
 
@@ -82,7 +80,7 @@ namespace Orbito.Application.Providers.Commands.CreateProvider
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
-                _logger.LogInformation("Provider utworzony: {BusinessName} (TenantId: {TenantId})", 
+                _logger.LogInformation("Provider utworzony: {BusinessName} (TenantId: {TenantId})",
                     provider.BusinessName, provider.TenantId.Value);
 
                 return new CreateProviderResult(

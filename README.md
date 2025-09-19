@@ -107,7 +107,9 @@ dotnet run --project Orbito.API
 
 #### AccountController
 
-- `POST /api/account/register-platform-admin` - Rejestracja administratora platformy
+- `GET /api/account/admin-setup-status` - Sprawdza status setup administratora
+- `POST /api/account/setup-admin` - Bezpieczna rejestracja początkowego administratora (tylko przy pierwszym uruchomieniu)
+- `POST /api/account/register-provider` - Rejestracja nowego providera z automatycznym przypisaniem roli
 - `POST /api/account/login` - Logowanie użytkownika
 
 #### ProvidersController
@@ -144,6 +146,22 @@ Log.Logger = new LoggerConfiguration()
 
 ## 🔐 Uwierzytelnianie i Autoryzacja
 
+### 🔒 Bezpieczny Model Uwierzytelniania
+
+Aplikacja implementuje **bezpieczny model uwierzytelniania** z następującymi zabezpieczeniami:
+
+#### 1. Bezpieczna Rejestracja Administratora
+
+- **Jednorazowa konfiguracja** - administrator może być utworzony tylko przy pierwszym uruchomieniu aplikacji
+- **Kontrola środowiska** - setup administratora jest dostępny tylko w środowisku Development lub gdy jest włączony w konfiguracji
+- **Automatyczna blokada** - po utworzeniu pierwszego administratora, endpoint setup jest automatycznie blokowany
+
+#### 2. Rejestracja Providerów
+
+- **Publiczny endpoint** - providerzy mogą się rejestrować bez ograniczeń
+- **Automatyczne przypisanie roli** - nowi providerzy automatycznie otrzymują rolę `Provider`
+- **Walidacja subdomain** - sprawdzanie unikalności subdomain przed utworzeniem konta
+
 ### JWT Configuration
 
 ```json
@@ -152,6 +170,27 @@ Log.Logger = new LoggerConfiguration()
     "Key": "your-secret-key-here",
     "Issuer": "http://localhost:5211",
     "Audience": "http://localhost:5211"
+  },
+  "AdminSetup": {
+    "Enabled": false
+  }
+}
+```
+
+### Konfiguracja AdminSetup
+
+```json
+// appsettings.Development.json
+{
+  "AdminSetup": {
+    "Enabled": true
+  }
+}
+
+// appsettings.json (Production)
+{
+  "AdminSetup": {
+    "Enabled": false
   }
 }
 ```
@@ -391,11 +430,15 @@ _logger.LogInformation("User {UserId} from tenant {TenantId} accessed resource {
 
 ### 🔄 Workflow Multi-Tenancy
 
-#### 1. Rejestracja Nowego Tenanta
+#### 1. Bezpieczna Rejestracja Administratora (Jednorazowa)
 
 ```csharp
-// 1. Rejestracja PlatformAdmin
-POST /api/account/register-platform-admin
+// 1. Sprawdzenie statusu setup administratora
+GET /api/account/admin-setup-status
+// Response: { "isSetupRequired": true, "isSetupEnabled": true }
+
+// 2. Utworzenie początkowego administratora (tylko przy pierwszym uruchomieniu)
+POST /api/account/setup-admin
 {
     "email": "admin@example.com",
     "password": "SecurePassword123!",
@@ -403,14 +446,49 @@ POST /api/account/register-platform-admin
     "lastName": "Kowalski"
 }
 
-// 2. Logowanie PlatformAdmin
+// 3. Logowanie PlatformAdmin
+POST /api/account/login
+{
+    "email": "admin@example.com",
+    "password": "SecurePassword123!"
+}
+```
+
+#### 2. Rejestracja Nowego Providera
+
+```csharp
+// 1. Rejestracja Provider (publiczny endpoint)
+POST /api/account/register-provider
+{
+    "email": "provider@example.com",
+    "password": "SecurePassword123!",
+    "firstName": "Anna",
+    "lastName": "Nowak",
+    "businessName": "Moja Firma",
+    "subdomainSlug": "moja-firma",
+    "description": "Opis firmy"
+}
+
+// 2. Automatyczne przypisanie roli Provider i utworzenie TenantId
+// 3. Logowanie Provider
+POST /api/account/login
+{
+    "email": "provider@example.com",
+    "password": "SecurePassword123!"
+}
+```
+
+#### 3. Tworzenie Provider przez PlatformAdmin (Alternatywny sposób)
+
+```csharp
+// 1. Logowanie PlatformAdmin
 POST /api/account/login
 {
     "email": "admin@example.com",
     "password": "SecurePassword123!"
 }
 
-// 3. Tworzenie Provider (główny tenant)
+// 2. Tworzenie Provider (wymaga roli PlatformAdmin)
 POST /api/providers
 {
     "userId": "user-guid",
@@ -418,10 +496,6 @@ POST /api/providers
     "subdomainSlug": "moja-firma",
     "description": "Opis firmy"
 }
-
-// 4. Automatyczne przypisanie TenantId w CreateProviderCommand
-var provider = Provider.Create(userId, businessName, subdomainSlug);
-// TenantId jest automatycznie ustawiony na provider.Id
 ```
 
 #### 2. Dodawanie Klienta do Tenanta
@@ -495,6 +569,10 @@ var subscription = Subscription.Create(provider.TenantId, clientId, planId, pric
 - [x] **Tenant Middleware** - automatyczne wykrywanie tenanta z requestu
 - [x] **Tenant Context Service** - zarządzanie kontekstem tenanta
 - [x] **Repository Pattern** - implementacja UnitOfWork z repozytoriami
+- [x] **🔒 Bezpieczny Model Uwierzytelniania** - refaktoryzacja systemu bezpieczeństwa
+- [x] **AdminSetupService** - bezpieczna rejestracja administratora z kontrolą środowiska
+- [x] **RegisterProviderCommand** - CQRS command do rejestracji providerów
+- [x] **Bezpieczne Endpointy** - usunięcie publicznego dostępu do tworzenia administratorów
 
 ### 🔄 W Trakcie
 
@@ -540,12 +618,14 @@ W przypadku problemów lub pytań:
 
 ### ✅ Zrealizowane Funkcjonalności
 
-1. **Rejestracja PlatformAdmin** - endpoint do tworzenia administratorów platformy z walidacją
+1. **🔒 Bezpieczna Rejestracja PlatformAdmin** - jednorazowa konfiguracja administratora z kontrolą środowiska
 2. **JWT Claims** - rozszerzone tokeny JWT o TenantId i Role dla multi-tenancy
 3. **CreateProviderCommand** - komenda CQRS do tworzenia providerów z automatycznym przypisaniem TenantId
-4. **Tenant Middleware** - middleware automatycznie wykrywający kontekst tenanta z JWT, headers i query parameters
-5. **Repository Pattern** - implementacja UnitOfWork z generycznymi repozytoriami
-6. **Tenant Context Service** - serwis do zarządzania kontekstem tenanta w aplikacji
+4. **RegisterProviderCommand** - komenda CQRS do rejestracji providerów z automatycznym przypisaniem roli
+5. **Tenant Middleware** - middleware automatycznie wykrywający kontekst tenanta z JWT, headers i query parameters
+6. **Repository Pattern** - implementacja UnitOfWork z generycznymi repozytoriami
+7. **Tenant Context Service** - serwis do zarządzania kontekstem tenanta w aplikacji
+8. **AdminSetupService** - serwis do bezpiecznego zarządzania początkową konfiguracją administratora
 
 ### 🔧 Architektura
 
@@ -554,6 +634,7 @@ W przypadku problemów lub pytań:
 - **Multi-Tenancy** z automatyczną izolacją danych
 - **JWT Authentication** z rozszerzonymi claims
 - **Repository Pattern** dla abstrakcji dostępu do danych
+- **🔒 Bezpieczny Model Uwierzytelniania** z kontrolą dostępu i jednorazową konfiguracją
 
 ### 🚀 Następne Kroki
 
@@ -563,6 +644,42 @@ W przypadku problemów lub pytań:
 4. **Frontend aplikacja** w React/Next.js
 5. **Docker containerization** i CI/CD pipeline
 
+## 🔒 Bezpieczeństwo Aplikacji
+
+### 🛡️ Implementowane Zabezpieczenia
+
+#### 1. Bezpieczna Rejestracja Administratora
+
+- **Jednorazowa konfiguracja** - administrator może być utworzony tylko przy pierwszym uruchomieniu
+- **Kontrola środowiska** - setup dostępny tylko w Development lub gdy włączony w konfiguracji
+- **Automatyczna blokada** - endpoint setup jest blokowany po utworzeniu pierwszego administratora
+
+#### 2. Kontrola Dostępu
+
+- **Role-based Authorization** - system ról z kontrolą dostępu do zasobów
+- **JWT Authentication** - bezpieczne tokeny z claims dla multi-tenancy
+- **Tenant Isolation** - automatyczna izolacja danych między tenantami
+
+#### 3. Walidacja i Sanityzacja
+
+- **FluentValidation** - walidacja wszystkich żądań
+- **Input Sanitization** - sanityzacja danych wejściowych
+- **SQL Injection Protection** - Entity Framework Core z parametrami
+
+#### 4. Logowanie i Monitorowanie
+
+- **Structured Logging** - szczegółowe logi z kontekstem tenanta
+- **Performance Monitoring** - monitorowanie wydajności operacji
+- **Error Tracking** - śledzenie błędów z kontekstem
+
+### 🚨 Zalecenia Bezpieczeństwa
+
+1. **Zmiana klucza JWT** - użyj silnego, unikalnego klucza w produkcji
+2. **HTTPS** - wymuś HTTPS we wszystkich środowiskach
+3. **Rate Limiting** - implementuj ograniczenia częstotliwości żądań
+4. **Audit Logging** - dodaj logi audytu dla operacji administracyjnych
+5. **Backup Strategy** - regularne kopie zapasowe bazy danych
+
 ---
 
-**Orbito** - Nowoczesna platforma SaaS dla zarządzania subskrypcjami i płatnościami.
+**Orbito** - Nowoczesna platforma SaaS dla zarządzania subskrypcjami i płatnościami z zaawansowanymi zabezpieczeniami.
