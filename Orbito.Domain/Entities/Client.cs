@@ -76,5 +76,55 @@ namespace Orbito.Domain.Entities
                 CreatedAt = DateTime.UtcNow
             };
         }
+
+        // Business Operations
+        public void Activate()
+        {
+            IsActive = true;
+        }
+
+        public void Deactivate()
+        {
+            IsActive = false;
+        }
+
+        public void UpdateContactInfo(string? companyName, string? phone)
+        {
+            if (!string.IsNullOrWhiteSpace(companyName))
+            {
+                CompanyName = companyName;
+            }
+
+            if (!string.IsNullOrWhiteSpace(phone))
+            {
+                Phone = phone;
+            }
+        }
+
+        public void UpdateDirectInfo(string? email, string? firstName, string? lastName)
+        {
+            if (UserId != null) return; // Nie można aktualizować danych bezpośrednich dla klientów z kontem Identity
+
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                DirectEmail = email;
+            }
+
+            if (!string.IsNullOrWhiteSpace(firstName))
+            {
+                DirectFirstName = firstName;
+            }
+
+            if (!string.IsNullOrWhiteSpace(lastName))
+            {
+                DirectLastName = lastName;
+            }
+        }
+
+        public bool CanBeDeleted()
+        {
+            // Klient może być usunięty tylko jeśli nie ma aktywnych subskrypcji
+            return !Subscriptions.Any(s => s.Status == SubscriptionStatus.Active);
+        }
     }
 }
