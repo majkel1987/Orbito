@@ -1,4 +1,5 @@
-﻿using Orbito.Domain.Interfaces;
+﻿using Orbito.Domain.Enums;
+using Orbito.Domain.Interfaces;
 using Orbito.Domain.ValueObjects;
 
 namespace Orbito.Domain.Entities
@@ -15,13 +16,15 @@ namespace Orbito.Domain.Entities
         public BillingPeriod BillingPeriod { get; set; }
         public int TrialDays { get; set; }
 
-        // Plan Features (JSON or separate entity)
-        public string? FeaturesJson { get; set; }  // Serialized features list
+        // Plan Features and Limitations (JSON)
+        public string? FeaturesJson { get; set; }      // Serialized features list
+        public string? LimitationsJson { get; set; }   // Serialized limitations list
 
         // Plan Settings
+        public int TrialPeriodDays { get; set; }       // Trial period in days
         public bool IsActive { get; set; }
-        public bool IsPublic { get; set; }      // Visible on public page
-        public int SortOrder { get; set; }      // Display order
+        public bool IsPublic { get; set; }             // Visible on public page
+        public int SortOrder { get; set; }             // Display order
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
 
@@ -38,7 +41,11 @@ namespace Orbito.Domain.Entities
         string currency,
         BillingPeriodType billingPeriodType,
         string? description = null,
-        int trialDays = 0)
+        int trialDays = 0,
+        int trialPeriodDays = 0,
+        string? featuresJson = null,
+        string? limitationsJson = null,
+        int sortOrder = 0)
     {
         return new SubscriptionPlan
         {
@@ -49,9 +56,12 @@ namespace Orbito.Domain.Entities
             Price = Money.Create(amount, currency),
             BillingPeriod = BillingPeriod.Create(1, billingPeriodType),
             TrialDays = trialDays,
+            TrialPeriodDays = trialPeriodDays,
+            FeaturesJson = featuresJson,
+            LimitationsJson = limitationsJson,
             IsActive = true,
             IsPublic = true,
-            SortOrder = 0,
+            SortOrder = sortOrder,
             CreatedAt = DateTime.UtcNow
         };
     }
@@ -62,10 +72,51 @@ namespace Orbito.Domain.Entities
             UpdatedAt = DateTime.UtcNow;
         }
 
+        public void UpdateFeatures(string? featuresJson)
+        {
+            FeaturesJson = featuresJson;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        public void UpdateLimitations(string? limitationsJson)
+        {
+            LimitationsJson = limitationsJson;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        public void UpdateTrialPeriod(int trialPeriodDays)
+        {
+            TrialPeriodDays = trialPeriodDays;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        public void UpdateSortOrder(int sortOrder)
+        {
+            SortOrder = sortOrder;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        public void Activate()
+        {
+            IsActive = true;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
         public void Deactivate()
         {
             IsActive = false;
             UpdatedAt = DateTime.UtcNow;
+        }
+
+        public void UpdateVisibility(bool isPublic)
+        {
+            IsPublic = isPublic;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        public bool CanBeDeleted()
+        {
+            return !Subscriptions.Any(s => s.Status == SubscriptionStatus.Active);
         }
     }
 }

@@ -151,7 +151,7 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
                 Id = userId,
                 Email = "test@example.com"
             };
-            user.Provider = new Provider(); // User already has a provider
+            user.Provider = Provider.Create(Guid.NewGuid(), "Test Business", "test-business"); // User already has a provider
 
             _userManagerMock.Setup(x => x.FindByIdAsync(userId.ToString()))
                 .ReturnsAsync(user);
@@ -179,11 +179,7 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
                 Email = "test@example.com"
             };
 
-            var existingProvider = new Provider
-            {
-                Id = Guid.NewGuid(),
-                SubdomainSlug = subdomainSlug
-            };
+            var existingProvider = Provider.Create(Guid.NewGuid(), "Existing Business", subdomainSlug);
 
             SetupSuccessfulUserLookup(user);
             _providerRepositoryMock.Setup(x => x.GetBySubdomainSlugAsync(subdomainSlug, It.IsAny<CancellationToken>()))

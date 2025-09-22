@@ -8,5 +8,10 @@
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
         
         IRepository<T> GetRepository<T>() where T : class;
+        
+        // Specific repositories
+        IProviderRepository Providers { get; }
+        IClientRepository Clients { get; }
+        ISubscriptionPlanRepository SubscriptionPlans { get; }
     }
 }

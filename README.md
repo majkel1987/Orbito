@@ -51,17 +51,27 @@ Orbito/
     - `GetClientsByProviderQuery` - pobieranie klientów providera z paginacją
     - `SearchClientsQuery` - wyszukiwanie klientów
     - `GetClientStatsQuery` - statystyki klientów
+  - **Subscription Plan Management**:
+    - `CreateSubscriptionPlanCommand` - tworzenie nowego planu subskrypcji
+    - `UpdateSubscriptionPlanCommand` - aktualizacja planu subskrypcji
+    - `DeleteSubscriptionPlanCommand` - usuwanie planu subskrypcji (soft/hard delete)
+    - `CloneSubscriptionPlanCommand` - klonowanie planu subskrypcji
+    - `GetSubscriptionPlanByIdQuery` - pobieranie planu subskrypcji po ID
+    - `GetSubscriptionPlansByProviderQuery` - pobieranie planów providera z paginacją
+    - `GetActiveSubscriptionPlansQuery` - pobieranie aktywnych planów subskrypcji
 - **Services**:
   - `TenantContext` - zarządzanie kontekstem tenanta
   - `DateTimeService` - abstrakcja dla operacji na czasie
   - `AdminSetupService` - bezpieczna rejestracja administratora
   - `ProviderService` - logika biznesowa i walidacja providerów
   - `ClientRepository` - repozytorium dla operacji CRUD klientów
+  - `SubscriptionPlanService` - logika biznesowa i walidacja planów subskrypcji
+  - `SubscriptionPlanRepository` - repozytorium dla operacji CRUD planów subskrypcji
 
 #### Orbito.Domain
 
 - **Encje domenowe**: `Provider`, `Client`, `Subscription`, `Payment`
-- **Value Objects**: `TenantId`, `Money`, `Email`, `BillingPeriod`
+- **Value Objects**: `TenantId`, `Money`, `Email`, `BillingPeriod`, `PlanFeatures`, `PlanLimitations`
 - **Identity**: `ApplicationUser`, `ApplicationRole`
 - **Enums**: `PaymentStatus`, `SubscriptionStatus`, `UserRole`
 
@@ -74,6 +84,7 @@ Orbito/
 - **Repository Pattern** - UnitOfWork z generycznymi repozytoriami
 - **Tenant Middleware** - automatyczne wykrywanie kontekstu tenanta
 - **ClientRepository** - specjalistyczne repozytorium dla klientów z operacjami wyszukiwania i statystyk
+- **SubscriptionPlanRepository** - repozytorium dla planów subskrypcji z operacjami filtrowania i sortowania
 
 ## 🚀 Uruchomienie Aplikacji
 
@@ -152,6 +163,16 @@ dotnet run --project Orbito.API
 - `POST /api/clients/{id}/deactivate` - Deaktywacja klienta (wymaga roli Provider/PlatformAdmin)
 - `GET /api/clients/search` - Wyszukiwanie klientów (wymaga roli Provider/PlatformAdmin)
 - `GET /api/clients/stats` - Statystyki klientów (wymaga roli Provider/PlatformAdmin)
+
+#### SubscriptionPlansController
+
+- `POST /api/subscription-plans` - Tworzenie nowego planu subskrypcji (wymaga roli Provider/PlatformAdmin)
+- `GET /api/subscription-plans` - Lista planów subskrypcji z filtrowaniem i paginacją (wymaga roli Provider/PlatformAdmin)
+- `GET /api/subscription-plans/{id}` - Szczegóły planu subskrypcji (wymaga roli Provider/PlatformAdmin)
+- `PUT /api/subscription-plans/{id}` - Aktualizacja planu subskrypcji (wymaga roli Provider/PlatformAdmin)
+- `DELETE /api/subscription-plans/{id}` - Usunięcie planu subskrypcji (wymaga roli Provider/PlatformAdmin)
+- `POST /api/subscription-plans/{id}/clone` - Klonowanie planu subskrypcji (wymaga roli Provider/PlatformAdmin)
+- `GET /api/subscription-plans/active` - Lista aktywnych planów subskrypcji (publiczny endpoint)
 
 ## 📊 Logowanie
 
@@ -770,16 +791,31 @@ dotnet test --filter "Category=Unit"
 - [x] **Client Queries** - GetById, GetByProvider, Search, GetStats z paginacją
 - [x] **ClientsController** - kompletne API endpoints dla zarządzania klientami
 - [x] **Client Business Logic** - metody domenowe Activate, Deactivate, CanBeDeleted
+- [x] **📋 Subscription Plan Management** - kompletne zarządzanie planami subskrypcji z CQRS
+- [x] **SubscriptionPlan Entity** - rozszerzona encja z Features, Limitations, TrialPeriodDays, IsActive, SortOrder
+- [x] **PlanFeatures & PlanLimitations** - Value Objects dla elastycznego definiowania funkcji i ograniczeń
+- [x] **SubscriptionPlan Commands** - Create, Update, Delete, Clone z walidacją
+- [x] **SubscriptionPlan Queries** - GetById, GetByProvider, GetActive z paginacją
+- [x] **SubscriptionPlanRepository** - repozytorium z operacjami filtrowania i sortowania
+- [x] **SubscriptionPlanService** - logika biznesowa i walidacja planów
+- [x] **SubscriptionPlansController** - kompletne API endpoints dla zarządzania planami
 
 ### 🔄 W Trakcie
 
 - [x] **Testy jednostkowe** - kompletne pokrycie testami jednostkowymi
+- [x] **Subscription Plan Management** - kompletne zarządzanie planami subskrypcji
 - [ ] Testy integracyjne
 - [ ] **Dodatkowe Commands/Queries** - rozszerzenie CQRS pattern
 - [ ] **Provider Management** - pełne zarządzanie providerami
 
 ### 📅 Planowane
 
+- [ ] **Subscription Management** - pełne zarządzanie subskrypcjami klientów
+- [ ] **Payment Processing** - integracja z systemami płatności
+- [ ] **Billing & Invoicing** - automatyczne generowanie faktur
+- [ ] **Analytics & Reporting** - zaawansowane raporty i analityka
+- [ ] **Email Notifications** - system powiadomień email
+- [ ] **Webhook System** - integracja z zewnętrznymi systemami
 - [ ] Frontend aplikacja (React/Next.js)
 - [ ] Docker containerization
 - [ ] CI/CD pipeline
@@ -831,6 +867,12 @@ W przypadku problemów lub pytań:
 14. **🧪 Kompletne Testy Jednostkowe** - 132 testy pokrywające wszystkie komponenty (Administrator, Provider, Client, Domain)
 15. **Provider CRUD Operations** - pełne operacje Create, Read, Update, Delete dla Provider z walidacją
 16. **ProviderService** - logika biznesowa i walidacja providerów z testami
+17. **📋 Pełne CRUD dla Subscription Plans** - kompletne operacje Create, Read, Update, Delete, Clone dla planów subskrypcji
+18. **SubscriptionPlanRepository** - repozytorium z operacjami filtrowania, sortowania i wyszukiwania
+19. **SubscriptionPlan Commands** - Create, Update, Delete, Clone z FluentValidation
+20. **SubscriptionPlan Queries** - GetById, GetByProvider, GetActive z paginacją
+21. **SubscriptionPlansController** - kompletne API endpoints dla zarządzania planami subskrypcji
+22. **PlanFeatures & PlanLimitations** - Value Objects dla elastycznego definiowania funkcji i ograniczeń planów
 
 ### 🔧 Architektura
 
@@ -1140,6 +1182,197 @@ POST /api/clients
 - **Role-based Authorization** - różne uprawnienia dla różnych ról
 - **Soft/Hard Delete** - bezpieczne usuwanie z walidacją
 - **Email Validation** - sprawdzanie unikalności emaili
+- **Transaction Management** - UnitOfWork dla spójności danych
+- **Multi-Tenant Security** - automatyczna izolacja danych
+
+## 📋 Subscription Plan Management
+
+### 🏗️ Architektura Subscription Plan Management
+
+Aplikacja implementuje **pełne zarządzanie planami subskrypcji** z wykorzystaniem wzorców Clean Architecture i CQRS:
+
+#### 1. SubscriptionPlan Entity
+
+```csharp
+public class SubscriptionPlan : IMustHaveTenant
+{
+    public Guid Id { get; set; }
+    public TenantId TenantId { get; set; }
+
+    // Plan Details
+    public string Name { get; set; }
+    public string? Description { get; set; }
+    public Money Price { get; set; }
+    public BillingPeriod BillingPeriod { get; set; }
+    public int TrialDays { get; set; }
+
+    // Plan Features and Limitations (JSON)
+    public string? FeaturesJson { get; set; }
+    public string? LimitationsJson { get; set; }
+
+    // Plan Settings
+    public int TrialPeriodDays { get; set; }
+    public bool IsActive { get; set; }
+    public bool IsPublic { get; set; }
+    public int SortOrder { get; set; }
+
+    // Business Operations
+    public void UpdateFeatures(string? featuresJson);
+    public void UpdateLimitations(string? limitationsJson);
+    public void UpdateTrialPeriod(int trialPeriodDays);
+    public void UpdateSortOrder(int sortOrder);
+    public void Activate();
+    public void Deactivate();
+    public void UpdateVisibility(bool isPublic);
+    public bool CanBeDeleted();
+}
+```
+
+#### 2. Value Objects
+
+##### PlanFeatures
+
+```csharp
+public sealed class PlanFeatures
+{
+    public IReadOnlyList<Feature> Features { get; }
+
+    public static PlanFeatures CreateFromJson(string? json);
+    public string ToJson();
+    public void AddFeature(Feature feature);
+    public bool HasFeature(string featureName);
+    public Feature? GetFeature(string featureName);
+}
+
+public sealed class Feature
+{
+    public string Name { get; }
+    public string? Description { get; }
+    public string? Value { get; }
+    public bool IsEnabled { get; }
+}
+```
+
+##### PlanLimitations
+
+```csharp
+public sealed class PlanLimitations
+{
+    public IReadOnlyList<Limitation> Limitations { get; }
+
+    public static PlanLimitations CreateFromJson(string? json);
+    public string ToJson();
+    public void AddLimitation(Limitation limitation);
+    public bool HasLimitation(string limitationName);
+    public int? GetNumericLimit(string limitationName);
+}
+
+public sealed class Limitation
+{
+    public string Name { get; }
+    public string? Description { get; }
+    public int? NumericValue { get; }
+    public string? StringValue { get; }
+    public LimitationType Type { get; }
+}
+```
+
+#### 3. CQRS Commands & Queries
+
+**Commands (Write Operations):**
+
+- `CreateSubscriptionPlanCommand` - tworzenie nowego planu subskrypcji
+- `UpdateSubscriptionPlanCommand` - aktualizacja planu subskrypcji
+- `DeleteSubscriptionPlanCommand` - usuwanie planu subskrypcji (soft/hard delete)
+- `CloneSubscriptionPlanCommand` - klonowanie planu subskrypcji
+
+**Queries (Read Operations):**
+
+- `GetSubscriptionPlanByIdQuery` - pobieranie planu subskrypcji po ID
+- `GetSubscriptionPlansByProviderQuery` - pobieranie planów providera z paginacją
+- `GetActiveSubscriptionPlansQuery` - pobieranie aktywnych planów subskrypcji
+
+#### 4. Subscription Plan Features
+
+##### 🔐 Autoryzacja Subscription Plan Operations
+
+| Endpoint                                  | PlatformAdmin | Provider | Client |
+| ----------------------------------------- | ------------- | -------- | ------ |
+| `GET /api/subscription-plans`             | ✅            | ✅\*     | ❌     |
+| `GET /api/subscription-plans/{id}`        | ✅            | ✅\*     | ❌     |
+| `POST /api/subscription-plans`            | ✅            | ✅\*     | ❌     |
+| `PUT /api/subscription-plans/{id}`        | ✅            | ✅\*     | ❌     |
+| `DELETE /api/subscription-plans/{id}`     | ✅            | ✅\*     | ❌     |
+| `POST /api/subscription-plans/{id}/clone` | ✅            | ✅\*     | ❌     |
+| `GET /api/subscription-plans/active`      | ✅            | ✅\*     | ✅     |
+
+\*Provider może operować tylko na planach ze swojego tenanta
+
+##### 📊 Subscription Plan Management Features
+
+- **Features & Limitations** - elastyczne definiowanie funkcji i ograniczeń planów w formacie JSON
+- **Trial Periods** - konfiguracja okresów próbnych dla planów
+- **Sort Order** - kontrola kolejności wyświetlania planów
+- **Public/Private Plans** - kontrola widoczności planów dla klientów
+- **Plan Cloning** - szybkie tworzenie nowych planów na podstawie istniejących
+- **Soft/Hard Delete** - bezpieczne usuwanie planów z walidacją aktywnych subskrypcji
+
+##### 🔍 Subscription Plan Search & Filtering
+
+- **Wyszukiwanie** po nazwie i opisie planu
+- **Filtrowanie** aktywnych/nieaktywnych planów
+- **Filtrowanie** publicznych/prywatnych planów
+- **Paginacja** z konfigurowalnym rozmiarem strony
+- **Sortowanie** według kolejności sortowania i nazwy
+
+##### 🏢 Multi-Tenant Subscription Plan Management
+
+- **Automatyczna izolacja** - plany są automatycznie przypisywane do tenanta providera
+- **Tenant Context** - wszystkie operacje są filtrowane według kontekstu tenanta
+- **Bezpieczeństwo** - provider może zarządzać tylko swoimi planami
+
+#### 5. Subscription Plan Creation Models
+
+##### Model 1: Basic Plan Creation
+
+```csharp
+POST /api/subscription-plans
+{
+    "name": "Basic Plan",
+    "description": "Basic features for small businesses",
+    "amount": 29.99,
+    "currency": "USD",
+    "billingPeriodType": "Monthly",
+    "trialPeriodDays": 14,
+    "isPublic": true,
+    "sortOrder": 1
+}
+```
+
+##### Model 2: Advanced Plan with Features and Limitations
+
+```csharp
+POST /api/subscription-plans
+{
+    "name": "Pro Plan",
+    "description": "Advanced features for growing businesses",
+    "amount": 99.99,
+    "currency": "USD",
+    "billingPeriodType": "Monthly",
+    "trialPeriodDays": 30,
+    "featuresJson": "{\"features\":[{\"name\":\"Unlimited Users\",\"description\":\"Add unlimited team members\",\"isEnabled\":true},{\"name\":\"Advanced Analytics\",\"description\":\"Access to detailed reports\",\"isEnabled\":true}]}",
+    "limitationsJson": "{\"limitations\":[{\"name\":\"Storage\",\"type\":\"Numeric\",\"numericValue\":1000,\"description\":\"GB of storage\"},{\"name\":\"API Calls\",\"type\":\"Numeric\",\"numericValue\":10000,\"description\":\"API calls per month\"}]}",
+    "isPublic": true,
+    "sortOrder": 2
+}
+```
+
+#### 6. Validation & Security
+
+- **FluentValidation** - walidacja wszystkich operacji
+- **Role-based Authorization** - różne uprawnienia dla różnych ról
+- **Soft/Hard Delete** - bezpieczne usuwanie z walidacją aktywnych subskrypcji
+- **Plan Name Validation** - sprawdzanie unikalności nazw planów
 - **Transaction Management** - UnitOfWork dla spójności danych
 - **Multi-Tenant Security** - automatyczna izolacja danych
 

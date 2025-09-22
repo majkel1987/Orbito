@@ -31,6 +31,25 @@ namespace Orbito.Infrastructure.Data.Configurations.Entity
             builder.Property(p => p.FeaturesJson)
                 .HasColumnType("nvarchar(max)");
 
+            builder.Property(p => p.LimitationsJson)
+                .HasColumnType("nvarchar(max)");
+
+            builder.Property(p => p.TrialPeriodDays)
+                .IsRequired()
+                .HasDefaultValue(0);
+
+            builder.Property(p => p.IsActive)
+                .IsRequired()
+                .HasDefaultValue(true);
+
+            builder.Property(p => p.IsPublic)
+                .IsRequired()
+                .HasDefaultValue(true);
+
+            builder.Property(p => p.SortOrder)
+                .IsRequired()
+                .HasDefaultValue(0);
+
             // Money Value Object
             builder.OwnsOne(p => p.Price, money =>
             {
@@ -67,6 +86,12 @@ namespace Orbito.Infrastructure.Data.Configurations.Entity
 
             builder.HasIndex(p => new { p.TenantId, p.SortOrder })
                 .HasDatabaseName("IX_SubscriptionPlans_TenantId_SortOrder");
+
+            builder.HasIndex(p => new { p.TenantId, p.IsPublic })
+                .HasDatabaseName("IX_SubscriptionPlans_TenantId_IsPublic");
+
+            builder.HasIndex(p => new { p.TenantId, p.IsActive, p.IsPublic })
+                .HasDatabaseName("IX_SubscriptionPlans_TenantId_IsActive_IsPublic");
 
             // Relationships
             builder.HasOne(p => p.Provider)

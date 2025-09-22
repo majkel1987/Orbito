@@ -10,12 +10,19 @@ namespace Orbito.Infrastructure.Persistance
         private readonly ApplicationDbContext _context;
         private IDbContextTransaction _transaction;
         private readonly ConcurrentDictionary<Type, object> _repositories;
+        private IProviderRepository _providers;
+        private IClientRepository _clients;
+        private ISubscriptionPlanRepository _subscriptionPlans;
 
         public UnitOfWork(ApplicationDbContext context)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _repositories = new ConcurrentDictionary<Type, object>();
         }
+
+        public IProviderRepository Providers => _providers ??= new ProviderRepository(_context);
+        public IClientRepository Clients => _clients ??= new ClientRepository(_context);
+        public ISubscriptionPlanRepository SubscriptionPlans => _subscriptionPlans ??= new SubscriptionPlanRepository(_context);
 
          public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
          {

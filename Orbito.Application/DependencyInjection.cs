@@ -33,6 +33,7 @@ namespace Orbito.Application
             services.AddScoped<ITenantContext, TenantContext>();
             services.AddScoped<IAdminSetupService, AdminSetupService>();
             services.AddScoped<IProviderService, ProviderService>();
+            services.AddScoped<ISubscriptionPlanService, SubscriptionPlanService>();
 
             return services;
         }

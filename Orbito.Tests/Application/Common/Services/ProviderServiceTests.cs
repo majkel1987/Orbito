@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.Common.Services;
+using Orbito.Domain.Entities;
 using Xunit;
 
 namespace Orbito.Tests.Application.Common.Services
@@ -167,12 +168,12 @@ namespace Orbito.Tests.Application.Common.Services
         {
             // Arrange
             var providerId = Guid.NewGuid();
+            var provider = Provider.Create(Guid.NewGuid(), "Test Business", "test-business");
+            provider.Id = providerId;
+            provider.ActiveClientsCount = 0;
+            
             _providerRepositoryMock.Setup(x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new Domain.Entities.Provider
-                {
-                    Id = providerId,
-                    ActiveClientsCount = 0
-                });
+                .ReturnsAsync(provider);
 
             // Act
             var result = await _providerService.CanProviderBeDeletedAsync(providerId);
@@ -186,12 +187,12 @@ namespace Orbito.Tests.Application.Common.Services
         {
             // Arrange
             var providerId = Guid.NewGuid();
+            var provider = Provider.Create(Guid.NewGuid(), "Test Business", "test-business");
+            provider.Id = providerId;
+            provider.ActiveClientsCount = 5;
+            
             _providerRepositoryMock.Setup(x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new Domain.Entities.Provider
-                {
-                    Id = providerId,
-                    ActiveClientsCount = 5
-                });
+                .ReturnsAsync(provider);
 
             // Act
             var result = await _providerService.CanProviderBeDeletedAsync(providerId);
@@ -206,7 +207,7 @@ namespace Orbito.Tests.Application.Common.Services
             // Arrange
             var providerId = Guid.NewGuid();
             _providerRepositoryMock.Setup(x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync((Domain.Entities.Provider?)null);
+                .ReturnsAsync((Orbito.Domain.Entities.Provider?)null);
 
             // Act
             var result = await _providerService.CanProviderBeDeletedAsync(providerId);
@@ -239,12 +240,9 @@ namespace Orbito.Tests.Application.Common.Services
         {
             // Arrange
             var providerId = Guid.NewGuid();
-            var provider = new Domain.Entities.Provider
-            {
-                Id = providerId,
-                BusinessName = "Test Business",
-                ActiveClientsCount = 10
-            };
+            var provider = Provider.Create(Guid.NewGuid(), "Test Business", "test-business");
+            provider.Id = providerId;
+            provider.ActiveClientsCount = 10;
 
             _providerRepositoryMock.Setup(x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(provider);
@@ -264,7 +262,7 @@ namespace Orbito.Tests.Application.Common.Services
             // Arrange
             var providerId = Guid.NewGuid();
             _providerRepositoryMock.Setup(x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync((Domain.Entities.Provider?)null);
+                .ReturnsAsync((Orbito.Domain.Entities.Provider?)null);
 
             // Act
             var result = await _providerService.GetProviderWithMetricsAsync(providerId);
@@ -297,22 +295,19 @@ namespace Orbito.Tests.Application.Common.Services
         {
             // Arrange
             var providerId = Guid.NewGuid();
-            var provider = new Domain.Entities.Provider
-            {
-                Id = providerId,
-                BusinessName = "Test Business"
-            };
+            var provider = Provider.Create(Guid.NewGuid(), "Test Business", "test-business");
+            provider.Id = providerId;
 
             _providerRepositoryMock.Setup(x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(provider);
-            _providerRepositoryMock.Setup(x => x.UpdateAsync(It.IsAny<Domain.Entities.Provider>(), It.IsAny<CancellationToken>()))
+            _providerRepositoryMock.Setup(x => x.UpdateAsync(It.IsAny<Provider>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.CompletedTask);
 
             // Act
             await _providerService.UpdateProviderMetricsAsync(providerId);
 
             // Assert
-            _providerRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Domain.Entities.Provider>(), It.IsAny<CancellationToken>()), Times.Once);
+            _providerRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Provider>(), It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -321,13 +316,13 @@ namespace Orbito.Tests.Application.Common.Services
             // Arrange
             var providerId = Guid.NewGuid();
             _providerRepositoryMock.Setup(x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync((Domain.Entities.Provider?)null);
+                .ReturnsAsync((Orbito.Domain.Entities.Provider?)null);
 
             // Act
             await _providerService.UpdateProviderMetricsAsync(providerId);
 
             // Assert
-            _providerRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Domain.Entities.Provider>(), It.IsAny<CancellationToken>()), Times.Never);
+            _providerRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Provider>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
@@ -352,11 +347,9 @@ namespace Orbito.Tests.Application.Common.Services
         {
             // Arrange
             var providerId = Guid.NewGuid();
-            var provider = new Domain.Entities.Provider
-            {
-                Id = providerId,
-                IsActive = true
-            };
+            var provider = Provider.Create(Guid.NewGuid(), "Test Business", "test-business");
+            provider.Id = providerId;
+            provider.IsActive = true;
 
             _providerRepositoryMock.Setup(x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(provider);
@@ -373,11 +366,9 @@ namespace Orbito.Tests.Application.Common.Services
         {
             // Arrange
             var providerId = Guid.NewGuid();
-            var provider = new Domain.Entities.Provider
-            {
-                Id = providerId,
-                IsActive = false
-            };
+            var provider = Provider.Create(Guid.NewGuid(), "Test Business", "test-business");
+            provider.Id = providerId;
+            provider.IsActive = false;
 
             _providerRepositoryMock.Setup(x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(provider);
@@ -395,7 +386,7 @@ namespace Orbito.Tests.Application.Common.Services
             // Arrange
             var providerId = Guid.NewGuid();
             _providerRepositoryMock.Setup(x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync((Domain.Entities.Provider?)null);
+                .ReturnsAsync((Orbito.Domain.Entities.Provider?)null);
 
             // Act
             var result = await _providerService.IsProviderActiveAsync(providerId);
