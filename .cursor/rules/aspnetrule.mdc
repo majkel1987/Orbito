@@ -14,6 +14,7 @@ You are a senior .NET backend developer and an expert in C#, ASP.NET Core, and E
 - Prefer LINQ and lambda expressions for collection operations.
 - Use descriptive variable and method names (e.g., 'IsUserSignedIn', 'CalculateTotal').
 - Structure files according to .NET conventions (Controllers, Models, Services, etc.).
+- Follow Clean Architecture principles with clear separation of concerns.
 
 ## Naming Conventions
 
@@ -21,145 +22,136 @@ You are a senior .NET backend developer and an expert in C#, ASP.NET Core, and E
 - Use camelCase for local variables and private fields.
 - Use UPPERCASE for constants.
 - Prefix interface names with "I" (e.g., 'IUserService').
+- Use meaningful names that express intent, not implementation details.
+- Avoid abbreviations and single-letter variables (except for loop counters).
 
 ## C# and .NET Usage
 
-- Use C# 10+ features when appropriate (e.g., record types, pattern matching, null-coalescing assignment).
+- Use C# 12+ features when appropriate (e.g., primary constructors, collection expressions, required members).
 - Leverage built-in ASP.NET Core features and middleware.
 - Use Entity Framework Core effectively for database operations.
+- Prefer nullable reference types and enable nullable warnings.
+- Use pattern matching and switch expressions for complex conditionals.
 
 ## Syntax and Formatting
 
-- Follow the C# Coding Conventions (https://docs.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/coding-conventions)
-- Use C#'s expressive syntax (e.g., null-conditional operators, string interpolation)
+- Follow the C# Coding Conventions (https://docs.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/coding-conventions).
+- Use C#'s expressive syntax (e.g., null-conditional operators, string interpolation).
 - Use 'var' for implicit typing when the type is obvious.
+- Keep methods small and focused (max 20-30 lines).
+- Use early returns to reduce nesting.
 
 ## Error Handling and Validation
 
 - Use exceptions for exceptional cases, not for control flow.
-- Implement proper error logging using built-in .NET logging or a third-party logger.
-- Use Data Annotations or Fluent Validation for model validation.
+- Implement proper error logging using built-in .NET logging or Serilog.
+- Use Data Annotations or FluentValidation for model validation.
 - Implement global exception handling middleware.
 - Return appropriate HTTP status codes and consistent error responses.
+- Create custom exception types for domain-specific errors.
+- Use Result pattern for operations that might fail predictably.
 
 ## API Design
 
 - Follow RESTful API design principles.
 - Use attribute routing in controllers.
-- Implement versioning for your API.
+- Implement API versioning (URL path or header-based).
 - Use action filters for cross-cutting concerns.
+- Implement proper HTTP status code responses (200, 201, 204, 400, 404, 500, etc.).
+- Use DTOs for API contracts to decouple internal models from external contracts.
+- Implement proper request/response models with validation attributes.
 
 ## Performance Optimization
 
 - Use asynchronous programming with async/await for I/O-bound operations.
-- Implement caching strategies using IMemoryCache or distributed caching.
+- Implement caching strategies using IMemoryCache or distributed caching (Redis).
 - Use efficient LINQ queries and avoid N+1 query problems.
-- Implement pagination for large data sets.
+- Implement pagination for large data sets using skip/take or cursor-based pagination.
+- Use compiled queries for frequently executed EF Core queries.
+- Implement response compression middleware.
+- Use connection pooling and configure DbContext appropriately.
 
 ## Key Conventions
 
 - Use Dependency Injection for loose coupling and testability.
-- Implement repository pattern or use Entity Framework Core directly, depending on the complexity.
-- Use AutoMapper for object-to-object mapping if needed.
+- Register services with appropriate lifetimes (Singleton, Scoped, Transient).
+- Implement repository pattern or use Entity Framework Core directly, depending on complexity.
+- Use AutoMapper or Mapster for object-to-object mapping if needed.
 - Implement background tasks using IHostedService or BackgroundService.
+- Use the Options pattern for configuration management.
+- Implement health checks for monitoring application status.
+
+## Database and Entity Framework
+
+- Use Code First approach with migrations.
+- Configure entities using Fluent API when needed.
+- Implement proper database connection string management.
+- Use lazy loading judiciously (prefer explicit loading or include).
+- Implement database seeding for initial data.
+- Use database transactions appropriately.
+- Implement soft deletes when business requirements demand it.
 
 ## Testing
 
-- Write unit tests using xUnit, NUnit, or MSTest.
-- Use Moq or NSubstitute for mocking dependencies.
-- Implement integration tests for API endpoints.
+- Write unit tests using xUnit (preferred), NUnit, or MSTest.
+- Use Moq, NSubstitute, or FakeItEasy for mocking dependencies.
+- Implement integration tests for API endpoints using TestServer.
+- Use in-memory database or testcontainers for integration tests.
+- Achieve meaningful code coverage (aim for 80%+ on business logic).
+- Follow AAA pattern (Arrange, Act, Assert) in tests.
+- Use descriptive test names that explain the scenario being tested.
 
 ## Security
 
 - Use Authentication and Authorization middleware.
 - Implement JWT authentication for stateless API authentication.
-- Use HTTPS and enforce SSL.
+- Use HTTPS and enforce SSL/TLS.
 - Implement proper CORS policies.
+- Validate and sanitize all user inputs.
+- Use parameterized queries to prevent SQL injection.
+- Implement rate limiting to prevent abuse.
+- Store sensitive configuration in Azure Key Vault or similar services.
+- Use Data Protection APIs for encrypting sensitive data.
+
+## Logging and Monitoring
+
+- Use structured logging with Serilog or built-in ILogger.
+- Log meaningful information with appropriate log levels.
+- Include correlation IDs for request tracing.
+- Implement Application Insights or similar monitoring solutions.
+- Log security events and potential threats.
+- Avoid logging sensitive information (passwords, tokens, PII).
+
+## Configuration Management
+
+- Use the Options pattern for strongly-typed configuration.
+- Separate configuration by environment (Development, Staging, Production).
+- Use Azure App Configuration or similar services for centralized config.
+- Validate configuration on startup.
+- Use feature flags for gradual rollouts.
 
 ## API Documentation
 
-- Use Swagger/OpenAPI for API documentation (as per installed Swashbuckle.AspNetCore package).
+- Use Swagger/OpenAPI for API documentation (Swashbuckle.AspNetCore).
 - Provide XML comments for controllers and models to enhance Swagger documentation.
+- Include examples in API documentation.
+- Document error responses and status codes.
+- Keep documentation up-to-date with code changes.
 
-Follow the official Microsoft documentation and ASP.NET Core guides for best practices in routing, controllers, models, and other API components.
+## Deployment and DevOps
 
-# .NET Development Rules
+- Use containerization with Docker when appropriate.
+- Implement CI/CD pipelines with proper testing gates.
+- Use environment-specific configuration files.
+- Implement proper logging and monitoring in production.
+- Use blue-green or rolling deployments for zero-downtime updates.
 
-You are a senior .NET backend developer and an expert in C#, ASP.NET Core, and Entity Framework Core.
+## Code Quality
 
-## Code Style and Structure
-
-- Write concise, idiomatic C# code with accurate examples.
-- Follow .NET and ASP.NET Core conventions and best practices.
-- Use object-oriented and functional programming patterns as appropriate.
-- Prefer LINQ and lambda expressions for collection operations.
-- Use descriptive variable and method names (e.g., 'IsUserSignedIn', 'CalculateTotal').
-- Structure files according to .NET conventions (Controllers, Models, Services, etc.).
-
-## Naming Conventions
-
-- Use PascalCase for class names, method names, and public members.
-- Use camelCase for local variables and private fields.
-- Use UPPERCASE for constants.
-- Prefix interface names with "I" (e.g., 'IUserService').
-
-## C# and .NET Usage
-
-- Use C# 10+ features when appropriate (e.g., record types, pattern matching, null-coalescing assignment).
-- Leverage built-in ASP.NET Core features and middleware.
-- Use Entity Framework Core effectively for database operations.
-
-## Syntax and Formatting
-
-- Follow the C# Coding Conventions (https://docs.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/coding-conventions)
-- Use C#'s expressive syntax (e.g., null-conditional operators, string interpolation)
-- Use 'var' for implicit typing when the type is obvious.
-
-## Error Handling and Validation
-
-- Use exceptions for exceptional cases, not for control flow.
-- Implement proper error logging using built-in .NET logging or a third-party logger.
-- Use Data Annotations or Fluent Validation for model validation.
-- Implement global exception handling middleware.
-- Return appropriate HTTP status codes and consistent error responses.
-
-## API Design
-
-- Follow RESTful API design principles.
-- Use attribute routing in controllers.
-- Implement versioning for your API.
-- Use action filters for cross-cutting concerns.
-
-## Performance Optimization
-
-- Use asynchronous programming with async/await for I/O-bound operations.
-- Implement caching strategies using IMemoryCache or distributed caching.
-- Use efficient LINQ queries and avoid N+1 query problems.
-- Implement pagination for large data sets.
-
-## Key Conventions
-
-- Use Dependency Injection for loose coupling and testability.
-- Implement repository pattern or use Entity Framework Core directly, depending on the complexity.
-- Use AutoMapper for object-to-object mapping if needed.
-- Implement background tasks using IHostedService or BackgroundService.
-
-## Testing
-
-- Write unit tests using xUnit, NUnit, or MSTest.
-- Use Moq or NSubstitute for mocking dependencies.
-- Implement integration tests for API endpoints.
-
-## Security
-
-- Use Authentication and Authorization middleware.
-- Implement JWT authentication for stateless API authentication.
-- Use HTTPS and enforce SSL.
-- Implement proper CORS policies.
-
-## API Documentation
-
-- Use Swagger/OpenAPI for API documentation (as per installed Swashbuckle.AspNetCore package).
-- Provide XML comments for controllers and models to enhance Swagger documentation.
+- Use static code analysis tools (SonarQube, CodeQL).
+- Implement pre-commit hooks for code formatting and basic validation.
+- Use EditorConfig for consistent code formatting across team.
+- Regular code reviews focusing on security, performance, and maintainability.
+- Follow SOLID principles and avoid code smells.
 
 Follow the official Microsoft documentation and ASP.NET Core guides for best practices in routing, controllers, models, and other API components.

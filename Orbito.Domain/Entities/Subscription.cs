@@ -76,11 +76,108 @@ namespace Orbito.Domain.Entities
             UpdatedAt = DateTime.UtcNow;
         }
 
+        public void Activate()
+        {
+            if (Status == SubscriptionStatus.Pending || Status == SubscriptionStatus.Suspended)
+            {
+                Status = SubscriptionStatus.Active;
+                UpdatedAt = DateTime.UtcNow;
+            }
+        }
+
+        public void Suspend()
+        {
+            if (Status == SubscriptionStatus.Active)
+            {
+                Status = SubscriptionStatus.Suspended;
+                UpdatedAt = DateTime.UtcNow;
+            }
+        }
+
+        public void Resume()
+        {
+            if (Status == SubscriptionStatus.Suspended)
+            {
+                Status = SubscriptionStatus.Active;
+                UpdatedAt = DateTime.UtcNow;
+            }
+        }
+
+        public void MarkAsPastDue()
+        {
+            if (Status == SubscriptionStatus.Active)
+            {
+                Status = SubscriptionStatus.PastDue;
+                UpdatedAt = DateTime.UtcNow;
+            }
+        }
+
+        public void MarkAsExpired()
+        {
+            Status = SubscriptionStatus.Expired;
+            EndDate = DateTime.UtcNow;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
         public void ChangePlan(Guid newPlanId, Money newPrice)
         {
             PlanId = newPlanId;
             CurrentPrice = newPrice;
             UpdatedAt = DateTime.UtcNow;
+        }
+
+        public void UpdateNextBillingDate()
+        {
+            NextBillingDate = BillingPeriod.GetNextBillingDate(NextBillingDate);
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        public void EndTrial()
+        {
+            if (IsInTrial)
+            {
+                IsInTrial = false;
+                TrialEndDate = DateTime.UtcNow;
+                NextBillingDate = BillingPeriod.GetNextBillingDate(DateTime.UtcNow);
+                UpdatedAt = DateTime.UtcNow;
+            }
+        }
+
+        public bool CanBeUpgraded()
+        {
+            return Status == SubscriptionStatus.Active && !IsInTrial;
+        }
+
+        public bool CanBeDowngraded()
+        {
+            return Status == SubscriptionStatus.Active && !IsInTrial;
+        }
+
+        public bool CanBeCancelled()
+        {
+            return Status == SubscriptionStatus.Active || Status == SubscriptionStatus.Suspended;
+        }
+
+        public bool CanBeSuspended()
+        {
+            return Status == SubscriptionStatus.Active;
+        }
+
+        public bool CanBeResumed()
+        {
+            return Status == SubscriptionStatus.Suspended;
+        }
+
+        public bool IsExpiring(DateTime checkDate, int daysBeforeExpiration = 7)
+        {
+            return Status == SubscriptionStatus.Active && 
+                   NextBillingDate <= checkDate.AddDays(daysBeforeExpiration) &&
+                   NextBillingDate > checkDate;
+        }
+
+        public bool IsExpired(DateTime checkDate)
+        {
+            return Status == SubscriptionStatus.Active && NextBillingDate <= checkDate;
         }
     }
 }

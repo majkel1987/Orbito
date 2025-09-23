@@ -59,6 +59,19 @@ Orbito/
     - `GetSubscriptionPlanByIdQuery` - pobieranie planu subskrypcji po ID
     - `GetSubscriptionPlansByProviderQuery` - pobieranie planów providera z paginacją
     - `GetActiveSubscriptionPlansQuery` - pobieranie aktywnych planów subskrypcji
+  - **Subscription Management**:
+    - `CreateSubscriptionCommand` - tworzenie nowej subskrypcji dla klienta
+    - `ActivateSubscriptionCommand` - aktywacja subskrypcji
+    - `CancelSubscriptionCommand` - anulowanie subskrypcji
+    - `SuspendSubscriptionCommand` - wstrzymanie subskrypcji
+    - `ResumeSubscriptionCommand` - wznowienie subskrypcji
+    - `UpgradeSubscriptionCommand` - upgrade subskrypcji do wyższego planu
+    - `DowngradeSubscriptionCommand` - downgrade subskrypcji do niższego planu
+    - `RenewSubscriptionCommand` - odnowienie subskrypcji z płatnością
+    - `GetSubscriptionByIdQuery` - pobieranie subskrypcji po ID
+    - `GetSubscriptionsByClientQuery` - pobieranie subskrypcji klienta z paginacją
+    - `GetExpiringSubscriptionsQuery` - pobieranie subskrypcji wygasających
+    - `GetActiveSubscriptionsQuery` - pobieranie aktywnych subskrypcji
 - **Services**:
   - `TenantContext` - zarządzanie kontekstem tenanta
   - `DateTimeService` - abstrakcja dla operacji na czasie
@@ -67,6 +80,8 @@ Orbito/
   - `ClientRepository` - repozytorium dla operacji CRUD klientów
   - `SubscriptionPlanService` - logika biznesowa i walidacja planów subskrypcji
   - `SubscriptionPlanRepository` - repozytorium dla operacji CRUD planów subskrypcji
+  - `SubscriptionService` - logika biznesowa i walidacja subskrypcji
+  - `SubscriptionRepository` - repozytorium dla operacji CRUD subskrypcji
 
 #### Orbito.Domain
 
@@ -74,6 +89,7 @@ Orbito/
 - **Value Objects**: `TenantId`, `Money`, `Email`, `BillingPeriod`, `PlanFeatures`, `PlanLimitations`
 - **Identity**: `ApplicationUser`, `ApplicationRole`
 - **Enums**: `PaymentStatus`, `SubscriptionStatus`, `UserRole`
+- **Domain Services**: `SubscriptionService` z metodami biznesowymi
 
 #### Orbito.Infrastructure
 
@@ -85,6 +101,8 @@ Orbito/
 - **Tenant Middleware** - automatyczne wykrywanie kontekstu tenanta
 - **ClientRepository** - specjalistyczne repozytorium dla klientów z operacjami wyszukiwania i statystyk
 - **SubscriptionPlanRepository** - repozytorium dla planów subskrypcji z operacjami filtrowania i sortowania
+- **SubscriptionRepository** - repozytorium dla subskrypcji z operacjami biznesowymi
+- **Background Jobs** - automatyczne przetwarzanie płatności i sprawdzanie wygasających subskrypcji
 
 ## 🚀 Uruchomienie Aplikacji
 
@@ -173,6 +191,21 @@ dotnet run --project Orbito.API
 - `DELETE /api/subscription-plans/{id}` - Usunięcie planu subskrypcji (wymaga roli Provider/PlatformAdmin)
 - `POST /api/subscription-plans/{id}/clone` - Klonowanie planu subskrypcji (wymaga roli Provider/PlatformAdmin)
 - `GET /api/subscription-plans/active` - Lista aktywnych planów subskrypcji (publiczny endpoint)
+
+#### SubscriptionsController
+
+- `POST /api/subscriptions` - Tworzenie nowej subskrypcji (wymaga roli Provider/PlatformAdmin)
+- `GET /api/subscriptions` - Lista subskrypcji z filtrowaniem i paginacją (wymaga roli Provider/PlatformAdmin)
+- `GET /api/subscriptions/{id}` - Szczegóły subskrypcji (wymaga roli Provider/PlatformAdmin)
+- `GET /api/subscriptions/client/{clientId}` - Subskrypcje klienta (wymaga roli Provider/PlatformAdmin)
+- `GET /api/subscriptions/expiring` - Lista subskrypcji wygasających (wymaga roli Provider/PlatformAdmin)
+- `POST /api/subscriptions/{id}/activate` - Aktywacja subskrypcji (wymaga roli Provider/PlatformAdmin)
+- `POST /api/subscriptions/{id}/cancel` - Anulowanie subskrypcji (wymaga roli Provider/PlatformAdmin)
+- `POST /api/subscriptions/{id}/suspend` - Wstrzymanie subskrypcji (wymaga roli Provider/PlatformAdmin)
+- `POST /api/subscriptions/{id}/resume` - Wznowienie subskrypcji (wymaga roli Provider/PlatformAdmin)
+- `POST /api/subscriptions/{id}/upgrade` - Upgrade subskrypcji (wymaga roli Provider/PlatformAdmin)
+- `POST /api/subscriptions/{id}/downgrade` - Downgrade subskrypcji (wymaga roli Provider/PlatformAdmin)
+- `POST /api/subscriptions/{id}/renew` - Odnowienie subskrypcji (wymaga roli Provider/PlatformAdmin)
 
 ## 📊 Logowanie
 
@@ -810,8 +843,8 @@ dotnet test --filter "Category=Unit"
 
 ### 📅 Planowane
 
-- [ ] **Subscription Management** - pełne zarządzanie subskrypcjami klientów
-- [ ] **Payment Processing** - integracja z systemami płatności
+- [x] **Subscription Management** - pełne zarządzanie subskrypcjami klientów
+- [ ] **Payment Processing** - integracja z systemami płatności (Stripe, PayPal)
 - [ ] **Billing & Invoicing** - automatyczne generowanie faktur
 - [ ] **Analytics & Reporting** - zaawansowane raporty i analityka
 - [ ] **Email Notifications** - system powiadomień email
@@ -873,6 +906,14 @@ W przypadku problemów lub pytań:
 20. **SubscriptionPlan Queries** - GetById, GetByProvider, GetActive z paginacją
 21. **SubscriptionPlansController** - kompletne API endpoints dla zarządzania planami subskrypcji
 22. **PlanFeatures & PlanLimitations** - Value Objects dla elastycznego definiowania funkcji i ograniczeń planów
+23. **📋 Pełne CRUD dla Subscription** - kompletne operacje Create, Read, Update, Delete dla subskrypcji
+24. **SubscriptionRepository** - repozytorium z operacjami biznesowymi i specjalistycznymi metodami
+25. **Subscription Commands** - Create, Activate, Cancel, Suspend, Resume, Upgrade, Downgrade, Renew z FluentValidation
+26. **Subscription Queries** - GetById, GetByClient, GetExpiring, GetActive z paginacją
+27. **SubscriptionsController** - kompletne API endpoints dla zarządzania subskrypcjami
+28. **SubscriptionService** - logika biznesowa i walidacja subskrypcji z metodami domenowymi
+29. **Background Jobs** - CheckExpiringSubscriptionsJob i ProcessRecurringPaymentsJob dla automatyzacji
+30. **Rozszerzone Statusy** - nowe statusy subskrypcji (Pending, Expired) i metody biznesowe
 
 ### 🔧 Architektura
 
@@ -1184,6 +1225,136 @@ POST /api/clients
 - **Email Validation** - sprawdzanie unikalności emaili
 - **Transaction Management** - UnitOfWork dla spójności danych
 - **Multi-Tenant Security** - automatyczna izolacja danych
+
+## 📋 Subscription Management
+
+### 🏗️ Architektura Subscription Management
+
+Aplikacja implementuje **pełne zarządzanie subskrypcjami** z wykorzystaniem wzorców Clean Architecture i CQRS:
+
+#### 1. Subscription Entity
+
+```csharp
+public class Subscription : IMustHaveTenant
+{
+    public Guid Id { get; set; }
+    public TenantId TenantId { get; set; }
+
+    // Subscription Details
+    public Guid ClientId { get; set; }
+    public Guid PlanId { get; set; }
+    public SubscriptionStatus Status { get; set; }
+
+    // Billing Information
+    public Money CurrentPrice { get; set; }
+    public BillingPeriod BillingPeriod { get; set; }
+    public DateTime StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+    public DateTime NextBillingDate { get; set; }
+
+    // Trial Information
+    public bool IsInTrial { get; set; }
+    public DateTime? TrialEndDate { get; set; }
+
+    // Business Operations
+    public void Activate();
+    public void Cancel();
+    public void Suspend();
+    public void Resume();
+    public void MarkAsPastDue();
+    public void MarkAsExpired();
+    public void ChangePlan(Guid newPlanId, Money newPrice);
+    public void UpdateNextBillingDate();
+    public void EndTrial();
+    public bool CanBeUpgraded();
+    public bool CanBeDowngraded();
+    public bool CanBeCancelled();
+    public bool CanBeSuspended();
+    public bool CanBeResumed();
+    public bool IsExpiring(DateTime checkDate, int daysBeforeExpiration = 7);
+    public bool IsExpired(DateTime checkDate);
+}
+```
+
+#### 2. Subscription Service
+
+```csharp
+public interface ISubscriptionService
+{
+    Task<DateTime> CalculateNextBillingDateAsync(Subscription subscription, CancellationToken cancellationToken = default);
+    Task<bool> CanUpgradeAsync(Subscription subscription, Guid newPlanId, CancellationToken cancellationToken = default);
+    Task<bool> CanDowngradeAsync(Subscription subscription, Guid newPlanId, CancellationToken cancellationToken = default);
+    Task<Subscription> ProcessSubscriptionChangeAsync(Subscription subscription, Guid newPlanId, Money newPrice, CancellationToken cancellationToken = default);
+    Task<bool> CanClientSubscribeToPlanAsync(Guid clientId, Guid planId, CancellationToken cancellationToken = default);
+    Task<Subscription> CreateSubscriptionAsync(Guid clientId, Guid planId, Money price, BillingPeriod billingPeriod, int trialDays = 0, CancellationToken cancellationToken = default);
+    Task<bool> ProcessPaymentAsync(Guid subscriptionId, Money amount, string? externalPaymentId = null, CancellationToken cancellationToken = default);
+    Task<IEnumerable<Subscription>> GetExpiringSubscriptionsAsync(int daysBeforeExpiration = 7, CancellationToken cancellationToken = default);
+    Task ProcessExpiredSubscriptionsAsync(CancellationToken cancellationToken = default);
+    Task ProcessRecurringPaymentsAsync(DateTime billingDate, CancellationToken cancellationToken = default);
+}
+```
+
+#### 3. Background Jobs
+
+##### CheckExpiringSubscriptionsJob
+
+- **Częstotliwość**: Codziennie
+- **Funkcja**: Sprawdza subskrypcje wygasające w ciągu 7 dni
+- **Akcje**: Wysyła powiadomienia do klientów
+
+##### ProcessRecurringPaymentsJob
+
+- **Częstotliwość**: Co godzinę
+- **Funkcja**: Przetwarza płatności cykliczne i wygasłe subskrypcje
+- **Akcje**: Automatyczne pobieranie płatności i aktualizacja statusów
+
+#### 4. Subscription Statuses
+
+- **Active** - Aktywna subskrypcja
+- **Cancelled** - Anulowana subskrypcja
+- **PastDue** - Subskrypcja z opóźnioną płatnością
+- **Suspended** - Wstrzymana subskrypcja
+- **Pending** - Oczekująca na aktywację
+- **Expired** - Wygasła subskrypcja
+
+#### 5. Subscription Operations
+
+##### Create Subscription
+
+```csharp
+POST /api/subscriptions
+{
+    "clientId": "client-guid",
+    "planId": "plan-guid",
+    "amount": 29.99,
+    "currency": "USD",
+    "billingPeriodValue": 1,
+    "billingPeriodType": "Monthly",
+    "trialDays": 14
+}
+```
+
+##### Upgrade Subscription
+
+```csharp
+POST /api/subscriptions/{id}/upgrade
+{
+    "newPlanId": "new-plan-guid",
+    "newAmount": 49.99,
+    "currency": "USD"
+}
+```
+
+##### Renew Subscription
+
+```csharp
+POST /api/subscriptions/{id}/renew
+{
+    "amount": 29.99,
+    "currency": "USD",
+    "externalPaymentId": "stripe-payment-intent-id"
+}
+```
 
 ## 📋 Subscription Plan Management
 

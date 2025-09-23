@@ -2,29 +2,72 @@
 alwaysApply: true
 ---
 
-Podstawowe zasady
+## Podstawowe zasady
 
-0. Zawsze odpowiadaj w języku polskim
+0. **Zawsze odpowiadaj w języku polskim**
 
-1. Limit długości plików: Nie twórz plików dłuższych niż 1000 linii kodu. Jeśli plik przekracza ten limit, podziel go na mniejsze moduły.
+1. **Limit długości plików**: Nie twórz plików dłuższych niż 1000 linii kodu. Jeśli plik przekracza ten limit, podziel go na mniejsze moduły.
 
-2. Kolejność działania: Najpierw instaluj zależności, a dopiero później generuj kod, który je wykorzystuje.
+2. **Kolejność działania**: Najpierw instaluj zależności, a dopiero później generuj kod, który je wykorzystuje.
 
-3. Transparentność: Jeśli czegoś nie umiesz, powiedz wprost że nie umiesz. Nie brrnij w kłamstwa ani niepewne rozwiązania.
-   Współpraca i komunikacja
+3. **Transparentność**: Jeśli czegoś nie umiesz, powiedz wprost że nie umiesz. Nie brrnij w kłamstwa ani niepewne rozwiązania.
 
-4. Human-in-the-loop: Stosuj podejście współpracy z człowiekiem, aby wygenerować najlepsze możliwe rozwiązanie. Razem robimy pair programming.
+## Współpraca i komunikacja
 
-5. Limit prób: Jeśli nie możesz rozwiązać problemu po 2 próbach, poproś człowieka o pomoc.
+4. **Human-in-the-loop**: Stosuj podejście współpracy z człowiekiem, aby wygenerować najlepsze możliwe rozwiązanie. Razem robimy pair programming.
 
-6. Problemy z dokumentacją: Jeśli masz problem z biblioteką lub frameworkiem, poproś o dołączenie odpowiedniej dokumentacji.
-   Jakość kodu
+5. **Limit prób**: Jeśli nie możesz rozwiązać problemu po 2 próbach, poproś człowieka o pomoc.
 
-7. Wysoka jakość: Stosuj jedynie porządne i eleganckie rozwiązania.
+6. **Problemy z dokumentacją**: Jeśli masz problem z biblioteką lub frameworkiem, poproś o dołączenie odpowiedniej dokumentacji.
 
-8. Kompletność zadań: NIGDY nie zostawiaj komentarzy typu TODO podczas wykonywania zadania. Każde zadanie musi być wykonane od początku do końca w całości i poprawnie.
+## Jakość kodu
 
-9. Zawsze twórz kod i komentarze w języku angielskim
-   Planowanie i analiza
+7. **Wysoka jakość**: Stosuj jedynie porządne i eleganckie rozwiązania.
 
-10. Analiza istniejącego kodu: Gdy podajesz plan wdrożenia nowej funkcji, zawsze przeanalizuj aktualny kod i dostosuj do niego swój plan.
+<!-- 8. **Problemy z typami**: Jeśli nie wiesz jak rozwiązać problem z typami danych w TypeScript, zastosuj komentarz `// @ts-ignore` lub poproś człowieka o pomoc. -->
+
+9. **Kompletność zadań**: NIGDY nie zostawiaj komentarzy typu TODO podczas wykonywania zadania. Każde zadanie musi być wykonane od początku do końca w całości i poprawnie.
+
+10. **Zawsze twórz kod i komentarze w języku angielskim**
+
+## Planowanie i analiza
+
+11. **Analiza istniejącego kodu**: Gdy podajesz plan wdrożenia nowej funkcji, zawsze przeanalizuj aktualny kod i dostosuj do niego swój plan.
+
+## Bezpieczeństwo i dobre praktyki
+
+12. **Bezpieczeństwo**: Nigdy nie umieszczaj w kodzie haseł, kluczy API, tokenów lub innych wrażliwych danych. Używaj zmiennych środowiskowych.
+
+13. **Validacja danych**: Zawsze waliduj dane wejściowe, szczególnie te pochodzące od użytkowników.
+
+14. **Obsługa błędów**: Każda funkcja powinna mieć odpowiednią obsługę błędów i nie powinna crashować aplikacji.
+
+## Struktura projektu
+
+15. **Architektura**: Stosuj zasady SOLID i utrzymuj czytelną architekturę projektu.
+
+16. **Nazewnictwo**: Używaj jasnych, opisowych nazw dla zmiennych, funkcji i klas. Unikaj skrótów.
+
+17. **Testy**: Gdy to możliwe, sugeruj lub twórz podstawowe testy jednostkowe dla kluczowych funkcji.
+
+## Performance i optymalizacja
+
+18. **Wydajność**: Unikaj niepotrzebnych pętli zagnieżdżonych i operacji O(n²). Zwracaj uwagę na wydajność rozwiązań.
+
+19. **Memory leaks**: Pamiętaj o czyszczeniu eventListenerów, timerów i innych zasobów.
+
+20. **Bundle size**: W projektach webowych zwracaj uwagę na rozmiar bundle'a - unikaj importowania całych bibliotek gdy potrzebujesz tylko jednej funkcji.
+
+## Git i wersjonowanie
+
+21. **Commity**: Sugeruj jasne, opisowe wiadomości commitów w formacie conventional commits gdy to możliwe.
+
+22. **Gitignore**: Zawsze sprawdź czy .gitignore zawiera odpowiednie wpisy (node_modules, .env, dist/, etc.).
+
+## Dokumentacja
+
+23. **README**: Każdy projekt powinien mieć podstawowy README.md z instrukcją instalacji i uruchomienia.
+
+24. **Komentarze w kodzie**: Pisz komentarze wyjaśniające "dlaczego", nie "co" - kod powinien być self-documenting.
+
+25. **JSDoc/TSDoc**: Dla publicznych funkcji i klas używaj odpowiedniego formatu dokumentacji.

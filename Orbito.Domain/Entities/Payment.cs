@@ -65,6 +65,30 @@ namespace Orbito.Domain.Entities
             FailedAt = DateTime.UtcNow;
             FailureReason = reason;
         }
+
+        public void MarkAsCancelled()
+        {
+            Status = PaymentStatus.Cancelled;
+            FailedAt = DateTime.UtcNow;
+            FailureReason = "Payment cancelled";
+        }
+
+        public void RetryPayment()
+        {
+            if (Status == PaymentStatus.Failed)
+            {
+                Status = PaymentStatus.Pending;
+                FailedAt = null;
+                FailureReason = null;
+            }
+        }
+
+        public bool CanBeRetried()
+        {
+            return Status == PaymentStatus.Failed && 
+                   FailedAt.HasValue && 
+                   FailedAt.Value.AddDays(30) > DateTime.UtcNow; // Can retry within 30 days
+        }
     }
 }
 

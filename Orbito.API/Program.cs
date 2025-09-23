@@ -78,6 +78,10 @@ builder.Services.AddSwaggerGen(option =>
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication(builder.Configuration);
 
+// Add Background Jobs
+builder.Services.AddHostedService<Orbito.Application.BackgroundJobs.CheckExpiringSubscriptionsJob>();
+builder.Services.AddHostedService<Orbito.Application.BackgroundJobs.ProcessRecurringPaymentsJob>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

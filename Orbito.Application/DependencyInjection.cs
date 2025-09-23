@@ -34,6 +34,7 @@ namespace Orbito.Application
             services.AddScoped<IAdminSetupService, AdminSetupService>();
             services.AddScoped<IProviderService, ProviderService>();
             services.AddScoped<ISubscriptionPlanService, SubscriptionPlanService>();
+            services.AddScoped<ISubscriptionService, SubscriptionService>();
 
             return services;
         }
