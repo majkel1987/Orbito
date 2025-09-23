@@ -698,6 +698,25 @@ Aplikacja Orbito posiada **kompletne pokrycie testami jednostkowymi** dla wszyst
 - **Domain Tests**: 1 test z 12 scenariuszami
   - `ClientTests`: 12 testów metod domenowych
 
+#### ✅ Subscription Plan Operations (Kompletne pokrycie)
+
+- **Commands**: 4 handlery z łącznie 23 testami
+  - `CreateSubscriptionPlanCommandHandler`: 6 testów
+  - `UpdateSubscriptionPlanCommandHandler`: 6 testów
+  - `DeleteSubscriptionPlanCommandHandler`: 5 testów
+  - `CloneSubscriptionPlanCommandHandler`: 6 testów
+- **Queries**: 3 handlery z łącznie 15 testami
+  - `GetSubscriptionPlanByIdQueryHandler`: 5 testów
+  - `GetSubscriptionPlansByProviderQueryHandler`: 8 testów
+  - `GetActiveSubscriptionPlansQueryHandler`: 7 testów
+- **Validators**: 2 validatory z łącznie 20 testami
+  - `CreateSubscriptionPlanCommandValidator`: 10 testów
+  - `UpdateSubscriptionPlanCommandValidator`: 10 testów
+- **Domain Tests**: 3 testy z łącznie 25 scenariuszami
+  - `SubscriptionPlanTests`: 15 testów metod domenowych
+  - `PlanFeaturesTests`: 5 testów Value Object
+  - `PlanLimitationsTests`: 5 testów Value Object
+
 ### 🎯 Kluczowe Scenariusze Testowe
 
 #### Multi-Tenancy Security
@@ -745,13 +764,14 @@ Aplikacja Orbito posiada **kompletne pokrycie testami jednostkowymi** dla wszyst
 
 ### 📈 Metryki Testów
 
-| Komponent         | Liczba Testów | Pokrycie Scenariuszy |
-| ----------------- | ------------- | -------------------- |
-| **Administrator** | 8             | 100%                 |
-| **Provider**      | 40            | 100%                 |
-| **Client**        | 72            | 100%                 |
-| **Domain**        | 12            | 100%                 |
-| **RAZEM**         | **132**       | **100%**             |
+| Komponent            | Liczba Testów | Pokrycie Scenariuszy |
+| -------------------- | ------------- | -------------------- |
+| **Administrator**    | 8             | 100%                 |
+| **Provider**         | 40            | 100%                 |
+| **Client**           | 72            | 100%                 |
+| **SubscriptionPlan** | 83            | 100%                 |
+| **Domain**           | 37            | 100%                 |
+| **RAZEM**            | **240**       | **100%**             |
 
 ### 🚀 Uruchamianie Testów
 
@@ -897,7 +917,7 @@ W przypadku problemów lub pytań:
 11. **Client Commands** - Create, Update, Delete, Activate, Deactivate z FluentValidation
 12. **Client Queries** - GetById, GetByProvider, Search, GetStats z paginacją
 13. **ClientsController** - kompletne API endpoints dla zarządzania klientami
-14. **🧪 Kompletne Testy Jednostkowe** - 132 testy pokrywające wszystkie komponenty (Administrator, Provider, Client, Domain)
+14. **🧪 Kompletne Testy Jednostkowe** - 240 testów pokrywające wszystkie komponenty (Administrator, Provider, Client, SubscriptionPlan, Domain)
 15. **Provider CRUD Operations** - pełne operacje Create, Read, Update, Delete dla Provider z walidacją
 16. **ProviderService** - logika biznesowa i walidacja providerów z testami
 17. **📋 Pełne CRUD dla Subscription Plans** - kompletne operacje Create, Read, Update, Delete, Clone dla planów subskrypcji
