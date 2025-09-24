@@ -33,6 +33,7 @@ namespace Orbito.Tests.Application.Clients.Commands.UpdateClient
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithValidData_ShouldUpdateClient()
         {
             // Arrange
@@ -62,6 +63,7 @@ namespace Orbito.Tests.Application.Clients.Commands.UpdateClient
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithoutTenantContext_ShouldReturnFailure()
         {
             // Arrange
@@ -78,6 +80,7 @@ namespace Orbito.Tests.Application.Clients.Commands.UpdateClient
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithNonExistentClient_ShouldReturnFailure()
         {
             // Arrange
@@ -96,6 +99,7 @@ namespace Orbito.Tests.Application.Clients.Commands.UpdateClient
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithDifferentTenant_ShouldReturnFailure()
         {
             // Arrange
@@ -118,6 +122,7 @@ namespace Orbito.Tests.Application.Clients.Commands.UpdateClient
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithExistingEmail_ShouldReturnFailure()
         {
             // Arrange
@@ -144,6 +149,7 @@ namespace Orbito.Tests.Application.Clients.Commands.UpdateClient
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithSameEmail_ShouldUpdateSuccessfully()
         {
             // Arrange
@@ -167,6 +173,7 @@ namespace Orbito.Tests.Application.Clients.Commands.UpdateClient
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithDirectClient_ShouldUpdateDirectInfo()
         {
             // Arrange
@@ -191,6 +198,7 @@ namespace Orbito.Tests.Application.Clients.Commands.UpdateClient
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithClientWithUser_ShouldNotUpdateDirectInfo()
         {
             // Arrange
@@ -217,6 +225,7 @@ namespace Orbito.Tests.Application.Clients.Commands.UpdateClient
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WhenRepositoryThrowsException_ShouldReturnFailure()
         {
             // Arrange
@@ -237,6 +246,69 @@ namespace Orbito.Tests.Application.Clients.Commands.UpdateClient
             result.Should().NotBeNull();
             result.Success.Should().BeFalse();
             result.Message.Should().Contain("An error occurred while updating client");
+        }
+
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public async Task Handle_WithEmptyGuidClientId_ShouldReturnFailure()
+        {
+            // Arrange
+            var command = new UpdateClientCommand(Guid.Empty, "New Company", null, null, null, null);
+
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Success.Should().BeFalse();
+            result.Message.Should().Be("Client not found");
+        }
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public async Task Handle_WithEmptyCompanyName_ShouldUpdateSuccessfully()
+        {
+            // Arrange
+            var client = Client.CreateWithUser(_tenantId, Guid.NewGuid(), "Old Company");
+            client.Id = _clientId;
+
+            var command = new UpdateClientCommand(_clientId, "", null, null, null, null);
+
+            _clientRepositoryMock.Setup(x => x.GetByIdAsync(_clientId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(client);
+            _clientRepositoryMock.Setup(x => x.UpdateAsync(It.IsAny<Client>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Success.Should().BeTrue();
+        }
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public async Task Handle_WithWhitespaceCompanyName_ShouldUpdateSuccessfully()
+        {
+            // Arrange
+            var client = Client.CreateWithUser(_tenantId, Guid.NewGuid(), "Old Company");
+            client.Id = _clientId;
+
+            var command = new UpdateClientCommand(_clientId, "   ", null, null, null, null);
+
+            _clientRepositoryMock.Setup(x => x.GetByIdAsync(_clientId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(client);
+            _clientRepositoryMock.Setup(x => x.UpdateAsync(It.IsAny<Client>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Success.Should().BeTrue();
         }
     }
 }

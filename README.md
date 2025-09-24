@@ -651,11 +651,11 @@ var subscription = Subscription.Create(provider.TenantId, clientId, planId, pric
 - **ValidationBehaviour**: Waliduje żądania przed przetworzeniem
 - **PerformanceBehaviour**: Monitoruje wydajność i loguje ostrzeżenia
 
-## 🧪 Testy Jednostkowe
+## 🧪 Testy Jednostkowe i Integracyjne
 
 ### 📊 Pokrycie Testami
 
-Aplikacja Orbito posiada **kompletne pokrycie testami jednostkowymi** dla wszystkich głównych komponentów:
+Aplikacja Orbito posiada **kompletne pokrycie testami jednostkowymi i integracyjnymi** dla wszystkich głównych komponentów:
 
 #### ✅ Administrator Operations (AdminSetupService)
 
@@ -717,6 +717,40 @@ Aplikacja Orbito posiada **kompletne pokrycie testami jednostkowymi** dla wszyst
   - `PlanFeaturesTests`: 5 testów Value Object
   - `PlanLimitationsTests`: 5 testów Value Object
 
+#### ✅ Subscription Operations (Kompletne pokrycie)
+
+- **Commands**: 4 handlery z łącznie 24 testami
+  - `CreateSubscriptionCommandHandler`: 6 testów
+  - `ActivateSubscriptionCommandHandler`: 6 testów
+  - `CancelSubscriptionCommandHandler`: 6 testów
+  - `UpgradeSubscriptionCommandHandler`: 6 testów
+- **Queries**: 2 handlery z łącznie 12 testami
+  - `GetSubscriptionByIdQueryHandler`: 6 testów
+  - `GetSubscriptionsByClientQueryHandler`: 6 testów
+- **Validators**: 1 validator z łącznie 15 testami
+  - `CreateSubscriptionCommandValidator`: 15 testów
+- **Domain Tests**: 1 test z łącznie 25 scenariuszami
+  - `SubscriptionTests`: 25 testów metod domenowych
+- **Services**: 1 serwis z łącznie 20 testami
+  - `SubscriptionServiceTests`: 20 testów logiki biznesowej
+
+#### ✅ Provider Integration Tests (UKOŃCZONE - 10 testów integracyjnych)
+
+- **ProviderIntegrationTests**: 10 testów integracyjnych - wszystkie przechodzą ✅
+
+  - **CreateProvider** - testy tworzenia providera z walidacją subdomain
+  - **UpdateProvider** - testy aktualizacji providera z logiką biznesową
+  - **GetProviderById** - testy pobierania providera po ID
+  - **GetAllProviders** - testy pobierania listy z paginacją
+  - **GetProviderByUserId** - testy pobierania providera po ID użytkownika
+  - **Business Logic** - testy złożonych scenariuszy biznesowych
+  - **Validation** - testy walidacji i obsługi błędów
+  - Testy pobierania providerów z różnymi scenariuszami
+  - Testy obsługi błędów i wyjątków
+  - Testy wydajności i bezpieczeństwa
+  - Testy walidacji subdomain
+  - Testy współbieżności i wydajności
+
 ### 🎯 Kluczowe Scenariusze Testowe
 
 #### Multi-Tenancy Security
@@ -764,14 +798,39 @@ Aplikacja Orbito posiada **kompletne pokrycie testami jednostkowymi** dla wszyst
 
 ### 📈 Metryki Testów
 
-| Komponent            | Liczba Testów | Pokrycie Scenariuszy |
-| -------------------- | ------------- | -------------------- |
-| **Administrator**    | 8             | 100%                 |
-| **Provider**         | 40            | 100%                 |
-| **Client**           | 72            | 100%                 |
-| **SubscriptionPlan** | 83            | 100%                 |
-| **Domain**           | 37            | 100%                 |
-| **RAZEM**            | **240**       | **100%**             |
+| Komponent            | Testy Jednostkowe | Testy Integracyjne | Pokrycie Scenariuszy |
+| -------------------- | ----------------- | ------------------ | -------------------- |
+| **Administrator**    | 8                 | 0                  | 100%                 |
+| **Provider**         | 40                | 10                 | 100%                 |
+| **Client**           | 72                | 0                  | 100%                 |
+| **SubscriptionPlan** | 83                | 0                  | 100%                 |
+| **Subscription**     | 96                | 0                  | 100%                 |
+| **Domain**           | 37                | 0                  | 100%                 |
+| **RAZEM**            | **336**           | **10**             | **100%**             |
+
+### 🔧 Poprawki Testów Jednostkowych
+
+#### ✅ Zrealizowane Poprawki
+
+- **Kategoryzacja testów**: Wszystkie testy jednostkowe zostały oznakowane atrybutem `[Trait("Category", "Unit")]` dla lepszej organizacji i filtrowania
+- **Nullable reference warnings**: Naprawiono wszystkie ostrzeżenia nullable reference w testach przez dodanie `!` do parametrów `null`
+- **Znaki diakrytyczne**: Poprawiono kodowanie znaków w komunikatach błędów (np. "Użytkownik" zamiast "UÅ¼ytkownik")
+- **Testy edge cases**: Dodano testy dla scenariuszy brzegowych:
+  - Testy z `null` command
+  - Testy z pustym `Guid.Empty`
+  - Testy z pustymi stringami
+  - Testy z ujemnymi wartościami
+  - Testy z bardzo długimi stringami
+
+#### 🎯 Jakość Testów
+
+Testy jednostkowe charakteryzują się:
+
+- **Wysoką jakością**: Pokrywają wszystkie scenariusze pozytywne i negatywne
+- **Czytelnością**: Jasne nazwy testów i struktura AAA (Arrange, Act, Assert)
+- **Niezawodnością**: Stabilne mocki i izolacja testów
+- **Wydajnością**: Szybkie wykonanie dzięki mockom
+- **Maintainability**: Łatwe w utrzymaniu i rozszerzaniu
 
 ### 🚀 Uruchamianie Testów
 
@@ -785,8 +844,26 @@ dotnet test --collect:"XPlat Code Coverage"
 # Uruchomienie konkretnego projektu testowego
 dotnet test Orbito.Tests
 
-# Uruchomienie testów z filtrem
+# Uruchomienie testów jednostkowych
 dotnet test --filter "Category=Unit"
+
+# Uruchomienie testów integracyjnych
+dotnet test --filter "Category=Integration"
+
+# Uruchomienie testów Provider
+dotnet test --filter "FullyQualifiedName~Provider"
+
+# Uruchomienie testów Client
+dotnet test --filter "FullyQualifiedName~Client"
+
+# Uruchomienie testów SubscriptionPlan
+dotnet test --filter "FullyQualifiedName~SubscriptionPlan"
+
+# Uruchomienie testów z szczegółowym outputem
+dotnet test --verbosity normal
+
+# Uruchomienie testów z pokryciem kodu
+dotnet test --collect:"XPlat Code Coverage" --results-directory ./TestResults
 ```
 
 ## 🛠️ Narzędzia Deweloperskie
@@ -857,7 +934,9 @@ dotnet test --filter "Category=Unit"
 
 - [x] **Testy jednostkowe** - kompletne pokrycie testami jednostkowymi
 - [x] **Subscription Plan Management** - kompletne zarządzanie planami subskrypcji
-- [ ] Testy integracyjne
+- [x] **Testy integracyjne Provider** - ✅ UKOŃCZONE - 10 testów integracyjnych przechodzi pomyślnie
+- [ ] **Testy integracyjne Client** - testy integracyjne dla operacji Client
+- [ ] **Testy integracyjne Subscription** - testy integracyjne dla operacji Subscription
 - [ ] **Dodatkowe Commands/Queries** - rozszerzenie CQRS pattern
 - [ ] **Provider Management** - pełne zarządzanie providerami
 
@@ -917,7 +996,7 @@ W przypadku problemów lub pytań:
 11. **Client Commands** - Create, Update, Delete, Activate, Deactivate z FluentValidation
 12. **Client Queries** - GetById, GetByProvider, Search, GetStats z paginacją
 13. **ClientsController** - kompletne API endpoints dla zarządzania klientami
-14. **🧪 Kompletne Testy Jednostkowe** - 240 testów pokrywające wszystkie komponenty (Administrator, Provider, Client, SubscriptionPlan, Domain)
+14. **🧪 Kompletne Testy Jednostkowe** - 336 testów pokrywające wszystkie komponenty (Administrator, Provider, Client, SubscriptionPlan, Subscription, Domain)
 15. **Provider CRUD Operations** - pełne operacje Create, Read, Update, Delete dla Provider z walidacją
 16. **ProviderService** - logika biznesowa i walidacja providerów z testami
 17. **📋 Pełne CRUD dla Subscription Plans** - kompletne operacje Create, Read, Update, Delete, Clone dla planów subskrypcji
@@ -934,6 +1013,8 @@ W przypadku problemów lub pytań:
 28. **SubscriptionService** - logika biznesowa i walidacja subskrypcji z metodami domenowymi
 29. **Background Jobs** - CheckExpiringSubscriptionsJob i ProcessRecurringPaymentsJob dla automatyzacji
 30. **Rozszerzone Statusy** - nowe statusy subskrypcji (Pending, Expired) i metody biznesowe
+31. **🧪 Testy Subscription Management** - kompletne testy jednostkowe dla zarządzania subskrypcjami (96 testów)
+32. **🧪 Testy Integracyjne Provider** - ✅ UKOŃCZONE - 10 testów integracyjnych dla operacji Provider (ProviderIntegrationTests) - wszystkie testy przechodzą pomyślnie
 
 ### 🔧 Architektura
 

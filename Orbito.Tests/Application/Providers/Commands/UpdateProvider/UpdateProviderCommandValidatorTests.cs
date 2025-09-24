@@ -14,6 +14,7 @@ namespace Orbito.Tests.Application.Providers.Commands.UpdateProvider
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public void Validate_WithValidCommand_ShouldBeValid()
         {
             // Arrange
@@ -33,6 +34,7 @@ namespace Orbito.Tests.Application.Providers.Commands.UpdateProvider
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public void Validate_WithMinimalValidCommand_ShouldBeValid()
         {
             // Arrange
@@ -52,6 +54,7 @@ namespace Orbito.Tests.Application.Providers.Commands.UpdateProvider
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public void Validate_WithEmptyId_ShouldBeInvalid()
         {
             // Arrange
@@ -72,6 +75,7 @@ namespace Orbito.Tests.Application.Providers.Commands.UpdateProvider
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public void Validate_WithEmptyBusinessName_ShouldBeInvalid()
         {
             // Arrange
@@ -92,6 +96,7 @@ namespace Orbito.Tests.Application.Providers.Commands.UpdateProvider
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public void Validate_WithNullBusinessName_ShouldBeInvalid()
         {
             // Arrange
@@ -112,6 +117,7 @@ namespace Orbito.Tests.Application.Providers.Commands.UpdateProvider
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public void Validate_WithTooLongBusinessName_ShouldBeInvalid()
         {
             // Arrange
@@ -133,6 +139,7 @@ namespace Orbito.Tests.Application.Providers.Commands.UpdateProvider
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public void Validate_WithTooLongDescription_ShouldBeInvalid()
         {
             // Arrange
@@ -154,6 +161,7 @@ namespace Orbito.Tests.Application.Providers.Commands.UpdateProvider
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public void Validate_WithTooLongAvatar_ShouldBeInvalid()
         {
             // Arrange
@@ -175,6 +183,7 @@ namespace Orbito.Tests.Application.Providers.Commands.UpdateProvider
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public void Validate_WithEmptySubdomainSlug_ShouldBeInvalid()
         {
             // Arrange
@@ -195,6 +204,7 @@ namespace Orbito.Tests.Application.Providers.Commands.UpdateProvider
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public void Validate_WithTooLongSubdomainSlug_ShouldBeInvalid()
         {
             // Arrange
@@ -216,6 +226,7 @@ namespace Orbito.Tests.Application.Providers.Commands.UpdateProvider
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public void Validate_WithInvalidSubdomainSlug_ShouldBeInvalid()
         {
             // Arrange
@@ -236,6 +247,7 @@ namespace Orbito.Tests.Application.Providers.Commands.UpdateProvider
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public void Validate_WithValidSubdomainSlug_ShouldBeValid()
         {
             // Arrange
@@ -255,6 +267,7 @@ namespace Orbito.Tests.Application.Providers.Commands.UpdateProvider
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public void Validate_WithInvalidCustomDomain_ShouldBeInvalid()
         {
             // Arrange
@@ -275,6 +288,7 @@ namespace Orbito.Tests.Application.Providers.Commands.UpdateProvider
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public void Validate_WithValidCustomDomain_ShouldBeValid()
         {
             // Arrange
@@ -294,6 +308,7 @@ namespace Orbito.Tests.Application.Providers.Commands.UpdateProvider
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public void Validate_WithTooLongCustomDomain_ShouldBeInvalid()
         {
             // Arrange
@@ -315,6 +330,7 @@ namespace Orbito.Tests.Application.Providers.Commands.UpdateProvider
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public void Validate_WithMultipleValidationErrors_ShouldReturnAllErrors()
         {
             // Arrange

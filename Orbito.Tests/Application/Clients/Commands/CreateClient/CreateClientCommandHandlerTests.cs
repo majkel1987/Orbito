@@ -32,6 +32,7 @@ namespace Orbito.Tests.Application.Clients.Commands.CreateClient
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithUserId_ShouldCreateClientWithUser()
         {
             // Arrange
@@ -62,6 +63,7 @@ namespace Orbito.Tests.Application.Clients.Commands.CreateClient
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithDirectEmail_ShouldCreateDirectClient()
         {
             // Arrange
@@ -96,6 +98,7 @@ namespace Orbito.Tests.Application.Clients.Commands.CreateClient
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithoutTenantContext_ShouldReturnFailure()
         {
             // Arrange
@@ -112,6 +115,7 @@ namespace Orbito.Tests.Application.Clients.Commands.CreateClient
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithNeitherUserIdNorEmail_ShouldReturnFailure()
         {
             // Arrange
@@ -127,6 +131,7 @@ namespace Orbito.Tests.Application.Clients.Commands.CreateClient
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithExistingEmail_ShouldReturnFailure()
         {
             // Arrange
@@ -147,6 +152,7 @@ namespace Orbito.Tests.Application.Clients.Commands.CreateClient
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithExistingUserId_ShouldReturnFailure()
         {
             // Arrange
@@ -167,6 +173,7 @@ namespace Orbito.Tests.Application.Clients.Commands.CreateClient
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithPhone_ShouldSetPhone()
         {
             // Arrange
@@ -194,6 +201,7 @@ namespace Orbito.Tests.Application.Clients.Commands.CreateClient
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WhenRepositoryThrowsException_ShouldReturnFailure()
         {
             // Arrange
@@ -210,6 +218,55 @@ namespace Orbito.Tests.Application.Clients.Commands.CreateClient
             result.Should().NotBeNull();
             result.Success.Should().BeFalse();
             result.Message.Should().Contain("An error occurred while creating client");
+        }
+
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public async Task Handle_WithEmptyGuidUserId_ShouldReturnFailure()
+        {
+            // Arrange
+            var command = new CreateClientCommand(Guid.Empty, "Test Company", null, null, null, null);
+
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Success.Should().BeFalse();
+            result.Message.Should().Contain("An error occurred while creating client");
+        }
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public async Task Handle_WithEmptyEmail_ShouldReturnFailure()
+        {
+            // Arrange
+            var command = new CreateClientCommand(null, "Test Company", null, "", null, null);
+
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Success.Should().BeFalse();
+            result.Message.Should().Be("Either UserId or DirectEmail must be provided");
+        }
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public async Task Handle_WithWhitespaceEmail_ShouldReturnFailure()
+        {
+            // Arrange
+            var command = new CreateClientCommand(null, "Test Company", null, "   ", null, null);
+
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Success.Should().BeFalse();
+            result.Message.Should().Be("Either UserId or DirectEmail must be provided");
         }
     }
 }

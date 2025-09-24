@@ -33,6 +33,7 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Commands.CreateSubscription
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithValidCommand_ShouldCreateSubscriptionPlan()
         {
             // Arrange
@@ -89,6 +90,7 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Commands.CreateSubscription
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithMinimalCommand_ShouldCreateSubscriptionPlan()
         {
             // Arrange
@@ -129,6 +131,7 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Commands.CreateSubscription
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithPrivatePlan_ShouldSetIsPublicToFalse()
         {
             // Arrange
@@ -164,6 +167,7 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Commands.CreateSubscription
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithTrialPeriod_ShouldSetTrialPeriodDays()
         {
             // Arrange
@@ -201,6 +205,7 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Commands.CreateSubscription
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithFeaturesAndLimitations_ShouldSetJsonProperties()
         {
             // Arrange
@@ -242,6 +247,7 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Commands.CreateSubscription
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithCustomSortOrder_ShouldSetSortOrder()
         {
             // Arrange
@@ -277,6 +283,7 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Commands.CreateSubscription
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithoutTenantContext_ShouldThrowException()
         {
             // Arrange
@@ -300,6 +307,7 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Commands.CreateSubscription
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WhenRepositoryThrowsException_ShouldPropagateException()
         {
             // Arrange
@@ -325,6 +333,7 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Commands.CreateSubscription
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithDifferentBillingPeriods_ShouldCreateCorrectBillingPeriod()
         {
             // Arrange
@@ -363,6 +372,90 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Commands.CreateSubscription
                 result.Should().NotBeNull();
                 result.BillingPeriod.Should().Be(testCase.Expected);
             }
+        }
+
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public async Task Handle_WithEmptyName_ShouldCreateSubscriptionPlan()
+        {
+            // Arrange
+            var command = new CreateSubscriptionPlanCommand
+            {
+                Name = "",
+                Amount = 29.99m,
+                Currency = "USD",
+                BillingPeriodType = BillingPeriodType.Monthly
+            };
+
+            var createdPlan = SubscriptionPlan.Create(
+                _tenantId,
+                command.Name,
+                command.Amount,
+                command.Currency,
+                command.BillingPeriodType);
+
+            _subscriptionPlanRepositoryMock.Setup(x => x.AddAsync(It.IsAny<SubscriptionPlan>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(createdPlan);
+
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Name.Should().Be("");
+        }
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public async Task Handle_WithNegativeAmount_ShouldThrowArgumentException()
+        {
+            // Arrange
+            var command = new CreateSubscriptionPlanCommand
+            {
+                Name = "Negative Plan",
+                Amount = -10.00m,
+                Currency = "USD",
+                BillingPeriodType = BillingPeriodType.Monthly
+            };
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentException>(() => 
+                _handler.Handle(command, CancellationToken.None));
+
+            exception.Message.Should().Contain("Amount cannot be negative");
+        }
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public async Task Handle_WithVeryLongName_ShouldCreateSubscriptionPlan()
+        {
+            // Arrange
+            var longName = new string('A', 1000);
+            var command = new CreateSubscriptionPlanCommand
+            {
+                Name = longName,
+                Amount = 29.99m,
+                Currency = "USD",
+                BillingPeriodType = BillingPeriodType.Monthly
+            };
+
+            var createdPlan = SubscriptionPlan.Create(
+                _tenantId,
+                command.Name,
+                command.Amount,
+                command.Currency,
+                command.BillingPeriodType);
+
+            _subscriptionPlanRepositoryMock.Setup(x => x.AddAsync(It.IsAny<SubscriptionPlan>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(createdPlan);
+
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Name.Should().Be(longName);
         }
     }
 }

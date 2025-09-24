@@ -22,10 +22,10 @@ namespace Orbito.Tests.Application.Common.Services
         public AdminSetupServiceTests()
         {
             _userManagerMock = new Mock<UserManager<ApplicationUser>>(
-                Mock.Of<IUserStore<ApplicationUser>>(), null, null, null, null, null, null, null, null);
+                Mock.Of<IUserStore<ApplicationUser>>(), null!, null!, null!, null!, null!, null!, null!, null!);
             
             _roleManagerMock = new Mock<RoleManager<ApplicationRole>>(
-                Mock.Of<IRoleStore<ApplicationRole>>(), null, null, null, null);
+                Mock.Of<IRoleStore<ApplicationRole>>(), null!, null!, null!, null!);
             
             _configurationMock = new Mock<IConfiguration>();
             _loggerMock = new Mock<ILogger<AdminSetupService>>();
