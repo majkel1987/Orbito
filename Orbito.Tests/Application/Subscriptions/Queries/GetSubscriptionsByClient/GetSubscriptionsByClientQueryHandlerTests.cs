@@ -28,6 +28,7 @@ namespace Orbito.Tests.Application.Subscriptions.Queries.GetSubscriptionsByClien
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithValidClientId_ShouldReturnSubscriptions()
         {
             // Arrange

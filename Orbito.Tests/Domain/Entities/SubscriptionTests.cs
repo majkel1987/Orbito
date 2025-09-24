@@ -15,6 +15,7 @@ namespace Orbito.Tests.Domain.Entities
         private readonly BillingPeriod _billingPeriod = BillingPeriod.Create(1, BillingPeriodType.Monthly);
 
         [Fact]
+        [Trait("Category", "Unit")]
         public void Create_WithValidParameters_ShouldCreateSubscription()
         {
             // Act
@@ -446,6 +447,55 @@ namespace Orbito.Tests.Domain.Entities
                 _planId,
                 _price,
                 _billingPeriod);
+        }
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public void Create_WithEmptyGuidClientId_ShouldCreateSubscription()
+        {
+            // Act
+            var subscription = Subscription.Create(_tenantId, Guid.Empty, _planId, _price, _billingPeriod);
+            
+            // Assert
+            subscription.Should().NotBeNull();
+            subscription.ClientId.Should().Be(Guid.Empty);
+        }
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public void Create_WithEmptyGuidPlanId_ShouldCreateSubscription()
+        {
+            // Act
+            var subscription = Subscription.Create(_tenantId, _clientId, Guid.Empty, _price, _billingPeriod);
+            
+            // Assert
+            subscription.Should().NotBeNull();
+            subscription.PlanId.Should().Be(Guid.Empty);
+        }
+
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public void Create_WithNullBillingPeriod_ShouldThrowNullReferenceException()
+        {
+            // Act & Assert
+            Assert.Throws<NullReferenceException>(() => 
+                Subscription.Create(_tenantId, _clientId, _planId, _price, null!));
+        }
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public void Create_WithZeroPrice_ShouldCreateSubscription()
+        {
+            // Arrange
+            var zeroPrice = Money.Create(0m, "USD");
+
+            // Act
+            var subscription = Subscription.Create(_tenantId, _clientId, _planId, zeroPrice, _billingPeriod);
+
+            // Assert
+            subscription.Should().NotBeNull();
+            subscription.CurrentPrice.Should().Be(zeroPrice);
         }
 
         private Subscription CreateTestSubscriptionWithTrial()

@@ -751,6 +751,21 @@ Aplikacja Orbito posiada **kompletne pokrycie testami jednostkowymi i integracyj
   - Testy walidacji subdomain
   - Testy współbieżności i wydajności
 
+#### ✅ Tenant Integration Tests (UKOŃCZONE - 25 testów integracyjnych)
+
+- **TenantIntegrationTests**: 25 testów integracyjnych - wszystkie przechodzą ✅
+
+  - **TenantId Value Object** - testy tworzenia, walidacji i konwersji TenantId
+  - **TenantContext Service** - testy zarządzania kontekstem tenanta
+  - **TenantMiddleware** - testy automatycznego wykrywania tenanta z JWT, headers i query parameters
+  - **Multi-Tenant Business Logic** - testy izolacji danych między tenantami
+  - **JWT Claims Integration** - testy ustawiania kontekstu tenanta z tokenów JWT
+  - **Header Integration** - testy ustawiania kontekstu z HTTP headers
+  - **Query Parameter Integration** - testy ustawiania kontekstu z query parameters
+  - **Error Handling** - testy obsługi błędów i nieprawidłowych danych
+  - **Tenant Isolation** - testy izolacji danych między różnymi tenantami
+  - **Complex Scenarios** - testy złożonych scenariuszy biznesowych z wieloma źródłami tenanta
+
 ### 🎯 Kluczowe Scenariusze Testowe
 
 #### Multi-Tenancy Security
@@ -800,13 +815,13 @@ Aplikacja Orbito posiada **kompletne pokrycie testami jednostkowymi i integracyj
 
 | Komponent            | Testy Jednostkowe | Testy Integracyjne | Pokrycie Scenariuszy |
 | -------------------- | ----------------- | ------------------ | -------------------- |
-| **Administrator**    | 8                 | 0                  | 100%                 |
+| **Administrator**    | 8                 | 27                 | 100%                 |
 | **Provider**         | 40                | 10                 | 100%                 |
 | **Client**           | 72                | 0                  | 100%                 |
 | **SubscriptionPlan** | 83                | 0                  | 100%                 |
 | **Subscription**     | 96                | 0                  | 100%                 |
 | **Domain**           | 37                | 0                  | 100%                 |
-| **RAZEM**            | **336**           | **10**             | **100%**             |
+| **RAZEM**            | **336**           | **37**             | **100%**             |
 
 ### 🔧 Poprawki Testów Jednostkowych
 
@@ -849,6 +864,9 @@ dotnet test --filter "Category=Unit"
 
 # Uruchomienie testów integracyjnych
 dotnet test --filter "Category=Integration"
+
+# Uruchomienie testów Tenant
+dotnet test --filter "FullyQualifiedName~TenantIntegrationTests"
 
 # Uruchomienie testów Provider
 dotnet test --filter "FullyQualifiedName~Provider"
@@ -935,6 +953,7 @@ dotnet test --collect:"XPlat Code Coverage" --results-directory ./TestResults
 - [x] **Testy jednostkowe** - kompletne pokrycie testami jednostkowymi
 - [x] **Subscription Plan Management** - kompletne zarządzanie planami subskrypcji
 - [x] **Testy integracyjne Provider** - ✅ UKOŃCZONE - 10 testów integracyjnych przechodzi pomyślnie
+- [x] **Testy integracyjne Tenant** - ✅ UKOŃCZONE - 27 testów integracyjnych przechodzi pomyślnie
 - [ ] **Testy integracyjne Client** - testy integracyjne dla operacji Client
 - [ ] **Testy integracyjne Subscription** - testy integracyjne dla operacji Subscription
 - [ ] **Dodatkowe Commands/Queries** - rozszerzenie CQRS pattern
@@ -1015,6 +1034,7 @@ W przypadku problemów lub pytań:
 30. **Rozszerzone Statusy** - nowe statusy subskrypcji (Pending, Expired) i metody biznesowe
 31. **🧪 Testy Subscription Management** - kompletne testy jednostkowe dla zarządzania subskrypcjami (96 testów)
 32. **🧪 Testy Integracyjne Provider** - ✅ UKOŃCZONE - 10 testów integracyjnych dla operacji Provider (ProviderIntegrationTests) - wszystkie testy przechodzą pomyślnie
+33. **🧪 Testy Integracyjne Tenant** - ✅ UKOŃCZONE - 25 testów integracyjnych dla operacji Tenant (TenantIntegrationTests) - wszystkie testy przechodzą pomyślnie
 
 ### 🔧 Architektura
 

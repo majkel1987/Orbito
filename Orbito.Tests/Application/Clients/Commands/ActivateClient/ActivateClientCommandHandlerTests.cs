@@ -32,6 +32,7 @@ namespace Orbito.Tests.Application.Clients.Commands.ActivateClient
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithInactiveClient_ShouldActivateClient()
         {
             // Arrange

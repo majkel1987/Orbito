@@ -241,5 +241,77 @@ namespace Orbito.Tests.Domain.Entities
             // Assert
             fullName.Should().Be("");
         }
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public void CreateWithUser_WithEmptyGuidUserId_ShouldCreateClient()
+        {
+            // Act
+            var client = Client.CreateWithUser(_tenantId, Guid.Empty, "Test Company");
+            
+            // Assert
+            client.Should().NotBeNull();
+            client.UserId.Should().Be(Guid.Empty);
+        }
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public void CreateWithUser_WithEmptyCompanyName_ShouldCreateClient()
+        {
+            // Act
+            var client = Client.CreateWithUser(_tenantId, Guid.NewGuid(), "");
+
+            // Assert
+            client.Should().NotBeNull();
+            client.CompanyName.Should().Be("");
+        }
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public void CreateDirect_WithEmptyEmail_ShouldCreateClient()
+        {
+            // Act
+            var client = Client.CreateDirect(_tenantId, "", "John", "Doe", "Test Company");
+            
+            // Assert
+            client.Should().NotBeNull();
+            client.DirectEmail.Should().Be("");
+        }
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public void CreateDirect_WithNullEmail_ShouldCreateClient()
+        {
+            // Act
+            var client = Client.CreateDirect(_tenantId, null!, "John", "Doe", "Test Company");
+            
+            // Assert
+            client.Should().NotBeNull();
+            client.DirectEmail.Should().BeNull();
+        }
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public void CreateDirect_WithEmptyFirstName_ShouldCreateClient()
+        {
+            // Act
+            var client = Client.CreateDirect(_tenantId, "test@example.com", "", "Doe", "Test Company");
+
+            // Assert
+            client.Should().NotBeNull();
+            client.DirectFirstName.Should().Be("");
+        }
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public void CreateDirect_WithEmptyLastName_ShouldCreateClient()
+        {
+            // Act
+            var client = Client.CreateDirect(_tenantId, "test@example.com", "John", "", "Test Company");
+
+            // Assert
+            client.Should().NotBeNull();
+            client.DirectLastName.Should().Be("");
+        }
     }
 }

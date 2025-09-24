@@ -39,6 +39,7 @@ namespace Orbito.Tests.Application.Common.Services
         #region CalculateNextBillingDateAsync Tests
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task CalculateNextBillingDateAsync_WithTrialSubscription_ShouldReturnTrialEndDate()
         {
             // Arrange
@@ -56,6 +57,7 @@ namespace Orbito.Tests.Application.Common.Services
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task CalculateNextBillingDateAsync_WithNonTrialSubscription_ShouldReturnNextBillingDate()
         {
             // Arrange
@@ -76,6 +78,7 @@ namespace Orbito.Tests.Application.Common.Services
         #region CanUpgradeAsync Tests
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task CanUpgradeAsync_WithUpgradeableSubscriptionAndHigherPricePlan_ShouldReturnTrue()
         {
             // Arrange
