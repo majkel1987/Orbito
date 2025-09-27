@@ -1,8 +1,11 @@
-﻿namespace Orbito.Application.Common.Interfaces
+﻿using System.Data;
+
+namespace Orbito.Application.Common.Interfaces
 {
     public interface IUnitOfWork : IAsyncDisposable
     {
         Task BeginTransactionAsync(CancellationToken cancellationToken = default);
+        Task BeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken cancellationToken = default);
         Task CommitTransactionAsync(CancellationToken cancellationToken = default);
         Task RollbackTransactionAsync(CancellationToken cancellationToken = default);
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
@@ -13,5 +16,6 @@
         IProviderRepository Providers { get; }
         IClientRepository Clients { get; }
         ISubscriptionPlanRepository SubscriptionPlans { get; }
+        IPaymentRepository Payments { get; }
     }
 }

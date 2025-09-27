@@ -62,8 +62,8 @@ namespace Orbito.Application.Subscriptions.Queries.GetSubscriptionById
                     PlanName = subscription.Plan?.Name,
                     PlanDescription = subscription.Plan?.Description,
                     PaymentCount = subscription.Payments?.Count ?? 0,
-                    TotalPaid = subscription.Payments?.Where(p => p.Status == Domain.Enums.PaymentStatus.Succeeded).Sum(p => p.Amount.Amount) ?? 0,
-                    LastPaymentDate = subscription.Payments?.Where(p => p.Status == Domain.Enums.PaymentStatus.Succeeded).Max(p => p.ProcessedAt)
+                    TotalPaid = subscription.Payments?.Where(p => p.Status == Domain.Enums.PaymentStatus.Completed).Sum(p => p.Amount.Amount) ?? 0,
+                    LastPaymentDate = subscription.Payments?.Where(p => p.Status == Domain.Enums.PaymentStatus.Completed).Max(p => p.ProcessedAt)
                 };
             }
 

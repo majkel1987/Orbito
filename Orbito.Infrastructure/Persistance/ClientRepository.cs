@@ -235,7 +235,7 @@ namespace Orbito.Infrastructure.Persistance
                 .CountAsync(c => c.Subscriptions.Any(s => s.Status == SubscriptionStatus.Active), cancellationToken);
 
             var totalRevenue = await _context.Payments
-                .Where(p => p.Status == PaymentStatus.Succeeded)
+                .Where(p => p.Status == PaymentStatus.Completed)
                 .SumAsync(p => p.Amount.Amount, cancellationToken);
 
             return new ClientStats

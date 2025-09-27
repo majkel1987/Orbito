@@ -102,8 +102,8 @@ namespace Orbito.Tests.Application.Subscriptions.Queries.GetSubscriptionById
             result.PlanName.Should().Be(subscription.Plan?.Name);
             result.PlanDescription.Should().Be(subscription.Plan?.Description);
             result.PaymentCount.Should().Be(subscription.Payments?.Count ?? 0);
-            result.TotalPaid.Should().Be(subscription.Payments?.Where(p => p.Status == PaymentStatus.Succeeded).Sum(p => p.Amount.Amount) ?? 0);
-            result.LastPaymentDate.Should().Be(subscription.Payments?.Where(p => p.Status == PaymentStatus.Succeeded).Max(p => p.ProcessedAt));
+            result.TotalPaid.Should().Be(subscription.Payments?.Where(p => p.Status == PaymentStatus.Completed).Sum(p => p.Amount.Amount) ?? 0);
+            result.LastPaymentDate.Should().Be(subscription.Payments?.Where(p => p.Status == PaymentStatus.Completed).Max(p => p.ProcessedAt));
 
             _subscriptionRepositoryMock.Verify(x => x.GetByIdWithDetailsAsync(subscriptionId, It.IsAny<CancellationToken>()), Times.Once);
             _subscriptionRepositoryMock.Verify(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -256,7 +256,7 @@ namespace Orbito.Tests.Application.Subscriptions.Queries.GetSubscriptionById
                 subscription.ClientId,
                 Money.Create(29.99m, "USD"),
                 "external-payment-id");
-            payment.MarkAsSucceeded();
+            payment.MarkAsCompleted();
             subscription.Payments = [payment];
 
             return subscription;

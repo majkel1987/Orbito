@@ -89,6 +89,7 @@ namespace Orbito.Infrastructure
             services.AddScoped<IClientRepository, ClientRepository>();
             services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
             services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
+            services.AddScoped<IPaymentRepository, PaymentRepository>();
 
             return services;
         }

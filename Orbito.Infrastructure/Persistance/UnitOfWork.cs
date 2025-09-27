@@ -1,18 +1,21 @@
-﻿using Microsoft.EntityFrameworkCore.Storage;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Infrastructure.Data;
 using System.Collections.Concurrent;
+using System.Data;
 
 namespace Orbito.Infrastructure.Persistance
 {
     public class UnitOfWork : IUnitOfWork
     {
         private readonly ApplicationDbContext _context;
-        private IDbContextTransaction _transaction;
+        private IDbContextTransaction? _transaction;
         private readonly ConcurrentDictionary<Type, object> _repositories;
-        private IProviderRepository _providers;
-        private IClientRepository _clients;
-        private ISubscriptionPlanRepository _subscriptionPlans;
+        private IProviderRepository? _providers;
+        private IClientRepository? _clients;
+        private ISubscriptionPlanRepository? _subscriptionPlans;
+        private IPaymentRepository? _payments;
 
         public UnitOfWork(ApplicationDbContext context)
         {
@@ -23,12 +26,34 @@ namespace Orbito.Infrastructure.Persistance
         public IProviderRepository Providers => _providers ??= new ProviderRepository(_context);
         public IClientRepository Clients => _clients ??= new ClientRepository(_context);
         public ISubscriptionPlanRepository SubscriptionPlans => _subscriptionPlans ??= new SubscriptionPlanRepository(_context);
+        public IPaymentRepository Payments => _payments ??= new PaymentRepository(_context);
 
          public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
          {
              if (_transaction != null)
              {
                  throw new InvalidOperationException("Transaction already started");
+             }
+
+             _transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+         }
+
+         public async Task BeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken cancellationToken = default)
+         {
+             if (_transaction != null)
+             {
+                 throw new InvalidOperationException("Transaction already started");
+             }
+
+             // Set isolation level via raw SQL if needed
+             switch (isolationLevel)
+             {
+                 case IsolationLevel.ReadCommitted:
+                     await _context.Database.ExecuteSqlRawAsync("SET TRANSACTION ISOLATION LEVEL READ COMMITTED", cancellationToken);
+                     break;
+                 case IsolationLevel.Serializable:
+                     await _context.Database.ExecuteSqlRawAsync("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE", cancellationToken);
+                     break;
              }
 
              _transaction = await _context.Database.BeginTransactionAsync(cancellationToken);

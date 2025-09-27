@@ -166,7 +166,7 @@ namespace Orbito.Application.Common.Services
 
             // In a real implementation, you would integrate with a payment processor here
             // For now, we'll simulate a successful payment
-            payment.MarkAsSucceeded();
+                payment.MarkAsCompleted();
 
             // Update subscription next billing date
             subscription.UpdateNextBillingDate();

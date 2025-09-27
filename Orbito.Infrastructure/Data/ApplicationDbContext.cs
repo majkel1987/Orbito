@@ -17,6 +17,8 @@ namespace Orbito.Infrastructure.Data
         public DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
         public DbSet<Subscription> Subscriptions { get; set; }
         public DbSet<Payment> Payments { get; set; }
+        public DbSet<PaymentMethod> PaymentMethods { get; set; }
+        public DbSet<PaymentHistory> PaymentHistory { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -64,6 +66,12 @@ namespace Orbito.Infrastructure.Data
 
             builder.Entity<Payment>()
                 .HasQueryFilter(p => EF.Property<Guid>(p, "TenantId") == Guid.Empty); // Will be overridden at runtime
+
+            builder.Entity<PaymentMethod>()
+                .HasQueryFilter(pm => EF.Property<Guid>(pm, "TenantId") == Guid.Empty); // Will be overridden at runtime
+
+            builder.Entity<PaymentHistory>()
+                .HasQueryFilter(ph => EF.Property<Guid>(ph, "TenantId") == Guid.Empty); // Will be overridden at runtime
         }
 
         private void SeedDefaultData(ModelBuilder builder)

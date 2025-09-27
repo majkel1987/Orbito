@@ -207,6 +207,13 @@ dotnet run --project Orbito.API
 - `POST /api/subscriptions/{id}/downgrade` - Downgrade subskrypcji (wymaga roli Provider/PlatformAdmin)
 - `POST /api/subscriptions/{id}/renew` - Odnowienie subskrypcji (wymaga roli Provider/PlatformAdmin)
 
+#### PaymentController
+
+- `POST /api/payments/process` - Przetwarzanie nowej płatności (wymaga roli Provider/PlatformAdmin)
+- `GET /api/payments/{id}` - Szczegóły płatności (wymaga roli Provider/PlatformAdmin)
+- `GET /api/payments/subscription/{subscriptionId}` - Płatności dla subskrypcji (wymaga roli Provider/PlatformAdmin)
+- `PUT /api/payments/{id}/status` - Aktualizacja statusu płatności (wymaga roli Provider/PlatformAdmin)
+
 ## 📊 Logowanie
 
 Aplikacja wykorzystuje **Serilog** z konfiguracją do oddzielnych plików:
@@ -697,6 +704,8 @@ Aplikacja Orbito posiada **kompletne pokrycie testami jednostkowymi i integracyj
   - `UpdateClientCommandValidator`: 15 testów
 - **Domain Tests**: 1 test z 12 scenariuszami
   - `ClientTests`: 12 testów metod domenowych
+- **Integration Tests**: 17 testów integracyjnych
+  - `ClientIntegrationTests`: 17 testów integracyjnych - wszystkie przechodzą ✅
 
 #### ✅ Subscription Plan Operations (Kompletne pokrycie)
 
@@ -766,6 +775,21 @@ Aplikacja Orbito posiada **kompletne pokrycie testami jednostkowymi i integracyj
   - **Tenant Isolation** - testy izolacji danych między różnymi tenantami
   - **Complex Scenarios** - testy złożonych scenariuszy biznesowych z wieloma źródłami tenanta
 
+#### ✅ Client Integration Tests (UKOŃCZONE - 17 testów integracyjnych)
+
+- **ClientIntegrationTests**: 17 testów integracyjnych - wszystkie przechodzą ✅
+
+  - **Create Client** - testy tworzenia klientów z kontem Identity i bez
+  - **Update Client** - testy aktualizacji informacji klientów
+  - **Get Client** - testy pobierania klientów po ID z kontrolą dostępu
+  - **Activate/Deactivate Client** - testy aktywacji i deaktywacji klientów
+  - **Delete Client** - testy usuwania klientów z walidacją aktywnych subskrypcji
+  - **Business Logic** - testy złożonych scenariuszy biznesowych
+  - **Validation** - testy walidacji i obsługi błędów
+  - **Multi-Tenant Security** - testy izolacji danych między tenantami
+  - **Error Handling** - testy obsługi błędów i wyjątków
+  - **Edge Cases** - testy scenariuszy brzegowych i nieprawidłowych danych
+
 ### 🎯 Kluczowe Scenariusze Testowe
 
 #### Multi-Tenancy Security
@@ -817,11 +841,11 @@ Aplikacja Orbito posiada **kompletne pokrycie testami jednostkowymi i integracyj
 | -------------------- | ----------------- | ------------------ | -------------------- |
 | **Administrator**    | 8                 | 27                 | 100%                 |
 | **Provider**         | 40                | 10                 | 100%                 |
-| **Client**           | 72                | 0                  | 100%                 |
+| **Client**           | 72                | 17                 | 100%                 |
 | **SubscriptionPlan** | 83                | 0                  | 100%                 |
 | **Subscription**     | 96                | 0                  | 100%                 |
 | **Domain**           | 37                | 0                  | 100%                 |
-| **RAZEM**            | **336**           | **37**             | **100%**             |
+| **RAZEM**            | **336**           | **54**             | **100%**             |
 
 ### 🔧 Poprawki Testów Jednostkowych
 
@@ -953,8 +977,8 @@ dotnet test --collect:"XPlat Code Coverage" --results-directory ./TestResults
 - [x] **Testy jednostkowe** - kompletne pokrycie testami jednostkowymi
 - [x] **Subscription Plan Management** - kompletne zarządzanie planami subskrypcji
 - [x] **Testy integracyjne Provider** - ✅ UKOŃCZONE - 10 testów integracyjnych przechodzi pomyślnie
-- [x] **Testy integracyjne Tenant** - ✅ UKOŃCZONE - 27 testów integracyjnych przechodzi pomyślnie
-- [ ] **Testy integracyjne Client** - testy integracyjne dla operacji Client
+- [x] **Testy integracyjne Tenant** - ✅ UKOŃCZONE - 25 testów integracyjnych przechodzi pomyślnie
+- [x] **Testy integracyjne Client** - ✅ UKOŃCZONE - 17 testów integracyjnych przechodzi pomyślnie
 - [ ] **Testy integracyjne Subscription** - testy integracyjne dla operacji Subscription
 - [ ] **Dodatkowe Commands/Queries** - rozszerzenie CQRS pattern
 - [ ] **Provider Management** - pełne zarządzanie providerami
@@ -962,7 +986,7 @@ dotnet test --collect:"XPlat Code Coverage" --results-directory ./TestResults
 ### 📅 Planowane
 
 - [x] **Subscription Management** - pełne zarządzanie subskrypcjami klientów
-- [ ] **Payment Processing** - integracja z systemami płatności (Stripe, PayPal)
+- [x] **Payment Processing** - kompletna infrastruktura płatności z CQRS i walidacją
 - [ ] **Billing & Invoicing** - automatyczne generowanie faktur
 - [ ] **Analytics & Reporting** - zaawansowane raporty i analityka
 - [ ] **Email Notifications** - system powiadomień email
@@ -1035,6 +1059,13 @@ W przypadku problemów lub pytań:
 31. **🧪 Testy Subscription Management** - kompletne testy jednostkowe dla zarządzania subskrypcjami (96 testów)
 32. **🧪 Testy Integracyjne Provider** - ✅ UKOŃCZONE - 10 testów integracyjnych dla operacji Provider (ProviderIntegrationTests) - wszystkie testy przechodzą pomyślnie
 33. **🧪 Testy Integracyjne Tenant** - ✅ UKOŃCZONE - 25 testów integracyjnych dla operacji Tenant (TenantIntegrationTests) - wszystkie testy przechodzą pomyślnie
+34. **🧪 Testy Integracyjne Client** - ✅ UKOŃCZONE - 17 testów integracyjnych dla operacji Client (ClientIntegrationTests) - wszystkie testy przechodzą pomyślnie
+35. **💳 Payment Management** - kompletna infrastruktura płatności z CQRS, walidacją i multi-tenancy
+36. **Payment Entities** - Payment, PaymentMethod, PaymentHistory z pełną funkcjonalnością biznesową
+37. **Payment CQRS** - ProcessPaymentCommand, UpdatePaymentStatusCommand, GetPaymentByIdQuery, GetPaymentsBySubscriptionQuery
+38. **PaymentController** - kompletne API endpoints dla zarządzania płatnościami
+39. **PaymentRepository** - repozytorium z operacjami CRUD i statystykami płatności
+40. **Payment Infrastructure** - konfiguracje EF Core, migracje i indeksy bazy danych
 
 ### 🔧 Architektura
 
@@ -1475,6 +1506,164 @@ POST /api/subscriptions/{id}/renew
     "currency": "USD",
     "externalPaymentId": "stripe-payment-intent-id"
 }
+```
+
+## 💳 Payment Management
+
+### 🏗️ Architektura Payment Management
+
+Aplikacja implementuje **kompletną infrastrukturę płatności** z wykorzystaniem wzorców Clean Architecture i CQRS:
+
+#### 1. Payment Entity
+
+```csharp
+public class Payment : IMustHaveTenant
+{
+    public Guid Id { get; set; }
+    public TenantId TenantId { get; set; }
+
+    // Payment Details
+    public Guid SubscriptionId { get; set; }
+    public Guid ClientId { get; set; }
+    public Money Amount { get; set; }
+    public PaymentStatus Status { get; set; }
+
+    // External Payment Data
+    public string? ExternalTransactionId { get; set; }
+    public string? PaymentMethod { get; set; }
+    public string? ExternalPaymentId { get; set; }
+    public string? PaymentMethodId { get; set; }
+
+    // Timestamps
+    public DateTime CreatedAt { get; set; }
+    public DateTime? ProcessedAt { get; set; }
+    public DateTime? FailedAt { get; set; }
+    public DateTime? RefundedAt { get; set; }
+
+    // Business Operations
+    public void MarkAsProcessing();
+    public void MarkAsCompleted();
+    public void MarkAsFailed(string reason);
+    public void MarkAsRefunded();
+    public void MarkAsPartiallyRefunded();
+    public void RetryPayment();
+    public bool CanBeRetried();
+}
+```
+
+#### 2. PaymentMethod Entity
+
+```csharp
+public class PaymentMethod : IMustHaveTenant
+{
+    public Guid Id { get; set; }
+    public TenantId TenantId { get; set; }
+    public Guid ClientId { get; set; }
+
+    // Payment Method Details
+    public PaymentMethodType Type { get; set; }
+    public string Token { get; set; } // Encrypted payment method token
+    public string? LastFourDigits { get; set; }
+    public DateTime? ExpiryDate { get; set; }
+    public bool IsDefault { get; set; }
+
+    // Business Operations
+    public void UpdateToken(string newToken);
+    public void SetAsDefault();
+    public void RemoveAsDefault();
+    public bool IsExpired();
+    public bool CanBeUsed();
+}
+```
+
+#### 3. PaymentHistory Entity
+
+```csharp
+public class PaymentHistory : IMustHaveTenant
+{
+    public Guid Id { get; set; }
+    public TenantId TenantId { get; set; }
+    public Guid PaymentId { get; set; }
+
+    // History Details
+    public string Action { get; set; } // Created, Processed, Failed, Refunded, etc.
+    public PaymentStatus Status { get; set; }
+    public DateTime OccurredAt { get; set; }
+    public string? Details { get; set; }
+    public string? ErrorMessage { get; set; }
+}
+```
+
+#### 4. Payment Statuses
+
+- **Pending** - Oczekująca płatność
+- **Processing** - Płatność w trakcie przetwarzania
+- **Completed** - Zakończona płatność
+- **Failed** - Nieudana płatność
+- **Refunded** - Zwrócona płatność
+- **PartiallyRefunded** - Częściowo zwrócona płatność
+- **Cancelled** - Anulowana płatność
+
+#### 5. Payment Method Types
+
+- **Card** - Karta płatnicza
+- **BankTransfer** - Przelew bankowy
+- **PayPal** - PayPal
+- **Stripe** - Stripe
+- **ApplePay** - Apple Pay
+- **GooglePay** - Google Pay
+- **SEPA** - SEPA
+- **ACH** - ACH
+
+#### 6. CQRS Commands & Queries
+
+**Commands (Write Operations):**
+
+- `ProcessPaymentCommand` - przetwarzanie nowej płatności
+- `UpdatePaymentStatusCommand` - aktualizacja statusu płatności
+
+**Queries (Read Operations):**
+
+- `GetPaymentByIdQuery` - pobieranie płatności po ID
+- `GetPaymentsBySubscriptionQuery` - pobieranie płatności dla subskrypcji
+
+#### 7. Payment API Endpoints
+
+##### 🔐 Autoryzacja Payment Operations
+
+| Endpoint                              | PlatformAdmin | Provider | Client |
+| ------------------------------------- | ------------- | -------- | ------ |
+| `POST /api/payments/process`          | ✅            | ✅\*     | ❌     |
+| `GET /api/payments/{id}`              | ✅            | ✅\*     | ❌     |
+| `GET /api/payments/subscription/{id}` | ✅            | ✅\*     | ❌     |
+| `PUT /api/payments/{id}/status`       | ✅            | ✅\*     | ❌     |
+
+\*Provider może operować tylko na płatnościach ze swojego tenanta
+
+#### 8. Payment Processing Features
+
+- **Multi-Tenant Security** - automatyczna izolacja płatności między tenantami
+- **Payment History** - pełna historia audytu płatności
+- **Payment Methods** - zarządzanie metodami płatności klientów
+- **External Integration** - wsparcie dla zewnętrznych systemów płatności
+- **Retry Logic** - możliwość ponowienia nieudanych płatności
+- **Refund Support** - obsługa zwrotów i częściowych zwrotów
+- **Validation** - FluentValidation dla wszystkich operacji płatności
+
+#### 9. Database Schema
+
+```sql
+-- Payment Tables
+Payments (Id, TenantId, SubscriptionId, ClientId, Amount, Currency, Status, ...)
+PaymentMethods (Id, TenantId, ClientId, Type, Token, LastFourDigits, ...)
+PaymentHistory (Id, TenantId, PaymentId, Action, Status, OccurredAt, ...)
+
+-- Indexes
+IX_Payments_TenantId_Status
+IX_Payments_SubscriptionId
+IX_Payments_ClientId
+IX_PaymentMethods_TenantId_ClientId
+IX_PaymentHistory_PaymentId_OccurredAt
 ```
 
 ## 📋 Subscription Plan Management

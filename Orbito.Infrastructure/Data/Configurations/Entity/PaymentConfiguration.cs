@@ -45,6 +45,12 @@ namespace Orbito.Infrastructure.Data.Configurations.Entity
             });
 
             // External Payment Data
+            builder.Property(p => p.ExternalTransactionId)
+                .HasMaxLength(255);
+
+            builder.Property(p => p.PaymentMethod)
+                .HasMaxLength(50);
+
             builder.Property(p => p.ExternalPaymentId)
                 .HasMaxLength(255);
 
@@ -62,6 +68,8 @@ namespace Orbito.Infrastructure.Data.Configurations.Entity
 
             builder.Property(p => p.FailedAt);
 
+            builder.Property(p => p.RefundedAt);
+
             // Indexes
             builder.HasIndex(p => p.TenantId)
                 .HasDatabaseName("IX_Payments_TenantId");
@@ -75,6 +83,12 @@ namespace Orbito.Infrastructure.Data.Configurations.Entity
             builder.HasIndex(p => p.ExternalPaymentId)
                 .HasDatabaseName("IX_Payments_ExternalPaymentId")
                 .HasFilter("ExternalPaymentId IS NOT NULL");
+
+            // Unique constraint for ExternalTransactionId to prevent duplicates
+            builder.HasIndex(p => p.ExternalTransactionId)
+                .HasDatabaseName("IX_Payments_ExternalTransactionId")
+                .IsUnique()
+                .HasFilter("ExternalTransactionId IS NOT NULL");
 
             builder.HasIndex(p => new { p.TenantId, p.Status })
                 .HasDatabaseName("IX_Payments_TenantId_Status");

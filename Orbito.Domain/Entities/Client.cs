@@ -29,6 +29,7 @@ namespace Orbito.Domain.Entities
         public Provider Provider { get; set; }
         public ICollection<Subscription> Subscriptions { get; set; } = [];
         public ICollection<Payment> Payments { get; set; } = [];
+        public ICollection<PaymentMethod> PaymentMethods { get; set; } = [];
 
         public string Email => User?.Email ?? DirectEmail ?? "";
         public string FirstName => User?.FirstName ?? DirectFirstName ?? "";
@@ -36,8 +37,25 @@ namespace Orbito.Domain.Entities
         public string FullName => $"{FirstName} {LastName}".Trim();
 
         // Computed Properties
-        public Subscription? ActiveSubscription =>
-            Subscriptions.FirstOrDefault(s => s.Status == SubscriptionStatus.Active);
+        public Subscription? ActiveSubscription
+        {
+            get
+            {
+                var activeSubscriptions = Subscriptions.Where(s => s.Status == SubscriptionStatus.Active).ToList();
+                
+                if (activeSubscriptions.Count == 0)
+                    return null;
+                
+                if (activeSubscriptions.Count > 1)
+                {
+                    // Logika biznesowa: jeśli klient ma wiele aktywnych subskrypcji,
+                    // zwróć najnowszą (najprawdopodobniej najważniejszą)
+                    return activeSubscriptions.OrderByDescending(s => s.StartDate).First();
+                }
+                
+                return activeSubscriptions.First();
+            }
+        }
 
         private Client() { } // EF Core
 
@@ -103,7 +121,8 @@ namespace Orbito.Domain.Entities
 
         public void UpdateDirectInfo(string? email, string? firstName, string? lastName)
         {
-            if (UserId != null) return; // Nie można aktualizować danych bezpośrednich dla klientów z kontem Identity
+            if (UserId != null)
+                throw new InvalidOperationException("Cannot update direct info for clients with Identity account. Use Identity user management instead.");
 
             if (!string.IsNullOrWhiteSpace(email))
             {
