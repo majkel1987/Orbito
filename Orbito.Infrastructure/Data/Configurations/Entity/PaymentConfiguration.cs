@@ -41,7 +41,10 @@ namespace Orbito.Infrastructure.Data.Configurations.Entity
                     .HasPrecision(18, 2);
                 money.Property(m => m.Currency)
                     .HasColumnName("Currency")
-                    .HasMaxLength(3);
+                    .HasMaxLength(3)
+                    .HasConversion(
+                        currency => currency.Code,
+                        code => Currency.Create(code, GetSymbolForCode(code), 2));
             });
 
             // External Payment Data
@@ -110,5 +113,19 @@ namespace Orbito.Infrastructure.Data.Configurations.Entity
             // Table name
             builder.ToTable("Payments");
         }
+
+        /// <summary>
+        /// Helper method to get symbol for currency code
+        /// </summary>
+        /// <param name="code">Currency code</param>
+        /// <returns>Currency symbol</returns>
+        private static string GetSymbolForCode(string code) => code.ToUpperInvariant() switch
+        {
+            "PLN" => "zł",
+            "USD" => "$",
+            "EUR" => "€",
+            "GBP" => "£",
+            _ => code
+        };
     }
 }

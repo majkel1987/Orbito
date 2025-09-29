@@ -9,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Domain.Identity;
 using Orbito.Infrastructure.Data;
+using Orbito.Infrastructure.PaymentGateways.Stripe;
 using Orbito.Infrastructure.Persistance;
 using System.Text;
 
@@ -90,6 +91,10 @@ namespace Orbito.Infrastructure
             services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
             services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
             services.AddScoped<IPaymentRepository, PaymentRepository>();
+
+            // Configure Stripe
+            services.Configure<StripeConfiguration>(configuration.GetSection("Stripe"));
+            services.AddScoped<IPaymentGateway, StripePaymentGateway>();
 
             return services;
         }

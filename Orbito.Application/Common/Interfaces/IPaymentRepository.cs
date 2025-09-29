@@ -27,6 +27,10 @@ namespace Orbito.Application.Common.Interfaces
         Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default);
         Task<bool> ExistsAsync(string externalTransactionId, CancellationToken cancellationToken = default);
 
+        // Security operations
+        Task<Payment?> GetRecentBySubscriptionIdAsync(Guid subscriptionId, TimeSpan timeWindow, CancellationToken cancellationToken = default);
+        Task<decimal> GetTotalRefundedAmountAsync(Guid paymentId, CancellationToken cancellationToken = default);
+
         // Stats operations
         Task<PaymentStats> GetPaymentStatsAsync(CancellationToken cancellationToken = default);
         Task<decimal> GetTotalRevenueAsync(CancellationToken cancellationToken = default);

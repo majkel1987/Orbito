@@ -168,6 +168,11 @@ namespace Orbito.Domain.Entities
             return Status == SubscriptionStatus.Suspended;
         }
 
+        public bool CanBePaid()
+        {
+            return Status == SubscriptionStatus.Active || Status == SubscriptionStatus.PastDue;
+        }
+
         public bool IsExpiring(DateTime checkDate, int daysBeforeExpiration = 7)
         {
             return Status == SubscriptionStatus.Active && 

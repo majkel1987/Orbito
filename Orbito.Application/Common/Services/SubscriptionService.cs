@@ -28,16 +28,16 @@ namespace Orbito.Application.Common.Services
             _logger = logger;
         }
 
-        public async Task<DateTime> CalculateNextBillingDateAsync(Subscription subscription, CancellationToken cancellationToken = default)
+        public Task<DateTime> CalculateNextBillingDateAsync(Subscription subscription, CancellationToken cancellationToken = default)
         {
             var currentDate = _dateTime.UtcNow;
             
             if (subscription.IsInTrial && subscription.TrialEndDate.HasValue)
             {
-                return subscription.TrialEndDate.Value;
+                return Task.FromResult(subscription.TrialEndDate.Value);
             }
 
-            return subscription.BillingPeriod.GetNextBillingDate(currentDate);
+            return Task.FromResult(subscription.BillingPeriod.GetNextBillingDate(currentDate));
         }
 
         public async Task<bool> CanUpgradeAsync(Subscription subscription, Guid newPlanId, CancellationToken cancellationToken = default)

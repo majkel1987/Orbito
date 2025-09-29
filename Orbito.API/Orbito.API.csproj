@@ -26,6 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Orbito.Application\Orbito.Application.csproj" />
     <ProjectReference Include="..\Orbito.Infrastructure\Orbito.Infrastructure.csproj" />
   </ItemGroup>
 

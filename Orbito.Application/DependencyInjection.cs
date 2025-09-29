@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Orbito.Application.Common.Behaviours;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.Common.Services;
+using Orbito.Application.Services;
 using Orbito.Application.Common.Settings;
 using System.Reflection;
 
@@ -35,6 +36,7 @@ namespace Orbito.Application
             services.AddScoped<IProviderService, ProviderService>();
             services.AddScoped<ISubscriptionPlanService, SubscriptionPlanService>();
             services.AddScoped<ISubscriptionService, SubscriptionService>();
+            services.AddScoped<IPaymentProcessingService, PaymentProcessingService>();
 
             return services;
         }

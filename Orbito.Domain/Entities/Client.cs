@@ -25,6 +25,9 @@ namespace Orbito.Domain.Entities
         public DateTime CreatedAt { get; set; }
         public bool IsActive { get; set; }
 
+        // Payment Gateway Integration
+        public string? StripeCustomerId { get; set; }
+
         // Navigation Properties
         public Provider Provider { get; set; }
         public ICollection<Subscription> Subscriptions { get; set; } = [];

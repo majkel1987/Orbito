@@ -207,6 +207,53 @@ namespace Orbito.Infrastructure.Persistance
             return await _context.Payments.CountAsync(p => p.SubscriptionId == subscriptionId, cancellationToken);
         }
 
+        public async Task<Payment?> GetRecentBySubscriptionIdAsync(Guid subscriptionId, TimeSpan timeWindow, CancellationToken cancellationToken = default)
+        {
+            var cutoffTime = DateTime.UtcNow.Subtract(timeWindow);
+
+            return await _context.Payments
+                .AsNoTracking()
+                .Where(p => p.SubscriptionId == subscriptionId &&
+                           p.CreatedAt >= cutoffTime)
+                .OrderByDescending(p => p.CreatedAt)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        public async Task<decimal> GetTotalRefundedAmountAsync(Guid paymentId, CancellationToken cancellationToken = default)
+        {
+            // W tej implementacji zakładamy, że informacja o zwrotach jest przechowywana
+            // w polu RefundedAmount lub w oddzielnej tabeli refunds
+            // Dla uproszczenia, zwrócimy 0 - należy to dostosować do rzeczywistej struktury danych
+
+            var payment = await _context.Payments
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == paymentId, cancellationToken);
+
+            if (payment == null)
+                return 0;
+
+            // Jeśli mamy pole RefundedAmount w encji Payment
+            // return payment.RefundedAmount ?? 0;
+
+            // Jeśli mamy oddzielną tabelę Refunds
+            // return await _context.Refunds
+            //     .Where(r => r.PaymentId == paymentId && r.Status == RefundStatus.Completed)
+            //     .SumAsync(r => r.Amount.Amount, cancellationToken);
+
+            // Tymczasowe rozwiązanie - zwróć pełną kwotę jeśli częściowo lub całkowicie zwrócone
+            if (payment.Status == PaymentStatus.Refunded)
+                return payment.Amount?.Amount ?? 0;
+
+            if (payment.Status == PaymentStatus.PartiallyRefunded)
+            {
+                // W rzeczywistości powinniśmy śledzić dokładną kwotę zwróconą
+                // Na razie zwrócimy połowę kwoty jako przykład
+                return (payment.Amount?.Amount ?? 0) * 0.5m;
+            }
+
+            return 0;
+        }
+
         private static (int pageNumber, int pageSize) ValidatePagination(int pageNumber, int pageSize)
         {
             if (pageNumber < 1) pageNumber = 1;

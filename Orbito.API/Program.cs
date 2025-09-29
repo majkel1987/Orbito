@@ -75,8 +75,8 @@ builder.Services.AddSwaggerGen(option =>
     });
 });
 
-builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication(builder.Configuration);
+builder.Services.AddInfrastructure(builder.Configuration);
 
 // Add Background Jobs
 builder.Services.AddHostedService<Orbito.Application.BackgroundJobs.CheckExpiringSubscriptionsJob>();
