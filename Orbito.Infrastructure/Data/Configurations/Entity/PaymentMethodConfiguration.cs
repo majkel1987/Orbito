@@ -6,78 +6,81 @@ using Orbito.Domain.ValueObjects;
 
 namespace Orbito.Infrastructure.Data.Configurations.Entity
 {
+    /// <summary>
+    /// Entity configuration for PaymentMethod
+    /// </summary>
     public class PaymentMethodConfiguration : IEntityTypeConfiguration<PaymentMethod>
     {
         public void Configure(EntityTypeBuilder<PaymentMethod> builder)
         {
-            // Primary Key
+            // Primary key
             builder.HasKey(pm => pm.Id);
 
-            // TenantId - required for multi-tenancy
-            builder.Property(pm => pm.TenantId)
-                .HasConversion(
-                    tenantId => tenantId.Value,
-                    guid => TenantId.Create(guid))
-                .IsRequired()
-                .HasColumnName("TenantId");
+            // Table name
+            builder.ToTable("PaymentMethods");
 
-            // Foreign Keys
+            // Properties
+            builder.Property(pm => pm.Id)
+                .IsRequired();
+
+            builder.Property(pm => pm.TenantId)
+                .IsRequired()
+                .HasConversion(
+                    v => v.Value,
+                    v => TenantId.Create(v));
+
             builder.Property(pm => pm.ClientId)
                 .IsRequired();
 
-            // Payment Method Details
             builder.Property(pm => pm.Type)
+                .IsRequired()
                 .HasConversion<string>()
-                .IsRequired();
+                .HasMaxLength(50);
 
             builder.Property(pm => pm.Token)
                 .IsRequired()
-                .HasMaxLength(500); // Encrypted token can be longer
+                .HasMaxLength(500);
 
             builder.Property(pm => pm.LastFourDigits)
-                .HasMaxLength(4);
+                .HasMaxLength(4)
+                .IsFixedLength(false);
 
-            builder.Property(pm => pm.ExpiryDate);
+            builder.Property(pm => pm.ExpiryDate)
+                .HasColumnType("datetime2");
 
             builder.Property(pm => pm.IsDefault)
                 .IsRequired()
                 .HasDefaultValue(false);
 
-            // Timestamps
             builder.Property(pm => pm.CreatedAt)
-                .IsRequired();
+                .IsRequired()
+                .HasDefaultValueSql("GETUTCDATE()");
 
-            builder.Property(pm => pm.UpdatedAt);
+            builder.Property(pm => pm.UpdatedAt)
+                .IsRequired()
+                .HasDefaultValueSql("GETUTCDATE()");
 
             // Indexes
-            builder.HasIndex(pm => pm.TenantId)
-                .HasDatabaseName("IX_PaymentMethods_TenantId");
-
-            builder.HasIndex(pm => pm.ClientId)
-                .HasDatabaseName("IX_PaymentMethods_ClientId");
-
             builder.HasIndex(pm => new { pm.TenantId, pm.ClientId })
                 .HasDatabaseName("IX_PaymentMethods_TenantId_ClientId");
 
-            builder.HasIndex(pm => pm.Type)
-                .HasDatabaseName("IX_PaymentMethods_Type");
+            builder.HasIndex(pm => new { pm.ClientId, pm.IsDefault })
+                .HasDatabaseName("IX_PaymentMethods_ClientId_IsDefault")
+                .HasFilter("[IsDefault] = 1"); // Only for default = true
 
-            builder.HasIndex(pm => pm.IsDefault)
-                .HasDatabaseName("IX_PaymentMethods_IsDefault");
+            builder.HasIndex(pm => new { pm.Type, pm.CreatedAt })
+                .HasDatabaseName("IX_PaymentMethods_Type_CreatedAt");
 
-            builder.HasIndex(pm => pm.CreatedAt)
-                .HasDatabaseName("IX_PaymentMethods_CreatedAt");
+            builder.HasIndex(pm => pm.ExpiryDate)
+                .HasDatabaseName("IX_PaymentMethods_ExpiryDate");
+
+            // Multi-tenancy query filter is handled globally in ApplicationDbContext
 
             // Relationships
             builder.HasOne(pm => pm.Client)
-                .WithMany(c => c.PaymentMethods)
+                .WithMany()
                 .HasForeignKey(pm => pm.ClientId)
                 .OnDelete(DeleteBehavior.Cascade);
-
-            // Note: PaymentMethod relationship will be configured in PaymentConfiguration
-
-            // Table name
-            builder.ToTable("PaymentMethods");
         }
     }
 }

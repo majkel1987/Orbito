@@ -1,10 +1,12 @@
 using Microsoft.OpenApi.Models;
 using Orbito.API.Middleware;
+using Orbito.Infrastructure.PaymentGateways.Stripe.Models;
 using Orbito.Application;
 using Orbito.Infrastructure;
 using Serilog;
 using Serilog.Events;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Diagnostics;
 
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
@@ -28,11 +30,43 @@ var builder = WebApplication.CreateBuilder(args);
 // Use Serilog
 builder.Host.UseSerilog();
 
+// Add Global Exception Handler
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
 builder.Services.AddHealthChecksUI()
     .AddInMemoryStorage();
+
+// Add Rate Limiting
+builder.Services.AddRateLimiter(rateLimiterOptions =>
+{
+    // Webhook rate limiter - 100 requests per minute
+    rateLimiterOptions.AddPolicy("webhook", context =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Request.Headers.Host.ToString(),
+            factory: _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 100,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0 // No queue, reject immediately
+            }));
+
+    // API rate limiter - 1000 requests per minute
+    rateLimiterOptions.AddPolicy("api", context =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Request.Headers.Host.ToString(),
+            factory: _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 1000,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
+});
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -78,6 +112,9 @@ builder.Services.AddSwaggerGen(option =>
 builder.Services.AddApplication(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
 
+// Configure Stripe Webhook Settings
+builder.Services.Configure<StripeWebhookSettings>(builder.Configuration.GetSection("StripeWebhookSettings"));
+
 // Add Background Jobs
 builder.Services.AddHostedService<Orbito.Application.BackgroundJobs.CheckExpiringSubscriptionsJob>();
 builder.Services.AddHostedService<Orbito.Application.BackgroundJobs.ProcessRecurringPaymentsJob>();
@@ -100,8 +137,17 @@ app.UseHttpsRedirection();
 // Use CORS
 app.UseCors("Orbito_test");
 
+// Add global exception handler
+app.UseExceptionHandler();
+
+// Add rate limiting
+app.UseRateLimiter();
+
 // Add tenant middleware
 app.UseMiddleware<TenantMiddleware>();
+
+// Add Stripe signature verification middleware
+app.UseStripeSignatureVerification();
 
 // Add authentication and authorization
 app.UseAuthentication();

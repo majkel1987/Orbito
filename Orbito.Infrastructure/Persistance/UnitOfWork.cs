@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.Common.Models;
 using Orbito.Infrastructure.Data;
+using Orbito.Infrastructure.Persistence;
 using System.Collections.Concurrent;
 using System.Data;
 
@@ -11,6 +12,7 @@ namespace Orbito.Infrastructure.Persistance
     public class UnitOfWork : IUnitOfWork
     {
         private readonly ApplicationDbContext _context;
+        private readonly ITenantContext _tenantContext;
         private IDbContextTransaction? _transaction;
         private readonly ConcurrentDictionary<Type, object> _repositories;
         private IProviderRepository? _providers;
@@ -18,10 +20,13 @@ namespace Orbito.Infrastructure.Persistance
         private ISubscriptionRepository? _subscriptions;
         private ISubscriptionPlanRepository? _subscriptionPlans;
         private IPaymentRepository? _payments;
+        private IPaymentMethodRepository? _paymentMethods;
+        private IWebhookLogRepository? _webhookLogs;
 
-        public UnitOfWork(ApplicationDbContext context)
+        public UnitOfWork(ApplicationDbContext context, ITenantContext tenantContext)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
+            _tenantContext = tenantContext ?? throw new ArgumentNullException(nameof(tenantContext));
             _repositories = new ConcurrentDictionary<Type, object>();
         }
 
@@ -29,7 +34,9 @@ namespace Orbito.Infrastructure.Persistance
         public IClientRepository Clients => _clients ??= new ClientRepository(_context);
         public ISubscriptionRepository Subscriptions => _subscriptions ??= new SubscriptionRepository(_context);
         public ISubscriptionPlanRepository SubscriptionPlans => _subscriptionPlans ??= new SubscriptionPlanRepository(_context);
-        public IPaymentRepository Payments => _payments ??= new PaymentRepository(_context);
+        public IPaymentRepository Payments => _payments ??= new PaymentRepository(_context, _tenantContext);
+        public IPaymentMethodRepository PaymentMethods => _paymentMethods ??= new PaymentMethodRepository(_context, _tenantContext);
+        public IWebhookLogRepository WebhookLogs => _webhookLogs ??= new WebhookLogRepository(_context, _tenantContext);
 
         public bool HasActiveTransaction => _transaction != null;
 

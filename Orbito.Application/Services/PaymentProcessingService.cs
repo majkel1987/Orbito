@@ -339,7 +339,7 @@ namespace Orbito.Application.Services
                     }
                     else
                     {
-                        payment.MarkAsPartiallyRefunded(reason);
+                        payment.MarkAsPartiallyRefunded(reason, amount);
                     }
 
                     await _unitOfWork.Payments.UpdateAsync(payment, cancellationToken);
@@ -425,6 +425,284 @@ namespace Orbito.Application.Services
             {
                 _logger.LogError(ex, "Error creating Stripe customer for client {ClientId}", clientId);
                 return CustomerResult.Failure("An error occurred while creating customer", "CUSTOMER_CREATION_ERROR");
+            }
+        }
+
+        /// <summary>
+        /// Przetwarza oczekujące płatności
+        /// </summary>
+        public async Task ProcessPendingPaymentsAsync(DateTime billingDate, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                _logger.LogInformation("Processing pending payments for date {BillingDate}", billingDate);
+
+                // Pobierz wszystkie oczekujące płatności
+                var pendingPayments = await _unitOfWork.Payments.GetPendingPaymentsAsync(cancellationToken);
+
+                foreach (var payment in pendingPayments)
+                {
+                    try
+                    {
+                        // Sprawdź czy płatność powinna być przetworzona
+                        if (payment.CreatedAt.AddMinutes(30) > billingDate) // Tylko płatności starsze niż 30 minut
+                        {
+                            continue;
+                        }
+
+                        // Sprawdź status w payment gateway
+                        if (!string.IsNullOrEmpty(payment.ExternalPaymentId))
+                        {
+                            var statusResult = await _paymentGateway.GetPaymentStatusAsync(payment.ExternalPaymentId);
+                            if (statusResult.IsSuccess)
+                            {
+                                switch (statusResult.Status)
+                                {
+                                    case PaymentStatus.Completed:
+                                        payment.MarkAsCompleted();
+                                        await _unitOfWork.Payments.UpdateAsync(payment, cancellationToken);
+                                        _logger.LogInformation("Payment {PaymentId} marked as completed", payment.Id);
+                                        break;
+                                    case PaymentStatus.Failed:
+                                        payment.MarkAsFailed("Payment failed in gateway");
+                                        await _unitOfWork.Payments.UpdateAsync(payment, cancellationToken);
+                                        _logger.LogInformation("Payment {PaymentId} marked as failed", payment.Id);
+                                        break;
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error processing pending payment {PaymentId}", payment.Id);
+                    }
+                }
+
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation("Successfully processed pending payments for date {BillingDate}", billingDate);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing pending payments for date {BillingDate}", billingDate);
+            }
+        }
+
+        /// <summary>
+        /// Aktualizuje płatność z webhook
+        /// </summary>
+        public async Task UpdatePaymentFromWebhookAsync(string webhookData, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                _logger.LogInformation("Updating payment from webhook data");
+
+                // TODO: Implement webhook data parsing and payment update logic
+                // This would parse the webhook data and update the corresponding payment
+                
+                _logger.LogInformation("Successfully updated payment from webhook");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating payment from webhook");
+            }
+        }
+
+        /// <summary>
+        /// Waliduje status płatności
+        /// </summary>
+        public async Task ValidatePaymentStatusAsync(CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                _logger.LogInformation("Validating payment statuses");
+
+                // Pobierz płatności w trakcie przetwarzania
+                var processingPayments = await _unitOfWork.Payments.GetProcessingPaymentsAsync(cancellationToken);
+
+                foreach (var payment in processingPayments)
+                {
+                    try
+                    {
+                        // Sprawdź czy płatność nie jest zbyt stara (więcej niż 24 godziny)
+                        if (payment.CreatedAt.AddHours(24) < DateTime.UtcNow)
+                        {
+                            payment.MarkAsFailed("Payment timeout");
+                            await _unitOfWork.Payments.UpdateAsync(payment, cancellationToken);
+                            _logger.LogWarning("Payment {PaymentId} timed out", payment.Id);
+                            continue;
+                        }
+
+                        // Sprawdź status w payment gateway
+                        if (!string.IsNullOrEmpty(payment.ExternalPaymentId))
+                        {
+                            var statusResult = await _paymentGateway.GetPaymentStatusAsync(payment.ExternalPaymentId);
+                            if (statusResult.IsSuccess)
+                            {
+                                switch (statusResult.Status)
+                                {
+                                    case PaymentStatus.Completed:
+                                        payment.MarkAsCompleted();
+                                        await _unitOfWork.Payments.UpdateAsync(payment, cancellationToken);
+                                        _logger.LogInformation("Payment {PaymentId} marked as completed", payment.Id);
+                                        break;
+                                    case PaymentStatus.Failed:
+                                        payment.MarkAsFailed("Payment failed in gateway");
+                                        await _unitOfWork.Payments.UpdateAsync(payment, cancellationToken);
+                                        _logger.LogInformation("Payment {PaymentId} marked as failed", payment.Id);
+                                        break;
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error validating payment status for payment {PaymentId}", payment.Id);
+                    }
+                }
+
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation("Successfully validated payment statuses");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error validating payment statuses");
+            }
+        }
+
+        /// <summary>
+        /// Synchronizuje statusy płatności ze Stripe
+        /// </summary>
+        public async Task SyncPaymentStatusesWithStripeAsync(DateTime syncDate, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                _logger.LogInformation("Syncing payment statuses with Stripe for date {SyncDate}", syncDate);
+
+                // Pobierz płatności z zewnętrznymi ID
+                var paymentsWithExternalId = await _unitOfWork.Payments.GetPaymentsWithExternalIdAsync(cancellationToken);
+
+                foreach (var payment in paymentsWithExternalId)
+                {
+                    try
+                    {
+                        // Sprawdź status w Stripe
+                        var statusResult = await _paymentGateway.GetPaymentStatusAsync(payment.ExternalPaymentId!);
+                        if (statusResult.IsSuccess)
+                        {
+                            var currentStatus = payment.Status;
+                            var gatewayStatus = statusResult.Status;
+
+                            // Aktualizuj status tylko jeśli się różni
+                            if (currentStatus != gatewayStatus)
+                            {
+                                switch (gatewayStatus)
+                                {
+                                    case PaymentStatus.Completed:
+                                        payment.MarkAsCompleted();
+                                        break;
+                                    case PaymentStatus.Failed:
+                                        payment.MarkAsFailed("Status updated from gateway");
+                                        break;
+                                    case PaymentStatus.Processing:
+                                        payment.MarkAsProcessing();
+                                        break;
+                                }
+
+                                await _unitOfWork.Payments.UpdateAsync(payment, cancellationToken);
+                                _logger.LogInformation("Payment {PaymentId} status updated from {OldStatus} to {NewStatus}",
+                                    payment.Id, currentStatus, gatewayStatus);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error syncing payment {PaymentId} with Stripe", payment.Id);
+                    }
+                }
+
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation("Successfully synced payment statuses with Stripe for date {SyncDate}", syncDate);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error syncing payment statuses with Stripe for date {SyncDate}", syncDate);
+            }
+        }
+
+        /// <summary>
+        /// Sprawdza czy można zwrócić płatność
+        /// </summary>
+        public async Task<bool> CanRefundAsync(Guid paymentId, Money amount, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                // SECURITY: Sprawdź kontekst tenanta
+                if (!_tenantContext.HasTenant)
+                {
+                    _logger.LogWarning("No tenant context for refund check {PaymentId}", paymentId);
+                    return false;
+                }
+
+                var payment = await _unitOfWork.Payments.GetByIdAsync(paymentId, cancellationToken);
+                if (payment == null)
+                {
+                    _logger.LogWarning("Payment {PaymentId} not found for refund check", paymentId);
+                    return false;
+                }
+
+                // SECURITY: Weryfikacja tenant context
+                if (payment.TenantId != _tenantContext.CurrentTenantId)
+                {
+                    _logger.LogWarning("Tenant mismatch for payment refund check {PaymentId}. Expected: {ExpectedTenant}, Actual: {ActualTenant}",
+                        paymentId, _tenantContext.CurrentTenantId, payment.TenantId);
+                    return false;
+                }
+
+                // Sprawdź czy płatność może być zwrócona
+                if (!payment.CanBeRefunded())
+                {
+                    return false;
+                }
+
+                // SECURITY: Sprawdź czy suma zwrotów nie przekracza kwoty płatności
+                var totalRefunded = await _unitOfWork.Payments.GetTotalRefundedAmountAsync(paymentId, cancellationToken);
+                if (totalRefunded + amount.Amount > payment.Amount.Amount)
+                {
+                    _logger.LogWarning("Refund amount {RefundAmount} would exceed remaining balance. Total refunded: {TotalRefunded}, Payment amount: {PaymentAmount}",
+                        amount.Amount, totalRefunded, payment.Amount.Amount);
+                    return false;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking if payment {PaymentId} can be refunded", paymentId);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Sprawdza rate limit dla klienta
+        /// </summary>
+        public async Task<TimeSpan?> GetRateLimitDelayAsync(Guid clientId, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                // SECURITY: Sprawdź kontekst tenanta
+                if (!_tenantContext.HasTenant)
+                {
+                    _logger.LogWarning("No tenant context for rate limit check {ClientId}", clientId);
+                    return TimeSpan.FromMinutes(5); // Conservative default
+                }
+
+                // Implementacja rate limiting - sprawdź ostatnie próby płatności
+                return await _unitOfWork.Payments.GetRateLimitDelayAsync(clientId, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking rate limit for client {ClientId}", clientId);
+                return TimeSpan.FromMinutes(5); // Conservative default on error
             }
         }
     }

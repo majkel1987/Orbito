@@ -32,11 +32,13 @@ namespace Orbito.Application
             // Add common services
             services.AddScoped<IDateTime, DateTimeService>();
             services.AddScoped<ITenantContext, TenantContext>();
+            services.AddScoped<ITenantProvider, TenantProvider>();
             services.AddScoped<IAdminSetupService, AdminSetupService>();
             services.AddScoped<IProviderService, ProviderService>();
             services.AddScoped<ISubscriptionPlanService, SubscriptionPlanService>();
             services.AddScoped<ISubscriptionService, SubscriptionService>();
             services.AddScoped<IPaymentProcessingService, PaymentProcessingService>();
+            services.AddSingleton<ISecurityLimitService, SecurityLimitService>();
 
             return services;
         }

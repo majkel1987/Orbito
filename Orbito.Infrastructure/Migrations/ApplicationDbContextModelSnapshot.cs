@@ -219,9 +219,6 @@ namespace Orbito.Infrastructure.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<Guid?>("PaymentMethodId1")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<DateTime?>("ProcessedAt")
                         .HasColumnType("datetime2");
 
@@ -258,8 +255,6 @@ namespace Orbito.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("IX_Payments_ExternalTransactionId")
                         .HasFilter("ExternalTransactionId IS NOT NULL");
-
-                    b.HasIndex("PaymentMethodId1");
 
                     b.HasIndex("SubscriptionId")
                         .HasDatabaseName("IX_Payments_SubscriptionId");
@@ -338,8 +333,13 @@ namespace Orbito.Infrastructure.Migrations
                     b.Property<Guid>("ClientId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("ClientId1")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
 
                     b.Property<DateTime?>("ExpiryDate")
                         .HasColumnType("datetime2");
@@ -351,11 +351,11 @@ namespace Orbito.Infrastructure.Migrations
 
                     b.Property<string>("LastFourDigits")
                         .HasMaxLength(4)
-                        .HasColumnType("nvarchar(4)");
+                        .HasColumnType("nvarchar(4)")
+                        .IsFixedLength(false);
 
                     b.Property<Guid>("TenantId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnName("TenantId");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Token")
                         .IsRequired()
@@ -364,32 +364,99 @@ namespace Orbito.Infrastructure.Migrations
 
                     b.Property<string>("Type")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ClientId")
-                        .HasDatabaseName("IX_PaymentMethods_ClientId");
+                    b.HasIndex("ClientId1");
 
-                    b.HasIndex("CreatedAt")
-                        .HasDatabaseName("IX_PaymentMethods_CreatedAt");
+                    b.HasIndex("ExpiryDate")
+                        .HasDatabaseName("IX_PaymentMethods_ExpiryDate");
 
-                    b.HasIndex("IsDefault")
-                        .HasDatabaseName("IX_PaymentMethods_IsDefault");
-
-                    b.HasIndex("TenantId")
-                        .HasDatabaseName("IX_PaymentMethods_TenantId");
-
-                    b.HasIndex("Type")
-                        .HasDatabaseName("IX_PaymentMethods_Type");
+                    b.HasIndex("ClientId", "IsDefault")
+                        .HasDatabaseName("IX_PaymentMethods_ClientId_IsDefault")
+                        .HasFilter("[IsDefault] = 1");
 
                     b.HasIndex("TenantId", "ClientId")
                         .HasDatabaseName("IX_PaymentMethods_TenantId_ClientId");
 
+                    b.HasIndex("Type", "CreatedAt")
+                        .HasDatabaseName("IX_PaymentMethods_Type_CreatedAt");
+
                     b.ToTable("PaymentMethods", (string)null);
+                });
+
+            modelBuilder.Entity("Orbito.Domain.Entities.PaymentWebhookLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Attempts")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("EventId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Metadata")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("ReceivedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status", "ReceivedAt")
+                        .HasDatabaseName("IX_PaymentWebhookLogs_Status_ReceivedAt")
+                        .HasFilter("[Status] = 'Failed'");
+
+                    b.HasIndex("TenantId", "EventId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_PaymentWebhookLogs_TenantId_EventId");
+
+                    b.ToTable("PaymentWebhookLogs", (string)null);
                 });
 
             modelBuilder.Entity("Orbito.Domain.Entities.Provider", b =>
@@ -471,6 +538,9 @@ namespace Orbito.Infrastructure.Migrations
 
                     b.Property<DateTime?>("EndDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("ExternalSubscriptionId")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsInTrial")
                         .HasColumnType("bit");
@@ -847,10 +917,6 @@ namespace Orbito.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
-                    b.HasOne("Orbito.Domain.Entities.PaymentMethod", null)
-                        .WithMany("Payments")
-                        .HasForeignKey("PaymentMethodId1");
-
                     b.HasOne("Orbito.Domain.Entities.Subscription", "Subscription")
                         .WithMany("Payments")
                         .HasForeignKey("SubscriptionId")
@@ -903,10 +969,14 @@ namespace Orbito.Infrastructure.Migrations
             modelBuilder.Entity("Orbito.Domain.Entities.PaymentMethod", b =>
                 {
                     b.HasOne("Orbito.Domain.Entities.Client", "Client")
-                        .WithMany("PaymentMethods")
+                        .WithMany()
                         .HasForeignKey("ClientId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("Orbito.Domain.Entities.Client", null)
+                        .WithMany("PaymentMethods")
+                        .HasForeignKey("ClientId1");
 
                     b.Navigation("Client");
                 });
@@ -1108,11 +1178,6 @@ namespace Orbito.Infrastructure.Migrations
                     b.Navigation("Payments");
 
                     b.Navigation("Subscriptions");
-                });
-
-            modelBuilder.Entity("Orbito.Domain.Entities.PaymentMethod", b =>
-                {
-                    b.Navigation("Payments");
                 });
 
             modelBuilder.Entity("Orbito.Domain.Entities.Provider", b =>

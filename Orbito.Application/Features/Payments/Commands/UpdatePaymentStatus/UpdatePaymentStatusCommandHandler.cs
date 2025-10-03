@@ -68,7 +68,8 @@ namespace Orbito.Application.Features.Payments.Commands.UpdatePaymentStatus
                     payment.MarkAsRefunded(request.RefundReason ?? "No refund reason provided");
                     break;
                 case PaymentStatus.PartiallyRefunded:
-                    payment.MarkAsPartiallyRefunded(request.RefundReason ?? "No refund reason provided");
+                    var refundedAmount = request.RefundedAmount ?? payment.Amount;
+                    payment.MarkAsPartiallyRefunded(request.RefundReason ?? "No refund reason provided", refundedAmount);
                     break;
                 default:
                     return UpdatePaymentStatusResult.FailureResult($"Unsupported payment status: {request.Status}");

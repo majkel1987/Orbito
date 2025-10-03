@@ -137,6 +137,11 @@ namespace Orbito.Domain.Entities
             FailureReason = "Payment cancelled";
         }
 
+        public void MarkAsCanceled()
+        {
+            MarkAsCancelled();
+        }
+
         public void MarkAsRefunded(string refundReason)
         {
             if (string.IsNullOrWhiteSpace(refundReason))
@@ -159,7 +164,7 @@ namespace Orbito.Domain.Entities
                 RefundedAt.Value));
         }
 
-        public void MarkAsPartiallyRefunded(string refundReason)
+        public void MarkAsPartiallyRefunded(string refundReason, Money refundedAmount)
         {
             if (string.IsNullOrWhiteSpace(refundReason))
                 throw new ArgumentException("Refund reason cannot be empty", nameof(refundReason));
@@ -168,6 +173,8 @@ namespace Orbito.Domain.Entities
             RefundedAt = DateTime.UtcNow;
             RefundReason = refundReason;
         }
+
+        public bool IsCompleted => Status == PaymentStatus.Completed;
 
         public void RetryPayment()
         {
@@ -189,6 +196,42 @@ namespace Orbito.Domain.Entities
         public bool CanBeRefunded()
         {
             return Status == PaymentStatus.Completed;
+        }
+
+        /// <summary>
+        /// Validates if the payment can transition to the new status
+        /// </summary>
+        /// <param name="newStatus">Target status</param>
+        /// <returns>True if transition is valid</returns>
+        public bool CanTransitionTo(PaymentStatus newStatus)
+        {
+            // Same status is always allowed (idempotent)
+            if (Status == newStatus)
+                return true;
+
+            return Status switch
+            {
+                PaymentStatus.Pending => newStatus is PaymentStatus.Processing
+                    or PaymentStatus.Completed
+                    or PaymentStatus.Failed
+                    or PaymentStatus.Cancelled,
+
+                PaymentStatus.Processing => newStatus is PaymentStatus.Completed
+                    or PaymentStatus.Failed,
+
+                PaymentStatus.Completed => newStatus is PaymentStatus.Refunded
+                    or PaymentStatus.PartiallyRefunded,
+
+                PaymentStatus.Failed => newStatus is PaymentStatus.Pending, // Retry
+
+                PaymentStatus.Cancelled => false, // Cannot transition from cancelled
+
+                PaymentStatus.Refunded => false, // Cannot transition from refunded
+
+                PaymentStatus.PartiallyRefunded => newStatus is PaymentStatus.Refunded, // Can complete the refund
+
+                _ => false
+            };
         }
     }
 }

@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
+using Orbito.Application.Common.Interfaces;
+using Orbito.Domain.ValueObjects;
 
 namespace Orbito.Infrastructure.Data
 {
@@ -27,7 +29,49 @@ namespace Orbito.Infrastructure.Data
                     errorNumbersToAdd: null);
             });
 
-            return new ApplicationDbContext(optionsBuilder.Options);
+            // Design-time tenant provider (for migrations)
+            var designTimeTenantProvider = new DesignTimeTenantProvider();
+
+            return new ApplicationDbContext(optionsBuilder.Options, designTimeTenantProvider);
+        }
+
+        /// <summary>
+        /// Design-time tenant provider for EF Core migrations.
+        /// Returns a default tenant ID that will be ignored by query filters during migrations.
+        /// </summary>
+        private class DesignTimeTenantProvider : ITenantProvider
+        {
+            public TenantId? GetCurrentTenantId()
+            {
+                // Return null for design-time operations (migrations)
+                // Query filters will be disabled during migrations
+                return null;
+            }
+
+            public Guid GetCurrentTenantIdAsGuid()
+            {
+                // Return Guid.Empty for design-time operations (migrations)
+                // Query filters will be disabled during migrations
+                return Guid.Empty;
+            }
+
+            public bool HasTenant()
+            {
+                // No tenant context during design-time operations
+                return false;
+            }
+
+            public void SetTenantOverride(Guid tenantId)
+            {
+                // Not supported during design-time operations
+                throw new NotSupportedException("Tenant override is not supported during design-time operations (migrations).");
+            }
+
+            public void ClearTenantOverride()
+            {
+                // Not supported during design-time operations
+                throw new NotSupportedException("Tenant override is not supported during design-time operations (migrations).");
+            }
         }
     }
 }

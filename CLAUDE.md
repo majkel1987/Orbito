@@ -1,4 +1,8 @@
-# CLAUDE.md - Zasady Pracy dla Orbito Platform
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+# Zasady Pracy dla Orbito Platform
 
 ## 🏗️ Architektura i Wzorce
 
@@ -57,7 +61,7 @@ Orbito.Application/
 └── Services/
 ```
 
-## 🔒 Multi-Tenancy
+## 🔒 Multi-Tenancy & Security
 
 ### Tenant Context
 
@@ -66,15 +70,67 @@ Orbito.Application/
 - **Izolacja**: Każdy tenant widzi tylko swoje dane
 - **JWT Claims**: `tenant_id` w tokenach
 
+### KRYTYCZNE: Repository Security Pattern
+
+**ZAWSZE używaj metod z weryfikacją klienta/tenanta:**
+
+```csharp
+// ✅ DOBRE - metody z weryfikacją clientId
+var payment = await _paymentRepository.GetByIdForClientAsync(paymentId, clientId, cancellationToken);
+var subscription = await _subscriptionRepository.GetByIdForClientAsync(subscriptionId, clientId, cancellationToken);
+var paymentMethod = await _paymentMethodRepository.GetByIdAsync(methodId, clientId, cancellationToken);
+
+// ❌ ZŁE - metody bez weryfikacji (deprecated, tylko dla adminów)
+var payment = await _paymentRepository.GetByIdAsync(paymentId, cancellationToken); // SECURITY RISK!
+var subscriptions = await _subscriptionRepository.GetActiveSubscriptionsAsync(); // SECURITY RISK!
+```
+
+**Repository Pattern Rules:**
+1. Repozytoria dla Payment, Subscription, PaymentMethod **MUSZĄ** mieć `ITenantContext`
+2. Wszystkie query methods **MUSZĄ** filtrować po `TenantId` + `ClientId`
+3. Metody bez weryfikacji klienta oznaczaj jako `[Obsolete("SECURITY RISK: ...")]`
+4. Provider i Client NIE potrzebują ITenantContext (sami są tenantami)
+5. **NIGDY** nie ignoruj ostrzeżeń kompilatora o `[Obsolete]` - oznaczają krytyczne luki bezpieczeństwa
+
+**Deprecated Methods Migration:**
+```csharp
+// STARE (usuń):
+var subs = await _repo.GetActiveSubscriptionsAsync(); // Zwraca WSZYSTKIE subskrypcje
+var payment = await _repo.GetByIdAsync(id); // Brak weryfikacji właściciela
+
+// NOWE (użyj):
+var subs = await _repo.GetActiveSubscriptionsByClientAsync(clientId); // Bezpieczne
+var payment = await _repo.GetByIdForClientAsync(id, clientId); // Z weryfikacją
+```
+
 ### Implementacja
 
 ```csharp
-// Zawsze sprawdzaj TenantId w handlerach
-var provider = await _repository.GetByIdAsync(request.Id, cancellationToken);
-if (provider.TenantId != _tenantContext.TenantId)
-    throw new UnauthorizedAccessException();
+// Repository z ITenantContext
+public class PaymentRepository : IPaymentRepository
+{
+    private readonly ApplicationDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
-// Query filters automatyczne w DbContext
+    public PaymentRepository(ApplicationDbContext context, ITenantContext tenantContext)
+    {
+        _context = context;
+        _tenantContext = tenantContext;
+    }
+
+    // Bezpieczna metoda z weryfikacją
+    public async Task<Payment?> GetByIdForClientAsync(Guid id, Guid clientId, CancellationToken cancellationToken)
+    {
+        if (!_tenantContext.HasTenant) return null;
+
+        var tenantId = _tenantContext.CurrentTenantId;
+        return await _context.Payments
+            .Where(p => p.TenantId == tenantId && p.Id == id && p.ClientId == clientId)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+}
+
+// Query filters w DbContext
 builder.Entity<Provider>()
     .HasQueryFilter(p => p.TenantId.Value == currentTenantId);
 ```
@@ -144,6 +200,37 @@ dotnet test --collect:"XPlat Code Coverage"
 - **FluentValidation**: Wszystkie commands/queries
 - **Domain validation**: Rich domain models
 - **Input sanitization**: Zawsze waliduj input
+
+### Rate Limiting & Security Limits
+
+**ISecurityLimitService** - centralne zarządzanie limitami:
+
+```csharp
+public interface ISecurityLimitService
+{
+    int MaxPaymentMethodsPerClient { get; } // 10
+    int MaxPageSize { get; } // 100
+    TimeSpan RateLimitWindow { get; } // 15 minut
+    int MaxPaymentAttemptsPerWindow { get; } // 5
+}
+```
+
+**Implementacja rate limiting:**
+```csharp
+// Sprawdź rate limit przed operacją
+var delay = await _paymentRepository.GetRateLimitDelayAsync(clientId);
+if (delay.HasValue)
+    return Result.Failure($"Rate limit exceeded. Try again in {delay.Value.TotalMinutes} minutes");
+
+// Zarejestruj próbę płatności
+await _paymentRepository.RecordPaymentAttemptAsync(clientId, cancellationToken);
+```
+
+**Limity zasobów:**
+- **Payment Methods**: Max 10 na klienta (`CanAddPaymentMethodAsync`)
+- **Pagination**: Max 100 rekordów na stronę
+- **Payment Attempts**: Max 5 prób w ciągu 15 minut
+- **Refunds**: Walidacja czy kwota nie przekracza oryginału
 
 ## 📊 Logowanie i Monitorowanie
 
@@ -242,6 +329,73 @@ public class Result<T>
 - **Domain exceptions**: Custom exception types
 - **Validation errors**: FluentValidation integration
 
+## 💳 Payment Integration
+
+### Stripe Integration
+
+- **Payment Gateway**: Stripe API
+- **Webhook Processing**: Automatic event handling
+- **Payment Methods**: Credit cards, ACH (future)
+- **Webhook Security**: Signature verification middleware
+
+### Payment Processing Pattern
+
+```csharp
+// 1. Create payment intent
+var payment = await _paymentService.CreatePaymentAsync(new CreatePaymentCommand
+{
+    ClientId = clientId,
+    SubscriptionId = subscriptionId,
+    Amount = amount,
+    Currency = "USD"
+});
+
+// 2. Process payment with Stripe
+var stripePaymentIntent = await _stripeService.CreatePaymentIntentAsync(payment);
+
+// 3. Handle webhook events
+// WebhookController automatycznie przetwarza eventy:
+// - payment_intent.succeeded
+// - payment_intent.payment_failed
+// - payment_method.attached
+```
+
+### Webhook Endpoints
+
+- `POST /api/webhook/stripe` - Stripe webhook handler
+- Wymaga header `Stripe-Signature` dla weryfikacji
+- Automatyczne retry failed webhooks w background job
+
+**Middleware Security:**
+```csharp
+// StripeSignatureVerificationMiddleware automatycznie weryfikuje wszystkie webhooks
+// Blokuje requesty bez poprawnego podpisu
+app.UseStripeSignatureVerification();
+```
+
+**Webhook Event Handlers:**
+- `PaymentIntentSucceededHandler` - sukces płatności
+- `PaymentIntentPaymentFailedHandler` - błąd płatności
+- `PaymentMethodAttachedHandler` - dodanie metody płatności
+
+**Logging webhooks:**
+Wszystkie eventy są logowane w tabeli `PaymentWebhookLogs`:
+- WebhookId, EventType, Status (Received/Processing/Completed/Failed)
+- RequestPayload, ResponsePayload, ErrorMessage
+- ProcessingTime, Retry tracking
+
+### Security Limits
+
+```csharp
+public interface ISecurityLimitService
+{
+    int MaxPaymentMethodsPerClient { get; } // 10
+    int MaxPageSize { get; } // 100
+    TimeSpan RateLimitWindow { get; } // 1 minute
+    int MaxPaymentAttemptsPerWindow { get; } // 5
+}
+```
+
 ## 🔄 Background Jobs
 
 ### Hangfire (Future)
@@ -249,6 +403,7 @@ public class Result<T>
 - **Recurring jobs**: Subscription checks
 - **Payment processing**: Retry logic
 - **Email notifications**: Async processing
+- **Webhook retry**: Failed webhook processing
 
 ## 📝 Dokumentacja
 
@@ -319,6 +474,9 @@ public interface IProviderRepository : IRepository<Provider>
 - **Hardcoded secrets**: Use configuration
 - **Missing authorization**: Check permissions
 - **Information disclosure**: Sanitize error messages
+- **Cross-tenant data access**: ZAWSZE używaj metod `ForClient` w repozytoriach
+- **Missing TenantId filtering**: Wszystkie queries MUSZĄ filtrować po TenantId
+- **Deprecated methods usage**: Sprawdzaj compilation warnings dla [Obsolete]
 
 ## 📋 Code Review Checklist
 
@@ -339,9 +497,12 @@ public interface IProviderRepository : IRepository<Provider>
 ### Bezpieczeństwo
 
 - [ ] Input jest walidowany
-- [ ] Authorization jest sprawdzana
+- [ ] Authorization jest sprawdzana (TenantId + ClientId)
 - [ ] Secrets nie są hardcoded
 - [ ] SQL injection prevented
+- [ ] Repozytoria używają metod `ForClient` zamiast deprecated
+- [ ] Wszystkie queries filtrują po TenantId
+- [ ] Brak cross-tenant data access vulnerabilities
 
 ### Performance
 
@@ -350,8 +511,29 @@ public interface IProviderRepository : IRepository<Provider>
 - [ ] Memory usage jest rozsądny
 - [ ] Caching gdzie potrzebny
 
+## 🌐 Komunikacja i Język
+
+### Język Odpowiedzi
+
+- **Zawsze odpowiadaj po polsku** - to jest podstawowa zasada
+- Kod i komentarze w kodzie **zawsze po angielsku**
+- Commit messages po angielsku (conventional commits)
+
+### Zasady Współpracy
+
+- **Human-in-the-loop**: Pair programming approach
+- **Limit prób**: Po 2 nieudanych próbach - poproś o pomoc
+- **Transparentność**: Jeśli czegoś nie umiesz - powiedz wprost
+- **Kompletność**: NIGDY nie zostawiaj TODO podczas wykonywania zadania
+
 ---
 
-**Wersja**: 1.0
-**Ostatnia aktualizacja**: 2025-09-28
+**Wersja**: 2.1
+**Ostatnia aktualizacja**: 2025-10-01
 **Autor**: IT Architect Team
+
+## 📚 Dodatkowe Zasoby
+
+- **SECURITY_FIXES_SUMMARY.md** - szczegółowy raport wprowadzonych poprawek bezpieczeństwa
+- **context.md** - kontekst projektu i dokumentacja techniczna
+- **README.md** - instrukcje instalacji i konfiguracji

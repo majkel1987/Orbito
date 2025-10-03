@@ -1,15 +1,23 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Orbito.Application.Common.Interfaces;
 using Orbito.Domain.Entities;
 using Orbito.Domain.Identity;
 using Orbito.Infrastructure.Data.Configurations.ValueObjects;
+using System.Linq.Expressions;
 
 namespace Orbito.Infrastructure.Data
 {
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, Guid>
     {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
-        { }
+        private readonly ITenantProvider _tenantProvider;
+
+        public ApplicationDbContext(
+            DbContextOptions<ApplicationDbContext> options,
+            ITenantProvider tenantProvider) : base(options)
+        {
+            _tenantProvider = tenantProvider;
+        }
 
         // Domain entities DbSets
         public DbSet<Provider> Providers { get; set; }
@@ -19,6 +27,7 @@ namespace Orbito.Infrastructure.Data
         public DbSet<Payment> Payments { get; set; }
         public DbSet<PaymentMethod> PaymentMethods { get; set; }
         public DbSet<PaymentHistory> PaymentHistory { get; set; }
+        public DbSet<PaymentWebhookLog> PaymentWebhookLogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -39,39 +48,42 @@ namespace Orbito.Infrastructure.Data
 
         private void ConfigureMultiTenancy(ModelBuilder builder)
         {
-            // Global query filters for multi-tenancy
-            // Note: These will be applied automatically when TenantInfo is available at runtime
-
+            // Global query filters for multi-tenancy using ITenantProvider
+            // CRITICAL: Each lambda expression is evaluated per query, not once during model building
+            
             // For ApplicationRole - allow global roles (TenantId = null) and tenant-specific roles
             builder.Entity<ApplicationRole>()
-                .HasQueryFilter(r => r.TenantId == null); // Will be overridden at runtime with actual tenant context
+                .HasQueryFilter(r => r.TenantId == null || r.TenantId == _tenantProvider.GetCurrentTenantIdAsGuid());
 
             // For ApplicationUser - filter by tenant
             builder.Entity<ApplicationUser>()
-                .HasQueryFilter(u => u.TenantId == null); // Will be overridden at runtime with actual tenant context
+                .HasQueryFilter(u => u.TenantId == _tenantProvider.GetCurrentTenantIdAsGuid());
 
-            // For domain entities - all must have tenant
-            // Note: We use EF.Property<Guid> to access the underlying Guid value for query filters
+            // For domain entities with TenantId value object
+            // Each method call is evaluated per query, ensuring current tenant context
             builder.Entity<Provider>()
-                .HasQueryFilter(p => EF.Property<Guid>(p, "TenantId") == Guid.Empty); // Will be overridden at runtime
+                .HasQueryFilter(p => p.TenantId.Value == _tenantProvider.GetCurrentTenantIdAsGuid());
 
             builder.Entity<Client>()
-                .HasQueryFilter(c => EF.Property<Guid>(c, "TenantId") == Guid.Empty); // Will be overridden at runtime
+                .HasQueryFilter(c => c.TenantId.Value == _tenantProvider.GetCurrentTenantIdAsGuid());
 
             builder.Entity<SubscriptionPlan>()
-                .HasQueryFilter(p => EF.Property<Guid>(p, "TenantId") == Guid.Empty); // Will be overridden at runtime
+                .HasQueryFilter(p => p.TenantId.Value == _tenantProvider.GetCurrentTenantIdAsGuid());
 
             builder.Entity<Subscription>()
-                .HasQueryFilter(s => EF.Property<Guid>(s, "TenantId") == Guid.Empty); // Will be overridden at runtime
+                .HasQueryFilter(s => s.TenantId.Value == _tenantProvider.GetCurrentTenantIdAsGuid());
 
             builder.Entity<Payment>()
-                .HasQueryFilter(p => EF.Property<Guid>(p, "TenantId") == Guid.Empty); // Will be overridden at runtime
+                .HasQueryFilter(p => p.TenantId.Value == _tenantProvider.GetCurrentTenantIdAsGuid());
 
             builder.Entity<PaymentMethod>()
-                .HasQueryFilter(pm => EF.Property<Guid>(pm, "TenantId") == Guid.Empty); // Will be overridden at runtime
+                .HasQueryFilter(pm => pm.TenantId.Value == _tenantProvider.GetCurrentTenantIdAsGuid());
 
             builder.Entity<PaymentHistory>()
-                .HasQueryFilter(ph => EF.Property<Guid>(ph, "TenantId") == Guid.Empty); // Will be overridden at runtime
+                .HasQueryFilter(ph => ph.TenantId.Value == _tenantProvider.GetCurrentTenantIdAsGuid());
+
+            builder.Entity<PaymentWebhookLog>()
+                .HasQueryFilter(pwl => pwl.TenantId.Value == _tenantProvider.GetCurrentTenantIdAsGuid());
         }
 
         private void SeedDefaultData(ModelBuilder builder)

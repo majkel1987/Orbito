@@ -40,6 +40,15 @@ namespace Orbito.Application.Common.Interfaces
         Task HandlePaymentFailureAsync(Guid paymentId, string reason, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Sprawdza czy można zwrócić płatność
+        /// </summary>
+        /// <param name="paymentId">ID płatności</param>
+        /// <param name="amount">Kwota zwrotu</param>
+        /// <param name="cancellationToken">Token anulowania</param>
+        /// <returns>True jeśli można zwrócić, false w przeciwnym przypadku</returns>
+        Task<bool> CanRefundAsync(Guid paymentId, Money amount, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Zwraca płatność
         /// </summary>
         /// <param name="paymentId">ID płatności</param>
@@ -48,8 +57,8 @@ namespace Orbito.Application.Common.Interfaces
         /// <param name="cancellationToken">Token anulowania</param>
         /// <returns>Wynik zwrotu płatności</returns>
         Task<RefundResult> RefundPaymentAsync(
-            Guid paymentId, 
-            Money amount, 
+            Guid paymentId,
+            Money amount,
             string reason,
             CancellationToken cancellationToken = default);
 
@@ -72,5 +81,40 @@ namespace Orbito.Application.Common.Interfaces
             string? companyName = null,
             string? phone = null,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Przetwarza oczekujące płatności
+        /// </summary>
+        /// <param name="billingDate">Data rozliczenia</param>
+        /// <param name="cancellationToken">Token anulowania</param>
+        Task ProcessPendingPaymentsAsync(DateTime billingDate, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Aktualizuje płatność z webhook
+        /// </summary>
+        /// <param name="webhookData">Dane webhook</param>
+        /// <param name="cancellationToken">Token anulowania</param>
+        Task UpdatePaymentFromWebhookAsync(string webhookData, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Waliduje status płatności
+        /// </summary>
+        /// <param name="cancellationToken">Token anulowania</param>
+        Task ValidatePaymentStatusAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Synchronizuje statusy płatności ze Stripe
+        /// </summary>
+        /// <param name="syncDate">Data synchronizacji</param>
+        /// <param name="cancellationToken">Token anulowania</param>
+        Task SyncPaymentStatusesWithStripeAsync(DateTime syncDate, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Sprawdza rate limit dla klienta
+        /// </summary>
+        /// <param name="clientId">ID klienta</param>
+        /// <param name="cancellationToken">Token anulowania</param>
+        /// <returns>Czas oczekiwania lub null jeśli brak ograniczeń</returns>
+        Task<TimeSpan?> GetRateLimitDelayAsync(Guid clientId, CancellationToken cancellationToken = default);
     }
 }

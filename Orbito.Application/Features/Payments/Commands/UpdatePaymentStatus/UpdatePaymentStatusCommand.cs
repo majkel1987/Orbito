@@ -1,5 +1,6 @@
 using MediatR;
 using Orbito.Domain.Enums;
+using Orbito.Domain.ValueObjects;
 
 namespace Orbito.Application.Features.Payments.Commands.UpdatePaymentStatus
 {
@@ -7,6 +8,7 @@ namespace Orbito.Application.Features.Payments.Commands.UpdatePaymentStatus
         Guid PaymentId,
         PaymentStatus Status,
         string? FailureReason = null,
-        string? RefundReason = null
+        string? RefundReason = null,
+        Money? RefundedAmount = null
     ) : IRequest<UpdatePaymentStatusResult>;
 }

@@ -229,6 +229,12 @@ dotnet run --project Orbito.API
 - `PUT /api/payments/{id}/status` - Aktualizacja statusu płatności (wymaga roli Provider/PlatformAdmin)
 - `POST /api/payments/{id}/refund` - Zwrot płatności (wymaga roli Provider/PlatformAdmin)
 - `POST /api/payments/create-customer` - Tworzenie klienta Stripe (wymaga roli Provider/PlatformAdmin)
+- `POST /api/payments/payment-methods` - Zapisywanie metody płatności (wymaga roli Provider/PlatformAdmin)
+- `GET /api/payments/payment-methods/client/{clientId}` - Pobieranie metod płatności klienta (wymaga roli Provider/PlatformAdmin)
+
+#### WebhookController
+
+- `POST /api/webhooks/stripe` - Endpoint do odbierania webhooków od Stripe (publiczny endpoint z weryfikacją podpisu)
 
 ## 📊 Logowanie
 
@@ -992,6 +998,20 @@ dotnet test --collect:"XPlat Code Coverage" --results-directory ./TestResults
 - [x] **Payment Processing Service** - serwis do przetwarzania płatności z payment gateway
 - [x] **Payment Gateway Commands** - RefundPaymentCommand, CreateStripeCustomerCommand z walidacją
 - [x] **Extended PaymentController** - nowe endpointy dla zwrotów i tworzenia klientów Stripe
+- [x] **🔔 Stripe Webhooks** - kompletna implementacja webhooków Stripe z walidacją podpisów
+- [x] **WebhookController** - endpoint do obsługi webhooków Stripe
+- [x] **StripeWebhookProcessor** - procesor webhooków z walidacją i logowaniem
+- [x] **StripeEventHandler** - obsługa eventów: payment_intent.succeeded, payment_intent.failed, charge.refunded, customer.subscription.updated
+- [x] **PaymentWebhookLog Entity** - logowanie webhooków z statusem i retry count
+- [x] **Webhook Signature Verification** - middleware do weryfikacji podpisów webhooków
+- [x] **⏰ Background Jobs** - automatyczne przetwarzanie płatności i synchronizacja statusów
+- [x] **RecurringPaymentJob** - przetwarzanie płatności cyklicznych co godzinę i sprawdzanie oczekujących płatności co 15 minut
+- [x] **PaymentStatusSyncJob** - synchronizacja statusów płatności ze Stripe co 30 minut
+- [x] **Payment Method Management** - zarządzanie metodami płatności klientów
+- [x] **SavePaymentMethodCommand** - zapisywanie metod płatności z walidacją
+- [x] **GetPaymentMethodsByClientQuery** - pobieranie metod płatności klienta
+- [x] **Webhook Idempotency** - obsługa duplikatów webhooków
+- [x] **Webhook Retry Logic** - retry dla nieudanych webhooków
 
 ### 🔄 W Trakcie
 
@@ -1008,16 +1028,271 @@ dotnet test --collect:"XPlat Code Coverage" --results-directory ./TestResults
 
 - [x] **Subscription Management** - pełne zarządzanie subskrypcjami klientów
 - [x] **Payment Processing** - kompletna infrastruktura płatności z CQRS i walidacją
+- [x] **Webhook System** - ✅ UKOŃCZONE - integracja webhooków Stripe z walidacją i logowaniem
+- [x] **Background Jobs** - ✅ UKOŃCZONE - automatyczne przetwarzanie płatności i synchronizacja
 - [ ] **Billing & Invoicing** - automatyczne generowanie faktur
 - [ ] **Analytics & Reporting** - zaawansowane raporty i analityka
 - [ ] **Email Notifications** - system powiadomień email
-- [ ] **Webhook System** - integracja z zewnętrznymi systemami
 - [ ] Frontend aplikacja (React/Next.js)
 - [ ] Docker containerization
 - [ ] CI/CD pipeline
 - [ ] Monitoring i alerting
 - [ ] Caching (Redis)
 - [ ] Message Queue (RabbitMQ/Azure Service Bus)
+
+## 🔔 Stripe Webhooks Integration
+
+### 🏗️ Architektura Stripe Webhooks
+
+Aplikacja implementuje **kompletną obsługę webhooków Stripe** z walidacją podpisów, logowaniem i automatycznym przetwarzaniem eventów:
+
+#### 1. Webhook Processing Pipeline
+
+```
+Incoming Webhook → Signature Verification → Event Parsing → Event Handler → Database Update → Response
+```
+
+#### 2. Wspierane Eventy Stripe
+
+- **payment_intent.succeeded** - płatność zakończona sukcesem
+- **payment_intent.failed** - płatność nieudana
+- **charge.refunded** - zwrot płatności
+- **customer.subscription.updated** - aktualizacja subskrypcji
+
+#### 3. Webhook Security
+
+##### Signature Verification Middleware
+
+```csharp
+public class StripeSignatureVerificationMiddleware
+{
+    // Automatyczna weryfikacja podpisu Stripe
+    // Walidacja timestamp (max 5 minut opóźnienia)
+    // Sprawdzanie duplikatów
+}
+```
+
+##### Configuration
+
+```json
+{
+  "StripeWebhookSettings": {
+    "WebhookSecret": "whsec_your_webhook_secret_here",
+    "EnableSignatureVerification": true,
+    "AllowedEventTypes": [],
+    "MaxPayloadSize": 1048576,
+    "LogPayloads": false
+  }
+}
+```
+
+#### 4. Webhook Logging
+
+##### PaymentWebhookLog Entity
+
+```csharp
+public class PaymentWebhookLog
+{
+    public Guid Id { get; set; }
+    public TenantId TenantId { get; set; }
+    public string Provider { get; set; } // "Stripe"
+    public string EventType { get; set; } // "payment_intent.succeeded"
+    public string Payload { get; set; } // Raw JSON payload
+    public DateTime ReceivedAt { get; set; }
+    public DateTime? ProcessedAt { get; set; }
+    public string Status { get; set; } // Pending, Processed, Failed
+    public string? ErrorMessage { get; set; }
+    public int RetryCount { get; set; }
+
+    // Business Operations
+    public void MarkAsProcessed();
+    public void MarkAsFailed(string errorMessage);
+    public void MarkAsRetrying();
+}
+```
+
+#### 5. Webhook Idempotency
+
+- **Duplicate Detection** - sprawdzanie duplikatów na podstawie event ID
+- **Retry Logic** - automatyczne retry dla nieudanych webhooków
+- **Status Tracking** - śledzenie statusu przetwarzania webhooków
+
+#### 6. Webhook API Endpoint
+
+```csharp
+POST /api/webhooks/stripe
+Content-Type: application/json
+Stripe-Signature: t=1234567890,v1=signature_hash
+
+{
+  "id": "evt_1234567890",
+  "object": "event",
+  "type": "payment_intent.succeeded",
+  "data": {
+    "object": {
+      "id": "pi_1234567890",
+      "amount": 2999,
+      "currency": "usd",
+      "status": "succeeded"
+    }
+  }
+}
+```
+
+#### 7. Event Handlers
+
+##### StripeEventHandler
+
+```csharp
+public class StripeEventHandler
+{
+    // Handle payment_intent.succeeded
+    public async Task HandlePaymentSucceededAsync(StripeWebhookData webhookData);
+
+    // Handle payment_intent.failed
+    public async Task HandlePaymentFailedAsync(StripeWebhookData webhookData);
+
+    // Handle charge.refunded
+    public async Task HandleChargeRefundedAsync(StripeWebhookData webhookData);
+
+    // Handle customer.subscription.updated
+    public async Task HandleSubscriptionUpdatedAsync(StripeWebhookData webhookData);
+}
+```
+
+#### 8. Webhook Processing Flow
+
+```
+1. Webhook Request → StripeSignatureVerificationMiddleware
+2. Signature Verified → WebhookController
+3. WebhookLog Created → StripeWebhookProcessor
+4. Event Parsed → StripeEventHandler
+5. Database Updated → PaymentProcessingService
+6. WebhookLog Updated → Response 200 OK
+```
+
+## ⏰ Background Jobs
+
+### 🏗️ Architektura Background Jobs
+
+Aplikacja implementuje **automatyczne przetwarzanie płatności** i **synchronizację statusów** za pomocą background jobs:
+
+#### 1. RecurringPaymentJob
+
+##### Harmonogram Wykonania
+
+- **ProcessDuePaymentsAsync** - co godzinę
+- **CheckPendingPaymentsAsync** - co 15 minut
+
+##### Funkcjonalności
+
+```csharp
+public class RecurringPaymentJob : BackgroundService
+{
+    // Przetwarzanie płatności cyklicznych
+    private async Task ProcessDuePaymentsAsync()
+    {
+        // 1. Pobierz subskrypcje z nadchodzącą datą płatności
+        // 2. Przetworz płatność dla każdej subskrypcji
+        // 3. Zaktualizuj status subskrypcji
+        // 4. Zaloguj wyniki
+    }
+
+    // Sprawdzanie oczekujących płatności
+    private async Task CheckPendingPaymentsAsync()
+    {
+        // 1. Pobierz płatności ze statusem Pending
+        // 2. Sprawdź status w Stripe
+        // 3. Zaktualizuj status płatności
+        // 4. Zaloguj wyniki
+    }
+}
+```
+
+#### 2. PaymentStatusSyncJob
+
+##### Harmonogram Wykonania
+
+- **SyncPaymentStatusesWithStripeAsync** - co 30 minut
+
+##### Funkcjonalności
+
+```csharp
+public class PaymentStatusSyncJob : BackgroundService
+{
+    // Synchronizacja statusów płatności ze Stripe
+    private async Task SyncPaymentStatusesWithStripeAsync()
+    {
+        // 1. Pobierz płatności do synchronizacji
+        // 2. Sprawdź status każdej płatności w Stripe
+        // 3. Zaktualizuj status w bazie danych
+        // 4. Zaloguj rozbieżności
+    }
+}
+```
+
+#### 3. Background Job Configuration
+
+##### Program.cs Registration
+
+```csharp
+// Rejestracja background jobs
+builder.Services.AddHostedService<RecurringPaymentJob>();
+builder.Services.AddHostedService<PaymentStatusSyncJob>();
+```
+
+#### 4. Payment Processing Service Extensions
+
+##### Nowe Metody
+
+```csharp
+public interface IPaymentProcessingService
+{
+    // Przetwarzanie oczekujących płatności
+    Task ProcessPendingPaymentsAsync(DateTime billingDate, CancellationToken cancellationToken = default);
+
+    // Aktualizacja płatności z webhook
+    Task UpdatePaymentFromWebhookAsync(string webhookData, CancellationToken cancellationToken = default);
+
+    // Walidacja statusu płatności
+    Task ValidatePaymentStatusAsync(CancellationToken cancellationToken = default);
+
+    // Synchronizacja statusów płatności ze Stripe
+    Task SyncPaymentStatusesWithStripeAsync(DateTime syncDate, CancellationToken cancellationToken = default);
+}
+```
+
+#### 5. Monitoring and Logging
+
+##### Background Job Logging
+
+```csharp
+_logger.LogInformation("RecurringPaymentJob: Starting ProcessDuePaymentsAsync for {Date}", billingDate);
+_logger.LogInformation("Processed {Count} due payments", paymentsProcessed);
+_logger.LogWarning("Failed to process payment {PaymentId}: {Error}", paymentId, error);
+```
+
+##### Performance Metrics
+
+- **Job Execution Time** - czas wykonania każdego job
+- **Payments Processed** - liczba przetworzonych płatności
+- **Errors Count** - liczba błędów
+- **Sync Status** - status synchronizacji
+
+#### 6. Error Handling
+
+##### Retry Strategy
+
+- **Exponential Backoff** - wykładnicze opóźnienia między próbami
+- **Max Retry Count** - maksymalna liczba prób (3)
+- **Dead Letter Queue** - kolejka dla nieudanych płatności
+
+##### Error Scenarios
+
+- **Stripe API Errors** - błędy komunikacji z API Stripe
+- **Database Errors** - błędy bazy danych
+- **Validation Errors** - błędy walidacji danych
+- **Timeout Errors** - przekroczenie limitu czasu
 
 ## 🤝 Współpraca
 
@@ -2146,6 +2421,1097 @@ POST /api/subscription-plans
 - **Plan Name Validation** - sprawdzanie unikalności nazw planów
 - **Transaction Management** - UnitOfWork dla spójności danych
 - **Multi-Tenant Security** - automatyczna izolacja danych
+
+## 🔄 Stripe Webhooks Integration
+
+### 📡 Webhook Processing Infrastructure
+
+Orbito zintegrował kompleksowy system obsługi webhooków Stripe dla automatycznego przetwarzania płatności i subskrypcji:
+
+#### Kluczowe Komponenty
+
+- **IPaymentWebhookProcessor** - interfejs dla procesorów webhooków
+- **StripeWebhookProcessor** - implementacja procesora webhooków Stripe
+- **StripeEventHandler** - obsługa eventów: payment_intent.succeeded, payment_intent.failed, charge.refunded, customer.subscription.updated
+- **StripeWebhookData** - model danych webhooków
+- **StripeWebhookModels** - DTOs dla różnych typów eventów Stripe
+
+#### API Layer
+
+- **WebhookController** - endpoint POST /api/webhooks/stripe
+- **StripeSignatureVerificationMiddleware** - weryfikacja podpisów webhooków
+- **StripeWebhookRequest** - model żądania webhook
+- **StripeWebhookSettings** - konfiguracja webhooków w appsettings.json
+
+#### Domain Layer
+
+- **PaymentWebhookLog** - entity do logowania webhooków
+- **PaymentMethod** - entity do przechowywania metod płatności
+- **PaymentMethodType** - enum typów metod płatności
+
+#### Infrastructure Layer
+
+- **PaymentWebhookLogConfiguration** - konfiguracja EF Core
+- **PaymentMethodConfiguration** - konfiguracja EF Core
+- **WebhookLogRepository** - repozytorium webhooków
+- **PaymentMethodRepository** - repozytorium metod płatności
+
+### 🔧 Background Jobs
+
+#### Zaimplementowane Zadania
+
+- **RecurringPaymentJob** - przetwarzanie płatności cyklicznych (co godzinę) i sprawdzanie oczekujących płatności (co 15 minut)
+- **PaymentStatusSyncJob** - synchronizacja statusów ze Stripe (co 30 minut)
+
+#### Application Services
+
+Rozszerzono **PaymentProcessingService** o nowe metody:
+
+- `ProcessPendingPaymentsAsync()` - przetwarzanie oczekujących płatności
+- `UpdatePaymentFromWebhookAsync()` - aktualizacja płatności z webhook
+- `ValidatePaymentStatusAsync()` - walidacja statusu płatności
+- `SyncPaymentStatusesWithStripeAsync()` - synchronizacja statusów ze Stripe
+
+#### Commands i Queries
+
+- **ProcessWebhookEventCommand** - komenda do przetwarzania webhooków
+- **UpdatePaymentFromWebhookCommand** - komenda aktualizacji płatności z webhook
+- **SavePaymentMethodCommand** - komenda zapisywania metod płatności
+- **GetPaymentMethodsByClientQuery** - query pobierania metod płatności
+
+### 🔒 Bezpieczeństwo Webhooków
+
+- **Weryfikacja podpisów** - automatyczna weryfikacja podpisów Stripe
+- **Ochrona przed duplikatami** - logowanie i identyfikacja duplikatów eventów
+- **Rate limiting** - ograniczenie częstotliwości webhooków
+- **Encryption** - szyfrowanie wrażliwych danych webhook
+
+### 🐞 Dependency Injection
+
+Wszystkie nowe serwisy zostały zarejestrowane w `DependencyInjection.cs`:
+
+- Rejestracja procesorów webhooków
+- Rejestracja background jobs jako IHostedService
+- Rejestracja middleware w Program.cs
+- Konfiguracja StripeWebhookSettings z appsettings.json
+
+### 📊 Database
+
+- Dodano `DbSet<PaymentWebhookLog>` i `DbSet<PaymentMethod>` do ApplicationDbContext
+- Konfiguracja query filters dla multi-tenancy
+- Dodanie repozytoriów do UnitOfWork
+
+### 🌐 Endpointy Webhooków
+
+- **POST /api/webhooks/stripe** - Przetwarzanie webhooków Stripe
+  - Weryfikacja podpisu
+  - Identyfikacja typu eventu
+  - Delegowanie do odpowiedniego handlera
+  - Logowanie wszystkich eventów
+
+### 📋 Konfiguracja
+
+Dodano konfigurację w `appsettings.json`:
+
+```json
+{
+  "StripeWebhookSettings": {
+    "WebhookSecret": "whsec_...",
+    "EnableSignatureVerification": true,
+    "AllowedEventTypes": [
+      "payment_intent.succeeded",
+      "payment_intent.payment_failed",
+      "charge.refunded",
+      "customer.subscription.updated",
+      "customer.subscription.deleted",
+      "invoice.payment_succeeded",
+      "invoice.payment_failed"
+    ],
+    "MaxPayloadSize": 1048576,
+    "LogPayloads": false
+  }
+}
+```
+
+---
+
+## 🔧 Domain Model Improvements & Bug Fixes (2025-10-01)
+
+### 📋 Przegląd Napraw
+
+Przeprowadzono kompleksową analizę i poprawę modelu domenowego dla encji związanych z płatnościami, webhookami i subskrypcjami.
+
+### ✅ PaymentMethod - Poprawki i Ulepszenia
+
+#### 1. Poprawiona Walidacja Daty Wygaśnięcia (`IsExpired()`)
+
+**Problem:** Metoda porównywała tylko datę bez uwzględnienia, że karty wygasają ostatniego dnia miesiąca.
+
+**Rozwiązanie:**
+
+```csharp
+public bool IsExpired()
+{
+    if (ExpiryDate == null)
+        return false;
+
+    // Cards expire on the last day of the month
+    var lastDayOfMonth = new DateTime(
+        ExpiryDate.Value.Year,
+        ExpiryDate.Value.Month,
+        DateTime.DaysInMonth(ExpiryDate.Value.Year, ExpiryDate.Value.Month));
+
+    return lastDayOfMonth.Date < DateTime.UtcNow.Date;
+}
+```
+
+**Lokalizacja:** [PaymentMethod.cs:120-132](Orbito.Domain/Entities/PaymentMethod.cs#L120)
+
+#### 2. Dodana Walidacja w `UpdateToken()`
+
+**Problem:** Brak walidacji czy token nie jest pusty.
+
+**Rozwiązanie:**
+
+```csharp
+public void UpdateToken(string newToken)
+{
+    if (string.IsNullOrWhiteSpace(newToken))
+        throw new ArgumentException("Token cannot be null or empty", nameof(newToken));
+
+    Token = newToken;
+    UpdatedAt = DateTime.UtcNow;
+}
+```
+
+**Lokalizacja:** [PaymentMethod.cs:92-99](Orbito.Domain/Entities/PaymentMethod.cs#L92)
+
+### ✅ PaymentWebhookLog - Kompleksowa Refaktoryzacja
+
+#### 1. Utworzono Enum `WebhookStatus`
+
+**Problem:** Używanie stringowych statusów zamiast enum.
+
+**Rozwiązanie:** Utworzono nowy enum:
+
+```csharp
+public enum WebhookStatus
+{
+    Pending = 0,    // Webhook received but not yet processed
+    Processed = 1,  // Successfully processed
+    Failed = 2      // Processing failed
+}
+```
+
+**Lokalizacja:** [WebhookStatus.cs](Orbito.Domain/Enums/WebhookStatus.cs)
+
+#### 2. Zmieniono Typ Właściwości `Status`
+
+**Problem:** `Status` jako `string` - brak type safety.
+
+**Rozwiązanie:**
+
+- Zmieniono typ z `string Status` na `WebhookStatus Status`
+- Zaktualizowano konfigurację EF Core z konwersją do string
+- Zmieniono `ProcessedAt` na nullable `DateTime?`
+
+**Lokalizacja:** [PaymentWebhookLog.cs:50](Orbito.Domain/Entities/PaymentWebhookLog.cs#L50)
+
+#### 3. Poprawiono Metodę `Create()`
+
+**Problem:** Od razu ustawiała status "Processed" zamiast "Pending".
+
+**Rozwiązanie:**
+
+```csharp
+public static PaymentWebhookLog Create(...)
+{
+    return new PaymentWebhookLog
+    {
+        // ...
+        Status = WebhookStatus.Pending,  // Changed from "Processed"
+        ReceivedAt = DateTime.UtcNow,
+        Attempts = 0  // Changed from 1
+    };
+}
+```
+
+**Lokalizacja:** [PaymentWebhookLog.cs:82-93](Orbito.Domain/Entities/PaymentWebhookLog.cs#L82)
+
+#### 4. Spójna Obsługa `Attempts`
+
+**Problem:** `MarkAsFailed()` inkrementowało `Attempts`, ale `MarkAsProcessed()` nie - niespójność.
+
+**Rozwiązanie:**
+
+```csharp
+public void MarkAsFailed(string errorMessage)
+{
+    Status = WebhookStatus.Failed;
+    ErrorMessage = errorMessage;
+    Attempts++;
+    ProcessedAt = DateTime.UtcNow;  // Added
+}
+
+public void MarkAsProcessed()
+{
+    Status = WebhookStatus.Processed;
+    ProcessedAt = DateTime.UtcNow;
+    Attempts++;  // Added for consistency
+}
+```
+
+**Lokalizacja:** [PaymentWebhookLog.cs:99-115](Orbito.Domain/Entities/PaymentWebhookLog.cs#L99)
+
+#### 5. Usunięto Niepotrzebną Metodę
+
+**Problem:** `IncrementAttempts()` była oddzielną metodą - ryzyko niezsynchronizowania.
+
+**Rozwiązanie:** Usunięto metodę `IncrementAttempts()` - inkrementacja jest teraz częścią `MarkAsFailed()` i `MarkAsProcessed()`.
+
+#### 6. Zaktualizowano Metodę `CanRetry()`
+
+**Rozwiązanie:**
+
+```csharp
+public bool CanRetry(int maxAttempts = 3)
+{
+    return Status == WebhookStatus.Failed && Attempts < maxAttempts;
+}
+```
+
+### ✅ Subscription - Poprawki i Nowe Funkcjonalności
+
+#### 1. Dodano Metodę `ProcessPayment()`
+
+**Problem:** `CanBePaid()` zwracała true dla PastDue, ale nie było metody do obsługi płatności.
+
+**Rozwiązanie:**
+
+```csharp
+public void ProcessPayment(Guid paymentId)
+{
+    if (!CanBePaid())
+        throw new InvalidOperationException("Subscription cannot be paid in current status");
+
+    if (Status == SubscriptionStatus.PastDue)
+        Status = SubscriptionStatus.Active;
+
+    UpdateNextBillingDate();
+    UpdatedAt = DateTime.UtcNow;
+}
+```
+
+**Lokalizacja:** [Subscription.cs:179-189](Orbito.Domain/Entities/Subscription.cs#L179)
+
+#### 2. Dodano Walidację w `ChangePlan()`
+
+**Problem:** Brak walidacji czy nowy plan istnieje.
+
+**Rozwiązanie:**
+
+```csharp
+public void ChangePlan(Guid newPlanId, Money newPrice)
+{
+    if (newPlanId == Guid.Empty)
+        throw new ArgumentException("Plan ID cannot be empty", nameof(newPlanId));
+
+    if (newPrice == null || newPrice.Amount <= 0)
+        throw new ArgumentException("Price must be greater than zero", nameof(newPrice));
+
+    PlanId = newPlanId;
+    CurrentPrice = newPrice;
+    UpdatedAt = DateTime.UtcNow;
+}
+```
+
+**Lokalizacja:** [Subscription.cs:125-136](Orbito.Domain/Entities/Subscription.cs#L125)
+
+#### 3. Poprawiono `UpdateNextBillingDate()`
+
+**Problem:** Używała starej daty `NextBillingDate` zamiast `DateTime.UtcNow` - mogło prowadzić do błędów przy opóźnieniach.
+
+**Rozwiązanie:**
+
+```csharp
+public void UpdateNextBillingDate()
+{
+    NextBillingDate = BillingPeriod.GetNextBillingDate(DateTime.UtcNow);  // Changed from NextBillingDate
+    UpdatedAt = DateTime.UtcNow;
+}
+```
+
+**Lokalizacja:** [Subscription.cs:138-142](Orbito.Domain/Entities/Subscription.cs#L138)
+
+### 🗄️ Infrastructure Updates
+
+#### 1. PaymentWebhookLogConfiguration
+
+- Zmieniono `ProcessedAt` na nullable
+- Dodano konwersję enum → string dla `Status`
+- Zmieniono domyślną wartość `Attempts` z 1 na 0
+
+**Lokalizacja:** [PaymentWebhookLogConfiguration.cs:47-58](Orbito.Infrastructure/Data/Configurations/Entity/PaymentWebhookLogConfiguration.cs#L47)
+
+#### 2. WebhookLogRepository
+
+Zaktualizowano wszystkie miejsca używające stringowych statusów:
+
+- `GetFailedWebhooksAsync()` - używa `WebhookStatus.Failed`
+- `GetStatisticsAsync()` - używa enum zamiast stringów
+
+**Lokalizacja:** [WebhookLogRepository.cs](Orbito.Infrastructure/Persistence/WebhookLogRepository.cs)
+
+#### 3. StripeWebhookProcessor
+
+Zaktualizowano metodę `MarkEventAsProcessedAsync()`:
+
+```csharp
+var webhookLog = new PaymentWebhookLog
+{
+    // ...
+    Status = WebhookStatus.Processed,  // Changed from string
+    ProcessedAt = DateTime.UtcNow,
+    ReceivedAt = DateTime.UtcNow,
+    Attempts = 1
+};
+```
+
+**Lokalizacja:** [StripeWebhookProcessor.cs:142-153](Orbito.Infrastructure/PaymentGateways/Stripe/StripeWebhookProcessor.cs#L142)
+
+### 📊 Podsumowanie Zmian
+
+| Kategoria           | Zmiany                 | Pliki                                                                                       |
+| ------------------- | ---------------------- | ------------------------------------------------------------------------------------------- |
+| **Domain Entities** | 3 encje zaktualizowane | `PaymentMethod.cs`, `PaymentWebhookLog.cs`, `Subscription.cs`                               |
+| **Enums**           | 1 nowy enum            | `WebhookStatus.cs`                                                                          |
+| **Infrastructure**  | 3 pliki zaktualizowane | `PaymentWebhookLogConfiguration.cs`, `WebhookLogRepository.cs`, `StripeWebhookProcessor.cs` |
+| **Validation**      | 3 nowe walidacje       | `UpdateToken()`, `ChangePlan()`, `ProcessPayment()`                                         |
+| **Business Logic**  | 4 poprawki logiki      | `IsExpired()`, `UpdateNextBillingDate()`, `MarkAsProcessed()`, `Create()`                   |
+
+### 🎯 Korzyści z Refaktoryzacji
+
+1. **Type Safety**: Użycie enum zamiast stringów eliminuje błędy literówek
+2. **Spójność**: Wszystkie metody konsekwentnie obsługują `Attempts`
+3. **Walidacja**: Dodano walidacje zabezpieczające przed błędnymi danymi
+4. **Dokładność**: Poprawiono logikę dat wygaśnięcia kart i billing dates
+5. **Business Logic**: Dodano brakującą metodę `ProcessPayment()` dla subskrypcji
+
+### 📝 Migracje Bazy Danych
+
+**UWAGA:** Wymagana nowa migracja ze względu na zmiany w `PaymentWebhookLog`:
+
+```bash
+dotnet ef migrations add ImprovePaymentWebhookLog --project Orbito.Infrastructure --startup-project Orbito.API
+dotnet ef database update --project Orbito.Infrastructure --startup-project Orbito.API
+```
+
+---
+
+## 🔧 Entity Framework Configuration Fixes (2025-10-01)
+
+### 🚨 Krytyczne Poprawki Bezpieczeństwa
+
+#### 1. Naprawiono Błędne Query Filters
+
+**Problem:** Konfiguracje Entity Framework używały nieistniejącej właściwości `CurrentTenantId` w query filters.
+
+**Rozwiązanie:** Utworzono nowy system zarządzania tenant context:
+
+```csharp
+// Nowy interfejs ITenantProvider
+public interface ITenantProvider
+{
+    TenantId? GetCurrentTenantId();
+    Guid GetCurrentTenantIdAsGuid();
+}
+
+// Implementacja używająca ITenantContext
+public class TenantProvider : ITenantProvider
+{
+    private readonly ITenantContext _tenantContext;
+
+    public Guid GetCurrentTenantIdAsGuid()
+    {
+        return _tenantContext.CurrentTenantId?.Value ?? Guid.Empty;
+    }
+}
+```
+
+**Lokalizacja:**
+
+- [ITenantProvider.cs](Orbito.Application/Common/Interfaces/ITenantProvider.cs)
+- [TenantProvider.cs](Orbito.Application/Common/Services/TenantProvider.cs)
+
+#### 2. Zaktualizowano ApplicationDbContext
+
+**Problem:** DbContext nie miał dostępu do aktualnego TenantId dla query filters.
+
+**Rozwiązanie:**
+
+```csharp
+public class ApplicationDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, Guid>
+{
+    private readonly ITenantProvider _tenantProvider;
+
+    public ApplicationDbContext(
+        DbContextOptions<ApplicationDbContext> options,
+        ITenantProvider tenantProvider) : base(options)
+    {
+        _tenantProvider = tenantProvider;
+    }
+
+    private void ConfigureMultiTenancy(ModelBuilder builder)
+    {
+        var currentTenantId = _tenantProvider.GetCurrentTenantIdAsGuid();
+
+        // Wszystkie encje filtrowane po aktualnym tenant
+        builder.Entity<PaymentMethod>()
+            .HasQueryFilter(pm => EF.Property<Guid>(pm, "TenantId") == currentTenantId);
+    }
+}
+```
+
+**Lokalizacja:** [ApplicationDbContext.cs:49-87](Orbito.Infrastructure/Data/ApplicationDbContext.cs#L49)
+
+#### 3. Usunięto Błędne Query Filters z Konfiguracji
+
+**Problem:** PaymentMethodConfiguration i PaymentWebhookLogConfiguration miały błędne query filters.
+
+**Rozwiązanie:** Usunięto błędne filtry - teraz są obsługiwane globalnie w ApplicationDbContext.
+
+**Lokalizacja:**
+
+- [PaymentMethodConfiguration.cs:76](Orbito.Infrastructure/Data/Configurations/Entity/PaymentMethodConfiguration.cs#L76)
+- [PaymentWebhookLogConfiguration.cs:84](Orbito.Infrastructure/Data/Configurations/Entity/PaymentWebhookLogConfiguration.cs#L84)
+
+### ⚡ Optymalizacje Konfiguracji
+
+#### 1. Uproszczono Konwersje Enumów
+
+**Problem:** Skomplikowane konwersje enumów z `Enum.Parse` mogły rzucać wyjątki.
+
+**Rozwiązanie:**
+
+```csharp
+// Przed (ryzykowne)
+builder.Property(pm => pm.Type)
+    .HasConversion(
+        v => v.ToString(),
+        v => Enum.Parse<PaymentMethodType>(v));
+
+// Po (bezpieczne)
+builder.Property(pm => pm.Type)
+    .IsRequired()
+    .HasConversion<string>()
+    .HasMaxLength(50);
+```
+
+**Lokalizacja:** [PaymentMethodConfiguration.cs:35-38](Orbito.Infrastructure/Data/Configurations/Entity/PaymentMethodConfiguration.cs#L35)
+
+#### 2. Zoptymalizowano Indeksy
+
+**Problem:** Nieefektywne indeksy bez filtrów, nadmiarowe indeksy.
+
+**Rozwiązanie:**
+
+**PaymentMethod - Filtered Index:**
+
+```csharp
+builder.HasIndex(pm => new { pm.ClientId, pm.IsDefault })
+    .HasDatabaseName("IX_PaymentMethods_ClientId_IsDefault")
+    .HasFilter("[IsDefault] = 1"); // Tylko dla default = true
+```
+
+**PaymentWebhookLog - Zredukowane Indeksy:**
+
+```csharp
+// Przed: 5 indeksów
+// Po: 2 zoptymalizowane indeksy
+builder.HasIndex(w => new { w.TenantId, w.EventId })
+    .IsUnique()
+    .HasDatabaseName("IX_PaymentWebhookLogs_TenantId_EventId");
+
+builder.HasIndex(w => new { w.Status, w.ReceivedAt })
+    .HasDatabaseName("IX_PaymentWebhookLogs_Status_ReceivedAt")
+    .HasFilter("[Status] = 'Failed'"); // Dla retry logic
+```
+
+**Lokalizacja:**
+
+- [PaymentMethodConfiguration.cs:67-69](Orbito.Infrastructure/Data/Configurations/Entity/PaymentMethodConfiguration.cs#L67)
+- [PaymentWebhookLogConfiguration.cs:67-74](Orbito.Infrastructure/Data/Configurations/Entity/PaymentWebhookLogConfiguration.cs#L67)
+
+#### 3. Dodano Walidację Długości
+
+**Problem:** Brak ograniczeń długości dla `LastFourDigits`.
+
+**Rozwiązanie:**
+
+```csharp
+builder.Property(pm => pm.LastFourDigits)
+    .HasMaxLength(4)
+    .IsFixedLength(false);
+```
+
+**Lokalizacja:** [PaymentMethodConfiguration.cs:44-46](Orbito.Infrastructure/Data/Configurations/Entity/PaymentMethodConfiguration.cs#L44)
+
+### 🔧 Dependency Injection Updates
+
+#### 1. Zarejestrowano ITenantProvider
+
+```csharp
+// Application layer
+services.AddScoped<ITenantProvider, TenantProvider>();
+
+// Infrastructure layer
+services.AddScoped<ITenantProvider, Application.Common.Services.TenantProvider>();
+```
+
+**Lokalizacja:**
+
+- [Application/DependencyInjection.cs:35](Orbito.Application/DependencyInjection.cs#L35)
+- [Infrastructure/DependencyInjection.cs:93](Orbito.Infrastructure/DependencyInjection.cs#L93)
+
+### 📊 Podsumowanie Poprawek
+
+| Kategoria        | Problem                         | Rozwiązanie                          | Pliki                                                                |
+| ---------------- | ------------------------------- | ------------------------------------ | -------------------------------------------------------------------- |
+| **Security**     | Błędne query filters            | ITenantProvider + globalne filtry    | `ApplicationDbContext.cs`, `ITenantProvider.cs`                      |
+| **Performance**  | Nieefektywne indeksy            | Filtered indexes + redukcja          | `PaymentMethodConfiguration.cs`, `PaymentWebhookLogConfiguration.cs` |
+| **Type Safety**  | Ryzykowne enum conversions      | `HasConversion<string>()`            | `PaymentMethodConfiguration.cs`                                      |
+| **Validation**   | Brak ograniczeń długości        | `HasMaxLength()` + `IsFixedLength()` | `PaymentMethodConfiguration.cs`                                      |
+| **Architecture** | Brak tenant context w DbContext | Dependency injection                 | `DependencyInjection.cs`                                             |
+
+### 🎯 Korzyści z Poprawek
+
+1. **Bezpieczeństwo**: Naprawiono krytyczną lukę w multi-tenancy - teraz dane są prawidłowo izolowane
+2. **Wydajność**: Zoptymalizowane indeksy z filtrami zmniejszają rozmiar i poprawiają szybkość zapytań
+3. **Stabilność**: Bezpieczne konwersje enumów eliminują ryzyko wyjątków
+4. **Architektura**: Czyste rozdzielenie odpowiedzialności między warstwami
+
+### ⚠️ Wymagane Migracje
+
+**UWAGA:** Wymagane nowe migracje ze względu na zmiany w konfiguracji:
+
+```bash
+# Utwórz nową migrację
+dotnet ef migrations add FixEntityFrameworkConfiguration --project Orbito.Infrastructure --startup-project Orbito.API
+
+# Zastosuj migrację
+dotnet ef database update --project Orbito.Infrastructure --startup-project Orbito.API
+```
+
+### 🔍 Weryfikacja Poprawek
+
+Po zastosowaniu migracji sprawdź:
+
+1. **Query filters działają** - każdy tenant widzi tylko swoje dane
+2. **Indeksy są efektywne** - sprawdź execution plans w SQL Server
+3. **Enum conversions** - testuj zapisywanie/odczytywanie enumów
+4. **Performance** - monitoruj wydajność zapytań
+
+---
+
+## 🔧 Final Entity Framework Configuration Fixes (2025-10-01)
+
+### 🚨 Krytyczne Poprawki Query Filters
+
+#### 1. Naprawiono Ewaluację Query Filters
+
+**Problem:** Query filters były ewaluowane raz podczas budowania modelu, a nie przy każdym zapytaniu.
+
+**Rozwiązanie:**
+
+```csharp
+// Przed (BŁĘDNE) - ewaluowane raz podczas OnModelCreating
+var currentTenantId = _tenantProvider.GetCurrentTenantIdAsGuid();
+builder.Entity<PaymentMethod>()
+    .HasQueryFilter(pm => pm.TenantId.Value == currentTenantId);
+
+// Po (POPRAWNE) - ewaluowane przy każdym zapytaniu
+builder.Entity<PaymentMethod>()
+    .HasQueryFilter(pm => pm.TenantId.Value == _tenantProvider.GetCurrentTenantIdAsGuid());
+```
+
+**Lokalizacja:** [ApplicationDbContext.cs:49-87](Orbito.Infrastructure/Data/ApplicationDbContext.cs#L49)
+
+#### 2. Dodano Walidację TenantId
+
+**Problem:** Brak zabezpieczenia przed `Guid.Empty` w query filters.
+
+**Rozwiązanie:**
+
+```csharp
+public interface ITenantProvider
+{
+    Guid GetCurrentTenantIdAsGuid(); // Throws exception if no tenant
+    bool HasTenant(); // Validation method
+}
+
+public Guid GetCurrentTenantIdAsGuid()
+{
+    if (!_tenantContext.HasTenant)
+        throw new InvalidOperationException("Tenant context is not available");
+
+    return _tenantContext.CurrentTenantId!.Value;
+}
+```
+
+**Lokalizacja:**
+
+- [ITenantProvider.cs:21-27](Orbito.Application/Common/Interfaces/ITenantProvider.cs#L21)
+- [TenantProvider.cs:23-29](Orbito.Application/Common/Services/TenantProvider.cs#L23)
+
+### 🔗 Navigation Properties
+
+#### 1. Dodano Navigation Property do PaymentMethod
+
+**Problem:** Brak navigation property do Client - utrudniało Eager/Lazy Loading.
+
+**Rozwiązanie:**
+
+```csharp
+// W PaymentMethod.cs
+public Guid ClientId { get; set; }
+public Client? Client { get; set; } // Navigation property
+
+// W PaymentMethodConfiguration.cs
+builder.HasOne(pm => pm.Client)
+    .WithMany()
+    .HasForeignKey(pm => pm.ClientId)
+    .OnDelete(DeleteBehavior.Cascade);
+```
+
+**Lokalizacja:**
+
+- [PaymentMethod.cs:27-30](Orbito.Domain/Entities/PaymentMethod.cs#L27)
+- [PaymentMethodConfiguration.cs:80-83](Orbito.Infrastructure/Data/Configurations/Entity/PaymentMethodConfiguration.cs#L80)
+
+### ⚡ Optymalizacje Konfiguracji
+
+#### 1. Dodano MaxLength dla Status
+
+**Problem:** Brak ograniczenia długości dla enum Status.
+
+**Rozwiązanie:**
+
+```csharp
+builder.Property(w => w.Status)
+    .IsRequired()
+    .HasConversion<string>()
+    .HasMaxLength(20); // Enum ma tylko kilka wartości
+```
+
+**Lokalizacja:** [PaymentWebhookLogConfiguration.cs:49-52](Orbito.Infrastructure/Data/Configurations/Entity/PaymentWebhookLogConfiguration.cs#L49)
+
+### 📊 Podsumowanie Finalnych Poprawek
+
+| Kategoria       | Problem                      | Rozwiązanie                      | Pliki                                               |
+| --------------- | ---------------------------- | -------------------------------- | --------------------------------------------------- |
+| **Security**    | Query filters ewaluowane raz | Lambda expressions per query     | `ApplicationDbContext.cs`                           |
+| **Validation**  | Brak walidacji TenantId      | Exception throwing + HasTenant() | `ITenantProvider.cs`, `TenantProvider.cs`           |
+| **Navigation**  | Brak navigation property     | Client navigation property       | `PaymentMethod.cs`, `PaymentMethodConfiguration.cs` |
+| **Performance** | Brak MaxLength dla Status    | HasMaxLength(20)                 | `PaymentWebhookLogConfiguration.cs`                 |
+
+### 🎯 Korzyści z Finalnych Poprawek
+
+1. **Bezpieczeństwo**: Query filters działają prawidłowo - każdy zapytanie używa aktualnego TenantId
+2. **Walidacja**: Zabezpieczenie przed nieprawidłowym kontekstem tenant
+3. **Funkcjonalność**: Navigation properties umożliwiają Eager/Lazy Loading
+4. **Optymalizacja**: MaxLength dla enum Status zmniejsza rozmiar bazy danych
+
+### ⚠️ Wymagane Migracje (Finalne)
+
+**UWAGA:** Wymagane nowe migracje ze względu na navigation property:
+
+```bash
+# Utwórz finalną migrację
+dotnet ef migrations add AddNavigationPropertiesAndFinalFixes --project Orbito.Infrastructure --startup-project Orbito.API
+
+# Zastosuj migrację
+dotnet ef database update --project Orbito.Infrastructure --startup-project Orbito.API
+```
+
+### 🔍 Finalna Weryfikacja
+
+Po zastosowaniu wszystkich migracji sprawdź:
+
+1. **Query filters per query** - każdy zapytanie używa aktualnego TenantId
+2. **Navigation properties** - testuj Include() dla PaymentMethod.Client
+3. **Tenant validation** - sprawdź czy brak tenant context rzuca wyjątek
+4. **Database constraints** - sprawdź czy foreign keys działają poprawnie
+
+---
+
+## 🔧 Background Jobs Multi-Tenancy Fixes (2025-10-01)
+
+### 🚨 Krytyczne Poprawki Multi-Tenancy
+
+#### 1. Naprawiono Obsługę Tenantów w Background Jobs
+
+**Problem:** Background jobs działały globalnie bez uwzględnienia kontekstu tenantów.
+
+**Rozwiązanie:**
+
+```csharp
+// Przed (BŁĘDNE) - działało tylko dla jednego tenanta
+var paymentProcessingService = scope.ServiceProvider.GetRequiredService<IPaymentProcessingService>();
+await paymentProcessingService.ProcessPendingPaymentsAsync(currentDate, stoppingToken);
+
+// Po (POPRAWNE) - iteruje po wszystkich tenantach
+var tenantIds = await context.Providers
+    .IgnoreQueryFilters()
+    .Where(p => p.IsActive)
+    .Select(p => p.TenantId.Value)
+    .Distinct()
+    .ToListAsync(stoppingToken);
+
+foreach (var tenantId in tenantIds)
+{
+    if (tenantProvider is TenantProvider provider)
+        provider.SetTenantOverride(tenantId);
+
+    await paymentService.ProcessPendingPaymentsAsync(currentDate, cts.Token);
+}
+```
+
+**Lokalizacja:**
+
+- [ProcessDuePaymentsJob.cs:67-89](Orbito.Infrastructure/BackgroundJobs/ProcessDuePaymentsJob.cs#L67)
+- [CheckPendingPaymentsJob.cs:67-89](Orbito.Infrastructure/BackgroundJobs/CheckPendingPaymentsJob.cs#L67)
+- [PaymentStatusSyncJob.cs:78-116](Orbito.Infrastructure/BackgroundJobs/PaymentStatusSyncJob.cs#L78)
+
+#### 2. Dodano Tenant Override do ITenantProvider
+
+**Problem:** Background jobs nie miały dostępu do kontekstu tenant.
+
+**Rozwiązanie:**
+
+```csharp
+public interface ITenantProvider
+{
+    void SetTenantOverride(Guid tenantId); // For background jobs
+    void ClearTenantOverride();
+}
+
+public class TenantProvider : ITenantProvider
+{
+    private TenantId? _tenantOverride;
+
+    public void SetTenantOverride(Guid tenantId)
+    {
+        _tenantOverride = TenantId.Create(tenantId);
+    }
+
+    public Guid GetCurrentTenantIdAsGuid()
+    {
+        var currentTenantId = _tenantOverride ?? _tenantContext.CurrentTenantId;
+        return currentTenantId?.Value ?? throw new InvalidOperationException("Tenant context is not available");
+    }
+}
+```
+
+**Lokalizacja:**
+
+- [ITenantProvider.cs:29-38](Orbito.Application/Common/Interfaces/ITenantProvider.cs#L29)
+- [TenantProvider.cs:39-47](Orbito.Application/Common/Services/TenantProvider.cs#L39)
+
+### 🔄 Refaktoryzacja Background Jobs
+
+#### 1. Rozdzielono RecurringPaymentJob
+
+**Problem:** Jeden job obsługiwał dwa różne zadania równolegle.
+
+**Rozwiązanie:** Utworzono dwa osobne joby:
+
+**ProcessDuePaymentsJob:**
+
+- Uruchamia się co godzinę
+- Przetwarza płatności dla wszystkich tenantów
+- Timeout: 50 minut dla 1-godzinnego jobu
+
+**CheckPendingPaymentsJob:**
+
+- Uruchamia się co 15 minut
+- Sprawdza status płatności dla wszystkich tenantów
+- Timeout: 10 minut dla 15-minutowego jobu
+
+**Lokalizacja:**
+
+- [ProcessDuePaymentsJob.cs](Orbito.Infrastructure/BackgroundJobs/ProcessDuePaymentsJob.cs)
+- [CheckPendingPaymentsJob.cs](Orbito.Infrastructure/BackgroundJobs/CheckPendingPaymentsJob.cs)
+
+#### 2. Dodano Timeout Handling
+
+**Problem:** Długie operacje mogły się nakładać.
+
+**Rozwiązanie:**
+
+```csharp
+using var cts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
+cts.CancelAfter(TimeSpan.FromMinutes(50)); // 50 min timeout dla 1h job
+
+try
+{
+    await paymentService.ProcessPendingPaymentsAsync(currentDate, cts.Token);
+}
+catch (OperationCanceledException) when (cts.IsCancellationRequested)
+{
+    _logger.LogWarning("Processing timed out for tenant {TenantId}", tenantId);
+}
+```
+
+**Lokalizacja:**
+
+- [ProcessDuePaymentsJob.cs:75-85](Orbito.Infrastructure/BackgroundJobs/ProcessDuePaymentsJob.cs#L75)
+- [CheckPendingPaymentsJob.cs:75-85](Orbito.Infrastructure/BackgroundJobs/CheckPendingPaymentsJob.cs#L75)
+- [PaymentStatusSyncJob.cs:81-103](Orbito.Infrastructure/BackgroundJobs/PaymentStatusSyncJob.cs#L81)
+
+#### 3. Zaktualizowano PaymentStatusSyncJob
+
+**Problem:** Job nie obsługiwał multi-tenancy.
+
+**Rozwiązanie:** Dodano iterację po wszystkich tenantach z tenant override.
+
+**Lokalizacja:** [PaymentStatusSyncJob.cs:55-122](Orbito.Infrastructure/BackgroundJobs/PaymentStatusSyncJob.cs#L55)
+
+### ⚡ Optymalizacje i Zabezpieczenia
+
+#### 1. Offset Between Jobs
+
+**Rozwiązanie:** Dodano różne opóźnienia startowe:
+
+- ProcessDuePaymentsJob: 5 minut
+- CheckPendingPaymentsJob: 10 minut
+- PaymentStatusSyncJob: 15 minut
+
+#### 2. Error Isolation
+
+**Rozwiązanie:** Błąd dla jednego tenanta nie przerywa przetwarzania pozostałych:
+
+```csharp
+catch (Exception ex)
+{
+    _logger.LogError(ex, "Error processing payments for tenant {TenantId}", tenantId);
+    // Continue with remaining tenants
+}
+```
+
+#### 3. Proper Resource Cleanup
+
+**Rozwiązanie:** Zawsze czyść tenant override w finally:
+
+```csharp
+finally
+{
+    if (tenantProvider is TenantProvider provider)
+        provider.ClearTenantOverride();
+}
+```
+
+### 📊 Podsumowanie Poprawek Background Jobs
+
+| Kategoria          | Problem                  | Rozwiązanie                           | Pliki                                                    |
+| ------------------ | ------------------------ | ------------------------------------- | -------------------------------------------------------- |
+| **Multi-tenancy**  | Brak obsługi tenantów    | Iteracja po wszystkich tenantach      | Wszystkie background jobs                                |
+| **Architecture**   | Jeden job, dwa zadania   | Rozdzielenie na osobne joby           | `ProcessDuePaymentsJob.cs`, `CheckPendingPaymentsJob.cs` |
+| **Timeout**        | Brak limitów czasu       | CancellationTokenSource z timeout     | Wszystkie background jobs                                |
+| **Tenant Context** | Brak dostępu do tenant   | SetTenantOverride/ClearTenantOverride | `ITenantProvider.cs`, `TenantProvider.cs`                |
+| **Error Handling** | Błąd przerywał wszystkie | Error isolation per tenant            | Wszystkie background jobs                                |
+
+### 🎯 Korzyści z Poprawek
+
+1. **Multi-tenancy**: Background jobs działają prawidłowo dla wszystkich tenantów
+2. **Niezawodność**: Timeout handling zapobiega nakładaniu się operacji
+3. **Architektura**: Rozdzielone joby są łatwiejsze w utrzymaniu
+4. **Izolacja**: Błąd jednego tenanta nie wpływa na pozostałe
+5. **Monitoring**: Lepsze logowanie per tenant
+
+### ⚠️ Wymagane Zmiany w DependencyInjection
+
+**UWAGA:** Zaktualizowano rejestrację background jobs:
+
+```csharp
+// Przed
+services.AddHostedService<RecurringPaymentJob>();
+services.AddHostedService<PaymentStatusSyncJob>();
+
+// Po
+services.AddHostedService<ProcessDuePaymentsJob>();
+services.AddHostedService<CheckPendingPaymentsJob>();
+services.AddHostedService<PaymentStatusSyncJob>();
+```
+
+**Lokalizacja:** [DependencyInjection.cs:112-114](Orbito.Infrastructure/DependencyInjection.cs#L112)
+
+### 🔍 Weryfikacja Poprawek
+
+Po wdrożeniu sprawdź:
+
+1. **Multi-tenancy** - każdy job przetwarza wszystkich aktywnych tenantów
+2. **Timeout handling** - operacje nie przekraczają limitów czasu
+3. **Error isolation** - błąd jednego tenanta nie przerywa pozostałych
+4. **Resource cleanup** - tenant override jest zawsze czyszczony
+5. **Job separation** - ProcessDuePaymentsJob i CheckPendingPaymentsJob działają niezależnie
+
+### 🚀 Następne Kroki (Opcjonalne)
+
+1. **Distributed Lock** - dodaj Redis/SQL distributed lock dla wielu instancji
+2. **Health Checks** - dodaj health checks dla background jobs
+3. **Metrics** - dodaj metryki per tenant
+4. **Graceful Shutdown** - popraw obsługę zatrzymywania aplikacji
+
+---
+
+## 🔧 Final Background Jobs Production Fixes (2025-10-01)
+
+### 🚨 Krytyczne Poprawki Thread Safety
+
+#### 1. Naprawiono Thread Safety w TenantProvider
+
+**Problem:** TenantProvider nie był thread-safe dla background jobs.
+
+**Rozwiązanie:**
+
+```csharp
+// Przed (BŁĘDNE) - nie thread-safe
+private TenantId? _tenantOverride;
+
+// Po (POPRAWNE) - thread-safe z AsyncLocal
+private readonly AsyncLocal<Guid?> _overrideTenantId = new();
+
+public void SetTenantOverride(Guid tenantId)
+{
+    _overrideTenantId.Value = tenantId;
+}
+
+public Guid GetCurrentTenantIdAsGuid()
+{
+    // Priority: override > tenant context
+    if (_overrideTenantId.Value.HasValue)
+        return _overrideTenantId.Value.Value;
+
+    var currentTenantId = _tenantContext.CurrentTenantId;
+    if (currentTenantId == null)
+        throw new InvalidOperationException("Tenant context is not available");
+    return currentTenantId.Value;
+}
+```
+
+**Lokalizacja:** [TenantProvider.cs:12-55](Orbito.Application/Common/Services/TenantProvider.cs#L12)
+
+### 🏥 Health Checks i Monitoring
+
+#### 1. Dodano Health Check do ProcessDuePaymentsJob
+
+**Problem:** Brak monitoringu statusu background jobs.
+
+**Rozwiązanie:**
+
+```csharp
+// Health check properties
+private DateTime? _lastSuccessfulRun;
+private int _failedAttempts;
+
+public bool IsHealthy()
+{
+    if (_lastSuccessfulRun == null)
+        return true; // New job, not checked yet
+
+    var timeSinceLastRun = DateTime.UtcNow - _lastSuccessfulRun.Value;
+    return timeSinceLastRun < TimeSpan.FromHours(2) && _failedAttempts < 3;
+}
+
+// Update health check status
+_lastSuccessfulRun = DateTime.UtcNow;
+_failedAttempts = 0;
+```
+
+**Lokalizacja:** [ProcessDuePaymentsJob.cs:20-66](Orbito.Infrastructure/BackgroundJobs/ProcessDuePaymentsJob.cs#L20)
+
+### ⚡ Batch Processing Optimization
+
+#### 1. Dodano Batch Processing dla Większej Wydajności
+
+**Problem:** Przetwarzanie wielu tenantów jeden po drugim było wolne.
+
+**Rozwiązanie:**
+
+```csharp
+// Process payments in batches for better performance
+var tenantBatches = tenantIds
+    .Select((id, index) => new { id, index })
+    .GroupBy(x => x.index / 10) // 10 tenants per batch
+    .Select(g => g.Select(x => x.id).ToList())
+    .ToList();
+
+foreach (var batch in tenantBatches)
+{
+    var tasks = batch.Select(tenantId => ProcessTenantAsync(tenantId, tenantProvider, paymentService, dateTime, stoppingToken));
+    await Task.WhenAll(tasks);
+}
+```
+
+**Lokalizacja:** [ProcessDuePaymentsJob.cs:91-106](Orbito.Infrastructure/BackgroundJobs/ProcessDuePaymentsJob.cs#L91)
+
+#### 2. Wydzielono ProcessTenantAsync dla Lepszego Kodu
+
+**Rozwiązanie:** Utworzono osobną metodę dla przetwarzania pojedynczego tenanta:
+
+```csharp
+private async Task ProcessTenantAsync(
+    Guid tenantId,
+    ITenantProvider tenantProvider,
+    IPaymentProcessingService paymentService,
+    IDateTime dateTime,
+    CancellationToken stoppingToken)
+{
+    // Individual tenant processing with proper error handling
+}
+```
+
+**Lokalizacja:** [ProcessDuePaymentsJob.cs:124-167](Orbito.Infrastructure/BackgroundJobs/ProcessDuePaymentsJob.cs#L124)
+
+### 📊 Podsumowanie Finalnych Poprawek
+
+| Kategoria          | Problem                        | Rozwiązanie                     | Pliki                      |
+| ------------------ | ------------------------------ | ------------------------------- | -------------------------- |
+| **Thread Safety**  | TenantProvider nie thread-safe | AsyncLocal<T> dla override      | `TenantProvider.cs`        |
+| **Health Checks**  | Brak monitoringu job status    | IsHealthy() + tracking          | `ProcessDuePaymentsJob.cs` |
+| **Performance**    | Wolne przetwarzanie tenantów   | Batch processing (10 per batch) | `ProcessDuePaymentsJob.cs` |
+| **Code Quality**   | Długie metody                  | Wydzielenie ProcessTenantAsync  | `ProcessDuePaymentsJob.cs` |
+| **Error Tracking** | Brak śledzenia błędów          | \_failedAttempts counter        | `ProcessDuePaymentsJob.cs` |
+
+### 🎯 Korzyści z Finalnych Poprawek
+
+1. **Thread Safety**: AsyncLocal<T> zapewnia bezpieczeństwo w środowisku wielowątkowym
+2. **Monitoring**: Health checks umożliwiają monitorowanie statusu jobów
+3. **Performance**: Batch processing znacznie przyspiesza przetwarzanie wielu tenantów
+4. **Maintainability**: Wydzielone metody są łatwiejsze w utrzymaniu
+5. **Reliability**: Lepsze śledzenie błędów i statusu wykonania
+
+### 🔍 Weryfikacja Finalnych Poprawek
+
+Po wdrożeniu sprawdź:
+
+1. **Thread Safety** - sprawdź czy AsyncLocal działa poprawnie w background jobs
+2. **Health Checks** - testuj IsHealthy() method dla różnych scenariuszy
+3. **Batch Processing** - monitoruj wydajność przetwarzania w partiach
+4. **Error Tracking** - sprawdź czy \_failedAttempts jest poprawnie aktualizowany
+5. **Resource Cleanup** - upewnij się, że tenant override jest zawsze czyszczony
+
+### 🚀 Production Ready Features
+
+Aplikacja jest teraz production-ready z następującymi osiągnięciami:
+
+✅ **Multi-tenancy** - poprawna obsługa wszystkich tenantów  
+✅ **Thread Safety** - AsyncLocal<T> dla bezpieczeństwa wielowątkowego  
+✅ **Resilience** - timeout, error isolation, graceful degradation  
+✅ **Performance** - batch processing dla lepszej wydajności  
+✅ **Monitoring** - health checks i error tracking  
+✅ **Maintainability** - rozdzielone joby, czytelny kod  
+✅ **Logging** - kompletne logowanie na wszystkich poziomach
 
 ---
 

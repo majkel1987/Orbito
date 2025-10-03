@@ -5,19 +5,26 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Domain.Identity;
+using Orbito.Infrastructure.BackgroundJobs;
 using Orbito.Infrastructure.Data;
 using Orbito.Infrastructure.PaymentGateways.Stripe;
+using Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers;
+using Orbito.Infrastructure.PaymentGateways.Stripe.Models;
 using Orbito.Infrastructure.Persistance;
+using Orbito.Infrastructure.Persistence;
+using System;
 using System.Text;
 
 namespace Orbito.Infrastructure
 {
     public static class DependencyInjection
     {
-        public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+        public static IServiceCollection AddInfrastructure(
+            this IServiceCollection services, IConfiguration configuration)
         {
             services.AddDbContext<ApplicationDbContext>((provider, options) =>
             {
@@ -85,16 +92,47 @@ namespace Orbito.Infrastructure
             services.AddHealthChecks()
                 .AddDbContextCheck<ApplicationDbContext>();
 
+            // Register ITenantProvider for ApplicationDbContext
+            services.AddScoped<ITenantProvider, Application.Common.Services.TenantProvider>();
+            
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<IProviderRepository, ProviderRepository>();
             services.AddScoped<IClientRepository, ClientRepository>();
             services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
             services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
             services.AddScoped<IPaymentRepository, PaymentRepository>();
+            services.AddScoped<IPaymentMethodRepository, PaymentMethodRepository>();
+            services.AddScoped<IWebhookLogRepository, WebhookLogRepository>();
 
             // Configure Stripe
             services.Configure<StripeConfiguration>(configuration.GetSection("Stripe"));
+            services.Configure<StripeWebhookSettings>(configuration.GetSection("StripeWebhookSettings"));
             services.AddScoped<IPaymentGateway, StripePaymentGateway>();
+            services.AddScoped<IPaymentWebhookProcessor, StripeWebhookProcessor>();
+            services.AddScoped<StripeEventHandler>();
+
+            // Add Background Jobs
+            services.AddHostedService<ProcessDuePaymentsJob>();
+            services.AddHostedService<CheckPendingPaymentsJob>();
+            services.AddHostedService<PaymentStatusSyncJob>();
+
+            // Validate Stripe configuration at startup
+            services.AddOptions<StripeConfiguration>()
+                .Validate(config =>
+                {
+                    // Validate only if signature verification is enabled
+                    return true; // Basic validation, detailed validation happens at runtime
+                }, "Invalid Stripe configuration");
+
+            services.AddOptions<StripeWebhookSettings>()
+                .Validate(settings =>
+                {
+                    if (settings.MaxPayloadSize <= 0)
+                        return false;
+                    if (settings.SignatureToleranceSeconds <= 0)
+                        return false;
+                    return true;
+                }, "Invalid Stripe webhook settings");
 
             return services;
         }

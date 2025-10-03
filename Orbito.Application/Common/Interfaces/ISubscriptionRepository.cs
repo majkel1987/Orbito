@@ -1,3 +1,4 @@
+using System;
 using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
 using Orbito.Domain.ValueObjects;
@@ -8,17 +9,20 @@ namespace Orbito.Application.Common.Interfaces
     {
         // Read operations
         Task<Subscription?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+        Task<Subscription?> GetByIdForClientAsync(Guid id, Guid clientId, CancellationToken cancellationToken = default);
         Task<Subscription?> GetByIdWithDetailsAsync(Guid id, CancellationToken cancellationToken = default);
+        Task<Subscription?> GetByIdWithDetailsForClientAsync(Guid id, Guid clientId, CancellationToken cancellationToken = default);
+        Task<Subscription?> GetByExternalIdAsync(string externalId, CancellationToken cancellationToken = default);
+        Task<Subscription?> GetByExternalIdForClientAsync(string externalId, Guid clientId, CancellationToken cancellationToken = default);
         Task<IEnumerable<Subscription>> GetByClientIdAsync(Guid clientId, CancellationToken cancellationToken = default);
-        Task<IEnumerable<Subscription>> GetActiveSubscriptionsAsync(CancellationToken cancellationToken = default);
-        Task<IEnumerable<Subscription>> GetExpiringSubscriptionsAsync(DateTime checkDate, int daysBeforeExpiration = 7, CancellationToken cancellationToken = default);
-        Task<IEnumerable<Subscription>> GetExpiredSubscriptionsAsync(DateTime checkDate, CancellationToken cancellationToken = default);
-        Task<IEnumerable<Subscription>> GetSubscriptionsByStatusAsync(SubscriptionStatus status, CancellationToken cancellationToken = default);
-        Task<IEnumerable<Subscription>> GetSubscriptionsByPlanIdAsync(Guid planId, CancellationToken cancellationToken = default);
-        Task<IEnumerable<Subscription>> GetAllAsync(int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken = default);
+        Task<IEnumerable<Subscription>> GetActiveSubscriptionsByClientAsync(Guid clientId, CancellationToken cancellationToken = default);
+        Task<IEnumerable<Subscription>> GetExpiringSubscriptionsByClientAsync(Guid clientId, DateTime checkDate, int daysBeforeExpiration = 7, CancellationToken cancellationToken = default);
+        Task<IEnumerable<Subscription>> GetExpiredSubscriptionsByClientAsync(Guid clientId, DateTime checkDate, CancellationToken cancellationToken = default);
+        Task<IEnumerable<Subscription>> GetSubscriptionsByStatusForClientAsync(SubscriptionStatus status, Guid clientId, CancellationToken cancellationToken = default);
+        Task<IEnumerable<Subscription>> GetSubscriptionsByPlanIdForClientAsync(Guid planId, Guid clientId, CancellationToken cancellationToken = default);
 
         // Search operations
-        Task<IEnumerable<Subscription>> SearchSubscriptionsAsync(string searchTerm, int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken = default);
+        Task<IEnumerable<Subscription>> SearchSubscriptionsForClientAsync(string searchTerm, Guid clientId, int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken = default);
 
         // CRUD operations
         Task<Subscription> AddAsync(Subscription subscription, CancellationToken cancellationToken = default);
@@ -28,6 +32,24 @@ namespace Orbito.Application.Common.Interfaces
         // Business operations
         Task<bool> HasActiveSubscriptionAsync(Guid clientId, CancellationToken cancellationToken = default);
         Task<bool> CanClientSubscribeToPlanAsync(Guid clientId, Guid planId, CancellationToken cancellationToken = default);
+        Task<int> GetActiveSubscriptionsCountByClientAsync(Guid clientId, CancellationToken cancellationToken = default);
+        Task<decimal> GetTotalRevenueByClientAsync(Guid clientId, CancellationToken cancellationToken = default);
+        Task<IEnumerable<Subscription>> GetSubscriptionsForBillingByClientAsync(DateTime billingDate, Guid clientId, CancellationToken cancellationToken = default);
+
+        // DEPRECATED: Admin-only operations (require special permissions and proper authorization)
+        // WARNING: These methods expose data across all tenants - use with extreme caution
+        [Obsolete("Use client-specific methods for better security. Only for admin operations with proper authorization.")]
+        Task<IEnumerable<Subscription>> GetActiveSubscriptionsAsync(CancellationToken cancellationToken = default);
+
+        [Obsolete("Use client-specific methods for better security. Only for admin operations with proper authorization.")]
+        Task<IEnumerable<Subscription>> GetExpiringSubscriptionsAsync(DateTime checkDate, int daysBeforeExpiration = 7, CancellationToken cancellationToken = default);
+
+        [Obsolete("Use client-specific methods for better security. Only for admin operations with proper authorization.")]
+        Task<IEnumerable<Subscription>> GetExpiredSubscriptionsAsync(DateTime checkDate, CancellationToken cancellationToken = default);
+
+        [Obsolete("Use client-specific methods for better security. Only for admin operations with proper authorization.")]
+        Task<IEnumerable<Subscription>> GetSubscriptionsByStatusAsync(SubscriptionStatus status, CancellationToken cancellationToken = default);
+
         Task<int> GetActiveSubscriptionsCountAsync(CancellationToken cancellationToken = default);
         Task<decimal> GetTotalRevenueAsync(CancellationToken cancellationToken = default);
         Task<IEnumerable<Subscription>> GetSubscriptionsForBillingAsync(DateTime billingDate, CancellationToken cancellationToken = default);

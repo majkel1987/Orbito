@@ -4,8 +4,11 @@ using Microsoft.AspNetCore.Mvc;
 using Orbito.Application.Features.Payments.Commands.ProcessPayment;
 using Orbito.Application.Features.Payments.Commands.UpdatePaymentStatus;
 using Orbito.Application.Features.Payments.Commands;
+using Orbito.Application.Features.Payments.Commands.SavePaymentMethod;
 using Orbito.Application.Features.Payments.Queries.GetPaymentById;
 using Orbito.Application.Features.Payments.Queries.GetPaymentsBySubscription;
+using Orbito.Application.Features.Payments.Queries.GetPaymentMethodsByClient;
+using Orbito.Domain.Enums;
 
 namespace Orbito.API.Controllers
 {
@@ -37,7 +40,13 @@ namespace Orbito.API.Controllers
                 return BadRequest(result);
             }
 
-            return CreatedAtAction(nameof(GetPaymentById), new { id = result.Payment!.Id }, result);
+            // Null-safe CreatedAtAction
+            if (result.Payment == null)
+            {
+                return BadRequest(new { error = "Payment was not created" });
+            }
+
+            return CreatedAtAction(nameof(GetPaymentById), new { id = result.Payment.Id }, result);
         }
 
         /// <summary>
@@ -151,6 +160,63 @@ namespace Orbito.API.Controllers
             }
 
             return Ok(result);
+        }
+
+        /// <summary>
+        /// Zapisuje metodę płatności
+        /// </summary>
+        /// <param name="command">Dane metody płatności</param>
+        /// <returns>Wynik zapisywania metody płatności</returns>
+        [HttpPost("payment-methods")]
+        [Authorize(Roles = "Provider,PlatformAdmin")]
+        public async Task<ActionResult<SavePaymentMethodResult>> SavePaymentMethod(
+            [FromBody] SavePaymentMethodCommand command)
+        {
+            var result = await _mediator.Send(command);
+
+            if (!result.IsSuccess)
+            {
+                return BadRequest(result);
+            }
+
+            return CreatedAtAction(nameof(GetPaymentMethodsByClient), new { clientId = command.ClientId }, result.Value);
+        }
+
+        /// <summary>
+        /// Pobiera metody płatności klienta
+        /// </summary>
+        /// <param name="clientId">ID klienta</param>
+        /// <param name="pageNumber">Numer strony</param>
+        /// <param name="pageSize">Rozmiar strony</param>
+        /// <param name="type">Typ metody płatności</param>
+        /// <param name="activeOnly">Tylko aktywne metody</param>
+        /// <returns>Lista metod płatności</returns>
+        [HttpGet("payment-methods/client/{clientId}")]
+        [Authorize(Roles = "Provider,PlatformAdmin")]
+        public async Task<ActionResult<GetPaymentMethodsByClientResult>> GetPaymentMethodsByClient(
+            Guid clientId,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] PaymentMethodType? type = null,
+            [FromQuery] bool activeOnly = true)
+        {
+            var query = new GetPaymentMethodsByClientQuery
+            {
+                ClientId = clientId,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                Type = type,
+                ActiveOnly = activeOnly
+            };
+
+            var result = await _mediator.Send(query);
+
+            if (!result.IsSuccess)
+            {
+                return BadRequest(result);
+            }
+
+            return Ok(result.Value);
         }
     }
 }

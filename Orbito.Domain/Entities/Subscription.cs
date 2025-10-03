@@ -21,6 +21,9 @@ namespace Orbito.Domain.Entities
         public DateTime? EndDate { get; set; }
         public DateTime NextBillingDate { get; set; }
 
+        // External Integration
+        public string? ExternalSubscriptionId { get; set; }  // External provider subscription ID (e.g., Stripe)
+
         // Trial Information
         public bool IsInTrial { get; set; }
         public DateTime? TrialEndDate { get; set; }
@@ -121,6 +124,12 @@ namespace Orbito.Domain.Entities
 
         public void ChangePlan(Guid newPlanId, Money newPrice)
         {
+            if (newPlanId == Guid.Empty)
+                throw new ArgumentException("Plan ID cannot be empty", nameof(newPlanId));
+
+            if (newPrice == null || newPrice.Amount <= 0)
+                throw new ArgumentException("Price must be greater than zero", nameof(newPrice));
+
             PlanId = newPlanId;
             CurrentPrice = newPrice;
             UpdatedAt = DateTime.UtcNow;
@@ -128,7 +137,7 @@ namespace Orbito.Domain.Entities
 
         public void UpdateNextBillingDate()
         {
-            NextBillingDate = BillingPeriod.GetNextBillingDate(NextBillingDate);
+            NextBillingDate = BillingPeriod.GetNextBillingDate(DateTime.UtcNow);
             UpdatedAt = DateTime.UtcNow;
         }
 
@@ -173,6 +182,18 @@ namespace Orbito.Domain.Entities
             return Status == SubscriptionStatus.Active || Status == SubscriptionStatus.PastDue;
         }
 
+        public void ProcessPayment(Guid paymentId)
+        {
+            if (!CanBePaid())
+                throw new InvalidOperationException("Subscription cannot be paid in current status");
+
+            if (Status == SubscriptionStatus.PastDue)
+                Status = SubscriptionStatus.Active;
+
+            UpdateNextBillingDate();
+            UpdatedAt = DateTime.UtcNow;
+        }
+
         public bool IsExpiring(DateTime checkDate, int daysBeforeExpiration = 7)
         {
             return Status == SubscriptionStatus.Active && 
@@ -183,6 +204,45 @@ namespace Orbito.Domain.Entities
         public bool IsExpired(DateTime checkDate)
         {
             return Status == SubscriptionStatus.Active && NextBillingDate <= checkDate;
+        }
+
+        public void MarkAsUnpaid()
+        {
+            if (Status == SubscriptionStatus.Active || Status == SubscriptionStatus.PastDue)
+            {
+                Status = SubscriptionStatus.PastDue;
+                UpdatedAt = DateTime.UtcNow;
+            }
+        }
+
+        public void StartTrial(DateTime trialEndDate)
+        {
+            IsInTrial = true;
+            TrialEndDate = trialEndDate;
+            NextBillingDate = trialEndDate;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        public bool IsCanceled => Status == SubscriptionStatus.Cancelled;
+
+        public void ScheduleCancellation(DateTime cancelDate)
+        {
+            EndDate = cancelDate;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        public void MarkAsDeleted()
+        {
+            Status = SubscriptionStatus.Cancelled;
+            EndDate = DateTime.UtcNow;
+            CancelledAt = DateTime.UtcNow;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        public void Renew(DateTime nextBillingDate)
+        {
+            NextBillingDate = nextBillingDate;
+            UpdatedAt = DateTime.UtcNow;
         }
     }
 }
