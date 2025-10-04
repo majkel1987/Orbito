@@ -118,6 +118,8 @@ builder.Services.Configure<StripeWebhookSettings>(builder.Configuration.GetSecti
 // Add Background Jobs
 builder.Services.AddHostedService<Orbito.Application.BackgroundJobs.CheckExpiringSubscriptionsJob>();
 builder.Services.AddHostedService<Orbito.Application.BackgroundJobs.ProcessRecurringPaymentsJob>();
+builder.Services.AddHostedService<Orbito.Application.BackgroundJobs.UpcomingPaymentReminderJob>();
+builder.Services.AddHostedService<Orbito.Application.BackgroundJobs.ExpiredCardNotificationJob>();
 
 var app = builder.Build();
 

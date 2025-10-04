@@ -67,8 +67,8 @@ namespace Orbito.Application.Features.Payments.Commands
                 //         request.FirstName, request.LastName);
                 // }
 
-                // Utwórz klienta w Stripe
-                var result = await _paymentProcessingService.CreateStripeCustomerAsync(
+                // Utwórz klienta w payment gateway
+                var result = await _paymentProcessingService.CreateCustomerAsync(
                     request.ClientId,
                     request.Email,
                     request.FirstName,

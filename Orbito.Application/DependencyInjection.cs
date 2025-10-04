@@ -38,6 +38,7 @@ namespace Orbito.Application
             services.AddScoped<ISubscriptionPlanService, SubscriptionPlanService>();
             services.AddScoped<ISubscriptionService, SubscriptionService>();
             services.AddScoped<IPaymentProcessingService, PaymentProcessingService>();
+            services.AddScoped<IPaymentNotificationService, PaymentNotificationService>();
             services.AddSingleton<ISecurityLimitService, SecurityLimitService>();
 
             return services;

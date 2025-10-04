@@ -34,7 +34,8 @@ namespace Orbito.Application.Common.Services
             var currentTenantId = _tenantContext.CurrentTenantId;
             
             if (currentTenantId == null)
-                throw new InvalidOperationException("Tenant context is not available");
+                // Return Guid.Empty for admin context (no tenant filtering)
+                return Guid.Empty;
 
             return currentTenantId.Value;
         }

@@ -99,6 +99,14 @@ namespace Orbito.Infrastructure.Data.Configurations.Entity
             builder.HasIndex(p => p.CreatedAt)
                 .HasDatabaseName("IX_Payments_CreatedAt");
 
+            // SECURITY: Unique constraint to prevent race condition on concurrent payment processing
+            // Only one active payment (Pending or Processing) per subscription at a time
+            // This prevents duplicate charges when multiple requests arrive simultaneously
+            builder.HasIndex(p => new { p.SubscriptionId, p.Status })
+                .HasDatabaseName("IX_Payments_SubscriptionId_Status_Unique")
+                .IsUnique()
+                .HasFilter("Status IN ('Pending', 'Processing')");
+
             // Relationships
             builder.HasOne(p => p.Subscription)
                 .WithMany(s => s.Payments)

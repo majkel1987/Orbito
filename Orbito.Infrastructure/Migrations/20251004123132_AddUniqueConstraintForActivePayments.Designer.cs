@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Orbito.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using Orbito.Infrastructure.Data;
 namespace Orbito.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251004123132_AddUniqueConstraintForActivePayments")]
+    partial class AddUniqueConstraintForActivePayments
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -946,7 +949,7 @@ namespace Orbito.Infrastructure.Migrations
 
                             b1.HasKey("PaymentId");
 
-                            b1.ToTable("Payments", (string)null);
+                            b1.ToTable("Payments");
 
                             b1.WithOwner()
                                 .HasForeignKey("PaymentId");
@@ -1011,7 +1014,7 @@ namespace Orbito.Infrastructure.Migrations
 
                             b1.HasKey("ProviderId");
 
-                            b1.ToTable("Providers", (string)null);
+                            b1.ToTable("Providers");
 
                             b1.WithOwner()
                                 .HasForeignKey("ProviderId");
@@ -1060,7 +1063,7 @@ namespace Orbito.Infrastructure.Migrations
 
                             b1.HasKey("SubscriptionId");
 
-                            b1.ToTable("Subscriptions", (string)null);
+                            b1.ToTable("Subscriptions");
 
                             b1.WithOwner()
                                 .HasForeignKey("SubscriptionId");
@@ -1084,7 +1087,7 @@ namespace Orbito.Infrastructure.Migrations
 
                             b1.HasKey("SubscriptionId");
 
-                            b1.ToTable("Subscriptions", (string)null);
+                            b1.ToTable("Subscriptions");
 
                             b1.WithOwner()
                                 .HasForeignKey("SubscriptionId");
@@ -1126,7 +1129,7 @@ namespace Orbito.Infrastructure.Migrations
 
                             b1.HasKey("SubscriptionPlanId");
 
-                            b1.ToTable("SubscriptionPlans", (string)null);
+                            b1.ToTable("SubscriptionPlans");
 
                             b1.WithOwner()
                                 .HasForeignKey("SubscriptionPlanId");
@@ -1150,7 +1153,7 @@ namespace Orbito.Infrastructure.Migrations
 
                             b1.HasKey("SubscriptionPlanId");
 
-                            b1.ToTable("SubscriptionPlans", (string)null);
+                            b1.ToTable("SubscriptionPlans");
 
                             b1.WithOwner()
                                 .HasForeignKey("SubscriptionPlanId");

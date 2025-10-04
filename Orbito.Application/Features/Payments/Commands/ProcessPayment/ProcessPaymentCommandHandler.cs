@@ -86,7 +86,7 @@ namespace Orbito.Application.Features.Payments.Commands.ProcessPayment
             }
 
             // Validate payment method
-            if (!PaymentMethods.IsValid(request.PaymentMethod))
+            if (!Domain.Constants.PaymentMethods.IsValid(request.PaymentMethod))
             {
                 _logger.LogWarning("Payment processing failed: Invalid payment method {PaymentMethod}", request.PaymentMethod);
                 return ProcessPaymentResult.FailureResult("Invalid payment method");
@@ -158,7 +158,7 @@ namespace Orbito.Application.Features.Payments.Commands.ProcessPayment
                 }
 
                 // Validate payment method requirements
-                if (request.PaymentMethod == PaymentMethods.Card && string.IsNullOrEmpty(request.ExternalPaymentId))
+                if (request.PaymentMethod == Domain.Constants.PaymentMethods.Card && string.IsNullOrEmpty(request.ExternalPaymentId))
                 {
                     return await FailWithRollback("External payment ID is required for card payments", cancellationToken);
                 }

@@ -4,58 +4,58 @@ using Orbito.Application.Common.Models.PaymentGateway;
 namespace Orbito.Application.Common.Interfaces
 {
     /// <summary>
-    /// Interfejs serwisu do przetwarzania płatności
+    /// Service interface for processing payments
     /// </summary>
     public interface IPaymentProcessingService
     {
         /// <summary>
-        /// Przetwarza płatność subskrypcji
+        /// Processes subscription payment
         /// </summary>
-        /// <param name="subscriptionId">ID subskrypcji</param>
-        /// <param name="amount">Kwota płatności</param>
-        /// <param name="paymentMethodId">ID metody płatności</param>
-        /// <param name="description">Opis płatności</param>
-        /// <param name="cancellationToken">Token anulowania</param>
-        /// <returns>Wynik przetwarzania płatności</returns>
+        /// <param name="subscriptionId">Subscription ID</param>
+        /// <param name="amount">Payment amount</param>
+        /// <param name="paymentMethodId">Payment method ID</param>
+        /// <param name="description">Payment description</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>Payment processing result</returns>
         Task<PaymentResult> ProcessSubscriptionPaymentAsync(
-            Guid subscriptionId, 
-            Money amount, 
-            string paymentMethodId,
+            Guid subscriptionId,
+            Money amount,
+            Guid paymentMethodId,
             string description,
             CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Obsługuje udaną płatność
+        /// Handles successful payment
         /// </summary>
-        /// <param name="paymentId">ID płatności</param>
-        /// <param name="cancellationToken">Token anulowania</param>
+        /// <param name="paymentId">Payment ID</param>
+        /// <param name="cancellationToken">Cancellation token</param>
         Task HandlePaymentSuccessAsync(Guid paymentId, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Obsługuje nieudaną płatność
+        /// Handles failed payment
         /// </summary>
-        /// <param name="paymentId">ID płatności</param>
-        /// <param name="reason">Powód niepowodzenia</param>
-        /// <param name="cancellationToken">Token anulowania</param>
+        /// <param name="paymentId">Payment ID</param>
+        /// <param name="reason">Failure reason</param>
+        /// <param name="cancellationToken">Cancellation token</param>
         Task HandlePaymentFailureAsync(Guid paymentId, string reason, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Sprawdza czy można zwrócić płatność
+        /// Checks if payment can be refunded
         /// </summary>
-        /// <param name="paymentId">ID płatności</param>
-        /// <param name="amount">Kwota zwrotu</param>
-        /// <param name="cancellationToken">Token anulowania</param>
-        /// <returns>True jeśli można zwrócić, false w przeciwnym przypadku</returns>
+        /// <param name="paymentId">Payment ID</param>
+        /// <param name="amount">Refund amount</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>True if refund is possible, false otherwise</returns>
         Task<bool> CanRefundAsync(Guid paymentId, Money amount, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Zwraca płatność
+        /// Refunds payment (full or partial)
         /// </summary>
-        /// <param name="paymentId">ID płatności</param>
-        /// <param name="amount">Kwota zwrotu</param>
-        /// <param name="reason">Powód zwrotu</param>
-        /// <param name="cancellationToken">Token anulowania</param>
-        /// <returns>Wynik zwrotu płatności</returns>
+        /// <param name="paymentId">Payment ID</param>
+        /// <param name="amount">Refund amount</param>
+        /// <param name="reason">Refund reason</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>Refund result</returns>
         Task<RefundResult> RefundPaymentAsync(
             Guid paymentId,
             Money amount,
@@ -63,17 +63,17 @@ namespace Orbito.Application.Common.Interfaces
             CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Tworzy klienta w Stripe
+        /// Creates a customer in payment gateway
         /// </summary>
-        /// <param name="clientId">ID klienta</param>
-        /// <param name="email">Email klienta</param>
-        /// <param name="firstName">Imię klienta</param>
-        /// <param name="lastName">Nazwisko klienta</param>
-        /// <param name="companyName">Nazwa firmy</param>
-        /// <param name="phone">Telefon klienta</param>
-        /// <param name="cancellationToken">Token anulowania</param>
-        /// <returns>Wynik tworzenia klienta</returns>
-        Task<CustomerResult> CreateStripeCustomerAsync(
+        /// <param name="clientId">Client ID</param>
+        /// <param name="email">Client email</param>
+        /// <param name="firstName">Client first name</param>
+        /// <param name="lastName">Client last name</param>
+        /// <param name="companyName">Company name</param>
+        /// <param name="phone">Client phone number</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>Customer creation result</returns>
+        Task<CustomerResult> CreateCustomerAsync(
             Guid clientId,
             string email,
             string? firstName = null,
@@ -83,38 +83,56 @@ namespace Orbito.Application.Common.Interfaces
             CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Przetwarza oczekujące płatności
+        /// Processes pending payments
         /// </summary>
-        /// <param name="billingDate">Data rozliczenia</param>
-        /// <param name="cancellationToken">Token anulowania</param>
+        /// <param name="billingDate">Billing date</param>
+        /// <param name="cancellationToken">Cancellation token</param>
         Task ProcessPendingPaymentsAsync(DateTime billingDate, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Aktualizuje płatność z webhook
+        /// Updates payment from webhook data with signature verification
         /// </summary>
-        /// <param name="webhookData">Dane webhook</param>
-        /// <param name="cancellationToken">Token anulowania</param>
-        Task UpdatePaymentFromWebhookAsync(string webhookData, CancellationToken cancellationToken = default);
+        /// <param name="webhookData">Webhook data</param>
+        /// <param name="stripeSignature">Stripe signature for verification</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        Task UpdatePaymentFromWebhookAsync(string webhookData, string stripeSignature, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Waliduje status płatności
+        /// Validates payment status
         /// </summary>
-        /// <param name="cancellationToken">Token anulowania</param>
+        /// <param name="cancellationToken">Cancellation token</param>
         Task ValidatePaymentStatusAsync(CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Synchronizuje statusy płatności ze Stripe
+        /// Synchronizes payment statuses with Stripe
         /// </summary>
-        /// <param name="syncDate">Data synchronizacji</param>
-        /// <param name="cancellationToken">Token anulowania</param>
+        /// <param name="syncDate">Synchronization date</param>
+        /// <param name="cancellationToken">Cancellation token</param>
         Task SyncPaymentStatusesWithStripeAsync(DateTime syncDate, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Sprawdza rate limit dla klienta
+        /// Checks rate limit for client
         /// </summary>
-        /// <param name="clientId">ID klienta</param>
-        /// <param name="cancellationToken">Token anulowania</param>
-        /// <returns>Czas oczekiwania lub null jeśli brak ograniczeń</returns>
+        /// <param name="clientId">Client ID</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>Wait time or null if no rate limit applies</returns>
         Task<TimeSpan?> GetRateLimitDelayAsync(Guid clientId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Gets default payment method ID for client
+        /// </summary>
+        /// <param name="clientId">Client ID</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>Default payment method ID or null if not found</returns>
+        Task<Guid?> GetDefaultPaymentMethodAsync(Guid clientId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Validates if payment method exists and can be used
+        /// </summary>
+        /// <param name="paymentMethodId">Payment method ID</param>
+        /// <param name="clientId">Client ID for security verification</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>True if valid and usable, false otherwise</returns>
+        Task<bool> ValidatePaymentMethodAsync(Guid paymentMethodId, Guid clientId, CancellationToken cancellationToken = default);
     }
 }

@@ -4,6 +4,47 @@
 
 Orbito to nowoczesna platforma SaaS zbudowana w architekturze Clean Architecture, wykorzystująca wzorce DDD (Domain-Driven Design) i CQRS z MediatR.
 
+## 🆕 Najnowsze Funkcje (v2.0)
+
+### 💳 System Zarządzania Metodami Płatności
+
+- **Dodawanie metod płatności** - obsługa kart kredytowych i innych metod
+- **Ustawianie domyślnej metody** - automatyczne wybieranie metody płatności
+- **Usuwanie metod płatności** - bezpieczne usuwanie z walidacją
+- **Walidacja kart** - sprawdzanie ważności i poprawności danych
+- **Value Objects** - `CardDetails` dla bezpiecznego przechowywania danych karty
+
+### 📧 System Notyfikacji
+
+- **Potwierdzenia płatności** - automatyczne emaile po udanych płatnościach
+- **Powiadomienia o błędach** - informowanie o nieudanych płatnościach
+- **Przypomnienia o płatnościach** - 3 dni przed terminem płatności
+- **Powiadomienia o wygasłych kartach** - automatyczne alerty
+- **Szablony email** - profesjonalne szablony w języku angielskim
+
+### 🔄 Background Jobs
+
+- **ProcessRecurringPaymentsJob** - przetwarzanie cyklicznych płatności i wygasłych subskrypcji (co godzinę)
+  - Wykorzystuje `ISubscriptionService.ProcessRecurringPaymentsAsync()` i `ProcessExpiredSubscriptionsAsync()`
+  - Działa w kontekście administratora z dostępem do wszystkich tenantów
+  - Timeout: 15 minut, z obsługą błędów dla każdego tenanta
+- **UpcomingPaymentReminderJob** - przypomnienia o nadchodzących płatnościach (codziennie)
+  - Wysyła powiadomienia 3 dni przed terminem płatności
+  - Wykorzystuje `IPaymentNotificationService.SendUpcomingPaymentReminderAsync()`
+  - Przetwarza w partiach z opóźnieniem 100ms między emailami
+- **ExpiredCardNotificationJob** - powiadomienia o wygasłych i wygasających kartach (codziennie)
+  - Wysyła powiadomienia o wygasłych kartach
+  - Wysyła przypomnienia 30 dni przed wygaśnięciem karty
+  - Wykorzystuje `IPaymentNotificationService.SendExpiredCardNotificationAsync()` i `SendCardExpiringSoonNotificationAsync()`
+  - Przetwarza w partiach z paginacją (100 rekordów na stronę)
+
+### 🛡️ Bezpieczeństwo i Multi-Tenancy
+
+- **Admin Context** - background jobs działają w kontekście administratora
+- **Tenant Filtering** - automatyczne filtrowanie danych według tenant
+- **Security Limits** - limity bezpieczeństwa dla metod płatności
+- **Repository Security** - wszystkie operacje z weryfikacją tenant
+
 ### 📁 Struktura Projektu
 
 ```
@@ -72,6 +113,12 @@ Orbito/
     - `GetSubscriptionsByClientQuery` - pobieranie subskrypcji klienta z paginacją
     - `GetExpiringSubscriptionsQuery` - pobieranie subskrypcji wygasających
     - `GetActiveSubscriptionsQuery` - pobieranie aktywnych subskrypcji
+  - **Payment Method Management**:
+    - `AddPaymentMethodCommand` - dodawanie nowej metody płatności (karta kredytowa/debetowa)
+    - `SetDefaultPaymentMethodCommand` - ustawienie metody płatności jako domyślnej
+    - `RemovePaymentMethodCommand` - usunięcie metody płatności
+    - `GetClientPaymentMethodsQuery` - pobieranie metod płatności klienta z paginacją
+    - `GetDefaultPaymentMethodQuery` - pobieranie domyślnej metody płatności klienta
 - **Services**:
   - `TenantContext` - zarządzanie kontekstem tenanta
   - `DateTimeService` - abstrakcja dla operacji na czasie
@@ -82,6 +129,9 @@ Orbito/
   - `SubscriptionPlanRepository` - repozytorium dla operacji CRUD planów subskrypcji
   - `SubscriptionService` - logika biznesowa i walidacja subskrypcji
   - `SubscriptionRepository` - repozytorium dla operacji CRUD subskrypcji
+  - `PaymentProcessingService` - przetwarzanie płatności z integracją Stripe
+  - `PaymentNotificationService` - wysyłanie powiadomień email o płatnościach
+  - `EmailSender` - wysyłanie wiadomości email
 
 #### Orbito.Domain
 
@@ -166,6 +216,26 @@ dotnet run --project Orbito.API
 - **Health Check**: `https://localhost:5211/health`
 - **Health Check UI**: `https://localhost:5211/healthchecks-ui`
 
+### 💳 Payment Methods API Endpoints
+
+#### PaymentMethodController
+
+- `GET /api/payment-methods/client/{clientId}` - Pobiera metody płatności dla klienta
+- `GET /api/payment-methods/client/{clientId}/default` - Pobiera domyślną metodę płatności
+- `POST /api/payment-methods` - Dodaje nową metodę płatności
+- `PUT /api/payment-methods/{id}/set-default` - Ustawia metodę jako domyślną
+- `DELETE /api/payment-methods/{id}` - Usuwa metodę płatności
+
+#### Autoryzacja Payment Methods
+
+| Endpoint                                           | PlatformAdmin | Provider | Client |
+| -------------------------------------------------- | ------------- | -------- | ------ |
+| GET /api/payment-methods/client/{clientId}         | ✅            | ✅       | ✅     |
+| GET /api/payment-methods/client/{clientId}/default | ✅            | ✅       | ✅     |
+| POST /api/payment-methods                          | ✅            | ✅       | ✅     |
+| PUT /api/payment-methods/{id}/set-default          | ✅            | ✅       | ✅     |
+| DELETE /api/payment-methods/{id}                   | ✅            | ✅       | ✅     |
+
 ### 🔐 Endpointy Uwierzytelniania
 
 #### AccountController
@@ -235,6 +305,14 @@ dotnet run --project Orbito.API
 #### WebhookController
 
 - `POST /api/webhooks/stripe` - Endpoint do odbierania webhooków od Stripe (publiczny endpoint z weryfikacją podpisu)
+
+#### PaymentMethodController
+
+- `GET /api/payment-methods/client/{clientId}` - Lista metod płatności klienta z paginacją (wymaga roli Provider/Client/PlatformAdmin)
+- `GET /api/payment-methods/client/{clientId}/default` - Pobieranie domyślnej metody płatności klienta (wymaga roli Provider/Client/PlatformAdmin)
+- `POST /api/payment-methods` - Dodawanie nowej metody płatności (wymaga roli Provider/Client/PlatformAdmin)
+- `PUT /api/payment-methods/{id}/set-default` - Ustawienie metody płatności jako domyślnej (wymaga roli Provider/Client/PlatformAdmin)
+- `DELETE /api/payment-methods/{id}` - Usunięcie metody płatności (wymaga roli Provider/Client/PlatformAdmin)
 
 ## 📊 Logowanie
 
@@ -1367,6 +1445,11 @@ W przypadku problemów lub pytań:
 43. **💰 Ulepszone Money ValueObject** - dodanie Currency ValueObject z kontekstem waluty i walidacją
 44. **🔗 Poprawione IUnitOfWork** - lepsza obsługa transakcji z HasActiveTransaction i Result pattern
 45. **🔍 Ulepszona Walidacja Webhooków** - WebhookValidationResult z szczegółowymi informacjami o walidacji
+46. **✅ Zaktualizowane Interfejsy Serwisów** - IPaymentProcessingService, IPaymentNotificationService, IEmailSender z pełną dokumentacją i zgodnością typów
+47. **🔐 Bezpieczeństwo PaymentProcessingService** - walidacja metod płatności z weryfikacją clientId i tenantId
+48. **📧 Pełne Szablony Email** - dodano SendPartialRefundConfirmationAsync i GetPartialRefundConfirmationBody do PaymentEmailTemplates
+49. **🎯 Zgodność Typów** - zmiana paymentMethodId z string na Guid w ProcessSubscriptionPaymentAsync dla spójności typu
+50. **✨ Nowe Metody** - GetDefaultPaymentMethodAsync i ValidatePaymentMethodAsync w IPaymentProcessingService
 
 ### 🔧 Architektura
 
@@ -1985,11 +2068,67 @@ public interface IPaymentGateway
 ```csharp
 public interface IPaymentProcessingService
 {
-    Task<PaymentResult> ProcessSubscriptionPaymentAsync(Guid subscriptionId, Money amount, string paymentMethodId, string description);
-    Task HandlePaymentSuccessAsync(Guid paymentId);
-    Task HandlePaymentFailureAsync(Guid paymentId, string reason);
-    Task<RefundResult> RefundPaymentAsync(Guid paymentId, Money amount, string reason);
-    Task<CustomerResult> CreateStripeCustomerAsync(Guid clientId, string email, string? firstName, string? lastName);
+    // Process subscription payment with payment method ID (Guid)
+    Task<PaymentResult> ProcessSubscriptionPaymentAsync(Guid subscriptionId, Money amount, Guid paymentMethodId, string description, CancellationToken cancellationToken = default);
+
+    // Handle payment success and failure
+    Task HandlePaymentSuccessAsync(Guid paymentId, CancellationToken cancellationToken = default);
+    Task HandlePaymentFailureAsync(Guid paymentId, string reason, CancellationToken cancellationToken = default);
+
+    // Refund operations
+    Task<bool> CanRefundAsync(Guid paymentId, Money amount, CancellationToken cancellationToken = default);
+    Task<RefundResult> RefundPaymentAsync(Guid paymentId, Money amount, string reason, CancellationToken cancellationToken = default);
+
+    // Customer and payment method operations
+    Task<CustomerResult> CreateStripeCustomerAsync(Guid clientId, string email, string? firstName = null, string? lastName = null, string? companyName = null, string? phone = null, CancellationToken cancellationToken = default);
+    Task<Guid?> GetDefaultPaymentMethodAsync(Guid clientId, CancellationToken cancellationToken = default);
+    Task<bool> ValidatePaymentMethodAsync(Guid paymentMethodId, Guid clientId, CancellationToken cancellationToken = default);
+
+    // Background processing operations
+    Task ProcessPendingPaymentsAsync(DateTime billingDate, CancellationToken cancellationToken = default);
+    Task ValidatePaymentStatusAsync(CancellationToken cancellationToken = default);
+    Task SyncPaymentStatusesWithStripeAsync(DateTime syncDate, CancellationToken cancellationToken = default);
+    Task UpdatePaymentFromWebhookAsync(string webhookData, CancellationToken cancellationToken = default);
+
+    // Rate limiting
+    Task<TimeSpan?> GetRateLimitDelayAsync(Guid clientId, CancellationToken cancellationToken = default);
+}
+```
+
+##### Payment Notification Service
+
+```csharp
+public interface IPaymentNotificationService
+{
+    // Payment notifications
+    Task SendPaymentConfirmationAsync(Guid paymentId, CancellationToken cancellationToken = default);
+    Task SendPaymentFailureNotificationAsync(Guid paymentId, string reason, CancellationToken cancellationToken = default);
+
+    // Refund notifications
+    Task SendRefundConfirmationAsync(Guid paymentId, Money refundAmount, CancellationToken cancellationToken = default);
+    Task SendPartialRefundConfirmationAsync(Guid paymentId, Money refundAmount, Money originalAmount, CancellationToken cancellationToken = default);
+
+    // Subscription and payment method notifications
+    Task SendUpcomingPaymentReminderAsync(Guid subscriptionId, int daysUntilPayment, CancellationToken cancellationToken = default);
+    Task SendExpiredCardNotificationAsync(Guid paymentMethodId, CancellationToken cancellationToken = default);
+    Task SendCardExpiringSoonNotificationAsync(Guid paymentMethodId, int daysUntilExpiry, CancellationToken cancellationToken = default);
+
+    // Payment method management notifications
+    Task SendPaymentMethodAddedNotificationAsync(Guid paymentMethodId, CancellationToken cancellationToken = default);
+    Task SendPaymentMethodRemovedNotificationAsync(Guid clientId, string lastFourDigits, CancellationToken cancellationToken = default);
+}
+```
+
+##### Email Sender Service
+
+```csharp
+public interface IEmailSender
+{
+    // Send email to single recipient
+    Task SendEmailAsync(string to, string subject, string body, bool isHtml = false, CancellationToken cancellationToken = default);
+
+    // Send email to multiple recipients
+    Task SendEmailAsync(IEnumerable<string> to, string subject, string body, bool isHtml = false, CancellationToken cancellationToken = default);
 }
 ```
 
@@ -2462,6 +2601,9 @@ Orbito zintegrował kompleksowy system obsługi webhooków Stripe dla automatycz
 
 - **RecurringPaymentJob** - przetwarzanie płatności cyklicznych (co godzinę) i sprawdzanie oczekujących płatności (co 15 minut)
 - **PaymentStatusSyncJob** - synchronizacja statusów ze Stripe (co 30 minut)
+- **UpcomingPaymentReminderJob** - przypomnienia o nadchodzących płatnościach (3 dni przed terminem)
+- **ExpiredCardNotificationJob** - powiadomienia o wygasłych kartach (codziennie)
+- **CheckExpiringSubscriptionsJob** - sprawdzanie wygasających subskrypcji (codziennie)
 
 #### Application Services
 
@@ -2469,8 +2611,49 @@ Rozszerzono **PaymentProcessingService** o nowe metody:
 
 - `ProcessPendingPaymentsAsync()` - przetwarzanie oczekujących płatności
 - `UpdatePaymentFromWebhookAsync()` - aktualizacja płatności z webhook
+
+#### Nowe Serwisy
+
+- **PaymentNotificationService** - serwis do wysyłania powiadomień email
+
+  - `SendPaymentConfirmationAsync()` - potwierdzenia płatności
+  - `SendPaymentFailureNotificationAsync()` - powiadomienia o błędach
+  - `SendRefundConfirmationAsync()` - potwierdzenia zwrotów
+  - `SendUpcomingPaymentReminderAsync()` - przypomnienia o płatnościach
+  - `SendExpiredCardNotificationAsync()` - powiadomienia o wygasłych kartach
+  - `SendPaymentMethodAddedNotificationAsync()` - powiadomienia o dodaniu metody płatności
+  - `SendPaymentMethodRemovedNotificationAsync()` - powiadomienia o usunięciu metody płatności
+  - `SendCardExpiringSoonNotificationAsync()` - powiadomienia o wygasających kartach
+
+- **PaymentEmailTemplates** - szablony email w języku angielskim
+  - Potwierdzenia płatności
+  - Powiadomienia o błędach
+  - Przypomnienia o płatnościach
+  - Powiadomienia o wygasłych kartach
+  - Powiadomienia o metodach płatności
 - `ValidatePaymentStatusAsync()` - walidacja statusu płatności
 - `SyncPaymentStatusesWithStripeAsync()` - synchronizacja statusów ze Stripe
+
+#### Nowe Commands i Queries
+
+- **Payment Method Commands**:
+
+  - `AddPaymentMethodCommand` - dodawanie nowej metody płatności
+  - `SetDefaultPaymentMethodCommand` - ustawianie domyślnej metody płatności
+  - `RemovePaymentMethodCommand` - usuwanie metody płatności
+
+- **Payment Method Queries**:
+
+  - `GetDefaultPaymentMethodQuery` - pobieranie domyślnej metody płatności
+
+- **Domain Events**:
+
+  - `PaymentMethodAddedEvent` - event dodania metody płatności
+  - `PaymentMethodRemovedEvent` - event usunięcia metody płatności
+  - `PaymentMethodSetAsDefaultEvent` - event ustawienia jako domyślna
+
+- **Value Objects**:
+  - `CardDetails` - Value Object dla szczegółów karty (Brand, ExpiryMonth, ExpiryYear, LastFourDigits)
 
 #### Commands i Queries
 

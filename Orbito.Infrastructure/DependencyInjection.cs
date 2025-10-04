@@ -95,6 +95,9 @@ namespace Orbito.Infrastructure
             // Register ITenantProvider for ApplicationDbContext
             services.AddScoped<ITenantProvider, Application.Common.Services.TenantProvider>();
             
+            // Add HttpContextAccessor for user context services
+            services.AddHttpContextAccessor();
+            
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<IProviderRepository, ProviderRepository>();
             services.AddScoped<IClientRepository, ClientRepository>();
@@ -103,6 +106,9 @@ namespace Orbito.Infrastructure
             services.AddScoped<IPaymentRepository, PaymentRepository>();
             services.AddScoped<IPaymentMethodRepository, PaymentMethodRepository>();
             services.AddScoped<IWebhookLogRepository, WebhookLogRepository>();
+            services.AddScoped<IEmailNotificationRepository, EmailNotificationRepository>();
+            services.AddScoped<IEmailSender, Services.EmailSender>();
+            services.AddScoped<IUserContextService, Services.UserContextService>();
 
             // Configure Stripe
             services.Configure<StripeConfiguration>(configuration.GetSection("Stripe"));

@@ -28,6 +28,7 @@ namespace Orbito.Infrastructure.Data
         public DbSet<PaymentMethod> PaymentMethods { get; set; }
         public DbSet<PaymentHistory> PaymentHistory { get; set; }
         public DbSet<PaymentWebhookLog> PaymentWebhookLogs { get; set; }
+        public DbSet<EmailNotification> EmailNotifications { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -52,38 +53,44 @@ namespace Orbito.Infrastructure.Data
             // CRITICAL: Each lambda expression is evaluated per query, not once during model building
             
             // For ApplicationRole - allow global roles (TenantId = null) and tenant-specific roles
+            // Admin context (Guid.Empty) bypasses tenant filtering
             builder.Entity<ApplicationRole>()
-                .HasQueryFilter(r => r.TenantId == null || r.TenantId == _tenantProvider.GetCurrentTenantIdAsGuid());
+                .HasQueryFilter(r => _tenantProvider.GetCurrentTenantIdAsGuid() == Guid.Empty || r.TenantId == null || r.TenantId == _tenantProvider.GetCurrentTenantIdAsGuid());
 
             // For ApplicationUser - filter by tenant
+            // Admin context (Guid.Empty) bypasses tenant filtering
             builder.Entity<ApplicationUser>()
-                .HasQueryFilter(u => u.TenantId == _tenantProvider.GetCurrentTenantIdAsGuid());
+                .HasQueryFilter(u => _tenantProvider.GetCurrentTenantIdAsGuid() == Guid.Empty || u.TenantId == _tenantProvider.GetCurrentTenantIdAsGuid());
 
             // For domain entities with TenantId value object
             // Each method call is evaluated per query, ensuring current tenant context
+            // Admin context (Guid.Empty) bypasses tenant filtering
             builder.Entity<Provider>()
-                .HasQueryFilter(p => p.TenantId.Value == _tenantProvider.GetCurrentTenantIdAsGuid());
+                .HasQueryFilter(p => _tenantProvider.GetCurrentTenantIdAsGuid() == Guid.Empty || p.TenantId.Value == _tenantProvider.GetCurrentTenantIdAsGuid());
 
             builder.Entity<Client>()
-                .HasQueryFilter(c => c.TenantId.Value == _tenantProvider.GetCurrentTenantIdAsGuid());
+                .HasQueryFilter(c => _tenantProvider.GetCurrentTenantIdAsGuid() == Guid.Empty || c.TenantId.Value == _tenantProvider.GetCurrentTenantIdAsGuid());
 
             builder.Entity<SubscriptionPlan>()
-                .HasQueryFilter(p => p.TenantId.Value == _tenantProvider.GetCurrentTenantIdAsGuid());
+                .HasQueryFilter(p => _tenantProvider.GetCurrentTenantIdAsGuid() == Guid.Empty || p.TenantId.Value == _tenantProvider.GetCurrentTenantIdAsGuid());
 
             builder.Entity<Subscription>()
-                .HasQueryFilter(s => s.TenantId.Value == _tenantProvider.GetCurrentTenantIdAsGuid());
+                .HasQueryFilter(s => _tenantProvider.GetCurrentTenantIdAsGuid() == Guid.Empty || s.TenantId.Value == _tenantProvider.GetCurrentTenantIdAsGuid());
 
             builder.Entity<Payment>()
-                .HasQueryFilter(p => p.TenantId.Value == _tenantProvider.GetCurrentTenantIdAsGuid());
+                .HasQueryFilter(p => _tenantProvider.GetCurrentTenantIdAsGuid() == Guid.Empty || p.TenantId.Value == _tenantProvider.GetCurrentTenantIdAsGuid());
 
             builder.Entity<PaymentMethod>()
-                .HasQueryFilter(pm => pm.TenantId.Value == _tenantProvider.GetCurrentTenantIdAsGuid());
+                .HasQueryFilter(pm => _tenantProvider.GetCurrentTenantIdAsGuid() == Guid.Empty || pm.TenantId.Value == _tenantProvider.GetCurrentTenantIdAsGuid());
 
             builder.Entity<PaymentHistory>()
-                .HasQueryFilter(ph => ph.TenantId.Value == _tenantProvider.GetCurrentTenantIdAsGuid());
+                .HasQueryFilter(ph => _tenantProvider.GetCurrentTenantIdAsGuid() == Guid.Empty || ph.TenantId.Value == _tenantProvider.GetCurrentTenantIdAsGuid());
 
             builder.Entity<PaymentWebhookLog>()
-                .HasQueryFilter(pwl => pwl.TenantId.Value == _tenantProvider.GetCurrentTenantIdAsGuid());
+                .HasQueryFilter(pwl => _tenantProvider.GetCurrentTenantIdAsGuid() == Guid.Empty || pwl.TenantId.Value == _tenantProvider.GetCurrentTenantIdAsGuid());
+
+            builder.Entity<EmailNotification>()
+                .HasQueryFilter(en => _tenantProvider.GetCurrentTenantIdAsGuid() == Guid.Empty || en.TenantId.Value == _tenantProvider.GetCurrentTenantIdAsGuid());
         }
 
         private void SeedDefaultData(ModelBuilder builder)

@@ -22,6 +22,7 @@ namespace Orbito.Infrastructure.Persistance
         private IPaymentRepository? _payments;
         private IPaymentMethodRepository? _paymentMethods;
         private IWebhookLogRepository? _webhookLogs;
+        private IEmailNotificationRepository? _emailNotifications;
 
         public UnitOfWork(ApplicationDbContext context, ITenantContext tenantContext)
         {
@@ -37,6 +38,7 @@ namespace Orbito.Infrastructure.Persistance
         public IPaymentRepository Payments => _payments ??= new PaymentRepository(_context, _tenantContext);
         public IPaymentMethodRepository PaymentMethods => _paymentMethods ??= new PaymentMethodRepository(_context, _tenantContext);
         public IWebhookLogRepository WebhookLogs => _webhookLogs ??= new WebhookLogRepository(_context, _tenantContext);
+        public IEmailNotificationRepository EmailNotifications => _emailNotifications ??= new EmailNotificationRepository(_context);
 
         public bool HasActiveTransaction => _transaction != null;
 
