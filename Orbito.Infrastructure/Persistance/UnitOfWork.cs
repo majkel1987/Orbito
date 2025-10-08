@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.Common.Models;
 using Orbito.Infrastructure.Data;
@@ -13,6 +14,9 @@ namespace Orbito.Infrastructure.Persistance
     {
         private readonly ApplicationDbContext _context;
         private readonly ITenantContext _tenantContext;
+        private readonly ITenantProvider _tenantProvider;
+        private readonly ILoggerFactory _loggerFactory;
+        private readonly ISecurityLimitService _securityLimitService;
         private IDbContextTransaction? _transaction;
         private readonly ConcurrentDictionary<Type, object> _repositories;
         private IProviderRepository? _providers;
@@ -21,13 +25,22 @@ namespace Orbito.Infrastructure.Persistance
         private ISubscriptionPlanRepository? _subscriptionPlans;
         private IPaymentRepository? _payments;
         private IPaymentMethodRepository? _paymentMethods;
+        private IPaymentRetryRepository? _paymentRetries;
         private IWebhookLogRepository? _webhookLogs;
         private IEmailNotificationRepository? _emailNotifications;
 
-        public UnitOfWork(ApplicationDbContext context, ITenantContext tenantContext)
+        public UnitOfWork(
+            ApplicationDbContext context,
+            ITenantContext tenantContext,
+            ITenantProvider tenantProvider,
+            ILoggerFactory loggerFactory,
+            ISecurityLimitService securityLimitService)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _tenantContext = tenantContext ?? throw new ArgumentNullException(nameof(tenantContext));
+            _tenantProvider = tenantProvider ?? throw new ArgumentNullException(nameof(tenantProvider));
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
+            _securityLimitService = securityLimitService ?? throw new ArgumentNullException(nameof(securityLimitService));
             _repositories = new ConcurrentDictionary<Type, object>();
         }
 
@@ -35,8 +48,9 @@ namespace Orbito.Infrastructure.Persistance
         public IClientRepository Clients => _clients ??= new ClientRepository(_context);
         public ISubscriptionRepository Subscriptions => _subscriptions ??= new SubscriptionRepository(_context);
         public ISubscriptionPlanRepository SubscriptionPlans => _subscriptionPlans ??= new SubscriptionPlanRepository(_context);
-        public IPaymentRepository Payments => _payments ??= new PaymentRepository(_context, _tenantContext);
+        public IPaymentRepository Payments => _payments ??= new PaymentRepository(_context, _tenantContext, _loggerFactory.CreateLogger<PaymentRepository>(), _securityLimitService);
         public IPaymentMethodRepository PaymentMethods => _paymentMethods ??= new PaymentMethodRepository(_context, _tenantContext);
+        public IPaymentRetryRepository PaymentRetries => _paymentRetries ??= new PaymentRetryRepository(_context, _tenantProvider);
         public IWebhookLogRepository WebhookLogs => _webhookLogs ??= new WebhookLogRepository(_context, _tenantContext);
         public IEmailNotificationRepository EmailNotifications => _emailNotifications ??= new EmailNotificationRepository(_context);
 
@@ -60,6 +74,10 @@ namespace Orbito.Infrastructure.Persistance
              }
          }
 
+         /// <summary>
+         /// Begins a database transaction with specified isolation level
+         /// Uses EF Core API for proper transaction management
+         /// </summary>
          public async Task<Result> BeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken cancellationToken = default)
          {
              try
@@ -69,18 +87,9 @@ namespace Orbito.Infrastructure.Persistance
                      return Result.Failure("Transaction already started");
                  }
 
-                 // Set isolation level via raw SQL if needed
-                 switch (isolationLevel)
-                 {
-                     case IsolationLevel.ReadCommitted:
-                         await _context.Database.ExecuteSqlRawAsync("SET TRANSACTION ISOLATION LEVEL READ COMMITTED", cancellationToken);
-                         break;
-                     case IsolationLevel.Serializable:
-                         await _context.Database.ExecuteSqlRawAsync("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE", cancellationToken);
-                         break;
-                 }
-
-                 _transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+                 // FIXED: Use EF Core API with isolation level parameter instead of raw SQL
+                 // This ensures proper transaction management across different database providers
+                 _transaction = await _context.Database.BeginTransactionAsync(isolationLevel, cancellationToken);
                  return Result.Success();
              }
              catch (Exception ex)
@@ -159,11 +168,15 @@ namespace Orbito.Infrastructure.Persistance
              }
          }
         
+         /// <summary>
+         /// Disposes the UnitOfWork and rollbacks any pending transaction
+         /// </summary>
          public async ValueTask DisposeAsync()
          {
              if (_transaction != null)
              {
-                 await _transaction.RollbackAsync();
+                 // FIXED: Added CancellationToken.None for proper async disposal
+                 await _transaction.RollbackAsync(CancellationToken.None);
                  await _transaction.DisposeAsync();
                  _transaction = null;
              }

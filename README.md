@@ -4,7 +4,176 @@
 
 Orbito to nowoczesna platforma SaaS zbudowana w architekturze Clean Architecture, wykorzystująca wzorce DDD (Domain-Driven Design) i CQRS z MediatR.
 
-## 🆕 Najnowsze Funkcje (v2.0)
+## 🆕 Najnowsze Funkcje (v2.3) - Payment Retry System
+
+### 🔄 System Ponawiania Płatności (Payment Retry System)
+
+- **Automatyczne ponawianie nieudanych płatności** - inteligentny system z exponential backoff
+- **PaymentRetrySchedule Entity** - zarządzanie harmonogramem ponownych prób płatności
+- **RetryStatus Enum** - statusy: Scheduled, InProgress, Completed, Cancelled, Failed
+- **Exponential Backoff** - opóźnienia: 5m, 15m, 1h, 6h, 24h dla kolejnych prób
+- **Thread-safe processing** - bezpieczne przetwarzanie z pessimistic locking
+- **Race condition protection** - unikalne ograniczenia w bazie danych
+
+### 🎯 PaymentRetryController - Nowe API Endpoints
+
+- **POST /api/payments/retry/{paymentId}** - ponowienie pojedynczej płatności
+- **POST /api/payments/retry/bulk** - masowe ponawianie płatności (max 50)
+- **DELETE /api/payments/retry/{paymentId}** - anulowanie zaplanowanego ponowienia
+- **GET /api/payments/retry/scheduled** - lista zaplanowanych ponownych prób
+- **GET /api/payments/retry/failed** - lista płatności gotowych do ponowienia
+- **Response Compression** - optymalizacja transferu danych
+- **Security Limits** - walidacja limitów bezpieczeństwa
+
+### 🏗️ CQRS Commands & Queries
+
+#### Commands
+
+- **RetryFailedPaymentCommand** - ponowienie pojedynczej płatności z walidacją
+- **BulkRetryPaymentsCommand** - masowe ponawianie z batch processing
+- **CancelRetryCommand** - anulowanie zaplanowanego ponowienia
+
+#### Queries
+
+- **GetScheduledRetriesQuery** - pobieranie zaplanowanych ponownych prób z paginacją
+- **GetFailedPaymentsForRetryQuery** - lista płatności gotowych do ponowienia
+
+### 🔧 Infrastructure & Services
+
+- **PaymentRetryService** - główny serwis zarządzania ponawianiem płatności
+- **IPaymentRetryRepository** - repozytorium dla harmonogramów ponownych prób
+- **PaymentRetryOptions** - konfiguracja opóźnień i limitów
+- **PaymentRetryScheduleConfiguration** - konfiguracja EF Core
+- **Database Migrations** - nowe tabele i indeksy dla systemu ponawiania
+
+### 📊 Pagination & Security
+
+- **PaginatedList<T>** - generyczna klasa dla wyników z paginacją
+- **PaginationParams** - parametry paginacji z walidacją limitów
+- **ISecurityLimitService** - rozszerzone limity bezpieczeństwa
+- **Multi-tenant security** - izolacja danych na poziomie tenantów
+
+### 🗄️ Database Schema Updates
+
+- **PaymentRetrySchedule Table** - nowa tabela dla harmonogramów ponownych prób
+- **Unique Constraints** - zapobieganie duplikatom aktywnych ponownych prób
+- **Indexes** - optymalizacja zapytań dla wydajności
+- **Foreign Keys** - relacje z Payment i Client entities
+
+### 📁 Nowe Pliki i Struktura
+
+#### Domain Layer
+
+- `Orbito.Domain/Entities/PaymentRetrySchedule.cs` - encja harmonogramu ponownych prób
+- `Orbito.Domain/Enums/RetryStatus.cs` - enum statusów ponownych prób
+
+#### Application Layer
+
+- `Orbito.Application/Services/PaymentRetryService.cs` - główny serwis ponawiania
+- `Orbito.Application/Common/Interfaces/IPaymentRetryService.cs` - interfejs serwisu
+- `Orbito.Application/Common/Interfaces/IPaymentRetryRepository.cs` - interfejs repozytorium
+- `Orbito.Application/Common/Models/PaginatedList.cs` - generyczna klasa paginacji
+- `Orbito.Application/Common/Models/PaginationParams.cs` - parametry paginacji
+- `Orbito.Application/Common/Options/PaymentRetryOptions.cs` - konfiguracja opcji
+
+#### Commands & Handlers
+
+- `Orbito.Application/Features/Payments/Commands/RetryFailedPaymentCommand.cs`
+- `Orbito.Application/Features/Payments/Commands/RetryFailedPaymentCommandHandler.cs`
+- `Orbito.Application/Features/Payments/Commands/BulkRetryPaymentsCommand.cs`
+- `Orbito.Application/Features/Payments/Commands/BulkRetryPaymentsCommandHandler.cs`
+- `Orbito.Application/Features/Payments/Commands/CancelRetryCommand.cs`
+- `Orbito.Application/Features/Payments/Commands/CancelRetryCommandHandler.cs`
+
+#### Queries & Handlers
+
+- `Orbito.Application/Features/Payments/Queries/GetScheduledRetriesQuery.cs`
+- `Orbito.Application/Features/Payments/Queries/GetScheduledRetriesQueryHandler.cs`
+- `Orbito.Application/Features/Payments/Queries/GetFailedPaymentsForRetryQuery.cs`
+- `Orbito.Application/Features/Payments/Queries/GetFailedPaymentsForRetryQueryHandler.cs`
+
+#### Validators
+
+- `Orbito.Application/Validators/RetryFailedPaymentCommandValidator.cs`
+- `Orbito.Application/Validators/BulkRetryPaymentsCommandValidator.cs`
+- `Orbito.Application/Validators/CancelRetryCommandValidator.cs`
+
+#### Infrastructure Layer
+
+- `Orbito.Infrastructure/Persistance/PaymentRetryRepository.cs` - implementacja repozytorium
+- `Orbito.Infrastructure/Data/Configurations/Entity/PaymentRetryScheduleConfiguration.cs` - konfiguracja EF Core
+
+#### API Layer
+
+- `Orbito.API/Controllers/PaymentRetryController.cs` - nowy kontroler API
+
+#### Database Migrations
+
+- `Orbito.Infrastructure/Migrations/20251004185023_AddPaymentRetrySchedules.cs`
+- `Orbito.Infrastructure/Migrations/20251005094825_UpdatePaymentRetrySchedule_AddClientIdAndFailedStatus.cs`
+- `Orbito.Infrastructure/Migrations/20251005110234_AddUniqueConstraintForActiveRetries.cs`
+
+### 🔄 Zmodyfikowane Pliki
+
+#### Core Infrastructure
+
+- `Orbito.API/Program.cs` - rejestracja nowych serwisów i opcji konfiguracji
+- `Orbito.API/appsettings.json` - konfiguracja PaymentRetry options
+- `Orbito.Application/DependencyInjection.cs` - rejestracja nowych serwisów w DI
+- `Orbito.Infrastructure/DependencyInjection.cs` - rejestracja repozytoriów i konfiguracji
+
+#### Domain & Application Updates
+
+- `Orbito.Domain/ValueObjects/TenantId.cs` - rozszerzenia dla nowych funkcjonalności
+- `Orbito.Application/Common/Interfaces/IPaymentRepository.cs` - nowe metody dla retry system
+- `Orbito.Application/Common/Interfaces/ISecurityLimitService.cs` - rozszerzone limity bezpieczeństwa
+- `Orbito.Application/Common/Interfaces/IUnitOfWork.cs` - nowe metody dla retry operations
+- `Orbito.Application/Common/Services/SecurityLimitService.cs` - implementacja rozszerzonych limitów
+
+#### Infrastructure Updates
+
+- `Orbito.Infrastructure/Data/ApplicationDbContext.cs` - nowe DbSet dla PaymentRetrySchedule
+- `Orbito.Infrastructure/Data/ApplicationDbContextFactory.cs` - aktualizacje dla migracji
+- `Orbito.Infrastructure/Data/Configurations/ValueObjects/ValueObjectsConfiguration.cs` - nowe konfiguracje
+- `Orbito.Infrastructure/Persistance/PaymentRepository.cs` - nowe metody dla retry system
+- `Orbito.Infrastructure/Persistance/UnitOfWork.cs` - rozszerzenia dla nowych operacji
+- `Orbito.Infrastructure/Orbito.Infrastructure.csproj` - nowe zależności
+
+#### Documentation Updates
+
+- `README.md` - kompletne podsumowanie nowych funkcjonalności
+- `plan.md` - aktualizacja planu implementacji
+- `prompt.md` - nowe instrukcje dla AI
+- `issues.md` - nowy plik z problemami do rozwiązania
+
+### 📊 Statystyki Zmian
+
+#### Nowe Pliki (25 plików)
+
+- **Domain Layer**: 2 pliki (Entity + Enum)
+- **Application Layer**: 15 plików (Services, Commands, Queries, Validators, Models)
+- **Infrastructure Layer**: 4 pliki (Repository, Configuration, Migrations)
+- **API Layer**: 1 plik (Controller)
+- **Database Migrations**: 3 pliki (Schema updates)
+
+#### Zmodyfikowane Pliki (15 plików)
+
+- **Core Infrastructure**: 4 pliki (Program.cs, appsettings.json, DI registrations)
+- **Domain & Application**: 5 plików (Interfaces, Services, ValueObjects)
+- **Infrastructure**: 4 pliki (DbContext, Repositories, Configurations)
+- **Documentation**: 4 pliki (README, plan, prompt, issues)
+
+#### Łączne Statystyki
+
+- **Nowe pliki**: 25 plików
+- **Zmodyfikowane pliki**: 15 plików
+- **Łącznie**: 40 plików dotkniętych zmianami
+- **Nowe linie kodu**: ~3000+ linii
+- **Nowe API endpoints**: 5 endpointów
+- **Nowe database tables**: 1 tabela (PaymentRetrySchedule)
+- **Nowe migrations**: 3 migracje
+
+## 🆕 Poprzednie Funkcje (v2.2)
 
 ### 💳 System Zarządzania Metodami Płatności
 
@@ -22,6 +191,13 @@ Orbito to nowoczesna platforma SaaS zbudowana w architekturze Clean Architecture
 - **Powiadomienia o wygasłych kartach** - automatyczne alerty
 - **Szablony email** - profesjonalne szablony w języku angielskim
 
+### 🔐 Nowe Serwisy Bezpieczeństwa (v2.1)
+
+- **IUserContextService** - bezpieczne pobieranie ClientId z kontekstu użytkownika
+- **EmailSender** - implementacja wysyłania emaili (development/production ready)
+- **IEmailNotificationRepository** - zarządzanie notyfikacjami email w outbox pattern
+- **Bezpieczne endpointy** - separacja ról i endpointów dla PaymentMethodController
+
 ### 🔄 Background Jobs
 
 - **ProcessRecurringPaymentsJob** - przetwarzanie cyklicznych płatności i wygasłych subskrypcji (co godzinę)
@@ -37,6 +213,44 @@ Orbito to nowoczesna platforma SaaS zbudowana w architekturze Clean Architecture
   - Wysyła przypomnienia 30 dni przed wygaśnięciem karty
   - Wykorzystuje `IPaymentNotificationService.SendExpiredCardNotificationAsync()` i `SendCardExpiringSoonNotificationAsync()`
   - Przetwarza w partiach z paginacją (100 rekordów na stronę)
+
+### 🔄 System Retry Logic dla Płatności (v2.2)
+
+- **PaymentRetrySchedule** - inteligentny system ponawiania nieudanych płatności
+
+  - **Exponential backoff**: 5m, 15m, 1h, 6h, 24h - automatyczne zwiększanie odstępów między próbami
+  - **Thread-safe processing** z pessimistic locking dla bezpieczeństwa
+  - **Max 5 prób** na płatność z automatycznym anulowaniem po przekroczeniu limitu
+  - **Status tracking**: Scheduled, InProgress, Completed, Cancelled
+
+- **PaymentRetryService** - zaawansowany serwis zarządzania retry
+
+  - `ScheduleRetryAsync()` - planowanie nowych prób z walidacją
+  - `ProcessScheduledRetriesAsync()` - przetwarzanie zaplanowanych retry
+  - `CalculateNextRetryTime()` - inteligentne obliczanie czasu następnej próby
+  - `CancelScheduledRetriesAsync()` - anulowanie retry dla udanych płatności
+
+- **API Endpoints** - kompletne REST API dla retry operations
+
+  - `POST /api/payments/retry/{paymentId}` - retry pojedynczej płatności
+  - `POST /api/payments/retry/bulk` - retry wielu płatności (max 50)
+  - `GET /api/payments/retry/scheduled` - lista zaplanowanych retry z filtrowaniem
+  - `GET /api/payments/retry/failed` - lista płatności dostępnych do retry
+  - `DELETE /api/payments/retry/{scheduleId}` - anulowanie zaplanowanego retry
+
+- **Security & Validation** - zaawansowane zabezpieczenia
+
+  - **Multi-tenancy** - automatyczne filtrowanie według tenant
+  - **Client verification** - tylko własne płatności można retry
+  - **Rate limiting** - max 50 płatności w bulk operation
+  - **FluentValidation** - walidacja wszystkich requestów
+  - **Idempotency** - zabezpieczenie przed duplikatami retry
+
+- **Database Optimization** - wydajne przechowywanie danych
+  - **PaymentRetrySchedules** tabela z optymalnymi indeksami
+  - **Query filters** dla tenant isolation
+  - **Optimistic concurrency** dla concurrent access
+  - **Pagination** - max 100 rekordów na stronę
 
 ### 🛡️ Bezpieczeństwo i Multi-Tenancy
 
@@ -220,21 +434,43 @@ dotnet run --project Orbito.API
 
 #### PaymentMethodController
 
-- `GET /api/payment-methods/client/{clientId}` - Pobiera metody płatności dla klienta
-- `GET /api/payment-methods/client/{clientId}/default` - Pobiera domyślną metodę płatności
-- `POST /api/payment-methods` - Dodaje nową metodę płatności
-- `PUT /api/payment-methods/{id}/set-default` - Ustawia metodę jako domyślną
-- `DELETE /api/payment-methods/{id}` - Usuwa metodę płatności
+**🔒 Bezpieczne endpointy dla klientów (Client role):**
+
+- `GET /api/payment-methods/my-payment-methods` - Pobiera metody płatności zalogowanego klienta
+- `GET /api/payment-methods/my-default` - Pobiera domyślną metodę płatności zalogowanego klienta
+- `GET /api/payment-methods/{id}` - Pobiera konkretną metodę płatności zalogowanego klienta
+- `POST /api/payment-methods` - Dodaje nową metodę płatności dla zalogowanego klienta
+- `PUT /api/payment-methods/{id}/set-default` - Ustawia metodę jako domyślną dla zalogowanego klienta
+- `DELETE /api/payment-methods/{id}` - Usuwa metodę płatności zalogowanego klienta
+
+**🔧 Endpointy dla providerów/adminów (Provider/PlatformAdmin role):**
+
+- `GET /api/payment-methods/client/{clientId}` - Pobiera metody płatności dla konkretnego klienta
+- `GET /api/payment-methods/client/{clientId}/default` - Pobiera domyślną metodę płatności klienta
+- `GET /api/payment-methods/{id}/client/{clientId}` - Pobiera konkretną metodę płatności klienta
+- `PUT /api/payment-methods/{id}/set-default/client/{clientId}` - Ustawia metodę jako domyślną dla klienta
+- `DELETE /api/payment-methods/{id}/client/{clientId}` - Usuwa metodę płatności klienta
 
 #### Autoryzacja Payment Methods
 
-| Endpoint                                           | PlatformAdmin | Provider | Client |
-| -------------------------------------------------- | ------------- | -------- | ------ |
-| GET /api/payment-methods/client/{clientId}         | ✅            | ✅       | ✅     |
-| GET /api/payment-methods/client/{clientId}/default | ✅            | ✅       | ✅     |
-| POST /api/payment-methods                          | ✅            | ✅       | ✅     |
-| PUT /api/payment-methods/{id}/set-default          | ✅            | ✅       | ✅     |
-| DELETE /api/payment-methods/{id}                   | ✅            | ✅       | ✅     |
+**🔒 Endpointy dla klientów (Client role):**
+| Endpoint | Client |
+| -------------------------------------------------- | ------ |
+| GET /api/payment-methods/my-payment-methods | ✅ |
+| GET /api/payment-methods/my-default | ✅ |
+| GET /api/payment-methods/{id} | ✅ |
+| POST /api/payment-methods | ✅ |
+| PUT /api/payment-methods/{id}/set-default | ✅ |
+| DELETE /api/payment-methods/{id} | ✅ |
+
+**🔧 Endpointy dla providerów/adminów (Provider/PlatformAdmin role):**
+| Endpoint | PlatformAdmin | Provider |
+| ------------------------------------------------------------- | ------------- | -------- |
+| GET /api/payment-methods/client/{clientId} | ✅ | ✅ |
+| GET /api/payment-methods/client/{clientId}/default | ✅ | ✅ |
+| GET /api/payment-methods/{id}/client/{clientId} | ✅ | ✅ |
+| PUT /api/payment-methods/{id}/set-default/client/{clientId} | ✅ | ✅ |
+| DELETE /api/payment-methods/{id}/client/{clientId} | ✅ | ✅ |
 
 ### 🔐 Endpointy Uwierzytelniania
 
@@ -308,11 +544,22 @@ dotnet run --project Orbito.API
 
 #### PaymentMethodController
 
-- `GET /api/payment-methods/client/{clientId}` - Lista metod płatności klienta z paginacją (wymaga roli Provider/Client/PlatformAdmin)
-- `GET /api/payment-methods/client/{clientId}/default` - Pobieranie domyślnej metody płatności klienta (wymaga roli Provider/Client/PlatformAdmin)
-- `POST /api/payment-methods` - Dodawanie nowej metody płatności (wymaga roli Provider/Client/PlatformAdmin)
-- `PUT /api/payment-methods/{id}/set-default` - Ustawienie metody płatności jako domyślnej (wymaga roli Provider/Client/PlatformAdmin)
-- `DELETE /api/payment-methods/{id}` - Usunięcie metody płatności (wymaga roli Provider/Client/PlatformAdmin)
+**🔒 Bezpieczne endpointy dla klientów (Client role):**
+
+- `GET /api/payment-methods/my-payment-methods` - Lista metod płatności zalogowanego klienta z paginacją
+- `GET /api/payment-methods/my-default` - Pobieranie domyślnej metody płatności zalogowanego klienta
+- `GET /api/payment-methods/{id}` - Pobieranie konkretnej metody płatności zalogowanego klienta
+- `POST /api/payment-methods` - Dodawanie nowej metody płatności dla zalogowanego klienta
+- `PUT /api/payment-methods/{id}/set-default` - Ustawienie metody płatności jako domyślnej dla zalogowanego klienta
+- `DELETE /api/payment-methods/{id}` - Usunięcie metody płatności zalogowanego klienta
+
+**🔧 Endpointy dla providerów/adminów (Provider/PlatformAdmin role):**
+
+- `GET /api/payment-methods/client/{clientId}` - Lista metod płatności konkretnego klienta z paginacją
+- `GET /api/payment-methods/client/{clientId}/default` - Pobieranie domyślnej metody płatności klienta
+- `GET /api/payment-methods/{id}/client/{clientId}` - Pobieranie konkretnej metody płatności klienta
+- `PUT /api/payment-methods/{id}/set-default/client/{clientId}` - Ustawienie metody płatności jako domyślnej dla klienta
+- `DELETE /api/payment-methods/{id}/client/{clientId}` - Usunięcie metody płatności klienta
 
 ## 📊 Logowanie
 
@@ -1437,19 +1684,20 @@ W przypadku problemów lub pytań:
 35. **💳 Payment Management** - kompletna infrastruktura płatności z CQRS, walidacją i multi-tenancy
 36. **Payment Entities** - Payment, PaymentMethod, PaymentHistory z pełną funkcjonalnością biznesową
 37. **Payment CQRS** - ProcessPaymentCommand, UpdatePaymentStatusCommand, GetPaymentByIdQuery, GetPaymentsBySubscriptionQuery
-38. **PaymentController** - kompletne API endpoints dla zarządzania płatnościami
-39. **PaymentRepository** - repozytorium z operacjami CRUD i statystykami płatności
-40. **Payment Infrastructure** - konfiguracje EF Core, migracje i indeksy bazy danych
-41. **🔧 Refaktoryzacja Interfejsów** - rozbicie IPaymentProcessingService na mniejsze, bardziej skupione interfejsy
-42. **📊 Result Pattern** - implementacja Result<T> dla lepszej obsługi błędów w całej aplikacji
-43. **💰 Ulepszone Money ValueObject** - dodanie Currency ValueObject z kontekstem waluty i walidacją
-44. **🔗 Poprawione IUnitOfWork** - lepsza obsługa transakcji z HasActiveTransaction i Result pattern
-45. **🔍 Ulepszona Walidacja Webhooków** - WebhookValidationResult z szczegółowymi informacjami o walidacji
-46. **✅ Zaktualizowane Interfejsy Serwisów** - IPaymentProcessingService, IPaymentNotificationService, IEmailSender z pełną dokumentacją i zgodnością typów
-47. **🔐 Bezpieczeństwo PaymentProcessingService** - walidacja metod płatności z weryfikacją clientId i tenantId
-48. **📧 Pełne Szablony Email** - dodano SendPartialRefundConfirmationAsync i GetPartialRefundConfirmationBody do PaymentEmailTemplates
-49. **🎯 Zgodność Typów** - zmiana paymentMethodId z string na Guid w ProcessSubscriptionPaymentAsync dla spójności typu
-50. **✨ Nowe Metody** - GetDefaultPaymentMethodAsync i ValidatePaymentMethodAsync w IPaymentProcessingService
+38. **🔄 Payment Retry System** - zaawansowany system ponawiania nieudanych płatności z exponential backoff, thread-safe processing i REST API
+39. **PaymentController** - kompletne API endpoints dla zarządzania płatnościami
+40. **PaymentRepository** - repozytorium z operacjami CRUD i statystykami płatności
+41. **Payment Infrastructure** - konfiguracje EF Core, migracje i indeksy bazy danych
+42. **🔧 Refaktoryzacja Interfejsów** - rozbicie IPaymentProcessingService na mniejsze, bardziej skupione interfejsy
+43. **📊 Result Pattern** - implementacja Result<T> dla lepszej obsługi błędów w całej aplikacji
+44. **💰 Ulepszone Money ValueObject** - dodanie Currency ValueObject z kontekstem waluty i walidacją
+45. **🔗 Poprawione IUnitOfWork** - lepsza obsługa transakcji z HasActiveTransaction i Result pattern
+46. **🔍 Ulepszona Walidacja Webhooków** - WebhookValidationResult z szczegółowymi informacjami o walidacji
+47. **✅ Zaktualizowane Interfejsy Serwisów** - IPaymentProcessingService, IPaymentNotificationService, IEmailSender z pełną dokumentacją i zgodnością typów
+48. **🔐 Bezpieczeństwo PaymentProcessingService** - walidacja metod płatności z weryfikacją clientId i tenantId
+49. **📧 Pełne Szablony Email** - dodano SendPartialRefundConfirmationAsync i GetPartialRefundConfirmationBody do PaymentEmailTemplates
+50. **🎯 Zgodność Typów** - zmiana paymentMethodId z string na Guid w ProcessSubscriptionPaymentAsync dla spójności typu
+51. **✨ Nowe Metody** - GetDefaultPaymentMethodAsync i ValidatePaymentMethodAsync w IPaymentProcessingService
 
 ### 🔧 Architektura
 
@@ -1599,6 +1847,82 @@ public class Provider : IMustHaveTenant
 3. **Rate Limiting** - implementuj ograniczenia częstotliwości żądań
 4. **Audit Logging** - dodaj logi audytu dla operacji administracyjnych
 5. **Backup Strategy** - regularne kopie zapasowe bazy danych
+
+### 🔒 Kluczowe Zmiany Bezpieczeństwa w PaymentMethodController (v2.1)
+
+#### 🛡️ Naprawione Krytyczne Luki Bezpieczeństwa
+
+1. **Eliminacja manipulacji ClientId** - ✅ NAPRAWIONE
+
+   - **Problem**: Użytkownicy mogli manipulować `clientId` w query string
+   - **Rozwiązanie**: Implementacja `IUserContextService` do bezpiecznego pobierania ClientId z kontekstu użytkownika
+   - **Bezpieczeństwo**: Wszystkie endpointy dla klientów automatycznie pobierają ClientId z JWT claims
+
+2. **Separacja ról i endpointów** - ✅ ZAIMPLEMENTOWANE
+
+   - **Client role**: Endpointy `/my-*` i `/{id}` - dostęp tylko do własnych danych
+   - **Provider/Admin role**: Endpointy `/client/{clientId}` - dostęp do danych klientów
+   - **Bezpieczeństwo**: Jasne rozdzielenie uprawnień i endpointów
+
+3. **Walidacja parametrów** - ✅ DODANE
+
+   - **Paginacja**: `pageSize` ograniczone do 100, `pageNumber` minimum 1
+   - **Walidacja**: Automatyczna korekta nieprawidłowych wartości
+   - **Bezpieczeństwo**: Zapobieganie atakom DoS przez duże zapytania
+
+4. **Poprawione kody HTTP** - ✅ NAPRAWIONE
+   - **Przed**: `BadRequest` dla problemów z autoryzacją
+   - **Po**: `Forbid` dla problemów z autoryzacją
+   - **Bezpieczeństwo**: Prawidłowe kody odpowiedzi dla różnych scenariuszy
+
+#### 🔧 Nowe Funkcjonalności Bezpieczeństwa
+
+5. **IUserContextService** - ✅ DODANE
+
+   - **Lokalizacja**: `Orbito.Infrastructure/Services/UserContextService.cs`
+   - **Funkcjonalność**: Bezpieczne pobieranie ClientId z JWT claims
+   - **Bezpieczeństwo**: Eliminacja możliwości manipulacji ClientId przez użytkownika
+
+6. **Endpoint GetPaymentMethodById** - ✅ DODANE
+
+   - **Funkcjonalność**: Pobieranie konkretnej metody płatności
+   - **Bezpieczeństwo**: Weryfikacja przynależności do klienta i tenanta
+   - **Użycie**: Poprawne `CreatedAtAction` w endpointach POST
+
+7. **Weryfikacja na poziomie handlerów** - ✅ ZACHOWANE
+   - **TenantContext**: Sprawdzanie kontekstu tenanta
+   - **Client verification**: Weryfikacja przynależności do klienta
+   - **Security logging**: Logowanie prób nieautoryzowanego dostępu
+
+#### 📊 Struktura Bezpiecznych Endpointów
+
+**🔒 Dla klientów (Client role):**
+
+```
+GET  /api/payment-methods/my-payment-methods     # Moje metody płatności
+GET  /api/payment-methods/my-default             # Moja domyślna metoda
+GET  /api/payment-methods/{id}                   # Konkretna metoda
+POST /api/payment-methods                         # Dodaj metodę
+PUT  /api/payment-methods/{id}/set-default       # Ustaw jako domyślną
+DELETE /api/payment-methods/{id}                 # Usuń metodę
+```
+
+**🔧 Dla providerów/adminów (Provider/PlatformAdmin role):**
+
+```
+GET  /api/payment-methods/client/{clientId}                    # Metody klienta
+GET  /api/payment-methods/client/{clientId}/default           # Domyślna metoda klienta
+GET  /api/payment-methods/{id}/client/{clientId}               # Konkretna metoda klienta
+PUT  /api/payment-methods/{id}/set-default/client/{clientId}   # Ustaw jako domyślną
+DELETE /api/payment-methods/{id}/client/{clientId}            # Usuń metodę klienta
+```
+
+#### 🎯 Korzyści Bezpieczeństwa
+
+- **Zero-trust architecture**: Każde żądanie weryfikowane pod kątem autoryzacji
+- **Principle of least privilege**: Użytkownicy mają dostęp tylko do własnych danych
+- **Defense in depth**: Wiele warstw zabezpieczeń (controller, handler, repository)
+- **Audit trail**: Pełne logowanie operacji bezpieczeństwa
 
 ## 📋 Client Management
 
@@ -2005,11 +2329,15 @@ public class PaymentHistory : IMustHaveTenant
 
 - `ProcessPaymentCommand` - przetwarzanie nowej płatności
 - `UpdatePaymentStatusCommand` - aktualizacja statusu płatności
+- `RetryFailedPaymentCommand` - ponowienie nieudanej płatności z exponential backoff
+- `BulkRetryPaymentsCommand` - masowe ponowienie wielu płatności (max 50)
 
 **Queries (Read Operations):**
 
 - `GetPaymentByIdQuery` - pobieranie płatności po ID
 - `GetPaymentsBySubscriptionQuery` - pobieranie płatności dla subskrypcji
+- `GetScheduledRetriesQuery` - pobieranie zaplanowanych retry z filtrowaniem
+- `GetFailedPaymentsForRetryQuery` - pobieranie płatności dostępnych do retry
 
 #### 7. Payment API Endpoints
 
@@ -2023,8 +2351,14 @@ public class PaymentHistory : IMustHaveTenant
 | `PUT /api/payments/{id}/status`       | ✅            | ✅\*     | ❌     |
 | `POST /api/payments/{id}/refund`      | ✅            | ✅\*     | ❌     |
 | `POST /api/payments/create-customer`  | ✅            | ✅\*     | ❌     |
+| `POST /api/payments/retry/{id}`       | ✅            | ✅\*     | ✅\*   |
+| `POST /api/payments/retry/bulk`       | ✅            | ✅\*     | ✅\*   |
+| `GET /api/payments/retry/scheduled`   | ✅            | ✅\*     | ✅\*   |
+| `GET /api/payments/retry/failed`      | ✅            | ✅\*     | ✅\*   |
+| `DELETE /api/payments/retry/{id}`     | ✅            | ✅\*     | ✅\*   |
 
-\*Provider może operować tylko na płatnościach ze swojego tenanta
+\*Provider może operować tylko na płatnościach ze swojego tenanta  
+\*Client może operować tylko na własnych płatnościach
 
 #### 8. Payment Processing Features
 
@@ -2032,7 +2366,7 @@ public class PaymentHistory : IMustHaveTenant
 - **Payment History** - pełna historia audytu płatności
 - **Payment Methods** - zarządzanie metodami płatności klientów
 - **External Integration** - wsparcie dla zewnętrznych systemów płatności
-- **Retry Logic** - możliwość ponowienia nieudanych płatności
+- **Advanced Retry Logic** - inteligentny system ponawiania nieudanych płatności z exponential backoff (5m, 15m, 1h, 6h, 24h), thread-safe processing i automatycznym anulowaniem po 5 próbach
 - **Refund Support** - obsługa zwrotów i częściowych zwrotów
 - **Validation** - FluentValidation dla wszystkich operacji płatności
 - **Payment Gateway Abstraction** - abstrakcja umożliwiająca łatwe przełączanie między dostawcami płatności

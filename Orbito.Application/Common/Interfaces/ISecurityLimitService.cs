@@ -18,6 +18,11 @@ namespace Orbito.Application.Common.Interfaces
         int MaxPageSize { get; }
 
         /// <summary>
+        /// Maximum number of payments allowed in bulk retry operation
+        /// </summary>
+        int MaxBulkRetryLimit { get; }
+
+        /// <summary>
         /// Rate limit window for payment attempts
         /// </summary>
         TimeSpan PaymentAttemptWindow { get; }
@@ -26,6 +31,11 @@ namespace Orbito.Application.Common.Interfaces
         /// Maximum payment attempts within window
         /// </summary>
         int MaxPaymentAttemptsPerWindow { get; }
+
+        /// <summary>
+        /// Tolerance window for marking retry schedules as overdue (in minutes)
+        /// </summary>
+        int RetryOverdueToleranceMinutes { get; }
 
         /// <summary>
         /// Validates if page size is within limits

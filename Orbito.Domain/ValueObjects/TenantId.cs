@@ -4,6 +4,12 @@
     {
         public Guid Value { get; }
 
+        // Parameterless constructor for EF Core
+        private TenantId()
+        {
+            Value = Guid.Empty;
+        }
+
         private TenantId(Guid value)
         {
             Value = value;

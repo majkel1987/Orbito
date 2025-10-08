@@ -11,8 +11,10 @@ namespace Orbito.Application.Common.Services
     {
         public int MaxPaymentMethodsPerClient => 10;
         public int MaxPageSize => 100;
+        public int MaxBulkRetryLimit => 50;
         public TimeSpan PaymentAttemptWindow => TimeSpan.FromMinutes(15);
         public int MaxPaymentAttemptsPerWindow => 5;
+        public int RetryOverdueToleranceMinutes => 5;
 
         public int ValidatePageSize(int pageSize)
         {

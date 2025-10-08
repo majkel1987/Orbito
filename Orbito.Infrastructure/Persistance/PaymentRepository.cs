@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
@@ -10,23 +11,33 @@ namespace Orbito.Infrastructure.Persistance
     {
         private readonly ApplicationDbContext _context;
         private readonly ITenantContext _tenantContext;
+        private readonly ILogger<PaymentRepository> _logger;
+        private readonly ISecurityLimitService _securityLimitService;
 
-        public PaymentRepository(ApplicationDbContext context, ITenantContext tenantContext)
+        public PaymentRepository(
+            ApplicationDbContext context,
+            ITenantContext tenantContext,
+            ILogger<PaymentRepository> logger,
+            ISecurityLimitService securityLimitService)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _tenantContext = tenantContext ?? throw new ArgumentNullException(nameof(tenantContext));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _securityLimitService = securityLimitService ?? throw new ArgumentNullException(nameof(securityLimitService));
         }
 
         [Obsolete("SECURITY RISK: This method allows access to any payment without client verification. Use GetByIdForClientAsync instead.")]
         public async Task<Payment?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
             // SECURITY: Log deprecated method usage for monitoring
-            Console.WriteLine($"[SECURITY WARNING] Deprecated GetByIdAsync called for payment {id}. This method should not be used!");
+            _logger.LogWarning("SECURITY: Deprecated {MethodName} called for payment {PaymentId}. This method should not be used!",
+                nameof(GetByIdAsync), id);
 
             // SECURITY: Apply tenant filtering even for deprecated method
             if (!_tenantContext.HasTenant)
             {
-                Console.WriteLine("[SECURITY ERROR] No tenant context available - access denied!");
+                _logger.LogError("SECURITY: No tenant context available - access denied in {MethodName}",
+                    nameof(GetByIdAsync));
                 return null;
             }
 
@@ -47,12 +58,14 @@ namespace Orbito.Infrastructure.Persistance
                 throw new ArgumentException("External transaction ID cannot be null or empty", nameof(externalTransactionId));
 
             // SECURITY: Log deprecated method usage for monitoring
-            Console.WriteLine($"[SECURITY WARNING] Deprecated GetByExternalTransactionIdAsync called for transaction {externalTransactionId}. This method should not be used!");
+            _logger.LogWarning("SECURITY: Deprecated {MethodName} called for transaction {TransactionId}. This method should not be used!",
+                nameof(GetByExternalTransactionIdAsync), externalTransactionId);
 
             // SECURITY: Apply tenant filtering even for deprecated method
             if (!_tenantContext.HasTenant)
             {
-                Console.WriteLine("[SECURITY ERROR] No tenant context available - access denied!");
+                _logger.LogError("SECURITY: No tenant context available - access denied in {MethodName}",
+                    nameof(GetByExternalTransactionIdAsync));
                 return null;
             }
 
@@ -73,12 +86,14 @@ namespace Orbito.Infrastructure.Persistance
                 throw new ArgumentException("External payment ID cannot be null or empty", nameof(externalPaymentId));
 
             // SECURITY: Log deprecated method usage for monitoring
-            Console.WriteLine($"[SECURITY WARNING] Deprecated GetByExternalPaymentIdAsync called for payment {externalPaymentId}. This method should not be used!");
+            _logger.LogWarning("SECURITY: Deprecated {MethodName} called for payment {PaymentId}. This method should not be used!",
+                nameof(GetByExternalPaymentIdAsync), externalPaymentId);
 
             // SECURITY: Apply tenant filtering even for deprecated method
             if (!_tenantContext.HasTenant)
             {
-                Console.WriteLine("[SECURITY ERROR] No tenant context available - access denied!");
+                _logger.LogError("SECURITY: No tenant context available - access denied in {MethodName}",
+                    nameof(GetByExternalPaymentIdAsync));
                 return null;
             }
 
@@ -96,11 +111,22 @@ namespace Orbito.Infrastructure.Persistance
         {
             (pageNumber, pageSize) = ValidatePagination(pageNumber, pageSize);
 
+            // SECURITY: Verify tenant context
+            if (!_tenantContext.HasTenant)
+            {
+                _logger.LogWarning("SECURITY: {MethodName} called without tenant context for subscription {SubscriptionId}",
+                    nameof(GetBySubscriptionIdAsync), subscriptionId);
+                return new List<Payment>();
+            }
+
+            var tenantId = _tenantContext.CurrentTenantId;
+
             return await _context.Payments
                 .AsNoTracking()
                 .Include(p => p.Subscription)
                 .Include(p => p.Client)
-                .Where(p => p.SubscriptionId == subscriptionId)
+                .Where(p => p.TenantId == tenantId && // SECURITY: Explicit tenant filter
+                            p.SubscriptionId == subscriptionId)
                 .OrderByDescending(p => p.CreatedAt)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
@@ -125,11 +151,13 @@ namespace Orbito.Infrastructure.Persistance
         [Obsolete("SECURITY RISK: This method returns payments from ALL clients without verification. Use client-specific methods instead.")]
         public async Task<IEnumerable<Payment>> GetByStatusAsync(PaymentStatus status, int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken = default)
         {
-            Console.WriteLine($"[SECURITY WARNING] Deprecated GetByStatusAsync called for status {status}. This method should not be used!");
+            _logger.LogWarning("SECURITY: Deprecated {MethodName} called for status {Status}. This method should not be used!",
+                nameof(GetByStatusAsync), status);
 
             if (!_tenantContext.HasTenant)
             {
-                Console.WriteLine("[SECURITY ERROR] No tenant context available - access denied!");
+                _logger.LogError("SECURITY: No tenant context available - access denied in {MethodName}",
+                    nameof(GetByStatusAsync));
                 return new List<Payment>();
             }
 
@@ -150,11 +178,13 @@ namespace Orbito.Infrastructure.Persistance
         [Obsolete("ADMIN-ONLY: Returns pending payments from ALL clients. Use client-specific methods for regular operations.")]
         public async Task<IEnumerable<Payment>> GetPendingPaymentsAsync(CancellationToken cancellationToken = default)
         {
-            Console.WriteLine("[SECURITY WARNING] ADMIN-ONLY GetPendingPaymentsAsync called. This returns data from ALL tenants!");
+            _logger.LogWarning("SECURITY: ADMIN-ONLY {MethodName} called. This returns data from ALL tenants!",
+                nameof(GetPendingPaymentsAsync));
 
             if (!_tenantContext.HasTenant)
             {
-                Console.WriteLine("[SECURITY ERROR] No tenant context available - access denied!");
+                _logger.LogError("SECURITY: No tenant context available - access denied in {MethodName}",
+                    nameof(GetPendingPaymentsAsync));
                 return new List<Payment>();
             }
 
@@ -172,11 +202,13 @@ namespace Orbito.Infrastructure.Persistance
         [Obsolete("ADMIN-ONLY: Returns failed payments from ALL clients. Use client-specific methods for regular operations.")]
         public async Task<IEnumerable<Payment>> GetFailedPaymentsAsync(CancellationToken cancellationToken = default)
         {
-            Console.WriteLine("[SECURITY WARNING] ADMIN-ONLY GetFailedPaymentsAsync called. This returns data from ALL tenants!");
+            _logger.LogWarning("SECURITY: ADMIN-ONLY {MethodName} called. This returns data from ALL tenants!",
+                nameof(GetFailedPaymentsAsync));
 
             if (!_tenantContext.HasTenant)
             {
-                Console.WriteLine("[SECURITY ERROR] No tenant context available - access denied!");
+                _logger.LogError("SECURITY: No tenant context available - access denied in {MethodName}",
+                    nameof(GetFailedPaymentsAsync));
                 return new List<Payment>();
             }
 
@@ -195,12 +227,14 @@ namespace Orbito.Infrastructure.Persistance
         public async Task<IEnumerable<Payment>> GetProcessingPaymentsAsync(CancellationToken cancellationToken = default)
         {
             // SECURITY: Log deprecated method usage for monitoring
-            Console.WriteLine("[SECURITY WARNING] Deprecated GetProcessingPaymentsAsync called. This method should not be used!");
+            _logger.LogWarning("SECURITY: Deprecated {MethodName} called. This method should not be used!",
+                nameof(GetProcessingPaymentsAsync));
 
             // SECURITY: Apply tenant filtering even for deprecated method
             if (!_tenantContext.HasTenant)
             {
-                Console.WriteLine("[SECURITY ERROR] No tenant context available - access denied!");
+                _logger.LogError("SECURITY: No tenant context available - access denied in {MethodName}",
+                    nameof(GetProcessingPaymentsAsync));
                 return new List<Payment>();
             }
 
@@ -219,12 +253,14 @@ namespace Orbito.Infrastructure.Persistance
         public async Task<IEnumerable<Payment>> GetPaymentsWithExternalIdAsync(CancellationToken cancellationToken = default)
         {
             // SECURITY: Log deprecated method usage for monitoring
-            Console.WriteLine("[SECURITY WARNING] Deprecated GetPaymentsWithExternalIdAsync called. This method should not be used!");
+            _logger.LogWarning("SECURITY: Deprecated {MethodName} called. This method should not be used!",
+                nameof(GetPaymentsWithExternalIdAsync));
 
             // SECURITY: Apply tenant filtering even for deprecated method
             if (!_tenantContext.HasTenant)
             {
-                Console.WriteLine("[SECURITY ERROR] No tenant context available - access denied!");
+                _logger.LogError("SECURITY: No tenant context available - access denied in {MethodName}",
+                    nameof(GetPaymentsWithExternalIdAsync));
                 return new List<Payment>();
             }
 
@@ -271,12 +307,14 @@ namespace Orbito.Infrastructure.Persistance
         public async Task<PaymentStats> GetPaymentStatsAsync(CancellationToken cancellationToken = default)
         {
             // SECURITY: Log deprecated method usage for monitoring
-            Console.WriteLine("[SECURITY WARNING] Deprecated GetPaymentStatsAsync called. This method should not be used!");
+            _logger.LogWarning("SECURITY: Deprecated {MethodName} called. This method should not be used!",
+                nameof(GetPaymentStatsAsync));
 
             // SECURITY: Apply tenant filtering even for deprecated method
             if (!_tenantContext.HasTenant)
             {
-                Console.WriteLine("[SECURITY ERROR] No tenant context available - access denied!");
+                _logger.LogError("SECURITY: No tenant context available - access denied in {MethodName}",
+                    nameof(GetPaymentStatsAsync));
                 return new PaymentStats
                 {
                     TotalPayments = 0,
@@ -356,12 +394,14 @@ namespace Orbito.Infrastructure.Persistance
         public async Task<decimal> GetTotalRevenueAsync(CancellationToken cancellationToken = default)
         {
             // SECURITY: Log deprecated method usage for monitoring
-            Console.WriteLine("[SECURITY WARNING] Deprecated GetTotalRevenueAsync called. This method should not be used!");
+            _logger.LogWarning("SECURITY: Deprecated {MethodName} called. This method should not be used!",
+                nameof(GetTotalRevenueAsync));
 
             // SECURITY: Apply tenant filtering even for deprecated method
             if (!_tenantContext.HasTenant)
             {
-                Console.WriteLine("[SECURITY ERROR] No tenant context available - access denied!");
+                _logger.LogError("SECURITY: No tenant context available - access denied in {MethodName}",
+                    nameof(GetTotalRevenueAsync));
                 return 0;
             }
 
@@ -376,12 +416,14 @@ namespace Orbito.Infrastructure.Persistance
         public async Task<int> GetPaymentsCountByStatusAsync(PaymentStatus status, CancellationToken cancellationToken = default)
         {
             // SECURITY: Log deprecated method usage for monitoring
-            Console.WriteLine($"[SECURITY WARNING] Deprecated GetPaymentsCountByStatusAsync called for status {status}. This method should not be used!");
+            _logger.LogWarning("SECURITY: Deprecated {MethodName} called for status {Status}. This method should not be used!",
+                nameof(GetPaymentsCountByStatusAsync), status);
 
             // SECURITY: Apply tenant filtering even for deprecated method
             if (!_tenantContext.HasTenant)
             {
-                Console.WriteLine("[SECURITY ERROR] No tenant context available - access denied!");
+                _logger.LogError("SECURITY: No tenant context available - access denied in {MethodName}",
+                    nameof(GetPaymentsCountByStatusAsync));
                 return 0;
             }
 
@@ -407,48 +449,69 @@ namespace Orbito.Infrastructure.Persistance
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
+        /// <summary>
+        /// Gets total refunded amount for a payment
+        /// WARNING: This is a simplified implementation. For production, implement proper Refunds table.
+        /// </summary>
         public async Task<decimal> GetTotalRefundedAmountAsync(Guid paymentId, CancellationToken cancellationToken = default)
         {
-            // W tej implementacji zakładamy, że informacja o zwrotach jest przechowywana
-            // w polu RefundedAmount lub w oddzielnej tabeli refunds
-            // Dla uproszczenia, zwrócimy 0 - należy to dostosować do rzeczywistej struktury danych
+            // IMPLEMENTATION NOTE: This method provides estimated refund amounts based on Payment.Status
+            // Limitations:
+            // 1. PartiallyRefunded status returns 50% estimate (not accurate)
+            // 2. Cannot track multiple partial refunds
+            // 3. No audit trail of refund transactions
+            //
+            // RECOMMENDED IMPLEMENTATION:
+            // Create a Refunds table:
+            // - CREATE TABLE Refunds (
+            //     Id GUID PRIMARY KEY,
+            //     PaymentId GUID NOT NULL,
+            //     Amount DECIMAL NOT NULL,
+            //     Status ENUM (Pending, Completed, Failed),
+            //     RefundedAt DATETIME,
+            //     Reason NVARCHAR(500),
+            //     FOREIGN KEY (PaymentId) REFERENCES Payments(Id)
+            //   )
+            // - Track each refund transaction separately
+            // - Sum up completed refunds for accurate totals
 
             var payment = await _context.Payments
                 .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.Id == paymentId, cancellationToken);
 
             if (payment == null)
-                return 0;
-
-            // Jeśli mamy pole RefundedAmount w encji Payment
-            // return payment.RefundedAmount ?? 0;
-
-            // Jeśli mamy oddzielną tabelę Refunds
-            // return await _context.Refunds
-            //     .Where(r => r.PaymentId == paymentId && r.Status == RefundStatus.Completed)
-            //     .SumAsync(r => r.Amount.Amount, cancellationToken);
-
-            // Tymczasowe rozwiązanie - zwróć pełną kwotę jeśli częściowo lub całkowicie zwrócone
-            if (payment.Status == PaymentStatus.Refunded)
-                return payment.Amount?.Amount ?? 0;
-
-            if (payment.Status == PaymentStatus.PartiallyRefunded)
             {
-                // W rzeczywistości powinniśmy śledzić dokładną kwotę zwróconą
-                // Na razie zwrócimy połowę kwoty jako przykład
-                return (payment.Amount?.Amount ?? 0) * 0.5m;
+                _logger.LogWarning("GetTotalRefundedAmountAsync: Payment {PaymentId} not found", paymentId);
+                return 0;
             }
 
-            return 0;
+            // Simplified logic based on status
+            return payment.Status switch
+            {
+                PaymentStatus.Refunded => payment.Amount?.Amount ?? 0,
+                PaymentStatus.PartiallyRefunded => (payment.Amount?.Amount ?? 0) * 0.5m, // ESTIMATE ONLY!
+                _ => 0
+            };
         }
 
         // Security-enhanced methods with client verification
         public async Task<Payment?> GetByIdForClientAsync(Guid id, Guid clientId, CancellationToken cancellationToken = default)
         {
+            // SECURITY: Verify tenant context
+            if (!_tenantContext.HasTenant)
+            {
+                _logger.LogWarning("SECURITY: {MethodName} called without tenant context for payment {PaymentId}",
+                    nameof(GetByIdForClientAsync), id);
+                return null;
+            }
+
+            var tenantId = _tenantContext.CurrentTenantId;
+
             return await _context.Payments
                 .AsNoTracking()
                 .Include(p => p.Subscription)
                 .Include(p => p.Client)
+                .Where(p => p.TenantId == tenantId) // SECURITY: Filter by tenant first
                 .FirstOrDefaultAsync(p => p.Id == id && p.ClientId == clientId, cancellationToken);
         }
 
@@ -530,37 +593,109 @@ namespace Orbito.Infrastructure.Persistance
         // Rate limiting operations
         public async Task<TimeSpan?> GetRateLimitDelayAsync(Guid clientId, CancellationToken cancellationToken = default)
         {
-            var recentAttemptsLimit = 5;
-            var timeWindow = TimeSpan.FromMinutes(15);
+            var limit = _securityLimitService.MaxPaymentAttemptsPerWindow;
+            var timeWindow = _securityLimitService.PaymentAttemptWindow;
             var cutoffTime = DateTime.UtcNow.Subtract(timeWindow);
 
-            var recentAttempts = await _context.Payments
+            // OPTIMIZED: Single query with projection to get count and oldest timestamp
+            var rateLimitInfo = await _context.Payments
                 .Where(p => p.ClientId == clientId && p.CreatedAt >= cutoffTime)
-                .CountAsync(cancellationToken);
+                .OrderBy(p => p.CreatedAt)
+                .Take(limit)
+                .Select(p => p.CreatedAt)
+                .ToListAsync(cancellationToken);
 
-            if (recentAttempts >= recentAttemptsLimit)
+            if (rateLimitInfo.Count >= limit)
             {
-                var oldestRecentAttempt = await _context.Payments
-                    .Where(p => p.ClientId == clientId && p.CreatedAt >= cutoffTime)
-                    .OrderBy(p => p.CreatedAt)
-                    .Select(p => p.CreatedAt)
-                    .FirstOrDefaultAsync(cancellationToken);
-
-                if (oldestRecentAttempt != default)
-                {
-                    var delay = timeWindow - (DateTime.UtcNow - oldestRecentAttempt);
-                    return delay > TimeSpan.Zero ? delay : TimeSpan.FromMinutes(1);
-                }
+                var oldestAttempt = rateLimitInfo.First();
+                var delay = timeWindow - (DateTime.UtcNow - oldestAttempt);
+                return delay > TimeSpan.Zero ? delay : TimeSpan.FromMinutes(1);
             }
 
             return null;
         }
 
+        /// <summary>
+        /// Records payment attempt for rate limiting
+        /// NOTE: Current implementation uses Payment.CreatedAt for rate limiting.
+        /// If more precise tracking is needed, create a separate PaymentAttempts table.
+        /// </summary>
         public async Task RecordPaymentAttemptAsync(Guid clientId, CancellationToken cancellationToken = default)
         {
-            // This method would typically create a record in a separate rate limiting table
-            // For now, we'll just ensure it's implemented to satisfy the interface
+            // IMPLEMENTATION NOTE: Rate limiting currently relies on Payment.CreatedAt timestamps.
+            // This is sufficient for basic rate limiting but has limitations:
+            // 1. Only tracks actual payment creation, not all attempts
+            // 2. Cannot track failed attempts that don't create Payment records
+            //
+            // For production use, consider implementing a separate PaymentAttempts table:
+            // - CREATE TABLE PaymentAttempts (Id, ClientId, AttemptedAt, Success, FailureReason)
+            // - Record ALL attempts (success and failure)
+            // - Use sliding window algorithm for precise rate limiting
+
+            _logger.LogDebug("RecordPaymentAttemptAsync called for client {ClientId}. Using Payment.CreatedAt for tracking.",
+                clientId);
+
             await Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Records multiple payment attempts for rate limiting - batch operation
+        /// NOTE: See RecordPaymentAttemptAsync for implementation details
+        /// </summary>
+        public async Task RecordPaymentAttemptsAsync(Guid clientId, int count, CancellationToken cancellationToken = default)
+        {
+            _logger.LogDebug("RecordPaymentAttemptsAsync called for client {ClientId} with count {Count}",
+                clientId, count);
+
+            await Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Gets queryable failed payments for retry logic
+        /// </summary>
+        public async Task<IQueryable<Payment>> GetFailedPaymentsQueryAsync(Guid? clientId = null, CancellationToken cancellationToken = default)
+        {
+            var query = _context.Payments
+                .Where(p => p.Status == PaymentStatus.Failed)
+                .AsQueryable();
+
+            if (clientId.HasValue)
+            {
+                query = query.Where(p => p.ClientId == clientId.Value);
+            }
+
+            return await Task.FromResult(query);
+        }
+
+        /// <summary>
+        /// Gets multiple payments by IDs for a specific client (batch operation)
+        /// SECURITY: Verifies both TenantId and ClientId to prevent cross-tenant data access
+        /// </summary>
+        public async Task<Dictionary<Guid, Payment>> GetByIdsForClientAsync(List<Guid> paymentIds, Guid clientId, CancellationToken cancellationToken = default)
+        {
+            if (paymentIds == null || paymentIds.Count == 0)
+                return new Dictionary<Guid, Payment>();
+
+            // SECURITY: Verify tenant context
+            if (!_tenantContext.HasTenant)
+            {
+                _logger.LogWarning("SECURITY: {MethodName} called without tenant context for {Count} payments",
+                    nameof(GetByIdsForClientAsync), paymentIds.Count);
+                return new Dictionary<Guid, Payment>();
+            }
+
+            var tenantId = _tenantContext.CurrentTenantId;
+
+            var payments = await _context.Payments
+                .AsNoTracking()
+                .Include(p => p.Subscription)
+                .Include(p => p.Client)
+                .Where(p => p.TenantId == tenantId && // SECURITY: Filter by tenant first
+                            p.ClientId == clientId &&
+                            paymentIds.Contains(p.Id))
+                .ToListAsync(cancellationToken);
+
+            return payments.ToDictionary(p => p.Id, p => p);
         }
 
         private static (int pageNumber, int pageSize) ValidatePagination(int pageNumber, int pageSize)

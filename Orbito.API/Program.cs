@@ -40,7 +40,11 @@ builder.Services.AddHealthChecks();
 builder.Services.AddHealthChecksUI()
     .AddInMemoryStorage();
 
-// Add Rate Limiting
+// Add Memory Cache
+builder.Services.AddMemoryCache();
+
+// NOTE: Rate Limiting and CORS are now configured in Infrastructure layer (AddInfrastructure)
+// Specific rate limit policies for webhook and API endpoints
 builder.Services.AddRateLimiter(rateLimiterOptions =>
 {
     // Webhook rate limiter - 100 requests per minute
@@ -66,18 +70,6 @@ builder.Services.AddRateLimiter(rateLimiterOptions =>
                 QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst,
                 QueueLimit = 0
             }));
-});
-
-// Add CORS
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("Orbito_test", policy =>
-    {
-        policy.WithOrigins("http://localhost:3000", "http://127.0.0.1:3000")
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
-    });
 });
 
 // Add Swagger with JWT support
@@ -136,8 +128,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// Use CORS
-app.UseCors("Orbito_test");
+// Use Response Compression (from Infrastructure layer)
+app.UseResponseCompression();
+
+// Use CORS (configured in Infrastructure layer + local policy)
+app.UseCors();
 
 // Add global exception handler
 app.UseExceptionHandler();

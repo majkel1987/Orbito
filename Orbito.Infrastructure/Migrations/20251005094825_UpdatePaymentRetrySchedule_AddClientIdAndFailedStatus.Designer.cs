@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Orbito.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using Orbito.Infrastructure.Data;
 namespace Orbito.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251005094825_UpdatePaymentRetrySchedule_AddClientIdAndFailedStatus")]
+    partial class UpdatePaymentRetrySchedule_AddClientIdAndFailedStatus
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -498,9 +501,7 @@ namespace Orbito.Infrastructure.Migrations
                     b.HasIndex("ClientId");
 
                     b.HasIndex("PaymentId")
-                        .IsUnique()
-                        .HasDatabaseName("IX_PaymentRetrySchedule_Payment_Active")
-                        .HasFilter("[Status] IN ('Scheduled', 'InProgress')");
+                        .HasDatabaseName("IX_PaymentRetrySchedules_PaymentId");
 
                     b.HasIndex("PaymentId", "Status")
                         .HasDatabaseName("IX_PaymentRetrySchedules_PaymentId_Status");

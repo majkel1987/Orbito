@@ -77,6 +77,7 @@ namespace Orbito.Application.Common.Interfaces
         ISubscriptionPlanRepository SubscriptionPlans { get; }
         IPaymentRepository Payments { get; }
         IPaymentMethodRepository PaymentMethods { get; }
+        IPaymentRetryRepository PaymentRetries { get; }
         IWebhookLogRepository WebhookLogs { get; }
         IEmailNotificationRepository EmailNotifications { get; }
     }

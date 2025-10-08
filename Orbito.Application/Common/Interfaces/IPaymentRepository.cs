@@ -60,6 +60,9 @@ namespace Orbito.Application.Common.Interfaces
         Task<int> GetPaymentsCountByStatusForClientAsync(PaymentStatus status, Guid clientId, CancellationToken cancellationToken = default);
         Task<int> GetCountBySubscriptionIdAsync(Guid subscriptionId, CancellationToken cancellationToken = default);
 
+        // Query operations for retry logic
+        Task<IQueryable<Payment>> GetFailedPaymentsQueryAsync(Guid? clientId = null, CancellationToken cancellationToken = default);
+
         // ADMIN-ONLY: Stats operations across ALL tenants - use with extreme caution
         [Obsolete("ADMIN-ONLY: Returns stats from ALL clients. Use GetPaymentStatsByClientAsync for regular operations.")]
         Task<PaymentStats> GetPaymentStatsAsync(CancellationToken cancellationToken = default);
@@ -73,6 +76,10 @@ namespace Orbito.Application.Common.Interfaces
         // Rate limiting operations
         Task<TimeSpan?> GetRateLimitDelayAsync(Guid clientId, CancellationToken cancellationToken = default);
         Task RecordPaymentAttemptAsync(Guid clientId, CancellationToken cancellationToken = default);
+        Task RecordPaymentAttemptsAsync(Guid clientId, int count, CancellationToken cancellationToken = default);
+
+        // Batch operations
+        Task<Dictionary<Guid, Payment>> GetByIdsForClientAsync(List<Guid> paymentIds, Guid clientId, CancellationToken cancellationToken = default);
     }
 
     public record PaymentStats

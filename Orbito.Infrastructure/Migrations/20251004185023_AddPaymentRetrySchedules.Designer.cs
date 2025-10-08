@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Orbito.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using Orbito.Infrastructure.Data;
 namespace Orbito.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251004185023_AddPaymentRetrySchedules")]
+    partial class AddPaymentRetrySchedules
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -461,15 +464,12 @@ namespace Orbito.Infrastructure.Migrations
                     b.Property<int>("AttemptNumber")
                         .HasColumnType("int");
 
-                    b.Property<Guid>("ClientId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("LastError")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<int>("MaxAttempts")
                         .ValueGeneratedOnAdd()
@@ -495,19 +495,15 @@ namespace Orbito.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ClientId");
-
                     b.HasIndex("PaymentId")
-                        .IsUnique()
-                        .HasDatabaseName("IX_PaymentRetrySchedule_Payment_Active")
-                        .HasFilter("[Status] IN ('Scheduled', 'InProgress')");
+                        .HasDatabaseName("IX_PaymentRetrySchedules_PaymentId");
+
+                    b.HasIndex("NextAttemptAt", "Status")
+                        .HasDatabaseName("IX_PaymentRetrySchedules_NextAttemptAt_Status")
+                        .HasFilter("[Status] = 'Scheduled'");
 
                     b.HasIndex("PaymentId", "Status")
                         .HasDatabaseName("IX_PaymentRetrySchedules_PaymentId_Status");
-
-                    b.HasIndex("TenantId", "ClientId", "Status", "NextAttemptAt")
-                        .HasDatabaseName("IX_PaymentRetrySchedules_TenantId_ClientId_Status_NextAttemptAt")
-                        .HasFilter("[Status] = 'Scheduled'");
 
                     b.ToTable("PaymentRetrySchedules", (string)null);
                 });
@@ -1103,19 +1099,11 @@ namespace Orbito.Infrastructure.Migrations
 
             modelBuilder.Entity("Orbito.Domain.Entities.PaymentRetrySchedule", b =>
                 {
-                    b.HasOne("Orbito.Domain.Entities.Client", "Client")
-                        .WithMany()
-                        .HasForeignKey("ClientId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("Orbito.Domain.Entities.Payment", "Payment")
                         .WithMany()
                         .HasForeignKey("PaymentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Client");
 
                     b.Navigation("Payment");
                 });

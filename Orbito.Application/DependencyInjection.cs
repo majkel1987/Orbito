@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Orbito.Application.Common.Behaviours;
 using Orbito.Application.Common.Interfaces;
+using Orbito.Application.Common.Options;
 using Orbito.Application.Common.Services;
 using Orbito.Application.Services;
 using Orbito.Application.Common.Settings;
@@ -22,6 +23,7 @@ namespace Orbito.Application
             });
 
             services.Configure<PerformanceSettings>(configuration.GetSection("PerformanceSettings"));
+            services.Configure<PaymentRetryOptions>(configuration.GetSection(PaymentRetryOptions.SectionName));
             services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
             
             // Add pipeline behaviors
@@ -39,6 +41,7 @@ namespace Orbito.Application
             services.AddScoped<ISubscriptionService, SubscriptionService>();
             services.AddScoped<IPaymentProcessingService, PaymentProcessingService>();
             services.AddScoped<IPaymentNotificationService, PaymentNotificationService>();
+            services.AddScoped<IPaymentRetryService, PaymentRetryService>();
             services.AddSingleton<ISecurityLimitService, SecurityLimitService>();
 
             return services;
