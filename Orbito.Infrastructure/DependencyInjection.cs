@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Orbito.Application.Common.Configuration;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Domain.Identity;
 using Orbito.Infrastructure.BackgroundJobs;
@@ -129,8 +130,13 @@ namespace Orbito.Infrastructure
             services.AddScoped<IWebhookLogRepository, WebhookLogRepository>();
             services.AddScoped<IEmailNotificationRepository, EmailNotificationRepository>();
             services.AddScoped<IPaymentRetryRepository, PaymentRetryRepository>();
+            services.AddScoped<IReconciliationRepository, ReconciliationRepository>();
             services.AddScoped<IEmailSender, Services.EmailSender>();
             services.AddScoped<IUserContextService, Services.UserContextService>();
+            services.AddScoped<IPaymentReconciliationService, Services.PaymentReconciliationService>();
+
+            // Configure reconciliation settings
+            services.Configure<ReconciliationSettings>(configuration.GetSection("ReconciliationSettings"));
 
             // Configure Stripe
             services.Configure<StripeConfiguration>(configuration.GetSection("Stripe"));
@@ -143,6 +149,7 @@ namespace Orbito.Infrastructure
             services.AddHostedService<ProcessDuePaymentsJob>();
             services.AddHostedService<CheckPendingPaymentsJob>();
             services.AddHostedService<PaymentStatusSyncJob>();
+            services.AddHostedService<DailyReconciliationJob>();
 
             // FIXED: Validate Stripe configuration at startup with proper validation
             services.AddOptions<StripeConfiguration>()

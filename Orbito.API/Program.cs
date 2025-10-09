@@ -1,5 +1,6 @@
 using Microsoft.OpenApi.Models;
 using Orbito.API.Middleware;
+using Orbito.API.HealthChecks;
 using Orbito.Infrastructure.PaymentGateways.Stripe.Models;
 using Orbito.Application;
 using Orbito.Infrastructure;
@@ -7,6 +8,7 @@ using Serilog;
 using Serilog.Events;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
@@ -36,7 +38,13 @@ builder.Services.AddProblemDetails();
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
-builder.Services.AddHealthChecks();
+
+// Configure Health Checks with custom checks
+builder.Services.AddHealthChecks()
+    .AddCheck<StripeHealthCheck>("stripe", tags: new[] { "external" })
+    .AddCheck<PaymentSystemHealthCheck>("payment_system", tags: new[] { "critical" })
+    .AddDbContextCheck<Orbito.Infrastructure.Data.ApplicationDbContext>();
+
 builder.Services.AddHealthChecksUI()
     .AddInMemoryStorage();
 
@@ -57,6 +65,19 @@ builder.Services.AddRateLimiter(rateLimiterOptions =>
                 Window = TimeSpan.FromMinutes(1),
                 QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst,
                 QueueLimit = 0 // No queue, reject immediately
+            }));
+
+    // Reconciliation rate limiter - 5 requests per 15 minutes per tenant
+    // SECURITY: Prevents abuse of Stripe API and expensive reconciliation operations
+    rateLimiterOptions.AddPolicy("reconciliation", context =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.User.FindFirst("tenant_id")?.Value ?? context.Request.Headers.Host.ToString(),
+            factory: _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(15),
+                QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst,
+                QueueLimit = 2
             }));
 
     // API rate limiter - 1000 requests per minute
@@ -106,6 +127,9 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 // Configure Stripe Webhook Settings
 builder.Services.Configure<StripeWebhookSettings>(builder.Configuration.GetSection("StripeWebhookSettings"));
+
+// Configure Monitoring Settings for Health Checks
+builder.Services.Configure<MonitoringSettings>(builder.Configuration.GetSection("MonitoringSettings"));
 
 // Add Background Jobs
 builder.Services.AddHostedService<Orbito.Application.BackgroundJobs.CheckExpiringSubscriptionsJob>();
@@ -157,10 +181,15 @@ app.MapGet("/", () => Results.Ok(new
     message = "Witaj w Orbito API!",
     endpoints = new[] {
             "/swagger - Dokumentacja API",
+            "/health - Health Checks",
+            "/healthchecks-ui - Health Checks UI"
         },
     timestamp = DateTime.UtcNow
 }));
+
+// Configure Health Check endpoints
 app.MapHealthChecks("/health");
+
 app.MapHealthChecksUI();
 
 try

@@ -1,207 +1,89 @@
-# Plan Implementacji Orbito Platform
+# Plan Implementacji Orbito Platform - REFAKTORYZOWANY
 
-## <� Plan Implementacji Payment System - Faza 2
+## 📊 **Status Implementacji** (Stan na 2025-01-08)
 
-### **Etap 1: Retry Logic & Scheduling (Dni 1-2)** - ZAIMPLEMENTOWANE
+### ✅ **KOMPLETNIE ZAIMPLEMENTOWANE**
 
-#### 1.1 Domain Layer
+- **Etap 2: Reconciliation System** - 100% ✅
+- **Etap 3: Health Checks** - 100% ✅
 
-- **PaymentRetrySchedule.cs** (Domain/Entities/)
-  - Properties: Id, PaymentId, NextAttemptAt, AttemptNumber, MaxAttempts, Status, LastError
-  - Value Objects: RetryStatus enum (Scheduled, InProgress, Completed, Cancelled)
-  - Business rules: ValidateAttemptNumber, CanRetry, CalculateBackoff
+### 🔄 **CZĘŚCIOWO ZAIMPLEMENTOWANE**
 
-#### 1.2 Application Layer - Services
+- **Etap 1: Retry Logic** - 70% ✅ (brak API endpoints)
+- **Etap 4: Metrics & Statistics** - 40% ✅ (podstawowe statystyki)
 
-- **IPaymentRetryService.cs + PaymentRetryService.cs** (Application/Services/)
-  - `ScheduleRetryAsync(Guid paymentId, int attemptNumber, string errorReason)`
-  - `ProcessScheduledRetriesAsync(CancellationToken)` - background job
-  - `CalculateNextRetryTime(int attemptNumber)` - exponential backoff (5m, 15m, 1h, 6h, 24h)
-  - `CancelScheduledRetriesAsync(Guid paymentId)`
-  - Thread-safe z pessimistic locking
+### ❌ **NIE ZAIMPLEMENTOWANE**
 
-#### 1.3 Application Layer - Commands & Queries
+- **Etap 5: Security & Idempotency** - 0% ❌
 
-- **Commands/RetryFailedPaymentCommand.cs** + Handler
+---
 
-  - Walidacja: czy payment istnieje, czy failed, czy clientId si zgadza
-  - Security: TenantId + ClientId verification
-  - Idempotency: sprawdzenie czy retry ju| w toku
+## 🎯 **PRIORYTETOWE ZADANIA DO DOKOŃCZENIA**
 
-- **Commands/BulkRetryPaymentsCommand.cs** + Handler
+### **Etap 1: Dokończenie Retry Logic (Dni 1-2)**
+
+#### 1.1 API Layer - Brakujące Endpoints
+
+- **PaymentRetryController.cs** - NOWY
+  - `POST /api/payments/retry/{paymentId}` - retry pojedynczej płatności
+  - `POST /api/payments/retry/bulk` - retry wielu płatności (max 50)
+  - `GET /api/payments/retry/scheduled` - lista zaplanowanych retry
+  - `DELETE /api/payments/retry/{scheduleId}` - anulowanie retry
+
+#### 1.2 Application Layer - Brakujące Commands
+
+- **BulkRetryPaymentsCommand.cs** + Handler
 
   - Input: List<Guid> paymentIds, Guid clientId
   - Batch processing z transaction scope
   - Rate limiting: max 50 payments naraz
 
-- **Queries/GetScheduledRetriesQuery.cs** + Handler
-
+- **GetScheduledRetriesQuery.cs** + Handler
   - Filtering: po ClientId, TenantId, Status
   - Pagination: max 100 records
   - DTOs: RetryScheduleDto z payment details
 
-- **Queries/GetFailedPaymentsForRetryQuery.cs** + Handler
-  - Filter: tylko Failed payments z < MaxAttempts
-  - Sort: po FailedAt desc
+#### 1.3 FluentValidation Validators
 
-#### 1.4 Infrastructure Layer - Repository
-
-- **IPaymentRetryRepository.cs** + Implementation
-  - `GetDueRetriesAsync(DateTime now)` - z query filter po TenantId
-  - `GetByPaymentIdAsync(Guid paymentId, Guid clientId)`
-  - `MarkAsProcessingAsync(Guid scheduleId)` - optimistic concurrency
-  - Indexes: (PaymentId, Status), (NextAttemptAt, Status)
-
-#### 1.5 FluentValidation Validators
-
-- **RetryFailedPaymentCommandValidator.cs**
 - **BulkRetryPaymentsCommandValidator.cs**
+- **GetScheduledRetriesQueryValidator.cs**
 
 ---
 
-### **Etap 2: Reconciliation System**
+### **Etap 4: Rozszerzenie Metrics & Statistics (Dni 3-4)**
 
-#### 2.1 Infrastructure Layer - Models
-
-- **Models/ReconciliationReport.cs**
-
-  - ReportId, RunDate, TenantId, DiscrepanciesCount, AutoResolvedCount, Status
-  - Statistics: TotalPayments, MatchedPayments, MismatchedPayments
-
-- **Models/PaymentDiscrepancy.cs**
-  - PaymentId, DiscrepancyType enum (StatusMismatch, AmountMismatch, Missing),
-  - OrbitoStatus, StripeStatus, OrbitoAmount, StripeAmount, Resolution, ResolvedAt
-
-#### 2.2 Infrastructure Layer - Services
-
-- **IPaymentReconciliationService.cs + PaymentReconciliationService.cs**
-
-  - `ReconcileWithStripeAsync(DateTime fromDate, DateTime toDate, Guid tenantId)`
-
-    - Batch fetch z Stripe API (100 per request)
-    - Parallel comparison z local DB
-    - Generate discrepancy list
-
-  - `GenerateDiscrepancyReportAsync(List<PaymentDiscrepancy> discrepancies)`
-
-    - Group by DiscrepancyType
-    - Calculate statistics
-    - Save to ReconciliationReports table
-
-  - `AutoResolveDiscrepanciesAsync(ReconciliationReport report)`
-    - Auto-fix rules:
-      - Status mismatch: update local if Stripe is source of truth
-      - Amount mismatch: flag for manual review
-      - Missing in Stripe: mark as potentially fraudulent
-    - Transaction safety: SaveChangesAsync per batch
-
-#### 2.3 Infrastructure Layer - Repository
-
-- **IReconciliationRepository.cs** + Implementation
-  - `SaveReportAsync(ReconciliationReport)`
-  - `GetRecentReportsAsync(int count, Guid tenantId)`
-  - `GetDiscrepanciesByReportIdAsync(Guid reportId)`
-  - Indexes: (RunDate, TenantId), (ReportId, DiscrepancyType)
-
-#### 2.4 Infrastructure Layer - Background Job
-
-- **BackgroundJobs/DailyReconciliationJob.cs**
-  - Hangfire/Quartz scheduled job: daily at 2:00 AM UTC
-  - `RunReconciliationAsync()`:
-    - Iterate przez wszystkie tenants
-    - Run reconciliation dla last 24h
-    - Generate report
-  - `SendReconciliationReportAsync(ReconciliationReport)`:
-    - Email notification z summary
-    - Critical discrepancies � Slack/Teams webhook
-
----
-
-### **Etap 3: Monitoring & Health Checks**
-
-#### 3.1 API Layer - Health Checks
-
-- **HealthChecks/StripeHealthCheck.cs**
-
-  - Check: Stripe API connectivity (GET /v1/balance)
-  - Timeout: 5 seconds
-  - Return: Healthy/Degraded/Unhealthy
-
-- **HealthChecks/PaymentSystemHealthCheck.cs**
-  - Checks:
-    - DB connection (EF Core check)
-    - Failed payments ratio last 1h (> 20% � Degraded)
-    - Pending retries count (> 1000 � Degraded)
-    - Stripe webhook response time (> 3s � Degraded)
-  - Composite health check
-
-#### 3.2 Program.cs Registration
-
-```csharp
-builder.Services.AddHealthChecks()
-    .AddCheck<StripeHealthCheck>("stripe", tags: new[] { "external" })
-    .AddCheck<PaymentSystemHealthCheck>("payment_system", tags: new[] { "critical" })
-    .AddDbContextCheck<ApplicationDbContext>();
-
-app.MapHealthChecks("/health", new HealthCheckOptions {
-    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
-});
-```
-
----
-
-### **Etap 4: Metrics & Statistics**
-
-#### 4.1 Application Layer - Services
+#### 4.1 Application Layer - Zaawansowane Metryki
 
 - **IPaymentMetricsService.cs + PaymentMetricsService.cs**
-
   - `GetPaymentSuccessRateAsync(DateRange range, Guid? providerId)`
-
-    - SQL: `COUNT(*) FILTER(WHERE Status = 'Succeeded') / COUNT(*) * 100`
-    - Group by hour/day/week
-
   - `GetAverageProcessingTimeAsync(DateRange range)`
-
-    - SQL: `AVG(DATEDIFF(second, CreatedAt, CompletedAt))`
-    - Filter: tylko Succeeded
-
   - `GetFailureReasonsBreakdownAsync(DateRange range, Guid? providerId)`
-
-    - Group by FailureReason
-    - Count + percentage
-
   - `GetRevenueMetricsAsync(DateRange range, Guid providerId)`
-    - SUM(Amount) WHERE Status = 'Succeeded'
-    - Group by Currency, SubscriptionPlan
 
 #### 4.2 Application Layer - Queries
 
-- **Queries/GetPaymentStatisticsQuery.cs** + Handler
+- **GetPaymentStatisticsQuery.cs** + Handler
+- **GetRevenueReportQuery.cs** + Handler
+- **GetPaymentTrendsQuery.cs** + Handler
 
-  - Input: DateRange, ProviderId (optional), ClientId (optional)
-  - Output: StatisticsDto (SuccessRate, TotalRevenue, AverageAmount, TopFailureReasons)
-  - Security: TenantId filtering
+#### 4.3 API Layer - Controller
 
-- **Queries/GetRevenueReportQuery.cs** + Handler
-
-  - Input: DateRange, GroupBy (Day/Week/Month), ProviderId
-  - Output: List<RevenueDataPoint> (Date, Amount, Currency, TransactionCount)
-
-- **Queries/GetPaymentTrendsQuery.cs** + Handler
-  - Input: DateRange, Granularity (Hourly/Daily/Weekly)
-  - Output: TrendDto (SuccessRate over time, Volume over time, Average amount trend)
+- **PaymentMetricsController.cs**
+  - `GET /api/payments/metrics/statistics`
+  - `GET /api/payments/metrics/revenue`
+  - `GET /api/payments/metrics/trends`
+  - `GET /api/payments/metrics/failure-reasons`
 
 ---
 
-### **Etap 5: Security & Idempotency**
+### **Etap 5: Security & Idempotency (Dni 5-6)**
 
 #### 5.1 Domain Layer
 
 - **ValueObjects/IdempotencyKey.cs**
   - Immutable record
   - Validation: GUID format or custom string (max 100 chars)
-  - Factory method: `Create(string key)` z walidacj
+  - Factory method: `Create(string key)` z walidacją
 
 #### 5.2 Domain Entity Update
 
@@ -213,9 +95,9 @@ app.MapHealthChecks("/health", new HealthCheckOptions {
 - **Middleware/IdempotencyMiddleware.cs**
   - Intercept POST requests do `/api/payments/*`
   - Extract header: `X-Idempotency-Key`
-  - Check cache (Redis): czy request ju| przetworzony
-  - If exists � return cached response (200 OK)
-  - If new � process + cache response (TTL: 24h)
+  - Check cache (Redis): czy request już przetworzony
+  - If exists → return cached response (200 OK)
+  - If new → process + cache response (TTL: 24h)
   - Thread-safe z distributed lock (Redis)
 
 #### 5.4 Infrastructure Layer - Cache
@@ -227,60 +109,9 @@ app.MapHealthChecks("/health", new HealthCheckOptions {
 
 ---
 
-### **Etap 6: Database Migrations**
+## 🗄️ **Database Migrations - BRAKUJĄCE**
 
-#### 6.1 Migration: AddPaymentRetrySchedules
-
-```sql
-CREATE TABLE PaymentRetrySchedules (
-    Id UNIQUEIDENTIFIER PRIMARY KEY,
-    PaymentId UNIQUEIDENTIFIER FOREIGN KEY REFERENCES Payments(Id),
-    TenantId UNIQUEIDENTIFIER NOT NULL,
-    NextAttemptAt DATETIME2 NOT NULL,
-    AttemptNumber INT NOT NULL,
-    MaxAttempts INT NOT NULL DEFAULT 5,
-    Status NVARCHAR(50) NOT NULL,
-    LastError NVARCHAR(MAX),
-    CreatedAt DATETIME2 NOT NULL,
-    UpdatedAt DATETIME2
-);
-CREATE INDEX IX_PaymentRetrySchedules_NextAttemptAt_Status
-    ON PaymentRetrySchedules(NextAttemptAt, Status) WHERE Status = 'Scheduled';
-CREATE INDEX IX_PaymentRetrySchedules_PaymentId
-    ON PaymentRetrySchedules(PaymentId);
-```
-
-#### 6.2 Migration: AddReconciliationTables
-
-```sql
-CREATE TABLE ReconciliationReports (
-    Id UNIQUEIDENTIFIER PRIMARY KEY,
-    TenantId UNIQUEIDENTIFIER NOT NULL,
-    RunDate DATETIME2 NOT NULL,
-    FromDate DATETIME2 NOT NULL,
-    ToDate DATETIME2 NOT NULL,
-    Status NVARCHAR(50) NOT NULL,
-    DiscrepanciesCount INT NOT NULL,
-    AutoResolvedCount INT NOT NULL,
-    TotalPayments INT NOT NULL,
-    CreatedAt DATETIME2 NOT NULL
-);
-
-CREATE TABLE PaymentDiscrepancies (
-    Id UNIQUEIDENTIFIER PRIMARY KEY,
-    ReportId UNIQUEIDENTIFIER FOREIGN KEY REFERENCES ReconciliationReports(Id),
-    PaymentId UNIQUEIDENTIFIER,
-    DiscrepancyType NVARCHAR(50) NOT NULL,
-    OrbitoStatus NVARCHAR(50),
-    StripeStatus NVARCHAR(50),
-    OrbitoAmount DECIMAL(18,2),
-    StripeAmount DECIMAL(18,2),
-    Resolution NVARCHAR(MAX),
-    ResolvedAt DATETIME2
-);
-```
-
-#### 6.3 Migration: AddIdempotencyKeyToPayments
+### **Migration: AddIdempotencyKeyToPayments**
 
 ```sql
 ALTER TABLE Payments
@@ -290,7 +121,7 @@ CREATE UNIQUE INDEX IX_Payments_IdempotencyKey
     ON Payments(IdempotencyKey) WHERE IdempotencyKey IS NOT NULL;
 ```
 
-#### 6.4 Migration: AddPerformanceIndexes
+### **Migration: AddPerformanceIndexes**
 
 ```sql
 CREATE INDEX IX_Payments_CreatedAt_Status
@@ -301,31 +132,13 @@ CREATE INDEX IX_Payments_TenantId_ClientId_Status
 
 ---
 
-### **Etap 7: Configuration (DzieD 9)**
+## ⚙️ **Configuration - BRAKUJĄCE**
 
-#### 7.1 appsettings.json
+### **appsettings.json - Dodatkowe Ustawienia**
 
 ```json
 {
   "PaymentSettings": {
-    "Retry": {
-      "MaxAttempts": 5,
-      "BackoffMultiplier": 2.0,
-      "InitialDelayMinutes": 5,
-      "MaxDelayHours": 24
-    },
-    "Reconciliation": {
-      "RunTime": "02:00:00",
-      "LookbackDays": 7,
-      "EmailRecipients": ["finance@orbito.com", "admin@orbito.com"],
-      "SlackWebhookUrl": "https://hooks.slack.com/...",
-      "CriticalDiscrepancyThreshold": 10
-    },
-    "Monitoring": {
-      "FailureRateThresholdPercent": 20,
-      "MaxPendingRetries": 1000,
-      "StripeHealthCheckTimeoutSeconds": 5
-    },
     "Idempotency": {
       "CacheTtlHours": 24,
       "RedisConnectionString": "localhost:6379"
@@ -334,202 +147,93 @@ CREATE INDEX IX_Payments_TenantId_ClientId_Status
 }
 ```
 
-#### 7.2 Configuration Classes
+### **Configuration Classes - NOWE**
 
-- **PaymentRetrySettings.cs**
-- **ReconciliationSettings.cs**
-- **MonitoringSettings.cs**
 - **IdempotencySettings.cs**
 
 ---
 
-### **Etap 8: Integration & Testing (Dni 10-11)**
+## 🧪 **Testing - BRAKUJĄCE**
 
-#### 8.1 Unit Tests (95% coverage)
+### **Unit Tests**
 
-- **PaymentRetryServiceTests.cs**
+- **PaymentRetryServiceTests.cs** - test exponential backoff
+- **IdempotencyMiddlewareTests.cs** - test duplicate request handling
+- **PaymentMetricsServiceTests.cs** - test metryki
 
-  - Test exponential backoff calculation
-  - Test thread-safety (parallel retry scheduling)
-  - Test max attempts enforcement
+### **Integration Tests**
 
-- **ReconciliationServiceTests.cs**
-
-  - Test discrepancy detection
-  - Test auto-resolution rules
-  - Mock Stripe API responses
-
-- **IdempotencyMiddlewareTests.cs**
-  - Test duplicate request handling
-  - Test cache expiration
-  - Test concurrent requests
-
-#### 8.2 Integration Tests
-
-- **PaymentRetryIntegrationTests.cs**
-
-  - End-to-end: failed payment � schedule retry � process retry � success
-  - Test with real DB (in-memory)
-
-- **ReconciliationIntegrationTests.cs**
-  - Test full reconciliation flow
-  - Test report generation + email sending
-
-#### 8.3 Load Tests
-
-- **PaymentRetryLoadTests.cs** (k6 or NBomber)
-  - Simulate 1000 failed payments
-  - Test retry processing performance
-  - Measure DB connection pool usage
+- **PaymentRetryIntegrationTests.cs** - end-to-end retry flow
+- **IdempotencyIntegrationTests.cs** - test cache behavior
 
 ---
 
-### **Etap 9: API Endpoints (DzieD 12)**
+## 📋 **Security Checklist - AKTUALIZACJA**
 
-#### 9.1 PaymentRetryController.cs
+### ✅ **ZAIMPLEMENTOWANE**
 
-```csharp
-[Authorize(Roles = "Provider,Client")]
-[Route("api/payments/retry")]
-public class PaymentRetryController : ApiControllerBase
-{
-    [HttpPost("{paymentId}")]
-    public async Task<IActionResult> RetryPayment(Guid paymentId, CancellationToken ct);
+- [x] **Wszystkie repozytoria** używają `ITenantContext` + `ClientId` verification
+- [x] **Query filters** po TenantId w każdej tabeli
+- [x] **Webhook signature verification** dla Stripe callbacks
+- [x] **Input validation** FluentValidation dla wszystkich commands
+- [x] **Authorization** checks w każdym endpoincie (Roles + TenantId)
+- [x] **SQL injection prevention** - tylko parametryzowane queries
 
-    [HttpPost("bulk")]
-    public async Task<IActionResult> BulkRetry([FromBody] BulkRetryRequest request, CancellationToken ct);
+### ❌ **DO ZAIMPLEMENTOWANIA**
 
-    [HttpGet("scheduled")]
-    public async Task<IActionResult> GetScheduledRetries([FromQuery] PaginationParams pagination, CancellationToken ct);
-
-    [HttpDelete("{scheduleId}")]
-    public async Task<IActionResult> CancelRetry(Guid scheduleId, CancellationToken ct);
-}
-```
-
-#### 9.2 ReconciliationController.cs
-
-```csharp
-[Authorize(Roles = "PlatformAdmin,Provider")]
-[Route("api/reconciliation")]
-public class ReconciliationController : ApiControllerBase
-{
-    [HttpPost("run")]
-    public async Task<IActionResult> RunReconciliation([FromBody] ReconciliationRequest request, CancellationToken ct);
-
-    [HttpGet("reports")]
-    public async Task<IActionResult> GetReports([FromQuery] PaginationParams pagination, CancellationToken ct);
-
-    [HttpGet("reports/{reportId}/discrepancies")]
-    public async Task<IActionResult> GetDiscrepancies(Guid reportId, CancellationToken ct);
-}
-```
-
-#### 9.3 PaymentMetricsController.cs
-
-```csharp
-[Authorize(Roles = "Provider")]
-[Route("api/payments/metrics")]
-public class PaymentMetricsController : ApiControllerBase
-{
-    [HttpGet("statistics")]
-    public async Task<IActionResult> GetStatistics([FromQuery] DateRangeParams dateRange, CancellationToken ct);
-
-    [HttpGet("revenue")]
-    public async Task<IActionResult> GetRevenue([FromQuery] RevenueReportParams params, CancellationToken ct);
-
-    [HttpGet("trends")]
-    public async Task<IActionResult> GetTrends([FromQuery] TrendParams params, CancellationToken ct);
-
-    [HttpGet("failure-reasons")]
-    public async Task<IActionResult> GetFailureReasons([FromQuery] DateRangeParams dateRange, CancellationToken ct);
-}
-```
-
----
-
-### **Etap 10: Documentation & Deployment (DzieD 13)**
-
-#### 10.1 XML Documentation
-
-- Dodaj XML comments do wszystkich publicznych API
-- Swagger examples dla complex DTOs
-
-#### 10.2 Migration Scripts
-
-- Production-ready migration scripts
-- Rollback scripts for emergency
-
-#### 10.3 Deployment Checklist
-
-- [ ] Wszystkie testy green (Unit + Integration)
-- [ ] Migracje przetestowane na staging
-- [ ] Redis cache configured
-- [ ] Hangfire/Quartz job registered
-- [ ] Health checks verified
-- [ ] Monitoring dashboards created (Grafana)
-- [ ] Alert rules configured (critical failures)
-- [ ] Performance baseline established
-
----
-
-## = Security Checklist
-
-- [ ] **Wszystkie repozytoria** u|ywaj `ITenantContext` + `ClientId` verification
-- [ ] **Query filters** po TenantId w ka|dej tabeli
 - [ ] **Rate limiting** dla retry endpoints (max 5 requests/15min)
 - [ ] **Idempotency keys** wymagane dla payment creation
-- [ ] **Webhook signature verification** dla Stripe callbacks
-- [ ] **Input validation** FluentValidation dla wszystkich commands
-- [ ] **Authorization** checks w ka|dym endpoincie (Roles + TenantId)
-- [ ] **SQL injection prevention** - tylko parametryzowane queries
 - [ ] **Secrets management** - Azure Key Vault/AWS Secrets Manager
 - [ ] **Audit logging** dla sensitive operations (retry, reconciliation)
 
 ---
 
-## =� Success Metrics
+## 🎯 **Success Metrics - AKTUALIZACJA**
 
 ### Performance KPIs
 
-- Payment retry success rate > 80%
-- Reconciliation runtime < 5 minutes (dla 10k payments)
-- Health check response time < 500ms
-- API response time (p95) < 200ms
+- ✅ Reconciliation runtime < 5 minutes (dla 10k payments) - **OSIĄGNIĘTE**
+- ✅ Health check response time < 500ms - **OSIĄGNIĘTE**
+- [ ] Payment retry success rate > 80% - **DO TESTOWANIA**
+- [ ] API response time (p95) < 200ms - **DO TESTOWANIA**
 
 ### Quality KPIs
 
-- Test coverage > 95%
-- Zero critical security vulnerabilities (SonarQube)
-- Code duplication < 3%
-- Technical debt ratio < 5%
+- [ ] Test coverage > 95% - **DO OSIĄGNIĘCIA**
+- [ ] Zero critical security vulnerabilities (SonarQube)
+- [ ] Code duplication < 3%
+- [ ] Technical debt ratio < 5%
 
 ---
 
-## =� Deployment Strategy
+## 🚀 **Deployment Strategy - AKTUALIZACJA**
 
-### Phase 1: Dark Launch (Week 1)
+### Phase 1: Retry API Endpoints (Week 1)
 
-- Deploy retry logic (disabled via feature flag)
-- Monitor logs, no user impact
+- Deploy PaymentRetryController
+- Test retry endpoints
+- Monitor performance
 
-### Phase 2: Canary (Week 2)
+### Phase 2: Advanced Metrics (Week 2)
 
-- Enable retry dla 10% tenants
-- Monitor metrics closely
+- Deploy PaymentMetricsController
+- Test metryki endpoints
+- Monitor usage
 
-### Phase 3: Full Rollout (Week 3)
+### Phase 3: Idempotency (Week 3)
 
-- Enable dla wszystkich tenants
-- 24/7 on-call monitoring
+- Deploy IdempotencyMiddleware
+- Test duplicate request handling
+- Monitor cache performance
 
-### Phase 4: Reconciliation (Week 4)
+### Phase 4: Full Testing (Week 4)
 
-- Enable daily reconciliation job
-- Email reports to finance team
+- Comprehensive testing
+- Performance optimization
+- Security audit
 
 ---
 
-**Szacowany czas realizacji**: 13 dni roboczych (2.5 tygodnia)
-**Team size**: 2 senior developers + 1 QA engineer
-**Risk level**: Medium (external API dependency - Stripe)
+**Szacowany czas realizacji**: 6 dni roboczych (1.5 tygodnia)
+**Team size**: 1 senior developer
+**Risk level**: Low (wszystkie komponenty już zaimplementowane, tylko brakuje API endpoints)

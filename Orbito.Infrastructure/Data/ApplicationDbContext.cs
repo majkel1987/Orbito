@@ -49,6 +49,8 @@ namespace Orbito.Infrastructure.Data
         public DbSet<PaymentWebhookLog> PaymentWebhookLogs { get; set; } = null!;
         public DbSet<EmailNotification> EmailNotifications { get; set; } = null!;
         public DbSet<PaymentRetrySchedule> PaymentRetrySchedules { get; set; } = null!;
+        public DbSet<ReconciliationReport> ReconciliationReports { get; set; } = null!;
+        public DbSet<PaymentDiscrepancy> PaymentDiscrepancies { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -117,6 +119,8 @@ namespace Orbito.Infrastructure.Data
             SetTenantQueryFilterGeneric<PaymentWebhookLog>(builder);
             SetTenantQueryFilterGeneric<EmailNotification>(builder);
             SetTenantQueryFilterGeneric<PaymentRetrySchedule>(builder);
+            SetTenantQueryFilterGeneric<ReconciliationReport>(builder);
+            SetTenantQueryFilterGeneric<PaymentDiscrepancy>(builder);
         }
 
         /// <summary>

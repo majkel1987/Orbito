@@ -4,7 +4,136 @@
 
 Orbito to nowoczesna platforma SaaS zbudowana w architekturze Clean Architecture, wykorzystująca wzorce DDD (Domain-Driven Design) i CQRS z MediatR.
 
-## 🆕 Najnowsze Funkcje (v2.3) - Payment Retry System
+## 🆕 Najnowsze Funkcje (v2.4) - Payment Reconciliation System
+
+### 🔍 System Rekoncyliacji Płatności (Payment Reconciliation System)
+
+- **Automatyczna rekoncyliacja z Stripe** - dzienna synchronizacja płatności między Orbito a Stripe
+- **ReconciliationReport Entity** - szczegółowe raporty z dyskrepancjami
+- **PaymentDiscrepancy Entity** - zarządzanie rozbieżnościami w płatnościach
+- **DiscrepancyType Enum** - typy rozbieżności: StatusMismatch, AmountMismatch, MissingInStripe, MissingInOrbito
+- **ReconciliationStatus Enum** - statusy raportów: InProgress, Completed, Failed, CompletedWithDiscrepancies
+- **DiscrepancyResolution Enum** - statusy rozwiązania: Pending, AutoResolved, RequiresManualReview, ManuallyResolved, Ignored
+
+### 🎯 PaymentReconciliationService - Główny Serwis
+
+- **ReconcileWithStripeAsync** - automatyczna rekoncyliacja płatności dla określonego okresu
+  - Batch fetch z Stripe API (100 płatności na request)
+  - Parallel comparison z lokalną bazą danych
+  - Thread-safe processing z ograniczeniem do 5 równoczesnych tasków
+- **AutoResolveDiscrepanciesAsync** - automatyczne rozwiązywanie rozbieżności
+  - Status mismatch: automatyczna aktualizacja lokalnego statusu na podstawie Stripe
+  - Amount mismatch: oznaczanie do manualnej weryfikacji
+  - Missing in Stripe: oznaczanie potencjalnych fraudów
+  - Transaction safety: SaveChangesAsync per batch
+- **GenerateDiscrepancyReportAsync** - generowanie szczegółowych raportów z dyskrepancjami
+- **SendReconciliationReportAsync** - wysyłanie powiadomień o wynikach rekoncyliacji
+
+### 📊 ReconciliationReport - Szczegółowe Raporty
+
+- **Statystyki rekoncyliacji**:
+  - TotalPayments - całkowita liczba płatności
+  - MatchedPayments - dopasowane płatności
+  - MismatchedPayments - płatności z rozbieżnościami
+  - DiscrepanciesCount - liczba znalezionych dyskrepancji
+  - AutoResolvedCount - automatycznie rozwiązane
+  - ManualReviewCount - wymagające manualnej weryfikacji
+- **Metadane raportu**: RunDate, PeriodStart, PeriodEnd, Status
+- **Szczegóły wykonania**: StartedAt, CompletedAt, Duration, ErrorMessage
+
+### 🔄 PaymentDiscrepancy - Zarządzanie Rozbieżnościami
+
+- **Factory methods** dla tworzenia różnych typów dyskrepancji:
+  - CreateStatusMismatch - rozbieżność w statusie płatności
+  - CreateAmountMismatch - rozbieżność w kwocie płatności
+  - CreateMissingPayment - płatność brakująca w jednym z systemów
+- **Rozwiązywanie dyskrepancji**:
+  - MarkAsAutoResolved - automatyczne rozwiązanie
+  - MarkAsRequiresManualReview - wymaga ręcznej weryfikacji
+  - MarkAsManuallyResolved - rozwiązane manualnie
+  - MarkAsIgnored - zignorowane (false positive)
+- **Szczegóły porównania**:
+  - OrbitoStatus vs StripeStatus
+  - OrbitoAmount/Currency vs StripeAmount/Currency
+  - PaymentId, ExternalPaymentId
+  - ResolutionNotes, ResolvedAt, ResolvedBy
+
+### ⏰ DailyReconciliationJob - Background Processing
+
+- **Scheduled execution** - codziennie o 2:00 AM UTC
+- **Multi-tenant processing** - iteracja przez wszystkich aktywnych tenantów
+- **Reconciliation window** - ostatnie 24 godziny
+- **Timeout protection** - 10 minut na tenant
+- **Rate limiting** - 2 sekundy opóźnienia między tenantami
+- **Error handling** - kontynuacja przy błędach, szczegółowe logowanie
+- **Critical alerts** - powiadomienia przy dużej liczbie dyskrepancji (>100)
+
+### 🗄️ IReconciliationRepository - Zarządzanie Danymi
+
+- **SaveReportAsync** - zapisywanie raportów z dyskrepancjami
+- **GetRecentReportsAsync** - pobieranie ostatnich raportów dla tenanta
+- **GetReportWithDiscrepanciesAsync** - szczegółowy raport z wszystkimi dyskrepancjami
+- **GetDiscrepanciesByReportIdAsync** - dyskrepancje dla konkretnego raportu
+- **GetUnresolvedDiscrepanciesAsync** - nierozwiązane dyskrepancje dla tenanta
+- **UpdateDiscrepancyAsync** - aktualizacja statusu rozwiązania dyskrepancji
+- **Multi-tenant security** - wszystkie metody z weryfikacją TenantId
+
+### 🔐 Security & Performance
+
+- **Tenant isolation** - pełna izolacja danych między tenantami
+- **Query filters** - automatyczne filtrowanie po TenantId w EF Core
+- **Parallel processing** - równoległe przetwarzanie z SemaphoreSlim (max 5 tasków)
+- **Stripe API rate limiting** - batch processing (100 per request)
+- **Database indexes** - optymalizacja zapytań dla wydajności:
+  - ix_reconciliation_reports_tenant_run_date
+  - ix_reconciliation_reports_tenant_status
+  - ix_payment_discrepancies_tenant_resolution
+  - ix_payment_discrepancies_tenant_type
+
+### 📁 Nowe Pliki - Reconciliation System
+
+#### Domain Layer (5 plików)
+
+- `Orbito.Domain/Entities/ReconciliationReport.cs` - encja raportu rekoncyliacji
+- `Orbito.Domain/Entities/PaymentDiscrepancy.cs` - encja dyskrepancji płatności
+- `Orbito.Domain/Enums/ReconciliationStatus.cs` - enum statusów raportów
+- `Orbito.Domain/Enums/DiscrepancyType.cs` - enum typów dyskrepancji
+- `Orbito.Domain/Enums/DiscrepancyResolution.cs` - enum statusów rozwiązania
+
+#### Application Layer (2 pliki)
+
+- `Orbito.Application/Common/Interfaces/IPaymentReconciliationService.cs` - interfejs serwisu
+- `Orbito.Application/Common/Interfaces/IReconciliationRepository.cs` - interfejs repozytorium
+
+#### Infrastructure Layer (5 plików)
+
+- `Orbito.Infrastructure/Services/PaymentReconciliationService.cs` - główna implementacja serwisu
+- `Orbito.Infrastructure/Persistence/ReconciliationRepository.cs` - implementacja repozytorium
+- `Orbito.Infrastructure/Data/Configurations/Entity/ReconciliationReportConfiguration.cs` - konfiguracja EF Core
+- `Orbito.Infrastructure/Data/Configurations/Entity/PaymentDiscrepancyConfiguration.cs` - konfiguracja EF Core
+- `Orbito.Infrastructure/BackgroundJobs/DailyReconciliationJob.cs` - background job
+
+#### Database Migrations (1 plik)
+
+- `Orbito.Infrastructure/Migrations/20251008174055_AddReconciliationSystem.cs` - migracja bazy danych
+
+### 🔄 Zmodyfikowane Pliki - Reconciliation System (3 pliki)
+
+- `Orbito.Infrastructure/Data/ApplicationDbContext.cs` - dodanie DbSets i query filters
+- `Orbito.Infrastructure/DependencyInjection.cs` - rejestracja serwisów i background job
+- `README.md` - dokumentacja nowej funkcjonalności
+
+### 📊 Statystyki Zmian - Reconciliation System
+
+- **Nowe pliki**: 13 plików
+- **Zmodyfikowane pliki**: 3 pliki
+- **Łącznie**: 16 plików dotkniętych zmianami
+- **Nowe linie kodu**: ~2500+ linii
+- **Nowe database tables**: 2 tabele (ReconciliationReports, PaymentDiscrepancies)
+- **Nowe enums**: 3 enumy (ReconciliationStatus, DiscrepancyType, DiscrepancyResolution)
+- **Background jobs**: 1 job (DailyReconciliationJob)
+
+## 🆕 Poprzednie Funkcje (v2.3) - Payment Retry System
 
 ### 🔄 System Ponawiania Płatności (Payment Retry System)
 
@@ -1282,7 +1411,7 @@ dotnet test --collect:"XPlat Code Coverage" --results-directory ./TestResults
 - [x] Konfiguracja logowania z Serilog
 - [x] JWT Authentication
 - [x] Pipeline Behaviors (Logging, Validation, Performance)
-- [x] Health Checks
+- [x] **Health Checks** - kompletny system monitorowania z StripeHealthCheck i PaymentSystemHealthCheck
 - [x] Swagger dokumentacja
 - [x] **Multi-Tenancy Architecture** - kompletna implementacja
 - [x] **Entity Configurations** - wszystkie encje skonfigurowane
@@ -1698,6 +1827,7 @@ W przypadku problemów lub pytań:
 49. **📧 Pełne Szablony Email** - dodano SendPartialRefundConfirmationAsync i GetPartialRefundConfirmationBody do PaymentEmailTemplates
 50. **🎯 Zgodność Typów** - zmiana paymentMethodId z string na Guid w ProcessSubscriptionPaymentAsync dla spójności typu
 51. **✨ Nowe Metody** - GetDefaultPaymentMethodAsync i ValidatePaymentMethodAsync w IPaymentProcessingService
+52. **🏥 Health Checks System** - kompletny system monitorowania zdrowia aplikacji z StripeHealthCheck i PaymentSystemHealthCheck
 
 ### 🔧 Architektura
 
@@ -4029,6 +4159,187 @@ Aplikacja jest teraz production-ready z następującymi osiągnięciami:
 ✅ **Monitoring** - health checks i error tracking  
 ✅ **Maintainability** - rozdzielone joby, czytelny kod  
 ✅ **Logging** - kompletne logowanie na wszystkich poziomach
+
+---
+
+## 🏥 Health Checks System (Etap 3 - 2025-10-08)
+
+### 📋 Przegląd Systemu
+
+Zaimplementowano kompletny system monitorowania zdrowia aplikacji zgodnie z Etapem 3 planu implementacji. System składa się z dwóch głównych health checks:
+
+1. **StripeHealthCheck** - monitorowanie połączenia z API Stripe
+2. **PaymentSystemHealthCheck** - kompozytowy health check systemu płatności
+
+### 🔧 Implementowane Komponenty
+
+#### 1. StripeHealthCheck
+
+**Lokalizacja:** `Orbito.API/HealthChecks/StripeHealthCheck.cs`
+
+**Funkcjonalności:**
+
+- ✅ Sprawdzenie połączenia z Stripe API (GET /v1/balance)
+- ✅ Timeout 5 sekund
+- ✅ Pomiar czasu odpowiedzi
+- ✅ Obsługa błędów Stripe API
+- ✅ Różne poziomy zdrowia: Healthy/Degraded/Unhealthy
+- ✅ Szczegółowe logowanie i metryki
+
+**Statusy:**
+
+- **Healthy**: Czas odpowiedzi ≤ 3s
+- **Degraded**: Czas odpowiedzi 3-5s
+- **Unhealthy**: Czas odpowiedzi > 5s lub błąd API
+
+#### 2. PaymentSystemHealthCheck
+
+**Lokalizacja:** `Orbito.API/HealthChecks/PaymentSystemHealthCheck.cs`
+
+**Funkcjonalności:**
+
+- ✅ Sprawdzenie połączenia z bazą danych
+- ✅ Analiza wskaźnika nieudanych płatności (ostatnia godzina)
+- ✅ Liczenie oczekujących retry'ów
+- ✅ Pomiar czasu odpowiedzi webhooków
+- ✅ Konfigurowalne progi alarmowe
+
+**Sprawdzane metryki:**
+
+- **Database**: Połączenie z EF Core
+- **Failed Payments Ratio**: > 20% = Degraded
+- **Pending Retries**: > 1000 = Degraded
+- **Webhook Response Time**: > 3s = Degraded
+
+### ⚙️ Konfiguracja
+
+#### Program.cs Registration
+
+```csharp
+// Configure Health Checks with custom checks
+builder.Services.AddHealthChecks()
+    .AddCheck<StripeHealthCheck>("stripe", tags: new[] { "external" })
+    .AddCheck<PaymentSystemHealthCheck>("payment_system", tags: new[] { "critical" })
+    .AddDbContextCheck<ApplicationDbContext>();
+
+// Configure Health Check endpoints
+app.MapHealthChecks("/health");
+app.MapHealthChecksUI();
+```
+
+#### appsettings.json Configuration
+
+```json
+{
+  "MonitoringSettings": {
+    "FailureRateThresholdPercent": 20,
+    "MaxPendingRetries": 1000,
+    "StripeHealthCheckTimeoutSeconds": 5
+  }
+}
+```
+
+### 🌐 Endpointy
+
+#### Health Check Endpoints
+
+- **`/health`** - JSON response z statusem wszystkich health checks
+- **`/healthchecks-ui`** - Interfejs webowy do monitorowania
+
+#### Przykład Response
+
+```json
+{
+  "status": "Healthy",
+  "totalDuration": "00:00:00.1234567",
+  "entries": {
+    "stripe": {
+      "status": "Healthy",
+      "description": "Stripe API is healthy (response time: 245ms)",
+      "data": {
+        "response_time_ms": 245,
+        "environment": "test",
+        "available_currencies": 2
+      }
+    },
+    "payment_system": {
+      "status": "Healthy",
+      "description": "Payment system is healthy",
+      "data": {
+        "database": { "status": "healthy", "response_time_ms": 12 },
+        "failed_payments_ratio": { "failure_rate_percent": 5.2 },
+        "pending_retries": { "count": 23 },
+        "webhook_response_time": { "avg_response_time_ms": 1200 }
+      }
+    }
+  }
+}
+```
+
+### 🏷️ Tagi i Kategoryzacja
+
+Health checks są kategoryzowane za pomocą tagów:
+
+- **`external`** - Zewnętrzne serwisy (Stripe API)
+- **`critical`** - Krytyczne komponenty systemu (Payment System)
+
+### 📊 Monitoring i Alerting
+
+#### Metryki Zbierane
+
+**StripeHealthCheck:**
+
+- Czas odpowiedzi API
+- Środowisko (test/live)
+- Liczba dostępnych walut
+- Typy błędów Stripe
+
+**PaymentSystemHealthCheck:**
+
+- Status bazy danych
+- Wskaźnik nieudanych płatności
+- Liczba oczekujących retry'ów
+- Średni czas przetwarzania webhooków
+
+#### Logowanie
+
+Wszystkie health checks logują:
+
+- Debug: Informacje o rozpoczęciu sprawdzania
+- Warning: Degraded status
+- Error: Unhealthy status z szczegółami błędów
+
+### 🔒 Bezpieczeństwo
+
+- ✅ Walidacja konfiguracji Stripe przed sprawdzeniem
+- ✅ Timeout protection (5s dla Stripe API)
+- ✅ Exception handling z szczegółowymi informacjami
+- ✅ Brak ekspozycji wrażliwych danych w response
+
+### 🚀 Korzyści
+
+1. **Proaktywne Monitorowanie** - wczesne wykrywanie problemów
+2. **Szczegółowe Metryki** - dokładne informacje o stanie systemu
+3. **Konfigurowalne Progi** - dostosowanie do potrzeb biznesowych
+4. **UI Dashboard** - łatwy dostęp do statusu systemu
+5. **Integration Ready** - gotowe do integracji z systemami monitorowania
+
+### 🔍 Weryfikacja
+
+Po wdrożeniu sprawdź:
+
+1. **Endpoint `/health`** - czy zwraca poprawne dane JSON
+2. **UI Dashboard** - czy `/healthchecks-ui` działa poprawnie
+3. **Stripe API** - czy health check wykrywa problemy z połączeniem
+4. **Database** - czy health check wykrywa problemy z bazą danych
+5. **Metryki** - czy wszystkie metryki są poprawnie zbierane
+
+### 📈 Następne Kroki (Opcjonalne)
+
+1. **Prometheus Integration** - eksport metryk do Prometheus
+2. **Grafana Dashboard** - wizualizacja metryk
+3. **Alerting Rules** - automatyczne powiadomienia
+4. **Custom Health Checks** - dodatkowe sprawdzenia biznesowe
 
 ---
 

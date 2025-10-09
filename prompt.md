@@ -1,4 +1,4 @@
-Przeanalizuj kod pod kątem:
+Twórz kod pod kątem:
 
 🔒 SECURITY: luki bezpieczeństwa, izolacja tenant (tenant context), SQL injection, XSS, autoryzacja, walidacja inputów
 
