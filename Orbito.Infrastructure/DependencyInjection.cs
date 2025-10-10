@@ -134,6 +134,7 @@ namespace Orbito.Infrastructure
             services.AddScoped<IEmailSender, Services.EmailSender>();
             services.AddScoped<IUserContextService, Services.UserContextService>();
             services.AddScoped<IPaymentReconciliationService, Services.PaymentReconciliationService>();
+            services.AddScoped<ITransactionService, Services.TransactionService>();
 
             // Configure reconciliation settings
             services.Configure<ReconciliationSettings>(configuration.GetSection("ReconciliationSettings"));

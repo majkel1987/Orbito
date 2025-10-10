@@ -9,6 +9,8 @@ using Orbito.Domain.Identity;
 using Orbito.Domain.Interfaces;
 using Orbito.Domain.ValueObjects;
 using Orbito.Infrastructure.Data.Configurations.ValueObjects;
+using Microsoft.AspNetCore.Http;
+using System.Security.Claims;
 
 namespace Orbito.Infrastructure.Data
 {
@@ -18,24 +20,28 @@ namespace Orbito.Infrastructure.Data
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, Guid>
     {
         private readonly ITenantProvider _tenantProvider;
-        private readonly IUserContextService _userContextService;
+        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ILogger<ApplicationDbContext> _logger;
 
         // Security constants
         private static readonly Guid AdminTenantId = Guid.Empty;
 
         // Performance cache - cleared automatically between requests (DbContext is scoped)
-        private Guid? _cachedTenantId;
+        // Thread-safe cache using Lazy<T> to prevent race conditions
+        private readonly Lazy<Guid?> _cachedTenantId;
 
         public ApplicationDbContext(
             DbContextOptions<ApplicationDbContext> options,
             ITenantProvider tenantProvider,
-            IUserContextService userContextService,
+            IHttpContextAccessor httpContextAccessor,
             ILogger<ApplicationDbContext> logger) : base(options)
         {
             _tenantProvider = tenantProvider ?? throw new ArgumentNullException(nameof(tenantProvider));
-            _userContextService = userContextService ?? throw new ArgumentNullException(nameof(userContextService));
+            _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            
+            // Initialize thread-safe cache
+            _cachedTenantId = new Lazy<Guid?>(() => GetCurrentTenantIdSafe());
         }
 
         // Domain entities DbSets
@@ -145,9 +151,10 @@ namespace Orbito.Infrastructure.Data
         {
             try
             {
-                // Use cached value if available
-                if (_cachedTenantId.HasValue)
-                    return _cachedTenantId.Value;
+                // Use thread-safe cached value
+                var cachedValue = _cachedTenantId.Value;
+                if (cachedValue.HasValue)
+                    return cachedValue.Value;
 
                 var tenantId = _tenantProvider.GetCurrentTenantIdAsGuid();
 
@@ -155,18 +162,33 @@ namespace Orbito.Infrastructure.Data
                 if (tenantId == Guid.Empty)
                 {
                     _logger.LogWarning("Tenant ID not available in query filter - granting admin access");
-                    _cachedTenantId = AdminTenantId;
                     return AdminTenantId;
                 }
 
-                _cachedTenantId = tenantId;
                 return tenantId;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in query filter tenant resolution - granting admin access");
-                _cachedTenantId = AdminTenantId;
                 return AdminTenantId;
+            }
+        }
+
+        /// <summary>
+        /// Gets current tenant ID safely without throwing exceptions
+        /// </summary>
+        /// <returns>Current tenant ID or null if not available</returns>
+        private Guid? GetCurrentTenantIdSafe()
+        {
+            try
+            {
+                var tenantId = _tenantProvider.GetCurrentTenantIdAsGuid();
+                return tenantId == Guid.Empty ? null : tenantId;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting current tenant ID safely");
+                return null;
             }
         }
 
@@ -178,9 +200,10 @@ namespace Orbito.Infrastructure.Data
         /// <exception cref="UnauthorizedAccessException">Thrown when tenant context is invalid</exception>
         private Guid GetCurrentTenantIdStrict()
         {
-            // Use cached value if available and valid (not admin)
-            if (_cachedTenantId.HasValue && _cachedTenantId.Value != AdminTenantId)
-                return _cachedTenantId.Value;
+            // Use thread-safe cached value if available and valid (not admin)
+            var cachedValue = _cachedTenantId.Value;
+            if (cachedValue.HasValue && cachedValue.Value != AdminTenantId)
+                return cachedValue.Value;
 
             var tenantId = _tenantProvider.GetCurrentTenantIdAsGuid();
 
@@ -190,7 +213,6 @@ namespace Orbito.Infrastructure.Data
                 throw new UnauthorizedAccessException("Tenant context required for data modification");
             }
 
-            _cachedTenantId = tenantId;
             return tenantId;
         }
 
@@ -394,8 +416,19 @@ namespace Orbito.Infrastructure.Data
         {
             try
             {
-                var userId = _userContextService.GetCurrentUserId();
-                return userId ?? Guid.Empty;
+                var user = _httpContextAccessor.HttpContext?.User;
+                if (user?.Identity?.IsAuthenticated != true)
+                {
+                    return Guid.Empty;
+                }
+
+                var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+                {
+                    return Guid.Empty;
+                }
+
+                return userId;
             }
             catch (Exception ex)
             {
@@ -408,11 +441,13 @@ namespace Orbito.Infrastructure.Data
         /// INTERNAL USE ONLY - Clears tenant cache
         /// Called automatically by DI container when DbContext scope ends
         /// Should NOT be called manually during request processing
+        /// Note: With Lazy<T>, cache is automatically cleared when DbContext is disposed
         /// </summary>
         internal void ClearTenantCache()
         {
-            _cachedTenantId = null;
-            _logger.LogDebug("Tenant cache cleared");
+            // With Lazy<T>, the cache is automatically cleared when DbContext is disposed
+            // No manual clearing needed - this method is kept for compatibility
+            _logger.LogDebug("Tenant cache will be cleared on DbContext disposal");
         }
 
         /// <summary>

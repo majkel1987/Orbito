@@ -1,0 +1,77 @@
+[1mdiff --git a/Orbito.Application/Validators/GetScheduledRetriesQueryValidator.cs b/Orbito.Application/Validators/GetScheduledRetriesQueryValidator.cs[m
+[1mnew file mode 100644[m
+[1mindex 0000000..162da1e[m
+[1m--- /dev/null[m
+[1m+++ b/Orbito.Application/Validators/GetScheduledRetriesQueryValidator.cs[m
+[36m@@ -0,0 +1,71 @@[m
+[32m+[m[32musing FluentValidation;[m
+[32m+[m[32musing Orbito.Application.Common.Interfaces;[m
+[32m+[m[32musing Orbito.Application.Features.Payments.Queries;[m
+[32m+[m[32musing Orbito.Domain.Enums;[m
+[32m+[m
+[32m+[m[32mnamespace Orbito.Application.Validators[m
+[32m+[m[32m{[m
+[32m+[m[32m    /// <summary>[m
+[32m+[m[32m    /// Validator for GetScheduledRetriesQuery[m
+[32m+[m[32m    /// </summary>[m
+[32m+[m[32m    public class GetScheduledRetriesQueryValidator : AbstractValidator<GetScheduledRetriesQuery>[m
+[32m+[m[32m    {[m
+[32m+[m[32m        private readonly ITenantContext _tenantContext;[m
+[32m+[m[32m        private readonly IClientRepository _clientRepository;[m
+[32m+[m[32m        private readonly ISecurityLimitService _securityLimitService;[m
+[32m+[m
+[32m+[m[32m        public GetScheduledRetriesQueryValidator([m
+[32m+[m[32m            ITenantContext tenantContext,[m
+[32m+[m[32m            IClientRepository clientRepository,[m
+[32m+[m[32m            ISecurityLimitService securityLimitService)[m
+[32m+[m[32m        {[m
+[32m+[m[32m            _tenantContext = tenantContext;[m
+[32m+[m[32m            _clientRepository = clientRepository;[m
+[32m+[m[32m            _securityLimitService = securityLimitService;[m
+[32m+[m
+[32m+[m[32m            // Pagination validation[m
+[32m+[m[32m            RuleFor(x => x.Pagination)[m
+[32m+[m[32m                .NotNull()[m
+[32m+[m[32m                .WithMessage("Pagination parameters are required");[m
+[32m+[m
+[32m+[m[32m            RuleFor(x => x.Pagination.PageNumber)[m
+[32m+[m[32m                .GreaterThan(0)[m
+[32m+[m[32m                .WithMessage("Page number must be greater than 0");[m
+[32m+[m
+[32m+[m[32m            RuleFor(x => x.Pagination.PageSize)[m
+[32m+[m[32m                .GreaterThan(0)[m
+[32m+[m[32m                .WithMessage("Page size must be greater than 0")[m
+[32m+[m[32m                .LessThanOrEqualTo(100)[m
+[32m+[m[32m                .WithMessage("Page size cannot exceed 100 records");[m
+[32m+[m
+[32m+[m[32m            // ClientId validation (optional but if provided, must be valid)[m
+[32m+[m[32m            RuleFor(x => x.ClientId)[m
+[32m+[m[32m                .MustAsync(async (clientId, ct) =>[m
+[32m+[m[32m                {[m
+[32m+[m[32m                    if (!clientId.HasValue)[m
+[32m+[m[32m                        return true; // Optional field[m
+[32m+[m
+[32m+[m[32m                    if (!_tenantContext.HasTenant)[m
+[32m+[m[32m                        return false;[m
+[32m+[m
+[32m+[m[32m                    var client = await _clientRepository.GetByIdAsync(clientId.Value, ct);[m
+[32m+[m[32m                    return client != null && client.TenantId == _tenantContext.CurrentTenantId;[m
+[32m+[m[32m                })[m
+[32m+[m[32m                .WithMessage("Client does not exist or does not belong to current tenant")[m
+[32m+[m[32m                .When(x => x.ClientId.HasValue);[m
+[32m+[m
+[32m+[m[32m            // Status validation - must be valid RetryStatus enum value[m
+[32m+[m[32m            RuleFor(x => x.Status)[m
+[32m+[m[32m                .Must(status => string.IsNullOrEmpty(status) ||[m[41m [m
+[32m+[m[32m                               Enum.TryParse<RetryStatus>(status, true, out _))[m
+[32m+[m[32m                .WithMessage("Status must be a valid retry status (Scheduled, InProgress, Completed, Failed, Cancelled)")[m
+[32m+[m[32m                .When(x => !string.IsNullOrEmpty(x.Status));[m
+[32m+[m
+[32m+[m[32m            // Security: Prevent excessive page size to avoid DoS attacks[m
+[32m+[m[32m            RuleFor(x => x.Pagination.PageSize)[m
+[32m+[m[32m                .Must(pageSize => pageSize <= _securityLimitService.MaxPageSize)[m
+[32m+[m[32m                .WithMessage($"Page size cannot exceed {_securityLimitService.MaxPageSize} records")[m
+[32m+[m[32m                .When(x => x.Pagination != null);[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m[32m}[m

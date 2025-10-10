@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
@@ -249,7 +250,7 @@ namespace Orbito.Infrastructure.Persistance
         /// <summary>
         /// Begins a database transaction
         /// </summary>
-        public async Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+        public async Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
         {
             return await _context.Database.BeginTransactionAsync(cancellationToken);
         }

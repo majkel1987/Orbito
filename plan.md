@@ -20,7 +20,7 @@
 
 ## 🎯 **PRIORYTETOWE ZADANIA DO DOKOŃCZENIA**
 
-### **Etap 1: Dokończenie Retry Logic (Dni 1-2)**
+### **Etap 1: Dokończenie Retry Logic (Dni 1-2)** - ZAIMPLEMENTOWANE
 
 #### 1.1 API Layer - Brakujące Endpoints
 
@@ -50,7 +50,7 @@
 
 ---
 
-### **Etap 4: Rozszerzenie Metrics & Statistics (Dni 3-4)**
+### **Etap 4: Rozszerzenie Metrics & Statistics (Dni 3-4)** - ZAIMPLEMENTOWANE
 
 #### 4.1 Application Layer - Zaawansowane Metryki
 

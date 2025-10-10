@@ -1,6 +1,7 @@
 using System;
 using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
+using Orbito.Domain.ValueObjects;
 
 namespace Orbito.Application.Common.Interfaces
 {
@@ -63,6 +64,14 @@ namespace Orbito.Application.Common.Interfaces
         // Query operations for retry logic
         Task<IQueryable<Payment>> GetFailedPaymentsQueryAsync(Guid? clientId = null, CancellationToken cancellationToken = default);
 
+        // SECURE: Metrics operations with tenant filtering
+        Task<IQueryable<Payment>> GetPaymentsForMetricsAsync(
+            Guid tenantId,
+            DateTime startDate,
+            DateTime endDate,
+            Guid? providerId = null,
+            CancellationToken cancellationToken = default);
+
         // ADMIN-ONLY: Stats operations across ALL tenants - use with extreme caution
         [Obsolete("ADMIN-ONLY: Returns stats from ALL clients. Use GetPaymentStatsByClientAsync for regular operations.")]
         Task<PaymentStats> GetPaymentStatsAsync(CancellationToken cancellationToken = default);
@@ -80,6 +89,9 @@ namespace Orbito.Application.Common.Interfaces
 
         // Batch operations
         Task<Dictionary<Guid, Payment>> GetByIdsForClientAsync(List<Guid> paymentIds, Guid clientId, CancellationToken cancellationToken = default);
+
+        // Metrics operations - SECURE (tenant + provider filtering)
+        Task<IQueryable<Payment>> GetPaymentsForMetricsAsync(TenantId tenantId, DateTime startDate, DateTime endDate, Guid? providerId, CancellationToken cancellationToken = default);
     }
 
     public record PaymentStats

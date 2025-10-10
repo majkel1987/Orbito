@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
+using Orbito.Domain.ValueObjects;
 using Orbito.Infrastructure.Data;
 
 namespace Orbito.Infrastructure.Persistance
@@ -668,6 +669,41 @@ namespace Orbito.Infrastructure.Persistance
         }
 
         /// <summary>
+        /// Gets payments for metrics and analytics with proper security filtering
+        /// SECURITY: Filters by tenantId at SQL level, includes navigation properties for efficiency
+        /// PERFORMANCE: Uses IQueryable to allow further filtering, includes related entities to prevent N+1
+        /// </summary>
+        public async Task<IQueryable<Payment>> GetPaymentsForMetricsAsync(
+            Guid tenantId,
+            DateTime startDate,
+            DateTime endDate,
+            Guid? providerId = null,
+            CancellationToken cancellationToken = default)
+        {
+            _logger.LogDebug("GetPaymentsForMetricsAsync called for tenant {TenantId}, period {StartDate} to {EndDate}, provider {ProviderId}",
+                tenantId, startDate, endDate, providerId);
+
+            // Build query with all necessary includes to prevent N+1
+            var query = _context.Payments
+                .AsNoTracking()
+                .Include(p => p.Subscription)
+                    .ThenInclude(s => s.Plan)
+                        .ThenInclude(pl => pl.Provider)
+                .Include(p => p.Client)
+                .Where(p => p.TenantId == tenantId &&
+                           p.CreatedAt >= startDate &&
+                           p.CreatedAt < endDate.AddDays(1)); // Include full end day
+
+            // Apply provider filter if specified
+            if (providerId.HasValue)
+            {
+                query = query.Where(p => p.Subscription.Plan.Provider.Id == providerId.Value);
+            }
+
+            return await Task.FromResult(query);
+        }
+
+        /// <summary>
         /// Gets multiple payments by IDs for a specific client (batch operation)
         /// SECURITY: Verifies both TenantId and ClientId to prevent cross-tenant data access
         /// </summary>
@@ -696,6 +732,46 @@ namespace Orbito.Infrastructure.Persistance
                 .ToListAsync(cancellationToken);
 
             return payments.ToDictionary(p => p.Id, p => p);
+        }
+
+        /// <summary>
+        /// Gets payments for metrics calculations with secure filtering
+        /// SECURITY: Filters by TenantId, date range, and optional ProviderId
+        /// PERFORMANCE: Optimized query with proper includes for metrics calculations
+        /// </summary>
+        public async Task<IQueryable<Payment>> GetPaymentsForMetricsAsync(TenantId tenantId, DateTime startDate, DateTime endDate, Guid? providerId, CancellationToken cancellationToken = default)
+        {
+            // SECURITY: Verify tenant context
+            if (!_tenantContext.HasTenant)
+            {
+                _logger.LogWarning("SECURITY: {MethodName} called without tenant context", nameof(GetPaymentsForMetricsAsync));
+                return _context.Payments.Where(p => false); // Return empty query
+            }
+
+            // SECURITY: Ensure we're using the correct tenant
+            if (_tenantContext.CurrentTenantId != tenantId)
+            {
+                _logger.LogWarning("SECURITY: {MethodName} called with mismatched tenant context. Expected: {ExpectedTenant}, Actual: {ActualTenant}",
+                    nameof(GetPaymentsForMetricsAsync), tenantId, _tenantContext.CurrentTenantId);
+                return _context.Payments.Where(p => false); // Return empty query
+            }
+
+            var query = _context.Payments
+                .AsNoTracking() // Performance: No tracking needed for metrics
+                .Include(p => p.Subscription)
+                    .ThenInclude(s => s.Plan)
+                        .ThenInclude(plan => plan.Provider)
+                .Where(p => p.TenantId == tenantId && // SECURITY: Filter by tenant
+                           p.CreatedAt.Date >= startDate.Date &&
+                           p.CreatedAt.Date <= endDate.Date);
+
+            // Apply provider filter if specified
+            if (providerId.HasValue)
+            {
+                query = query.Where(p => p.Subscription.Plan.Provider.Id == providerId.Value);
+            }
+
+            return await Task.FromResult(query);
         }
 
         private static (int pageNumber, int pageSize) ValidatePagination(int pageNumber, int pageSize)

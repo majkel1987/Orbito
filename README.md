@@ -4,6 +4,176 @@
 
 Orbito to nowoczesna platforma SaaS zbudowana w architekturze Clean Architecture, wykorzystująca wzorce DDD (Domain-Driven Design) i CQRS z MediatR.
 
+## 🆕 Najnowsze Funkcje (v2.7) - Security & Code Quality Improvements
+
+### 🔒 Krytyczne Poprawki Bezpieczeństwa
+
+- **Stripe Signature Verification** - Zaimplementowano pełną weryfikację HMAC-SHA256 z kontrolą timestamp tolerance i constant-time comparison
+- **Race Condition Fix** - Naprawiono race condition w tenant cache przez zastąpienie `Guid?` przez `Lazy<Guid?>` dla thread-safe caching
+- **Memory Leak Prevention** - Dodano proper cleanup strumieni w middleware z `try-finally` blocks
+- **Input Validation** - Dodano FluentValidation validators dla wszystkich query models z regułami dla dat, GUID-ów i pagination
+
+### ⚡ Optymalizacje Wydajności
+
+- **Caching System** - Zaimplementowano `ICacheService` i `MemoryCacheService` z obsługą typów wartościowych
+- **Query Optimization** - Zmodyfikowano queries do używania `GroupBy` i `Select` na poziomie bazy danych
+- **Cache Constants** - Dodano `CacheConstants` z predefiniowanymi TTL dla różnych typów danych
+
+### ✨ Poprawki Jakości Kodu
+
+- **DRY Principle** - Utworzono `BaseController` z wspólną logiką error handling i validation
+- **Magic Numbers Elimination** - Utworzono `ValidationConstants` dla wszystkich hardcoded wartości
+- **Error Response Model** - Utworzono `ErrorResponse` dla standardowych odpowiedzi błędów
+- **Clean Architecture** - Przeniesiono `TransactionService` z Application do Infrastructure layer
+
+### 🏗️ Nowa Architektura
+
+- **BaseController** - Wspólna logika dla wszystkich API controllers
+- **ValidationConstants** - Centralizacja stałych walidacji
+- **CacheConstants** - Centralizacja stałych cache
+- **ErrorResponse** - Standardowy model odpowiedzi błędów
+- **TransactionService** - Proper transaction management w Infrastructure layer
+
+### 📁 Nowe Pliki
+
+#### Controllers
+
+- `Orbito.API/Controllers/BaseController.cs` - Base controller z wspólną logiką
+
+#### Application Layer
+
+- `Orbito.Application/Common/Constants/CacheConstants.cs` - Stałe cache
+- `Orbito.Application/Common/Constants/ValidationConstants.cs` - Stałe walidacji
+- `Orbito.Application/Common/Models/ErrorResponse.cs` - Model odpowiedzi błędów
+- `Orbito.Application/Common/Interfaces/ICacheService.cs` - Interface cache service
+- `Orbito.Application/Common/Services/MemoryCacheService.cs` - Implementacja cache
+- `Orbito.Application/Features/Payments/Validators/GetPaymentStatisticsQueryValidator.cs`
+- `Orbito.Application/Features/Payments/Validators/GetRevenueReportQueryValidator.cs`
+- `Orbito.Application/Features/Payments/Validators/GetPaymentTrendsQueryValidator.cs`
+- `Orbito.Application/Features/Payments/Validators/GetFailureReasonsQueryValidator.cs`
+
+#### Infrastructure Layer
+
+- `Orbito.Infrastructure/Services/TransactionService.cs` - Transaction management
+
+## 🆕 Poprzednie Funkcje (v2.6) - Advanced Payment Metrics & Statistics
+
+### 📊 Payment Metrics & Statistics System
+
+- **Kompletny system metryk płatności** - zaawansowane statystyki i analizy płatności
+- **PaymentMetricsController** - pełne API endpoints dla metryk i statystyk
+- **IPaymentMetricsService** - główny serwis z zaawansowanymi metrykami
+- **GetPaymentStatisticsQuery** - kompleksowe statystyki płatności
+- **GetRevenueReportQuery** - raporty przychodów z analizą wzrostu
+- **GetPaymentTrendsQuery** - trendy płatności w czasie
+- **GetFailureReasonsQuery** - analiza przyczyn niepowodzeń
+
+### 🎯 PaymentMetricsController - API Endpoints
+
+- **GET /api/payments/metrics/statistics** - kompleksowe statystyki płatności
+  - Success rate, processing time, revenue breakdown
+  - Filtrowanie po dacie i providerze
+  - Security: weryfikacja TenantId + ProviderId
+- **GET /api/payments/metrics/revenue** - raporty przychodów
+  - Total revenue, growth percentage, currency breakdown
+  - Revenue by payment method analysis
+  - Monthly recurring revenue (MRR) calculation
+- **GET /api/payments/metrics/trends** - trendy płatności
+  - Daily trends with data points
+  - Overall trend direction (increasing/decreasing/stable)
+  - Percentage change calculations
+- **GET /api/payments/metrics/failure-reasons** - analiza niepowodzeń
+  - Breakdown of failure reasons with counts
+  - Provider-specific failure analysis
+- **GET /api/payments/metrics/success-rate** - wskaźnik sukcesu
+- **GET /api/payments/metrics/average-processing-time** - średni czas przetwarzania
+
+### 📈 PaymentMetricsService - Główny Serwis
+
+- **GetPaymentSuccessRateAsync** - obliczanie wskaźnika sukcesu płatności
+- **GetAverageProcessingTimeAsync** - średni czas przetwarzania płatności
+- **GetFailureReasonsBreakdownAsync** - analiza przyczyn niepowodzeń
+- **GetRevenueMetricsAsync** - kompleksowe metryki przychodów
+- **GetPaymentStatisticsAsync** - kompletne statystyki płatności
+- **GetPaymentTrendsAsync** - trendy płatności w czasie
+
+## 🆕 Poprzednie Funkcje (v2.5) - Payment Retry Logic System
+
+### 🔄 System Retry Logic (Payment Retry System)
+
+- **Kompletny system retry płatności** - automatyczne ponawianie nieudanych płatności z exponential backoff
+- **PaymentRetryController** - pełne API endpoints dla zarządzania retry operacjami
+- **BulkRetryPaymentsCommand** - masowe ponawianie płatności (max 50 naraz)
+- **GetScheduledRetriesQuery** - lista zaplanowanych retry z filtrowaniem i paginacją
+- **CancelRetryCommand** - anulowanie zaplanowanych retry
+- **PaymentRetryService** - główny serwis z exponential backoff i rate limiting
+
+### 🎯 PaymentRetryController - API Endpoints
+
+- **POST /api/payments/retry/{paymentId}** - retry pojedynczej płatności
+  - Walidacja: tylko failed payments, brak aktywnych retry
+  - Security: weryfikacja ClientId z user context
+  - Rate limiting: max 5 retry na 15 minut per client
+- **POST /api/payments/retry/bulk** - retry wielu płatności
+  - Batch processing z transaction scope
+  - Rate limiting: max 50 payments naraz
+  - Atomic operations: wszystkie retry lub żadne
+- **GET /api/payments/retry/scheduled** - lista zaplanowanych retry
+  - Filtering: po ClientId, TenantId, Status
+  - Pagination: max 100 records
+  - Response caching: 30 sekund
+- **DELETE /api/payments/retry/{scheduleId}** - anulowanie retry
+  - Security: weryfikacja ownership
+  - Soft delete: oznaczanie jako cancelled
+
+### 📊 PaymentRetryService - Główny Serwis
+
+- **ScheduleRetryAsync** - planowanie retry z exponential backoff
+  - Automatyczne obliczanie NextAttemptAt
+  - Race condition protection przez unique constraint
+  - Max attempts: 5 (konfigurowalne)
+- **ProcessRetryAsync** - przetwarzanie retry attempts
+  - Transaction safety z rollback
+  - Error handling z cleanup
+  - Integration z payment gateway (Stripe)
+- **CalculateNextAttemptNumberAsync** - obliczanie kolejnego attempt
+  - Exponential backoff: 2^attempt \* base delay
+  - Jitter: ±25% randomization
+  - Max delay: 24 godziny
+
+### 🔐 Security & Performance
+
+- **Tenant isolation** - pełna izolacja danych między tenantami
+- **Client verification** - wszystkie operacje z weryfikacją ClientId
+- **Rate limiting** - ochrona przed abuse (5 retry/15min per client)
+- **Input validation** - FluentValidation dla wszystkich commands
+- **Transaction safety** - atomic operations z rollback
+- **Caching** - ClientId caching (5 min), response caching (30s)
+
+### 📁 Nowe Pliki - Retry Logic System
+
+#### API Layer (1 plik)
+
+- `Orbito.API/Controllers/PaymentRetryController.cs` - kompletny controller z wszystkimi endpoints
+
+#### Application Layer (8 plików)
+
+- `Orbito.Application/Features/Payments/Commands/BulkRetryPaymentsCommand.cs` + Handler
+- `Orbito.Application/Features/Payments/Commands/RetryFailedPaymentCommand.cs` + Handler
+- `Orbito.Application/Features/Payments/Commands/CancelRetryCommand.cs` + Handler
+- `Orbito.Application/Features/Payments/Queries/GetScheduledRetriesQuery.cs` + Handler
+- `Orbito.Application/Validators/GetScheduledRetriesQueryValidator.cs` - **NOWY**
+
+#### DTOs i Results (5 typów)
+
+- `RetryScheduleDto` - informacje o zaplanowanych retry
+- `BulkRetryPaymentsResult` - wynik masowego retry
+- `RetryFailedPaymentResult` - wynik pojedynczego retry
+- `CancelRetryResult` - wynik anulowania retry
+- `FailedPaymentDto` - informacje o failed payments
+
+---
+
 ## 🆕 Najnowsze Funkcje (v2.4) - Payment Reconciliation System
 
 ### 🔍 System Rekoncyliacji Płatności (Payment Reconciliation System)
@@ -1466,6 +1636,13 @@ dotnet test --collect:"XPlat Code Coverage" --results-directory ./TestResults
 - [x] **GetPaymentMethodsByClientQuery** - pobieranie metod płatności klienta
 - [x] **Webhook Idempotency** - obsługa duplikatów webhooków
 - [x] **Webhook Retry Logic** - retry dla nieudanych webhooków
+- [x] **🔄 Payment Retry Logic System** - kompletny system retry płatności z exponential backoff
+- [x] **PaymentRetryController** - pełne API endpoints dla zarządzania retry operacjami
+- [x] **BulkRetryPaymentsCommand** - masowe ponawianie płatności (max 50 naraz)
+- [x] **GetScheduledRetriesQuery** - lista zaplanowanych retry z filtrowaniem i paginacją
+- [x] **CancelRetryCommand** - anulowanie zaplanowanych retry
+- [x] **PaymentRetryService** - główny serwis z exponential backoff i rate limiting
+- [x] **FluentValidation Validators** - walidatory dla wszystkich retry commands i queries
 
 ### 🔄 W Trakcie
 
@@ -2489,6 +2666,105 @@ public class PaymentHistory : IMustHaveTenant
 
 \*Provider może operować tylko na płatnościach ze swojego tenanta  
 \*Client może operować tylko na własnych płatnościach
+
+##### 📊 Payment Metrics API Endpoints
+
+| Endpoint                                            | PlatformAdmin | Provider | Client | Description                                   |
+| --------------------------------------------------- | ------------- | -------- | ------ | --------------------------------------------- |
+| `GET /api/payments/metrics/statistics`              | ✅            | ✅\*     | ❌     | Comprehensive payment statistics for a period |
+| `GET /api/payments/metrics/revenue`                 | ✅            | ✅\*     | ❌     | Revenue metrics for a specific provider       |
+| `GET /api/payments/metrics/trends`                  | ✅            | ✅\*     | ❌     | Payment trends over time                      |
+| `GET /api/payments/metrics/failure-reasons`         | ✅            | ✅\*     | ❌     | Breakdown of failure reasons                  |
+| `GET /api/payments/metrics/success-rate`            | ✅            | ✅\*     | ❌     | Payment success rate percentage               |
+| `GET /api/payments/metrics/average-processing-time` | ✅            | ✅\*     | ❌     | Average payment processing time               |
+
+**Query Parameters:**
+
+- `startDate` (required): Start date in YYYY-MM-DD format
+- `endDate` (required): End date in YYYY-MM-DD format
+- `providerId` (optional): Filter by specific provider ID
+
+**Response Examples:**
+
+```json
+// GET /api/payments/metrics/statistics?startDate=2024-01-01&endDate=2024-01-31
+{
+  "totalPayments": 1250,
+  "completedPayments": 1180,
+  "failedPayments": 70,
+  "successRate": 94.4,
+  "totalRevenue": 125000.0,
+  "currency": "USD",
+  "averageProcessingTimeSeconds": 3.2,
+  "paymentsByStatus": {
+    "Completed": 1180,
+    "Failed": 70
+  },
+  "paymentsByMethod": {
+    "card": 1100,
+    "bank_transfer": 150
+  },
+  "failureReasons": {
+    "insufficient_funds": 45,
+    "card_declined": 25
+  },
+  "period": {
+    "startDate": "2024-01-01T00:00:00Z",
+    "endDate": "2024-01-31T23:59:59Z"
+  },
+  "calculatedAt": "2024-02-01T10:30:00Z"
+}
+```
+
+```json
+// GET /api/payments/metrics/revenue?startDate=2024-01-01&endDate=2024-01-31&providerId=123e4567-e89b-12d3-a456-426614174000
+{
+  "totalRevenue": 50000.0,
+  "currency": "USD",
+  "growthPercentage": 15.5,
+  "revenueByCurrency": {
+    "USD": 45000.0,
+    "EUR": 5000.0
+  },
+  "averageRevenuePerPayment": 42.37,
+  "successfulPaymentsCount": 1180,
+  "revenueByPaymentMethod": {
+    "card": 45000.0,
+    "bank_transfer": 5000.0
+  },
+  "monthlyRecurringRevenue": 50000.0,
+  "period": {
+    "startDate": "2024-01-01T00:00:00Z",
+    "endDate": "2024-01-31T23:59:59Z"
+  },
+  "providerId": "123e4567-e89b-12d3-a456-426614174000",
+  "calculatedAt": "2024-02-01T10:30:00Z"
+}
+```
+
+```json
+// GET /api/payments/metrics/trends?startDate=2024-01-01&endDate=2024-01-31
+{
+  "dataPoints": [
+    {
+      "date": "2024-01-01T00:00:00Z",
+      "paymentCount": 45,
+      "successfulPayments": 42,
+      "failedPayments": 3,
+      "revenue": 4500.0,
+      "currency": "USD",
+      "successRate": 93.33
+    }
+  ],
+  "overallTrend": "Increasing",
+  "percentageChange": 12.5,
+  "period": {
+    "startDate": "2024-01-01T00:00:00Z",
+    "endDate": "2024-01-31T23:59:59Z"
+  },
+  "calculatedAt": "2024-02-01T10:30:00Z"
+}
+```
 
 #### 8. Payment Processing Features
 

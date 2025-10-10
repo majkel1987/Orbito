@@ -1,0 +1,104 @@
+// KOMPLETNA POPRAWIONA WERSJA - zamień zawartość Orbito.Application/Services/PaymentMetricsService.cs
+
+// Linia 95: Zmień z GetFailedPaymentsQueryAsync na:
+var payments = await _paymentRepository.GetPaymentsForMetricsAsync(
+    tenantId,
+    range.StartDate,
+    range.EndDate,
+    null, // providerId
+    cancellationToken);
+
+// Linia 97-102: Usuń date filtering (już w repository)
+var completedPayments = await payments
+    .Where(p => p.Status == PaymentStatus.Completed && p.ProcessedAt.HasValue)
+    .Select(p => new { p.CreatedAt, p.ProcessedAt })
+    .ToListAsync(cancellationToken);
+
+// Linia 148: GetFailureReasonsBreakdownAsync - zmień:
+var payments = await _paymentRepository.GetPaymentsForMetricsAsync(
+    tenantId,
+    range.StartDate,
+    range.EndDate,
+    providerId,
+    cancellationToken);
+
+// Linia 156-163: Usuń tenant/date/provider filtering
+var failedPayments = await payments
+    .Where(p => p.Status == PaymentStatus.Failed && !string.IsNullOrEmpty(p.FailureReason))
+    .Select(p => p.FailureReason)
+    .ToListAsync(cancellationToken);
+
+// Linia 203: GetRevenueMetricsAsync - zmień:
+var payments = await _paymentRepository.GetPaymentsForMetricsAsync(
+    tenantId,
+    range.StartDate,
+    range.EndDate,
+    providerId,
+    cancellationToken);
+
+// Linia 206-214: Simplify query + FIX CURRENCY BUG
+var completedPayments = await payments
+    .Where(p => p.Status == PaymentStatus.Completed && p.Amount != null)
+    .Select(p => new { p.Amount, p.PaymentMethod })
+    .ToListAsync(cancellationToken);
+
+// CRITICAL FIX - Linia 228-243: Handle mixed currencies safely
+if (completedPayments.Any())
+{
+    // Check for mixed currencies
+    var currencies = completedPayments
+        .Select(p => p.Amount!.Currency)
+        .Distinct()
+        .ToList();
+
+    // Calculate revenue by currency
+    var revenueByCurrency = completedPayments
+        .GroupBy(p => p.Amount!.Currency)
+        .ToDictionary(g => g.Key.ToString(), g => g.Sum(p => p.Amount!.Amount));
+
+    // Use primary currency (most common) for total revenue
+    var primaryCurrency = completedPayments
+        .GroupBy(p => p.Amount!.Currency)
+        .OrderByDescending(g => g.Count())
+        .First()
+        .Key;
+
+    // Only sum payments in primary currency for TotalRevenue
+    var totalRevenue = completedPayments
+        .Where(p => p.Amount!.Currency == primaryCurrency)
+        .Sum(p => p.Amount!.Amount);
+
+    // Log warning if mixed currencies
+    if (currencies.Count > 1)
+    {
+        _logger.LogWarning("Mixed currencies detected. Using {Currency} as primary. Found: {Currencies}",
+            primaryCurrency, string.Join(", ", currencies));
+    }
+}
+
+// Linia 289: GetPaymentStatisticsAsync - zmień:
+var payments = await _paymentRepository.GetPaymentsForMetricsAsync(
+    tenantId,
+    range.StartDate,
+    range.EndDate,
+    providerId,
+    cancellationToken);
+
+// Linia 292-306: Usuń filtering
+var filteredPayments = await payments
+    .Select(p => new { p.Status, p.Amount, p.PaymentMethod, p.FailureReason, p.CreatedAt, p.ProcessedAt })
+    .ToListAsync(cancellationToken);
+
+// Linia 412: GetPaymentTrendsAsync - zmień:
+var payments = await _paymentRepository.GetPaymentsForMetricsAsync(
+    tenantId,
+    range.StartDate,
+    range.EndDate,
+    providerId,
+    cancellationToken);
+
+// Linia 415-426: Usuń filtering
+var filteredPayments = await payments
+    .Select(p => new { p.Status, p.Amount, p.CreatedAt })
+    .ToListAsync(cancellationToken);
+

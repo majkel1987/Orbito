@@ -1,4 +1,5 @@
 using FluentValidation;
+using Orbito.Application.Common.Constants;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.Features.Payments.Queries;
 using Orbito.Domain.Enums;
@@ -35,8 +36,8 @@ namespace Orbito.Application.Validators
             RuleFor(x => x.Pagination.PageSize)
                 .GreaterThan(0)
                 .WithMessage("Page size must be greater than 0")
-                .LessThanOrEqualTo(100)
-                .WithMessage("Page size cannot exceed 100 records");
+                .LessThanOrEqualTo(ValidationConstants.MaxPageSize)
+                .WithMessage($"Page size cannot exceed {ValidationConstants.MaxPageSize} records");
 
             // ClientId validation (optional but if provided, must be valid)
             RuleFor(x => x.ClientId)

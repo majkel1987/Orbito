@@ -1,4 +1,4 @@
-Twórz kod pod kątem:
+Twórz i sprawdzaj kod kod pod kątem następujacych kryteriów:
 
 🔒 SECURITY: luki bezpieczeństwa, izolacja tenant (tenant context), SQL injection, XSS, autoryzacja, walidacja inputów
 

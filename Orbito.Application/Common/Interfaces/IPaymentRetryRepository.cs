@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore.Storage;
 using Orbito.Domain.Entities;
 
 namespace Orbito.Application.Common.Interfaces
@@ -120,6 +121,6 @@ namespace Orbito.Application.Common.Interfaces
         /// </summary>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Database transaction</returns>
-        Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
+        Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
     }
 }

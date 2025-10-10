@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Domain.ValueObjects;
+using Microsoft.AspNetCore.Http;
 
 namespace Orbito.Infrastructure.Data
 {
@@ -31,45 +32,22 @@ namespace Orbito.Infrastructure.Data
 
             // Design-time services (for migrations)
             var designTimeTenantProvider = new DesignTimeTenantProvider();
-            var designTimeUserContextService = new DesignTimeUserContextService();
+            var designTimeHttpContextAccessor = new DesignTimeHttpContextAccessor();
 
             return new ApplicationDbContext(
                 optionsBuilder.Options, 
                 designTimeTenantProvider, 
-                designTimeUserContextService,
+                designTimeHttpContextAccessor,
                 Microsoft.Extensions.Logging.Abstractions.NullLogger<ApplicationDbContext>.Instance);
         }
 
         /// <summary>
-        /// Design-time user context service for EF Core migrations.
-        /// Returns null for all user operations during migrations.
+        /// Design-time HTTP context accessor for EF Core migrations.
+        /// Returns null for all HTTP context operations during migrations.
         /// </summary>
-        private class DesignTimeUserContextService : IUserContextService
+        private class DesignTimeHttpContextAccessor : IHttpContextAccessor
         {
-            public Guid? GetCurrentUserId()
-            {
-                return null; // No user context during design-time operations
-            }
-
-            public Task<Guid?> GetCurrentClientIdAsync(CancellationToken cancellationToken = default)
-            {
-                return Task.FromResult<Guid?>(null); // No client context during design-time operations
-            }
-
-            public string? GetCurrentUserEmail()
-            {
-                return null; // No user context during design-time operations
-            }
-
-            public string? GetCurrentUserRole()
-            {
-                return null; // No user context during design-time operations
-            }
-
-            public bool IsAuthenticated()
-            {
-                return false; // No authentication during design-time operations
-            }
+            public HttpContext? HttpContext { get; set; } = null; // No HTTP context during design-time operations
         }
 
         /// <summary>

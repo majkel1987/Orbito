@@ -43,13 +43,16 @@ builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks()
     .AddCheck<StripeHealthCheck>("stripe", tags: new[] { "external" })
     .AddCheck<PaymentSystemHealthCheck>("payment_system", tags: new[] { "critical" })
-    .AddDbContextCheck<Orbito.Infrastructure.Data.ApplicationDbContext>();
+    .AddDbContextCheck<Orbito.Infrastructure.Data.ApplicationDbContext>("database");
 
 builder.Services.AddHealthChecksUI()
     .AddInMemoryStorage();
 
 // Add Memory Cache
 builder.Services.AddMemoryCache();
+
+// Add Response Compression
+builder.Services.AddResponseCompression();
 
 // NOTE: Rate Limiting and CORS are now configured in Infrastructure layer (AddInfrastructure)
 // Specific rate limit policies for webhook and API endpoints

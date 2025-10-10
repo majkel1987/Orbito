@@ -42,7 +42,11 @@ namespace Orbito.Application
             services.AddScoped<IPaymentProcessingService, PaymentProcessingService>();
             services.AddScoped<IPaymentNotificationService, PaymentNotificationService>();
             services.AddScoped<IPaymentRetryService, PaymentRetryService>();
+            services.AddScoped<IPaymentMetricsService, PaymentMetricsService>();
             services.AddSingleton<ISecurityLimitService, SecurityLimitService>();
+            
+        // Add caching service
+        services.AddScoped<ICacheService, Common.Services.MemoryCacheService>();
 
             return services;
         }
