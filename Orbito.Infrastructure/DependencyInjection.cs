@@ -135,6 +135,7 @@ namespace Orbito.Infrastructure
             services.AddScoped<IUserContextService, Services.UserContextService>();
             services.AddScoped<IPaymentReconciliationService, Services.PaymentReconciliationService>();
             services.AddScoped<ITransactionService, Services.TransactionService>();
+            services.AddScoped<IIdempotencyCacheService, Services.IdempotencyCacheService>();
 
             // Configure reconciliation settings
             services.Configure<ReconciliationSettings>(configuration.GetSection("ReconciliationSettings"));

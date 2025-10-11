@@ -86,6 +86,15 @@ namespace Orbito.Infrastructure.Data.Configurations.ValueObjects
                 .HasConversion(
                     tenantId => tenantId != null ? tenantId.Value : (Guid?)null,
                     guid => guid.HasValue ? TenantId.Create(guid.Value) : null);
+
+            // IdempotencyKey Value Object Configuration
+            modelBuilder.Entity<Domain.Entities.Payment>()
+                .Property(p => p.IdempotencyKey)
+                .HasConversion(
+                    idempotencyKey => idempotencyKey != null ? idempotencyKey.Value : null,
+                    key => key != null ? IdempotencyKey.Create(key) : null)
+                .HasMaxLength(100)  // FIXED: Match IdempotencySettings.MaxKeyLength
+                .IsUnicode(true);   // Support international characters
         }
     }
 }

@@ -4,7 +4,71 @@
 
 Orbito to nowoczesna platforma SaaS zbudowana w architekturze Clean Architecture, wykorzystująca wzorce DDD (Domain-Driven Design) i CQRS z MediatR.
 
-## 🆕 Najnowsze Funkcje (v2.7) - Security & Code Quality Improvements
+## 🆕 Najnowsze Funkcje (v2.8.1) - Critical Security & Performance Fixes
+
+### 🔴 Krytyczne Poprawki Bezpieczeństwa (11 Fixes)
+
+#### **Duplicate Payment Prevention** ✅
+- **Unique Index** - Dodano unique index `IX_Payments_IdempotencyKey` z filtered WHERE clause
+- **Double-Checked Locking** - Implementacja race condition prevention w middleware
+- **Database Constraint** - `nvarchar(100)` z unique constraint zamiast `nvarchar(max)`
+
+#### **Cross-Tenant Security** ✅
+- **Mandatory Tenant Validation** - Wymuszenie tenant/client context w BuildCacheKey
+- **Cache Key Sanitization** - Pełna sanityzacja (`:`, `/` replaced) przeciwko injection
+- **Tenant Isolation** - Brak możliwości "no-tenant" fallback = zero cross-tenant leak
+
+#### **DOS Protection** ✅
+- **Response Size Limit** - Max 1MB per response (configurable)
+- **Memory Guard** - Automatyczne skip caching dla oversized responses
+- **Error Response Filtering** - Cache tylko success responses (2xx-3xx)
+
+#### **Thread Safety** ✅
+- **Async/Await Compliance** - Zamieniono `.Result` na `await` (deadlock prevention)
+- **Proper Task Returns** - Fixed `null` → `Task.FromResult<T?>(null)` bug
+- **Lock Management** - Async-compatible distributed locking
+
+### 🔄 Idempotency System (Enhanced)
+
+- **IdempotencyKey ValueObject** - Immutable value object z `private set` dla EF Core compatibility
+- **IdempotencyMiddleware** - **FIXED:** Double-checked locking + response size validation
+- **IdempotencyCacheService** - **FIXED:** Async/await + proper null handling
+- **IdempotencySettings** - `RequireIdempotencyKey: false` (opt-in dla smooth migration)
+- **Database Migration** - **FIXED:** Unique index + nvarchar(100) + MaxLength constraint
+
+### 🔒 Enhanced Security Features
+
+- **Request Deduplication** - Guaranteed duplicate prevention z unique constraint
+- **Distributed Locking** - **FIXED:** Async-compatible, deadlock-free locking
+- **Cache TTL Management** - Konfigurowalny TTL z automatic cleanup
+- **Tenant Isolation** - **FIXED:** Strict validation, zero cross-tenant possibility
+
+### ⚡ Performance Improvements
+
+- **Indexed IdempotencyKey** - nvarchar(100) umożliwia indexowanie (vs nvarchar(max))
+- **Response Caching** - **FIXED:** Only success responses (2xx-3xx), max 1MB
+- **Async Optimization** - **FIXED:** Eliminacja `.Result` = no thread blocking
+- **Memory Management** - Response size limits + automatic cleanup
+
+### 📊 Code Quality Improvements
+
+- **Value Object Pattern** - Proper immutability z EF Core compatibility
+- **EF Configuration** - HasMaxLength(100) + IsUnicode(true)
+- **Telemetry** - Comprehensive logging (cache hits, duplicates, size warnings)
+- **Configuration** - Opt-in model dla backward compatibility
+
+### 📚 Szczegółowa Dokumentacja
+
+**Pełny raport wprowadzonych poprawek:** [`IDEMPOTENCY_FIXES_SUMMARY.md`](IDEMPOTENCY_FIXES_SUMMARY.md)
+
+Zawiera:
+- Szczegółową analizę każdej poprawki z przykładami kodu (before/after)
+- Impact analysis dla każdego fix
+- Testing recommendations (pre/post deployment)
+- Migration checklist
+- Next steps i future enhancements
+
+## 🆕 Poprzednie Funkcje (v2.7) - Security & Code Quality Improvements
 
 ### 🔒 Krytyczne Poprawki Bezpieczeństwa
 
@@ -34,7 +98,35 @@ Orbito to nowoczesna platforma SaaS zbudowana w architekturze Clean Architecture
 - **ErrorResponse** - Standardowy model odpowiedzi błędów
 - **TransactionService** - Proper transaction management w Infrastructure layer
 
-### 📁 Nowe Pliki
+### 📁 Nowe Pliki (v2.8.1)
+
+#### Documentation
+
+- `IDEMPOTENCY_FIXES_SUMMARY.md` - **Szczegółowy raport wszystkich 11 poprawek bezpieczeństwa i wydajności**
+
+#### Domain Layer
+
+- `Orbito.Domain/ValueObjects/IdempotencyKey.cs` - **FIXED:** Value object z proper immutability (private set)
+
+#### Application Layer
+
+- `Orbito.Application/Common/Configuration/IdempotencySettings.cs` - Konfiguracja idempotency
+- `Orbito.Application/Common/Interfaces/IIdempotencyCacheService.cs` - Interface cache service
+
+#### Infrastructure Layer
+
+- `Orbito.Infrastructure/Services/IdempotencyCacheService.cs` - **FIXED:** Async/await compliance, null handling
+- `Orbito.Infrastructure/Data/Configurations/ValueObjects/ValueObjectsConfiguration.cs` - **UPDATED:** MaxLength(100) + IsUnicode
+
+#### API Layer
+
+- `Orbito.API/Middleware/IdempotencyMiddleware.cs` - **FIXED:** Double-checked locking, response size validation, cache key sanitization
+
+#### Database
+
+- `Orbito.Infrastructure/Migrations/20251011085155_AddIdempotencyKeyToPayments.cs` - **FIXED:** Unique index + nvarchar(100)
+
+### 📁 Poprzednie Pliki (v2.7)
 
 #### Controllers
 
@@ -684,7 +776,29 @@ git clone <repository-url>
 cd Orbito
 ```
 
-2. **Konfiguracja zmiennych środowiskowych**
+2. **Konfiguracja Idempotency (v2.8)**
+
+```json
+{
+  "IdempotencySettings": {
+    "CacheTtlHours": 24,
+    "RedisConnectionString": "localhost:6379",
+    "Enabled": true,
+    "MaxKeyLength": 100,
+    "MinKeyLength": 1,
+    "RequireIdempotencyKey": true,
+    "LockTimeoutSeconds": 30,
+    "UseDistributedLock": true,
+    "CacheKeyPrefix": "idempotency:",
+    "EnableLogging": true,
+    "MaxCachedResponsesPerTenant": 1000,
+    "EnableAutoCleanup": true,
+    "CleanupIntervalHours": 6
+  }
+}
+```
+
+3. **Konfiguracja zmiennych środowiskowych**
 
 ```bash
 # Skopiuj plik przykładowy
@@ -829,6 +943,7 @@ dotnet run --project Orbito.API
 #### PaymentController
 
 - `POST /api/payments/process` - Przetwarzanie nowej płatności (wymaga roli Provider/PlatformAdmin)
+  - **Idempotency**: Wymaga header `X-Idempotency-Key` dla deduplikacji requestów
 - `GET /api/payments/{id}` - Szczegóły płatności (wymaga roli Provider/PlatformAdmin)
 - `GET /api/payments/subscription/{subscriptionId}` - Płatności dla subskrypcji (wymaga roli Provider/PlatformAdmin)
 - `PUT /api/payments/{id}/status` - Aktualizacja statusu płatności (wymaga roli Provider/PlatformAdmin)
@@ -859,6 +974,65 @@ dotnet run --project Orbito.API
 - `GET /api/payment-methods/{id}/client/{clientId}` - Pobieranie konkretnej metody płatności klienta
 - `PUT /api/payment-methods/{id}/set-default/client/{clientId}` - Ustawienie metody płatności jako domyślnej dla klienta
 - `DELETE /api/payment-methods/{id}/client/{clientId}` - Usunięcie metody płatności klienta
+
+## 🔄 Idempotency System (v2.8)
+
+### Jak używać Idempotency
+
+System idempotency automatycznie przechwytuje i cache'uje odpowiedzi dla POST requestów do endpointów płatności. Oto jak go używać:
+
+#### 1. Wymagany Header
+
+```http
+POST /api/payments/process
+X-Idempotency-Key: 550e8400-e29b-41d4-a716-446655440000
+Content-Type: application/json
+
+{
+  "subscriptionId": "123e4567-e89b-12d3-a456-426614174000",
+  "amount": 29.99,
+  "currency": "USD"
+}
+```
+
+#### 2. Format Idempotency Key
+
+- **GUID**: `550e8400-e29b-41d4-a716-446655440000`
+- **Custom String**: `payment-2024-01-15-client-123` (tylko alfanumeryczne, myślniki, podkreślenia)
+- **Długość**: 1-100 znaków
+
+#### 3. Zachowanie Systemu
+
+- **Pierwszy request**: Przetwarzany normalnie, odpowiedź cache'owana
+- **Duplikat request**: Zwracana cache'owana odpowiedź (200 OK)
+- **TTL**: Cache wygasa po 24 godzinach (konfigurowalne)
+- **Tenant Isolation**: Klucze są izolowane per tenant i client
+
+#### 4. Przykład Użycia
+
+```csharp
+// Pierwszy request
+var response1 = await httpClient.PostAsync("/api/payments/process", content);
+
+// Duplikat request z tym samym kluczem
+var response2 = await httpClient.PostAsync("/api/payments/process", content);
+
+// response1 i response2 będą identyczne
+```
+
+#### 5. Konfiguracja
+
+```json
+{
+  "IdempotencySettings": {
+    "Enabled": true,
+    "RequireIdempotencyKey": true,
+    "CacheTtlHours": 24,
+    "UseDistributedLock": true,
+    "LockTimeoutSeconds": 30
+  }
+}
+```
 
 ## 📊 Logowanie
 

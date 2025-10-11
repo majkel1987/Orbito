@@ -23,6 +23,9 @@ namespace Orbito.Domain.Entities
         public string? ExternalPaymentId { get; set; }
         public string? PaymentMethodId { get; set; }
 
+        // Idempotency
+        public IdempotencyKey? IdempotencyKey { get; set; }
+
         // Timestamps
         public DateTime CreatedAt { get; set; }
         public DateTime? ProcessedAt { get; set; }
@@ -60,7 +63,8 @@ namespace Orbito.Domain.Entities
             Money amount,
             string? externalTransactionId = null,
             string? paymentMethod = null,
-            string? externalPaymentId = null)
+            string? externalPaymentId = null,
+            IdempotencyKey? idempotencyKey = null)
         {
             if (tenantId == null)
                 throw new ArgumentNullException(nameof(tenantId));
@@ -88,6 +92,7 @@ namespace Orbito.Domain.Entities
                 ExternalTransactionId = externalTransactionId,
                 PaymentMethod = paymentMethod,
                 ExternalPaymentId = externalPaymentId,
+                IdempotencyKey = idempotencyKey,
                 CreatedAt = DateTime.UtcNow
             };
         }

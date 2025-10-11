@@ -8,6 +8,7 @@ using Orbito.Application.Common.Options;
 using Orbito.Application.Common.Services;
 using Orbito.Application.Services;
 using Orbito.Application.Common.Settings;
+using Orbito.Application.Common.Configuration;
 using System.Reflection;
 
 namespace Orbito.Application
@@ -24,6 +25,7 @@ namespace Orbito.Application
 
             services.Configure<PerformanceSettings>(configuration.GetSection("PerformanceSettings"));
             services.Configure<PaymentRetryOptions>(configuration.GetSection(PaymentRetryOptions.SectionName));
+            services.Configure<IdempotencySettings>(configuration.GetSection("IdempotencySettings"));
             services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
             
             // Add pipeline behaviors

@@ -173,6 +173,9 @@ app.UseMiddleware<TenantMiddleware>();
 // Add Stripe signature verification middleware
 app.UseStripeSignatureVerification();
 
+// Add idempotency middleware
+app.UseIdempotency();
+
 // Add authentication and authorization
 app.UseAuthentication();
 app.UseAuthorization();
