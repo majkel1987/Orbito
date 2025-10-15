@@ -31,8 +31,14 @@ public class ProcessEmailNotificationsJob
             _logger.LogInformation("Starting email notification processing");
 
             using var scope = _serviceProvider.CreateScope();
-            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-            var emailSender = scope.ServiceProvider.GetRequiredService<IEmailSender>();
+            var unitOfWork = scope.ServiceProvider.GetService<IUnitOfWork>();
+            var emailSender = scope.ServiceProvider.GetService<IEmailSender>();
+
+            if (unitOfWork == null || emailSender == null)
+            {
+                _logger.LogError("Required services not available");
+                return;
+            }
 
             // Get pending notifications that are ready for retry
             var pendingNotifications = await unitOfWork.EmailNotifications
@@ -108,7 +114,13 @@ public class ProcessEmailNotificationsJob
             _logger.LogInformation("Starting cleanup of failed email notifications");
 
             using var scope = _serviceProvider.CreateScope();
-            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+            var unitOfWork = scope.ServiceProvider.GetService<IUnitOfWork>();
+
+            if (unitOfWork == null)
+            {
+                _logger.LogError("Required services not available");
+                return;
+            }
 
             // Get notifications that have exceeded max retries
             var failedNotifications = await unitOfWork.EmailNotifications

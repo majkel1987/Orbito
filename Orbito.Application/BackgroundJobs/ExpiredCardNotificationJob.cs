@@ -13,23 +13,33 @@ public class ExpiredCardNotificationJob : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<ExpiredCardNotificationJob> _logger;
     private readonly TimeSpan _period = TimeSpan.FromHours(24); // Run daily
+    private readonly TimeSpan _initialDelay;
     private const int DaysBeforeExpiryToNotify = 30; // Notify 30 days before expiry
     private const int OperationTimeoutMinutes = 20;
 
     public ExpiredCardNotificationJob(
         IServiceProvider serviceProvider,
         ILogger<ExpiredCardNotificationJob> logger)
+        : this(serviceProvider, logger, TimeSpan.FromMinutes(5))
+    {
+    }
+
+    public ExpiredCardNotificationJob(
+        IServiceProvider serviceProvider,
+        ILogger<ExpiredCardNotificationJob> logger,
+        TimeSpan initialDelay)
     {
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _initialDelay = initialDelay;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("ExpiredCardNotificationJob started");
 
-        // Wait 5 minutes before first run to allow application to fully start
-        await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+        // Wait before first run to allow application to fully start
+        await Task.Delay(_initialDelay, stoppingToken);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -56,9 +66,15 @@ public class ExpiredCardNotificationJob : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
 
-        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        var notificationService = scope.ServiceProvider.GetRequiredService<IPaymentNotificationService>();
-        var tenantContext = scope.ServiceProvider.GetRequiredService<ITenantContext>();
+        var unitOfWork = scope.ServiceProvider.GetService<IUnitOfWork>();
+        var notificationService = scope.ServiceProvider.GetService<IPaymentNotificationService>();
+        var tenantContext = scope.ServiceProvider.GetService<ITenantContext>();
+
+        if (unitOfWork == null || notificationService == null || tenantContext == null)
+        {
+            _logger.LogError("Required services not available");
+            return;
+        }
 
         _logger.LogInformation("Processing expired payment cards");
 
@@ -137,10 +153,16 @@ public class ExpiredCardNotificationJob : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
 
-        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        var notificationService = scope.ServiceProvider.GetRequiredService<IPaymentNotificationService>();
-        var dateTime = scope.ServiceProvider.GetRequiredService<IDateTime>();
-        var tenantContext = scope.ServiceProvider.GetRequiredService<ITenantContext>();
+        var unitOfWork = scope.ServiceProvider.GetService<IUnitOfWork>();
+        var notificationService = scope.ServiceProvider.GetService<IPaymentNotificationService>();
+        var dateTime = scope.ServiceProvider.GetService<IDateTime>();
+        var tenantContext = scope.ServiceProvider.GetService<ITenantContext>();
+
+        if (unitOfWork == null || notificationService == null || dateTime == null || tenantContext == null)
+        {
+            _logger.LogError("Required services not available");
+            return;
+        }
 
         var currentDate = dateTime.UtcNow;
         var expiryThresholdDate = currentDate.AddDays(DaysBeforeExpiryToNotify);

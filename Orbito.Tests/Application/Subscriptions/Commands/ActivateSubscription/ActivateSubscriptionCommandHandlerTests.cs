@@ -37,7 +37,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.ActivateSubscription
             var subscription = CreateTestSubscription();
             subscription.Status = SubscriptionStatus.Suspended;
 
-            _subscriptionRepositoryMock.Setup(x => x.GetByIdAsync(subscriptionId, It.IsAny<CancellationToken>()))
+            _subscriptionRepositoryMock.Setup(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(subscription);
 
             // Act
@@ -64,7 +64,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.ActivateSubscription
             var subscription = CreateTestSubscription();
             subscription.Status = SubscriptionStatus.Suspended; // Use Suspended instead of Pending
 
-            _subscriptionRepositoryMock.Setup(x => x.GetByIdAsync(subscriptionId, It.IsAny<CancellationToken>()))
+            _subscriptionRepositoryMock.Setup(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(subscription);
 
             // Act
@@ -87,7 +87,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.ActivateSubscription
             var subscriptionId = Guid.NewGuid();
             var command = new ActivateSubscriptionCommand { SubscriptionId = subscriptionId };
 
-            _subscriptionRepositoryMock.Setup(x => x.GetByIdAsync(subscriptionId, It.IsAny<CancellationToken>()))
+            _subscriptionRepositoryMock.Setup(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((Subscription?)null);
 
             // Act
@@ -112,7 +112,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.ActivateSubscription
             var subscription = CreateTestSubscription();
             subscription.Status = SubscriptionStatus.Active;
 
-            _subscriptionRepositoryMock.Setup(x => x.GetByIdAsync(subscriptionId, It.IsAny<CancellationToken>()))
+            _subscriptionRepositoryMock.Setup(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(subscription);
 
             // Act
@@ -137,7 +137,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.ActivateSubscription
             var subscription = CreateTestSubscription();
             subscription.Status = SubscriptionStatus.Cancelled;
 
-            _subscriptionRepositoryMock.Setup(x => x.GetByIdAsync(subscriptionId, It.IsAny<CancellationToken>()))
+            _subscriptionRepositoryMock.Setup(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(subscription);
 
             // Act
@@ -162,7 +162,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.ActivateSubscription
             var subscription = CreateTestSubscription();
             subscription.Status = SubscriptionStatus.Expired;
 
-            _subscriptionRepositoryMock.Setup(x => x.GetByIdAsync(subscriptionId, It.IsAny<CancellationToken>()))
+            _subscriptionRepositoryMock.Setup(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(subscription);
 
             // Act
@@ -187,7 +187,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.ActivateSubscription
             var subscription = CreateTestSubscription();
             subscription.Status = SubscriptionStatus.PastDue;
 
-            _subscriptionRepositoryMock.Setup(x => x.GetByIdAsync(subscriptionId, It.IsAny<CancellationToken>()))
+            _subscriptionRepositoryMock.Setup(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(subscription);
 
             // Act

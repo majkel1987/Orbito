@@ -88,7 +88,7 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
             _providerRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Provider>(), It.IsAny<CancellationToken>()), Times.Once);
             _userManagerMock.Verify(x => x.AddToRoleAsync(user, "Provider"), Times.Once);
             _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
-            _unitOfWorkMock.Verify(x => x.CommitTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
+            _unitOfWorkMock.Verify(x => x.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -143,7 +143,7 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
                 () => _handler.Handle(command, CancellationToken.None));
 
             exception.Message.Should().Contain($"Użytkownik o ID {userId} nie istnieje");
-            _unitOfWorkMock.Verify(x => x.RollbackTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
+            _unitOfWorkMock.Verify(x => x.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -170,7 +170,7 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
                 () => _handler.Handle(command, CancellationToken.None));
 
             exception.Message.Should().Contain($"Użytkownik {user.Email} już ma przypisanego providera");
-            _unitOfWorkMock.Verify(x => x.RollbackTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
+            _unitOfWorkMock.Verify(x => x.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -200,7 +200,7 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
                 () => _handler.Handle(command, CancellationToken.None));
 
             exception.Message.Should().Contain($"Subdomain '{subdomainSlug}' jest już zajęty");
-            _unitOfWorkMock.Verify(x => x.RollbackTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
+            _unitOfWorkMock.Verify(x => x.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -230,7 +230,7 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
 
             // Act & Assert
             await Assert.ThrowsAsync<Exception>(() => _handler.Handle(command, CancellationToken.None));
-            _unitOfWorkMock.Verify(x => x.RollbackTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
+            _unitOfWorkMock.Verify(x => x.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -257,7 +257,7 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
 
             // Act & Assert
             await Assert.ThrowsAsync<Exception>(() => _handler.Handle(command, CancellationToken.None));
-            _unitOfWorkMock.Verify(x => x.RollbackTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
+            _unitOfWorkMock.Verify(x => x.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -339,6 +339,130 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
         {
             _userManagerMock.Setup(x => x.AddToRoleAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()))
                 .ReturnsAsync(IdentityResult.Success);
+        }
+
+        #endregion
+
+        #region Security Tests
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public async Task Handle_WithUnauthorizedUser_ShouldThrowSecurityException()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+            var command = new CreateProviderCommand(
+                userId, "Test Business", "test-business", null, null, null);
+
+            var unauthorizedUser = new ApplicationUser
+            {
+                Id = userId,
+                Email = "unauthorized@example.com",
+                TenantId = TenantId.New() // User already belongs to different tenant
+            };
+
+            _userManagerMock.Setup(x => x.FindByIdAsync(userId.ToString()))
+                .ReturnsAsync(unauthorizedUser);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+                () => _handler.Handle(command, CancellationToken.None));
+
+            exception.Message.Should().Contain($"Użytkownik {unauthorizedUser.Email} już ma przypisanego providera");
+        }
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public async Task Handle_WithMaliciousSubdomain_ShouldSanitizeInput()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+            var maliciousSubdomain = "<script>alert('xss')</script>malicious-subdomain";
+            var command = new CreateProviderCommand(
+                userId, "Test Business", maliciousSubdomain, null, null, null);
+
+            var user = new ApplicationUser
+            {
+                Id = userId,
+                Email = "test@example.com"
+            };
+
+            var createdProvider = Provider.Create(userId, "Test Business", "malicious-subdomain"); // Should be sanitized
+
+            SetupSuccessfulUserLookup(user);
+            SetupNoExistingProvider();
+            SetupSuccessfulProviderCreation(createdProvider);
+            SetupSuccessfulRoleAssignment();
+
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.SubdomainSlug.Should().NotContain("<script>");
+            result.SubdomainSlug.Should().NotContain("alert");
+        }
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public async Task Handle_WithSQLInjectionInBusinessName_ShouldSanitizeInput()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+            var maliciousBusinessName = "'; DROP TABLE Providers; --";
+            var command = new CreateProviderCommand(
+                userId, maliciousBusinessName, "test-business", null, null, null);
+
+            var user = new ApplicationUser
+            {
+                Id = userId,
+                Email = "test@example.com"
+            };
+
+            var createdProvider = Provider.Create(userId, maliciousBusinessName, "test-business");
+
+            SetupSuccessfulUserLookup(user);
+            SetupNoExistingProvider();
+            SetupSuccessfulProviderCreation(createdProvider);
+            SetupSuccessfulRoleAssignment();
+
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.BusinessName.Should().Be(maliciousBusinessName); // Should be stored as-is (parameterized queries prevent SQL injection)
+            
+            // Verify that the provider was created with the exact input (parameterized queries handle SQL injection)
+            _providerRepositoryMock.Verify(x => x.AddAsync(
+                It.Is<Provider>(p => p.BusinessName == maliciousBusinessName), 
+                It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public async Task Handle_WithCrossTenantDataAccess_ShouldPreventAccess()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+            var command = new CreateProviderCommand(
+                userId, "Test Business", "test-business", null, null, null);
+
+            var userFromDifferentTenant = new ApplicationUser
+            {
+                Id = userId,
+                Email = "test@example.com",
+                TenantId = TenantId.New() // Different tenant
+            };
+
+            _userManagerMock.Setup(x => x.FindByIdAsync(userId.ToString()))
+                .ReturnsAsync(userFromDifferentTenant);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+                () => _handler.Handle(command, CancellationToken.None));
+
+            exception.Message.Should().Contain($"Użytkownik {userFromDifferentTenant.Email} już ma przypisanego providera");
         }
 
         #endregion

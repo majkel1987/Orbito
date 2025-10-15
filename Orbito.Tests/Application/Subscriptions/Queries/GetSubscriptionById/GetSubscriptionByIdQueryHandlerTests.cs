@@ -41,7 +41,7 @@ namespace Orbito.Tests.Application.Subscriptions.Queries.GetSubscriptionById
             var subscription = CreateTestSubscription();
             subscription.Id = subscriptionId;
 
-            _subscriptionRepositoryMock.Setup(x => x.GetByIdAsync(subscriptionId, It.IsAny<CancellationToken>()))
+            _subscriptionRepositoryMock.Setup(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(subscription);
 
             // Act
@@ -65,7 +65,7 @@ namespace Orbito.Tests.Application.Subscriptions.Queries.GetSubscriptionById
             result.CancelledAt.Should().Be(subscription.CancelledAt);
             result.UpdatedAt.Should().Be(subscription.UpdatedAt);
 
-            _subscriptionRepositoryMock.Verify(x => x.GetByIdAsync(subscriptionId, It.IsAny<CancellationToken>()), Times.Once);
+            _subscriptionRepositoryMock.Verify(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Once);
             _subscriptionRepositoryMock.Verify(x => x.GetByIdWithDetailsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
@@ -106,7 +106,7 @@ namespace Orbito.Tests.Application.Subscriptions.Queries.GetSubscriptionById
             result.LastPaymentDate.Should().Be(subscription.Payments?.Where(p => p.Status == PaymentStatus.Completed).Max(p => p.ProcessedAt));
 
             _subscriptionRepositoryMock.Verify(x => x.GetByIdWithDetailsAsync(subscriptionId, It.IsAny<CancellationToken>()), Times.Once);
-            _subscriptionRepositoryMock.Verify(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+            _subscriptionRepositoryMock.Verify(x => x.GetByIdForClientAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
@@ -120,7 +120,7 @@ namespace Orbito.Tests.Application.Subscriptions.Queries.GetSubscriptionById
                 IncludeDetails = false
             };
 
-            _subscriptionRepositoryMock.Setup(x => x.GetByIdAsync(subscriptionId, It.IsAny<CancellationToken>()))
+            _subscriptionRepositoryMock.Setup(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((Subscription?)null);
 
             // Act
@@ -129,7 +129,7 @@ namespace Orbito.Tests.Application.Subscriptions.Queries.GetSubscriptionById
             // Assert
             result.Should().BeNull();
 
-            _subscriptionRepositoryMock.Verify(x => x.GetByIdAsync(subscriptionId, It.IsAny<CancellationToken>()), Times.Once);
+            _subscriptionRepositoryMock.Verify(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -169,7 +169,7 @@ namespace Orbito.Tests.Application.Subscriptions.Queries.GetSubscriptionById
             var subscription = CreateTestSubscriptionWithTrial();
             subscription.Id = subscriptionId;
 
-            _subscriptionRepositoryMock.Setup(x => x.GetByIdAsync(subscriptionId, It.IsAny<CancellationToken>()))
+            _subscriptionRepositoryMock.Setup(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(subscription);
 
             // Act
@@ -197,7 +197,7 @@ namespace Orbito.Tests.Application.Subscriptions.Queries.GetSubscriptionById
             subscription.Status = SubscriptionStatus.Cancelled;
             subscription.Cancel();
 
-            _subscriptionRepositoryMock.Setup(x => x.GetByIdAsync(subscriptionId, It.IsAny<CancellationToken>()))
+            _subscriptionRepositoryMock.Setup(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(subscription);
 
             // Act

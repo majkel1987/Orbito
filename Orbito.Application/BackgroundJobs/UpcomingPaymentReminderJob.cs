@@ -13,23 +13,33 @@ public class UpcomingPaymentReminderJob : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<UpcomingPaymentReminderJob> _logger;
     private readonly TimeSpan _period = TimeSpan.FromHours(24); // Run daily
+    private readonly TimeSpan _initialDelay;
     private const int DaysBeforePayment = 3;
     private const int OperationTimeoutMinutes = 15;
 
     public UpcomingPaymentReminderJob(
         IServiceProvider serviceProvider,
         ILogger<UpcomingPaymentReminderJob> logger)
+        : this(serviceProvider, logger, TimeSpan.FromMinutes(1))
+    {
+    }
+
+    public UpcomingPaymentReminderJob(
+        IServiceProvider serviceProvider,
+        ILogger<UpcomingPaymentReminderJob> logger,
+        TimeSpan initialDelay)
     {
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _initialDelay = initialDelay;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("UpcomingPaymentReminderJob started");
 
-        // Wait 1 minute before first run to allow application to fully start
-        await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+        // Wait before first run to allow application to fully start
+        await Task.Delay(_initialDelay, stoppingToken);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -52,10 +62,16 @@ public class UpcomingPaymentReminderJob : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
 
-        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        var notificationService = scope.ServiceProvider.GetRequiredService<IPaymentNotificationService>();
-        var dateTime = scope.ServiceProvider.GetRequiredService<IDateTime>();
-        var tenantContext = scope.ServiceProvider.GetRequiredService<ITenantContext>();
+        var unitOfWork = scope.ServiceProvider.GetService<IUnitOfWork>();
+        var notificationService = scope.ServiceProvider.GetService<IPaymentNotificationService>();
+        var dateTime = scope.ServiceProvider.GetService<IDateTime>();
+        var tenantContext = scope.ServiceProvider.GetService<ITenantContext>();
+
+        if (unitOfWork == null || notificationService == null || dateTime == null || tenantContext == null)
+        {
+            _logger.LogError("Required services not available");
+            return;
+        }
 
         var currentDate = dateTime.UtcNow;
         var reminderDate = currentDate.AddDays(DaysBeforePayment).Date;

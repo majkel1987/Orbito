@@ -13,23 +13,33 @@ public class CheckExpiringSubscriptionsJob : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<CheckExpiringSubscriptionsJob> _logger;
     private readonly TimeSpan _period = TimeSpan.FromHours(24); // Run daily
+    private readonly TimeSpan _initialDelay;
     private const int DaysBeforeExpiry = 7;
     private const int OperationTimeoutMinutes = 10;
 
     public CheckExpiringSubscriptionsJob(
         IServiceProvider serviceProvider,
         ILogger<CheckExpiringSubscriptionsJob> logger)
+        : this(serviceProvider, logger, TimeSpan.FromMinutes(2))
+    {
+    }
+
+    public CheckExpiringSubscriptionsJob(
+        IServiceProvider serviceProvider,
+        ILogger<CheckExpiringSubscriptionsJob> logger,
+        TimeSpan initialDelay)
     {
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _initialDelay = initialDelay;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("CheckExpiringSubscriptionsJob started");
 
-        // Wait 2 minutes before first run to allow application to fully start
-        await Task.Delay(TimeSpan.FromMinutes(2), stoppingToken);
+        // Wait before first run to allow application to fully start
+        await Task.Delay(_initialDelay, stoppingToken);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -51,10 +61,16 @@ public class CheckExpiringSubscriptionsJob : BackgroundService
     private async Task CheckExpiringSubscriptions(CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
-        var subscriptionService = scope.ServiceProvider.GetRequiredService<ISubscriptionService>();
-        var notificationService = scope.ServiceProvider.GetRequiredService<IPaymentNotificationService>();
-        var dateTime = scope.ServiceProvider.GetRequiredService<IDateTime>();
-        var tenantContext = scope.ServiceProvider.GetRequiredService<ITenantContext>();
+        var subscriptionService = scope.ServiceProvider.GetService<ISubscriptionService>();
+        var notificationService = scope.ServiceProvider.GetService<IPaymentNotificationService>();
+        var dateTime = scope.ServiceProvider.GetService<IDateTime>();
+        var tenantContext = scope.ServiceProvider.GetService<ITenantContext>();
+
+        if (subscriptionService == null || notificationService == null || dateTime == null || tenantContext == null)
+        {
+            _logger.LogError("Required services not available");
+            return;
+        }
 
         _logger.LogInformation("Checking for subscriptions expiring within {Days} days", DaysBeforeExpiry);
 

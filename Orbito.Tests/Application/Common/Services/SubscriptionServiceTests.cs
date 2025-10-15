@@ -558,7 +558,7 @@ namespace Orbito.Tests.Application.Common.Services
             };
 
             _dateTimeMock.Setup(x => x.UtcNow).Returns(checkDate);
-            _subscriptionRepositoryMock.Setup(x => x.GetExpiringSubscriptionsAsync(checkDate, daysBeforeExpiration, It.IsAny<CancellationToken>()))
+            _subscriptionRepositoryMock.Setup(x => x.GetExpiringSubscriptionsByClientAsync(It.IsAny<Guid>(), checkDate, daysBeforeExpiration, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expiringSubscriptions);
 
             // Act
@@ -566,7 +566,7 @@ namespace Orbito.Tests.Application.Common.Services
 
             // Assert
             result.Should().HaveCount(2);
-            _subscriptionRepositoryMock.Verify(x => x.GetExpiringSubscriptionsAsync(checkDate, daysBeforeExpiration, It.IsAny<CancellationToken>()), Times.Once);
+            _subscriptionRepositoryMock.Verify(x => x.GetExpiringSubscriptionsByClientAsync(It.IsAny<Guid>(), checkDate, daysBeforeExpiration, It.IsAny<CancellationToken>()), Times.Once);
         }
 
         #endregion
@@ -585,7 +585,7 @@ namespace Orbito.Tests.Application.Common.Services
             };
 
             _dateTimeMock.Setup(x => x.UtcNow).Returns(checkDate);
-            _subscriptionRepositoryMock.Setup(x => x.GetExpiredSubscriptionsAsync(checkDate, It.IsAny<CancellationToken>()))
+            _subscriptionRepositoryMock.Setup(x => x.GetExpiredSubscriptionsByClientAsync(It.IsAny<Guid>(), checkDate, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expiredSubscriptions);
 
             // Act
@@ -625,6 +625,146 @@ namespace Orbito.Tests.Application.Common.Services
             // Assert
             _subscriptionRepositoryMock.Verify(x => x.GetSubscriptionsForBillingAsync(billingDate, It.IsAny<CancellationToken>()), Times.Once);
             _subscriptionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Subscription>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+        }
+
+        #endregion
+
+        #region Security Tests
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public async Task CanClientSubscribeToPlanAsync_WithCrossTenantClient_ShouldReturnFalse()
+        {
+            // Arrange
+            var clientId = Guid.NewGuid();
+            var planId = Guid.NewGuid();
+            var differentTenantId = TenantId.New();
+
+            var clientFromDifferentTenant = Client.CreateWithUser(differentTenantId, Guid.NewGuid(), "Test Company");
+            var plan = SubscriptionPlan.Create(_tenantId, "Test Plan", 29.99m, "USD", BillingPeriodType.Monthly);
+            plan.Activate();
+
+            _clientRepositoryMock.Setup(x => x.GetByIdAsync(clientId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(clientFromDifferentTenant);
+            _subscriptionPlanRepositoryMock.Setup(x => x.GetByIdAsync(planId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(plan);
+
+            // Act
+            var result = await _subscriptionService.CanClientSubscribeToPlanAsync(clientId, planId);
+
+            // Assert
+            result.Should().BeFalse(); // Cross-tenant access should be denied
+        }
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public async Task CanClientSubscribeToPlanAsync_WithCrossTenantPlan_ShouldReturnFalse()
+        {
+            // Arrange
+            var clientId = Guid.NewGuid();
+            var planId = Guid.NewGuid();
+            var differentTenantId = TenantId.New();
+
+            var client = Client.CreateWithUser(_tenantId, Guid.NewGuid(), "Test Company");
+            var planFromDifferentTenant = SubscriptionPlan.Create(differentTenantId, "Test Plan", 29.99m, "USD", BillingPeriodType.Monthly);
+            planFromDifferentTenant.Activate();
+
+            _clientRepositoryMock.Setup(x => x.GetByIdAsync(clientId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(client);
+            _subscriptionPlanRepositoryMock.Setup(x => x.GetByIdAsync(planId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(planFromDifferentTenant);
+
+            // Act
+            var result = await _subscriptionService.CanClientSubscribeToPlanAsync(clientId, planId);
+
+            // Assert
+            result.Should().BeFalse(); // Cross-tenant access should be denied
+        }
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public async Task CreateSubscriptionAsync_WithCrossTenantClient_ShouldThrowSecurityException()
+        {
+            // Arrange
+            var clientId = Guid.NewGuid();
+            var planId = Guid.NewGuid();
+            var price = Money.Create(29.99m, "USD");
+            var billingPeriod = BillingPeriod.Create(1, BillingPeriodType.Monthly);
+            var differentTenantId = TenantId.New();
+
+            var clientFromDifferentTenant = Client.CreateWithUser(differentTenantId, Guid.NewGuid(), "Test Company");
+            var plan = SubscriptionPlan.Create(_tenantId, "Test Plan", 29.99m, "USD", BillingPeriodType.Monthly);
+            plan.Activate();
+
+            _clientRepositoryMock.Setup(x => x.GetByIdAsync(clientId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(clientFromDifferentTenant);
+            _subscriptionPlanRepositoryMock.Setup(x => x.GetByIdAsync(planId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(plan);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                _subscriptionService.CreateSubscriptionAsync(clientId, planId, price, billingPeriod));
+
+            exception.Message.Should().Be($"Client with ID {clientId} not found");
+        }
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public async Task ProcessPaymentAsync_WithCrossTenantSubscription_ShouldReturnFalse()
+        {
+            // Arrange
+            var subscriptionId = Guid.NewGuid();
+            var amount = Money.Create(29.99m, "USD");
+            var differentTenantId = TenantId.New();
+
+            var subscriptionFromDifferentTenant = Subscription.Create(
+                differentTenantId,
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                Money.Create(29.99m, "USD"),
+                BillingPeriod.Create(1, BillingPeriodType.Monthly));
+
+            _subscriptionRepositoryMock.Setup(x => x.GetByIdWithDetailsAsync(subscriptionId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync((Subscription?)null); // Subscription not found for current tenant
+
+            // Act
+            var result = await _subscriptionService.ProcessPaymentAsync(subscriptionId, amount);
+
+            // Assert
+            result.Should().BeFalse(); // Cross-tenant access should be denied
+        }
+
+        [Fact]
+        [Trait("Category", "Unit")]
+        public async Task GetExpiringSubscriptionsAsync_ShouldOnlyReturnCurrentTenantSubscriptions()
+        {
+            // Arrange
+            var daysBeforeExpiration = 7;
+            var checkDate = DateTime.UtcNow;
+            var differentTenantId = TenantId.New();
+
+            var currentTenantSubscriptions = new List<Subscription>
+            {
+                CreateTestSubscription(), // Current tenant
+                CreateTestSubscription()  // Current tenant
+            };
+
+            var differentTenantSubscriptions = new List<Subscription>
+            {
+                Subscription.Create(differentTenantId, Guid.NewGuid(), Guid.NewGuid(), 
+                    Money.Create(29.99m, "USD"), BillingPeriod.Create(1, BillingPeriodType.Monthly))
+            };
+
+            _dateTimeMock.Setup(x => x.UtcNow).Returns(checkDate);
+            _subscriptionRepositoryMock.Setup(x => x.GetExpiringSubscriptionsByClientAsync(It.IsAny<Guid>(), checkDate, daysBeforeExpiration, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(currentTenantSubscriptions);
+
+            // Act
+            var result = await _subscriptionService.GetExpiringSubscriptionsAsync(daysBeforeExpiration);
+
+            // Assert
+            result.Should().HaveCount(2);
+            result.Should().OnlyContain(s => s.TenantId == _tenantId); // Only current tenant subscriptions
         }
 
         #endregion

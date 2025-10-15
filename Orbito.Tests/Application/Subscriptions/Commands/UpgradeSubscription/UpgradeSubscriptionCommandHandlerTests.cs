@@ -52,7 +52,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.UpgradeSubscription
             updatedSubscription.PlanId = newPlanId;
             updatedSubscription.CurrentPrice = Money.Create(49.99m, "USD");
 
-            _subscriptionRepositoryMock.Setup(x => x.GetByIdAsync(subscriptionId, It.IsAny<CancellationToken>()))
+            _subscriptionRepositoryMock.Setup(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(subscription);
             _subscriptionServiceMock.Setup(x => x.CanUpgradeAsync(subscription, newPlanId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
@@ -90,7 +90,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.UpgradeSubscription
                 Currency = "USD"
             };
 
-            _subscriptionRepositoryMock.Setup(x => x.GetByIdAsync(subscriptionId, It.IsAny<CancellationToken>()))
+            _subscriptionRepositoryMock.Setup(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((Subscription?)null);
 
             // Act
@@ -125,7 +125,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.UpgradeSubscription
             subscription.Status = SubscriptionStatus.Active;
             subscription.IsInTrial = false;
 
-            _subscriptionRepositoryMock.Setup(x => x.GetByIdAsync(subscriptionId, It.IsAny<CancellationToken>()))
+            _subscriptionRepositoryMock.Setup(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(subscription);
             _subscriptionServiceMock.Setup(x => x.CanUpgradeAsync(subscription, newPlanId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(false);
@@ -162,7 +162,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.UpgradeSubscription
             subscription.Status = SubscriptionStatus.Active;
             subscription.IsInTrial = true; // Trial subscription cannot be upgraded
 
-            _subscriptionRepositoryMock.Setup(x => x.GetByIdAsync(subscriptionId, It.IsAny<CancellationToken>()))
+            _subscriptionRepositoryMock.Setup(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(subscription);
             _subscriptionServiceMock.Setup(x => x.CanUpgradeAsync(subscription, newPlanId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(false);
@@ -198,7 +198,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.UpgradeSubscription
             var subscription = CreateTestSubscription();
             subscription.Status = SubscriptionStatus.Cancelled;
 
-            _subscriptionRepositoryMock.Setup(x => x.GetByIdAsync(subscriptionId, It.IsAny<CancellationToken>()))
+            _subscriptionRepositoryMock.Setup(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(subscription);
             _subscriptionServiceMock.Setup(x => x.CanUpgradeAsync(subscription, newPlanId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(false);
@@ -238,7 +238,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.UpgradeSubscription
             var updatedSubscription = CreateTestSubscription();
             updatedSubscription.PlanId = newPlanId;
 
-            _subscriptionRepositoryMock.Setup(x => x.GetByIdAsync(subscriptionId, It.IsAny<CancellationToken>()))
+            _subscriptionRepositoryMock.Setup(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(subscription);
             _subscriptionServiceMock.Setup(x => x.CanUpgradeAsync(subscription, newPlanId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
