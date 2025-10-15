@@ -14,24 +14,20 @@ namespace Orbito.API.Controllers
     /// </summary>
     [Authorize(Roles = "Provider,Client")]
     [Route("api/payments/retry")]
-    [ApiController]
-    public class PaymentRetryController : ControllerBase
+    public class PaymentRetryController : BaseController
     {
-        private readonly IMediator _mediator;
-        private readonly ILogger<PaymentRetryController> _logger;
         private readonly IUserContextService _userContextService;
         private readonly ISecurityLimitService _securityLimitService;
         private readonly IMemoryCache _cache;
 
         public PaymentRetryController(
-            IMediator mediator, 
+            IMediator mediator,
             ILogger<PaymentRetryController> logger,
             IUserContextService userContextService,
             ISecurityLimitService securityLimitService,
             IMemoryCache cache)
+            : base(mediator, logger)
         {
-            _mediator = mediator;
-            _logger = logger;
             _userContextService = userContextService;
             _securityLimitService = securityLimitService;
             _cache = cache;
@@ -57,13 +53,13 @@ namespace Orbito.API.Controllers
         {
             try
             {
-                _logger.LogInformation("Retry payment request for payment {PaymentId}", paymentId);
+                Logger.LogInformation("Retry payment request for payment {PaymentId}", paymentId);
 
                 // SECURITY: Get ClientId from user context with caching
                 var currentClientId = await GetCachedClientIdAsync(cancellationToken);
                 if (currentClientId == null)
                 {
-                    _logger.LogWarning("User context does not contain valid ClientId");
+                    Logger.LogWarning("User context does not contain valid ClientId");
                     return Unauthorized(new { error = "Unable to determine client context" });
                 }
 
@@ -80,19 +76,19 @@ namespace Orbito.API.Controllers
                     Reason = request.Reason
                 };
 
-                var result = await _mediator.Send(command, cancellationToken);
+                var result = await Mediator.Send(command, cancellationToken);
 
                 if (!result.Success)
                 {
                     return BadRequest(new { error = result.ErrorMessage });
                 }
 
-                _logger.LogInformation("Successfully scheduled retry for payment {PaymentId}", paymentId);
+                Logger.LogInformation("Successfully scheduled retry for payment {PaymentId}", paymentId);
                 return Ok(result);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing retry request for payment {PaymentId}", paymentId);
+                Logger.LogError(ex, "Error processing retry request for payment {PaymentId}", paymentId);
                 return StatusCode(StatusCodes.Status500InternalServerError, new { error = "An error occurred while processing the retry request" });
             }
         }
@@ -114,13 +110,13 @@ namespace Orbito.API.Controllers
         {
             try
             {
-                _logger.LogInformation("Bulk retry request for {Count} payments", request.PaymentIds.Count);
+                Logger.LogInformation("Bulk retry request for {Count} payments", request.PaymentIds.Count);
 
                 // SECURITY: Get ClientId from user context with caching
                 var currentClientId = await GetCachedClientIdAsync(cancellationToken);
                 if (currentClientId == null)
                 {
-                    _logger.LogWarning("User context does not contain valid ClientId");
+                    Logger.LogWarning("User context does not contain valid ClientId");
                     return Unauthorized(new { error = "Unable to determine client context" });
                 }
 
@@ -148,16 +144,16 @@ namespace Orbito.API.Controllers
                     Reason = request.Reason
                 };
 
-                var result = await _mediator.Send(command, cancellationToken);
+                var result = await Mediator.Send(command, cancellationToken);
 
-                _logger.LogInformation("Bulk retry completed: {Successful} successful, {Failed} failed", 
+                Logger.LogInformation("Bulk retry completed: {Successful} successful, {Failed} failed",
                     result.SuccessfulRetries, result.FailedRetries);
 
                 return Ok(result);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing bulk retry request");
+                Logger.LogError(ex, "Error processing bulk retry request");
                 return StatusCode(StatusCodes.Status500InternalServerError, new { error = "An error occurred while processing the bulk retry request" });
             }
         }
@@ -206,16 +202,16 @@ namespace Orbito.API.Controllers
                     Pagination = pagination
                 };
 
-                var result = await _mediator.Send(query, cancellationToken);
+                var result = await Mediator.Send(query, cancellationToken);
 
-                _logger.LogInformation("Retrieved {Count} scheduled retries out of {Total}", 
+                Logger.LogInformation("Retrieved {Count} scheduled retries out of {Total}",
                     result.Items.Count, result.TotalCount);
 
                 return Ok(result);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting scheduled retries");
+                Logger.LogError(ex, "Error getting scheduled retries");
                 return StatusCode(StatusCodes.Status500InternalServerError, new { error = "An error occurred while retrieving scheduled retries" });
             }
         }
@@ -261,16 +257,16 @@ namespace Orbito.API.Controllers
                     Pagination = pagination
                 };
 
-                var result = await _mediator.Send(query, cancellationToken);
+                var result = await Mediator.Send(query, cancellationToken);
 
-                _logger.LogInformation("Retrieved {Count} failed payments out of {Total}", 
+                Logger.LogInformation("Retrieved {Count} failed payments out of {Total}",
                     result.Items.Count, result.TotalCount);
 
                 return Ok(result);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting failed payments");
+                Logger.LogError(ex, "Error getting failed payments");
                 return StatusCode(StatusCodes.Status500InternalServerError, new { error = "An error occurred while retrieving failed payments" });
             }
         }
@@ -293,7 +289,7 @@ namespace Orbito.API.Controllers
         {
             try
             {
-                _logger.LogInformation("Cancel retry request for schedule {ScheduleId}", scheduleId);
+                Logger.LogInformation("Cancel retry request for schedule {ScheduleId}", scheduleId);
 
                 // Validate schedule ID
                 if (scheduleId == Guid.Empty)
@@ -305,7 +301,7 @@ namespace Orbito.API.Controllers
                 var currentClientId = await GetCachedClientIdAsync(cancellationToken);
                 if (currentClientId == null)
                 {
-                    _logger.LogWarning("User context does not contain valid ClientId");
+                    Logger.LogWarning("User context does not contain valid ClientId");
                     return Unauthorized(new { error = "Unable to determine client context" });
                 }
 
@@ -316,19 +312,19 @@ namespace Orbito.API.Controllers
                     ClientId = currentClientId.Value
                 };
 
-                var result = await _mediator.Send(command, cancellationToken);
+                var result = await Mediator.Send(command, cancellationToken);
 
                 if (!result.Success)
                 {
                     return BadRequest(new { error = result.ErrorMessage });
                 }
 
-                _logger.LogInformation("Successfully cancelled retry schedule {ScheduleId}", scheduleId);
+                Logger.LogInformation("Successfully cancelled retry schedule {ScheduleId}", scheduleId);
                 return NoContent();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error cancelling retry {ScheduleId}", scheduleId);
+                Logger.LogError(ex, "Error cancelling retry {ScheduleId}", scheduleId);
                 return StatusCode(StatusCodes.Status500InternalServerError, new { error = "An error occurred while cancelling the retry" });
             }
         }

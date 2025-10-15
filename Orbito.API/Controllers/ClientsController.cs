@@ -13,16 +13,12 @@ using Orbito.Application.Clients.Queries.SearchClients;
 
 namespace Orbito.API.Controllers
 {
-    [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
-    public class ClientsController : ControllerBase
+    public class ClientsController : BaseController
     {
-        private readonly IMediator _mediator;
-
-        public ClientsController(IMediator mediator)
+        public ClientsController(IMediator mediator, ILogger<ClientsController> logger)
+            : base(mediator, logger)
         {
-            _mediator = mediator;
         }
 
         /// <summary>
@@ -34,7 +30,7 @@ namespace Orbito.API.Controllers
         [Authorize(Roles = "Provider,PlatformAdmin")]
         public async Task<ActionResult<CreateClientResult>> CreateClient([FromBody] CreateClientCommand command)
         {
-            var result = await _mediator.Send(command);
+            var result = await Mediator.Send(command);
 
             if (!result.Success)
             {
@@ -61,7 +57,7 @@ namespace Orbito.API.Controllers
             [FromQuery] string? searchTerm = null)
         {
             var query = new GetClientsByProviderQuery(pageNumber, pageSize, activeOnly, searchTerm);
-            var result = await _mediator.Send(query);
+            var result = await Mediator.Send(query);
 
             if (!result.Success)
             {
@@ -81,7 +77,7 @@ namespace Orbito.API.Controllers
         public async Task<ActionResult<GetClientByIdResult>> GetClientById(Guid id)
         {
             var query = new GetClientByIdQuery(id);
-            var result = await _mediator.Send(query);
+            var result = await Mediator.Send(query);
 
             if (!result.Success)
             {
@@ -106,7 +102,7 @@ namespace Orbito.API.Controllers
                 return BadRequest("ID in URL does not match ID in request body");
             }
 
-            var result = await _mediator.Send(command);
+            var result = await Mediator.Send(command);
 
             if (!result.Success)
             {
@@ -127,7 +123,7 @@ namespace Orbito.API.Controllers
         public async Task<ActionResult<DeleteClientResult>> DeleteClient(Guid id, [FromQuery] bool hardDelete = false)
         {
             var command = new DeleteClientCommand(id, hardDelete);
-            var result = await _mediator.Send(command);
+            var result = await Mediator.Send(command);
 
             if (!result.Success)
             {
@@ -147,7 +143,7 @@ namespace Orbito.API.Controllers
         public async Task<ActionResult<ActivateClientResult>> ActivateClient(Guid id)
         {
             var command = new ActivateClientCommand(id);
-            var result = await _mediator.Send(command);
+            var result = await Mediator.Send(command);
 
             if (!result.Success)
             {
@@ -167,7 +163,7 @@ namespace Orbito.API.Controllers
         public async Task<ActionResult<DeactivateClientResult>> DeactivateClient(Guid id)
         {
             var command = new DeactivateClientCommand(id);
-            var result = await _mediator.Send(command);
+            var result = await Mediator.Send(command);
 
             if (!result.Success)
             {
@@ -199,7 +195,7 @@ namespace Orbito.API.Controllers
             }
 
             var query = new SearchClientsQuery(searchTerm, pageNumber, pageSize, activeOnly);
-            var result = await _mediator.Send(query);
+            var result = await Mediator.Send(query);
 
             if (!result.Success)
             {
@@ -218,7 +214,7 @@ namespace Orbito.API.Controllers
         public async Task<ActionResult<GetClientStatsResult>> GetClientStats()
         {
             var query = new GetClientStatsQuery();
-            var result = await _mediator.Send(query);
+            var result = await Mediator.Send(query);
 
             if (!result.Success)
             {

@@ -12,16 +12,12 @@ using Orbito.Domain.Enums;
 
 namespace Orbito.API.Controllers
 {
-    [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
-    public class PaymentController : ControllerBase
+    public class PaymentController : BaseController
     {
-        private readonly IMediator _mediator;
-
-        public PaymentController(IMediator mediator)
+        public PaymentController(IMediator mediator, ILogger<PaymentController> logger)
+            : base(mediator, logger)
         {
-            _mediator = mediator;
         }
 
         /// <summary>
@@ -33,7 +29,7 @@ namespace Orbito.API.Controllers
         [Authorize(Roles = "Provider,PlatformAdmin")]
         public async Task<ActionResult<ProcessPaymentResult>> ProcessPayment([FromBody] ProcessPaymentCommand command)
         {
-            var result = await _mediator.Send(command);
+            var result = await Mediator.Send(command);
 
             if (!result.Success)
             {
@@ -59,7 +55,7 @@ namespace Orbito.API.Controllers
         public async Task<ActionResult<GetPaymentByIdResult>> GetPaymentById(Guid id)
         {
             var query = new GetPaymentByIdQuery(id);
-            var result = await _mediator.Send(query);
+            var result = await Mediator.Send(query);
 
             if (!result.Success)
             {
@@ -84,7 +80,7 @@ namespace Orbito.API.Controllers
             [FromQuery] int pageSize = 10)
         {
             var query = new GetPaymentsBySubscriptionQuery(subscriptionId, pageNumber, pageSize);
-            var result = await _mediator.Send(query);
+            var result = await Mediator.Send(query);
 
             if (!result.Success)
             {
@@ -108,7 +104,7 @@ namespace Orbito.API.Controllers
         {
             // Upewnij się, że ID w command jest takie samo jak w URL
             var commandWithId = command with { PaymentId = id };
-            var result = await _mediator.Send(commandWithId);
+            var result = await Mediator.Send(commandWithId);
 
             if (!result.Success)
             {
@@ -132,7 +128,7 @@ namespace Orbito.API.Controllers
         {
             // Upewnij się, że ID w command jest takie samo jak w URL
             var commandWithId = command with { PaymentId = id };
-            var result = await _mediator.Send(commandWithId);
+            var result = await Mediator.Send(commandWithId);
 
             if (!result.IsSuccess)
             {
@@ -152,7 +148,7 @@ namespace Orbito.API.Controllers
         public async Task<ActionResult<CreateStripeCustomerResult>> CreateStripeCustomer(
             [FromBody] CreateStripeCustomerCommand command)
         {
-            var result = await _mediator.Send(command);
+            var result = await Mediator.Send(command);
 
             if (!result.IsSuccess)
             {
@@ -172,7 +168,7 @@ namespace Orbito.API.Controllers
         public async Task<ActionResult<SavePaymentMethodResult>> SavePaymentMethod(
             [FromBody] SavePaymentMethodCommand command)
         {
-            var result = await _mediator.Send(command);
+            var result = await Mediator.Send(command);
 
             if (!result.IsSuccess)
             {
@@ -209,7 +205,7 @@ namespace Orbito.API.Controllers
                 ActiveOnly = activeOnly
             };
 
-            var result = await _mediator.Send(query);
+            var result = await Mediator.Send(query);
 
             if (!result.IsSuccess)
             {

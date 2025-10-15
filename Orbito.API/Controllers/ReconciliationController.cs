@@ -1,3 +1,4 @@
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Orbito.API.Extensions;
@@ -13,24 +14,23 @@ namespace Orbito.API.Controllers;
 /// </summary>
 [Authorize(Roles = "PlatformAdmin,Provider")]
 [Route("api/reconciliation")]
-[ApiController]
-public class ReconciliationController : ControllerBase
+public class ReconciliationController : BaseController
 {
     private readonly IPaymentReconciliationService _reconciliationService;
     private readonly IReconciliationRepository _reconciliationRepository;
     private readonly ITenantContext _tenantContext;
-    private readonly ILogger<ReconciliationController> _logger;
 
     public ReconciliationController(
+        IMediator mediator,
+        ILogger<ReconciliationController> logger,
         IPaymentReconciliationService reconciliationService,
         IReconciliationRepository reconciliationRepository,
-        ITenantContext tenantContext,
-        ILogger<ReconciliationController> logger)
+        ITenantContext tenantContext)
+        : base(mediator, logger)
     {
         _reconciliationService = reconciliationService ?? throw new ArgumentNullException(nameof(reconciliationService));
         _reconciliationRepository = reconciliationRepository ?? throw new ArgumentNullException(nameof(reconciliationRepository));
         _tenantContext = tenantContext ?? throw new ArgumentNullException(nameof(tenantContext));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>
@@ -86,7 +86,7 @@ public class ReconciliationController : ControllerBase
             {
                 if (!Guid.TryParse(jwtTenantIdClaim, out var jwtTenantId) || jwtTenantId != request.TenantId)
                 {
-                    _logger.LogWarning(
+                    Logger.LogWarning(
                         "SECURITY: JWT tenant_id {JwtTenantId} does not match request tenant {RequestTenantId}",
                         jwtTenantIdClaim, request.TenantId);
                     return Forbid();
@@ -98,7 +98,7 @@ public class ReconciliationController : ControllerBase
             {
                 if (!_tenantContext.HasTenant || _tenantContext.CurrentTenantId != tenantId)
                 {
-                    _logger.LogWarning(
+                    Logger.LogWarning(
                         "SECURITY: User attempted to reconcile tenant {RequestedTenantId} but current tenant is {CurrentTenantId}",
                         request.TenantId, _tenantContext.CurrentTenantId?.Value);
                     return Forbid();
@@ -110,7 +110,7 @@ public class ReconciliationController : ControllerBase
                 tenantId,
                 cancellationToken);
 
-            _logger.LogInformation(
+            Logger.LogInformation(
                 "Reconciliation completed for tenant {TenantId}. Report ID: {ReportId}, Discrepancies: {DiscrepancyCount}",
                 request.TenantId, report.Id, report.DiscrepanciesCount);
 
@@ -118,17 +118,17 @@ public class ReconciliationController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            _logger.LogWarning(ex, "Invalid reconciliation request: {ErrorMessage}", ex.Message);
+            Logger.LogWarning(ex, "Invalid reconciliation request: {ErrorMessage}", ex.Message);
             return BadRequest(ex.Message);
         }
         catch (UnauthorizedAccessException ex)
         {
-            _logger.LogError(ex, "Unauthorized reconciliation attempt: {ErrorMessage}", ex.Message);
+            Logger.LogError(ex, "Unauthorized reconciliation attempt: {ErrorMessage}", ex.Message);
             return Unauthorized("Insufficient permissions for reconciliation");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to run reconciliation: {ErrorMessage}", ex.Message);
+            Logger.LogError(ex, "Failed to run reconciliation: {ErrorMessage}", ex.Message);
             return StatusCode(500, "Internal server error during reconciliation");
         }
     }
@@ -163,7 +163,7 @@ public class ReconciliationController : ControllerBase
             {
                 if (!_tenantContext.HasTenant || _tenantContext.CurrentTenantId != tenantIdValue)
                 {
-                    _logger.LogWarning(
+                    Logger.LogWarning(
                         "SECURITY: User attempted to get reports for tenant {RequestedTenantId} but current tenant is {CurrentTenantId}",
                         tenantId, _tenantContext.CurrentTenantId?.Value);
                     return Forbid();
@@ -176,12 +176,12 @@ public class ReconciliationController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            _logger.LogWarning(ex, "Invalid get reports request: {ErrorMessage}", ex.Message);
+            Logger.LogWarning(ex, "Invalid get reports request: {ErrorMessage}", ex.Message);
             return BadRequest(ex.Message);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get reconciliation reports: {ErrorMessage}", ex.Message);
+            Logger.LogError(ex, "Failed to get reconciliation reports: {ErrorMessage}", ex.Message);
             return StatusCode(500, "Internal server error while retrieving reports");
         }
     }
@@ -211,7 +211,7 @@ public class ReconciliationController : ControllerBase
             {
                 if (!_tenantContext.HasTenant || _tenantContext.CurrentTenantId != tenantIdValue)
                 {
-                    _logger.LogWarning(
+                    Logger.LogWarning(
                         "SECURITY: User attempted to get discrepancies for tenant {RequestedTenantId} but current tenant is {CurrentTenantId}",
                         tenantId, _tenantContext.CurrentTenantId?.Value);
                     return Forbid();
@@ -225,12 +225,12 @@ public class ReconciliationController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            _logger.LogWarning(ex, "Invalid get discrepancies request: {ErrorMessage}", ex.Message);
+            Logger.LogWarning(ex, "Invalid get discrepancies request: {ErrorMessage}", ex.Message);
             return BadRequest(ex.Message);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get discrepancies for report {ReportId}: {ErrorMessage}", 
+            Logger.LogError(ex, "Failed to get discrepancies for report {ReportId}: {ErrorMessage}",
                 reportId, ex.Message);
             return StatusCode(500, "Internal server error while retrieving discrepancies");
         }
@@ -267,7 +267,7 @@ public class ReconciliationController : ControllerBase
             {
                 if (!_tenantContext.HasTenant || _tenantContext.CurrentTenantId != tenantIdValue)
                 {
-                    _logger.LogWarning(
+                    Logger.LogWarning(
                         "SECURITY: User attempted to resolve discrepancy {DiscrepancyId} for tenant {RequestedTenantId} but current tenant is {CurrentTenantId}",
                         discrepancyId, request.TenantId, _tenantContext.CurrentTenantId?.Value);
                     return Forbid();
@@ -282,7 +282,7 @@ public class ReconciliationController : ControllerBase
 
             if (discrepancy == null)
             {
-                _logger.LogWarning("Discrepancy {DiscrepancyId} not found for tenant {TenantId}",
+                Logger.LogWarning("Discrepancy {DiscrepancyId} not found for tenant {TenantId}",
                     discrepancyId, request.TenantId);
                 return NotFound("Discrepancy not found");
             }
@@ -291,7 +291,7 @@ public class ReconciliationController : ControllerBase
             if (discrepancy.Resolution != DiscrepancyResolution.Pending &&
                 discrepancy.Resolution != DiscrepancyResolution.RequiresManualReview)
             {
-                _logger.LogInformation(
+                Logger.LogInformation(
                     "Discrepancy {DiscrepancyId} already resolved with status {Resolution}",
                     discrepancyId, discrepancy.Resolution);
                 return Conflict(new
@@ -328,7 +328,7 @@ public class ReconciliationController : ControllerBase
 
             await _reconciliationRepository.UpdateDiscrepancyAsync(discrepancy, cancellationToken);
 
-            _logger.LogInformation(
+            Logger.LogInformation(
                 "Discrepancy {DiscrepancyId} resolved as {Resolution} by {ResolvedBy}",
                 discrepancyId, resolutionEnum, request.ResolvedBy);
 
@@ -343,24 +343,24 @@ public class ReconciliationController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            _logger.LogWarning(ex, "Invalid resolve discrepancy request: {ErrorMessage}", ex.Message);
+            Logger.LogWarning(ex, "Invalid resolve discrepancy request: {ErrorMessage}", ex.Message);
             return BadRequest(ex.Message);
         }
         catch (InvalidOperationException ex)
         {
-            _logger.LogWarning(ex, "Cannot resolve discrepancy {DiscrepancyId}: {ErrorMessage}",
+            Logger.LogWarning(ex, "Cannot resolve discrepancy {DiscrepancyId}: {ErrorMessage}",
                 discrepancyId, ex.Message);
             return BadRequest(ex.Message);
         }
         catch (UnauthorizedAccessException ex)
         {
-            _logger.LogError(ex, "Unauthorized attempt to resolve discrepancy {DiscrepancyId}: {ErrorMessage}",
+            Logger.LogError(ex, "Unauthorized attempt to resolve discrepancy {DiscrepancyId}: {ErrorMessage}",
                 discrepancyId, ex.Message);
             return Unauthorized("Insufficient permissions");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to resolve discrepancy {DiscrepancyId}: {ErrorMessage}",
+            Logger.LogError(ex, "Failed to resolve discrepancy {DiscrepancyId}: {ErrorMessage}",
                 discrepancyId, ex.Message);
             return StatusCode(500, "Internal server error while resolving discrepancy");
         }

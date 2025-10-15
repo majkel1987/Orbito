@@ -12,17 +12,11 @@ using Orbito.Domain.Enums;
 namespace Orbito.API.Controllers
 {
     [Route("api/[controller]")]
-    [ApiController]
-    [Authorize]
-    public class ProvidersController : ControllerBase
+    public class ProvidersController : BaseController
     {
-        private readonly IMediator _mediator;
-        private readonly ILogger<ProvidersController> _logger;
-
         public ProvidersController(IMediator mediator, ILogger<ProvidersController> logger)
+            : base(mediator, logger)
         {
-            _mediator = mediator;
-            _logger = logger;
         }
 
         /// <summary>
@@ -38,7 +32,7 @@ namespace Orbito.API.Controllers
             try
             {
                 var query = new GetAllProvidersQuery(pageNumber, pageSize, activeOnly);
-                var result = await _mediator.Send(query);
+                var result = await Mediator.Send(query);
 
                 if (!result.Success)
                 {
@@ -59,7 +53,7 @@ namespace Orbito.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Błąd podczas pobierania providerów");
+                Logger.LogError(ex, "Błąd podczas pobierania providerów");
                 return StatusCode(500, new { message = "Wystąpił błąd podczas pobierania providerów" });
             }
         }
@@ -74,7 +68,7 @@ namespace Orbito.API.Controllers
             try
             {
                 var query = new GetProviderByIdQuery(id);
-                var result = await _mediator.Send(query);
+                var result = await Mediator.Send(query);
 
                 if (!result.Success)
                 {
@@ -85,7 +79,7 @@ namespace Orbito.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Błąd podczas pobierania providera: {ProviderId}", id);
+                Logger.LogError(ex, "Błąd podczas pobierania providera: {ProviderId}", id);
                 return StatusCode(500, new { message = "Wystąpił błąd podczas pobierania providera" });
             }
         }
@@ -100,7 +94,7 @@ namespace Orbito.API.Controllers
             try
             {
                 var query = new GetProviderByUserIdQuery(userId);
-                var result = await _mediator.Send(query);
+                var result = await Mediator.Send(query);
 
                 if (!result.Success)
                 {
@@ -111,7 +105,7 @@ namespace Orbito.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Błąd podczas pobierania providera dla użytkownika: {UserId}", userId);
+                Logger.LogError(ex, "Błąd podczas pobierania providera dla użytkownika: {UserId}", userId);
                 return StatusCode(500, new { message = "Wystąpił błąd podczas pobierania providera" });
             }
         }
@@ -133,9 +127,9 @@ namespace Orbito.API.Controllers
                     request.Avatar,
                     request.CustomDomain);
 
-                var result = await _mediator.Send(command);
+                var result = await Mediator.Send(command);
 
-                _logger.LogInformation("Provider utworzony: {BusinessName} (ID: {ProviderId})", 
+                Logger.LogInformation("Provider utworzony: {BusinessName} (ID: {ProviderId})", 
                     result.BusinessName, result.ProviderId);
 
                 return Ok(new
@@ -146,12 +140,12 @@ namespace Orbito.API.Controllers
             }
             catch (InvalidOperationException ex)
             {
-                _logger.LogWarning(ex, "Błąd walidacji podczas tworzenia providera");
+                Logger.LogWarning(ex, "Błąd walidacji podczas tworzenia providera");
                 return BadRequest(new { message = ex.Message });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Błąd podczas tworzenia providera");
+                Logger.LogError(ex, "Błąd podczas tworzenia providera");
                 return StatusCode(500, new { message = "Wystąpił błąd podczas tworzenia providera" });
             }
         }
@@ -173,7 +167,7 @@ namespace Orbito.API.Controllers
                     request.SubdomainSlug,
                     request.CustomDomain);
 
-                var result = await _mediator.Send(command);
+                var result = await Mediator.Send(command);
 
                 if (!result.Success)
                 {
@@ -184,7 +178,7 @@ namespace Orbito.API.Controllers
                     });
                 }
 
-                _logger.LogInformation("Provider zaktualizowany: {ProviderId}", id);
+                Logger.LogInformation("Provider zaktualizowany: {ProviderId}", id);
 
                 return Ok(new
                 {
@@ -194,7 +188,7 @@ namespace Orbito.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Błąd podczas aktualizacji providera: {ProviderId}", id);
+                Logger.LogError(ex, "Błąd podczas aktualizacji providera: {ProviderId}", id);
                 return StatusCode(500, new { message = "Wystąpił błąd podczas aktualizacji providera" });
             }
         }
@@ -209,7 +203,7 @@ namespace Orbito.API.Controllers
             try
             {
                 var command = new DeleteProviderCommand(id, hardDelete);
-                var result = await _mediator.Send(command);
+                var result = await Mediator.Send(command);
 
                 if (!result.Success)
                 {
@@ -220,7 +214,7 @@ namespace Orbito.API.Controllers
                     });
                 }
 
-                _logger.LogInformation("Provider usunięty: {ProviderId}, HardDelete: {HardDelete}", 
+                Logger.LogInformation("Provider usunięty: {ProviderId}, HardDelete: {HardDelete}", 
                     id, result.WasHardDelete);
 
                 return Ok(new
@@ -231,7 +225,7 @@ namespace Orbito.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Błąd podczas usuwania providera: {ProviderId}", id);
+                Logger.LogError(ex, "Błąd podczas usuwania providera: {ProviderId}", id);
                 return StatusCode(500, new { message = "Wystąpił błąd podczas usuwania providera" });
             }
         }

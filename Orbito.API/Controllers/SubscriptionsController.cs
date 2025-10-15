@@ -16,18 +16,12 @@ using Orbito.Application.Subscriptions.Queries.GetSubscriptionsByClient;
 
 namespace Orbito.API.Controllers
 {
-    [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
-    public class SubscriptionsController : ControllerBase
+    public class SubscriptionsController : BaseController
     {
-        private readonly IMediator _mediator;
-        private readonly ILogger<SubscriptionsController> _logger;
-
         public SubscriptionsController(IMediator mediator, ILogger<SubscriptionsController> logger)
+            : base(mediator, logger)
         {
-            _mediator = mediator;
-            _logger = logger;
         }
 
         /// <summary>
@@ -39,10 +33,10 @@ namespace Orbito.API.Controllers
         [Authorize(Roles = "Provider,PlatformAdmin")]
         public async Task<ActionResult<CreateSubscriptionResult>> CreateSubscription(CreateSubscriptionCommand command)
         {
-            _logger.LogInformation("Creating subscription for client {ClientId} with plan {PlanId}", 
+            Logger.LogInformation("Creating subscription for client {ClientId} with plan {PlanId}", 
                 command.ClientId, command.PlanId);
 
-            var result = await _mediator.Send(command);
+            var result = await Mediator.Send(command);
             return CreatedAtAction(nameof(GetSubscriptionById), new { id = result.SubscriptionId }, result);
         }
 
@@ -60,7 +54,7 @@ namespace Orbito.API.Controllers
             [FromQuery] int pageSize = 10,
             [FromQuery] string? searchTerm = null)
         {
-            _logger.LogInformation("Getting subscriptions with pagination {PageNumber}/{PageSize}", 
+            Logger.LogInformation("Getting subscriptions with pagination {PageNumber}/{PageSize}", 
                 pageNumber, pageSize);
 
             var query = new GetActiveSubscriptionsQuery
@@ -70,7 +64,7 @@ namespace Orbito.API.Controllers
                 SearchTerm = searchTerm
             };
 
-            var result = await _mediator.Send(query);
+            var result = await Mediator.Send(query);
             return Ok(result);
         }
 
@@ -86,7 +80,7 @@ namespace Orbito.API.Controllers
             Guid id,
             [FromQuery] bool includeDetails = false)
         {
-            _logger.LogInformation("Getting subscription {SubscriptionId} with details: {IncludeDetails}", 
+            Logger.LogInformation("Getting subscription {SubscriptionId} with details: {IncludeDetails}", 
                 id, includeDetails);
 
             var query = new GetSubscriptionByIdQuery
@@ -95,7 +89,7 @@ namespace Orbito.API.Controllers
                 IncludeDetails = includeDetails
             };
 
-            var result = await _mediator.Send(query);
+            var result = await Mediator.Send(query);
             if (result == null)
             {
                 return NotFound($"Subscription with ID {id} not found");
@@ -120,7 +114,7 @@ namespace Orbito.API.Controllers
             [FromQuery] int pageSize = 10,
             [FromQuery] bool activeOnly = false)
         {
-            _logger.LogInformation("Getting subscriptions for client {ClientId}", clientId);
+            Logger.LogInformation("Getting subscriptions for client {ClientId}", clientId);
 
             var query = new GetSubscriptionsByClientQuery
             {
@@ -130,7 +124,7 @@ namespace Orbito.API.Controllers
                 ActiveOnly = activeOnly
             };
 
-            var result = await _mediator.Send(query);
+            var result = await Mediator.Send(query);
             return Ok(result);
         }
 
@@ -148,7 +142,7 @@ namespace Orbito.API.Controllers
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10)
         {
-            _logger.LogInformation("Getting expiring subscriptions within {Days} days", daysBeforeExpiration);
+            Logger.LogInformation("Getting expiring subscriptions within {Days} days", daysBeforeExpiration);
 
             var query = new GetExpiringSubscriptionsQuery
             {
@@ -157,7 +151,7 @@ namespace Orbito.API.Controllers
                 PageSize = pageSize
             };
 
-            var result = await _mediator.Send(query);
+            var result = await Mediator.Send(query);
             return Ok(result);
         }
 
@@ -170,14 +164,14 @@ namespace Orbito.API.Controllers
         [Authorize(Roles = "Provider,PlatformAdmin")]
         public async Task<ActionResult<ActivateSubscriptionResult>> ActivateSubscription(Guid id)
         {
-            _logger.LogInformation("Activating subscription {SubscriptionId}", id);
+            Logger.LogInformation("Activating subscription {SubscriptionId}", id);
 
             var command = new ActivateSubscriptionCommand
             {
                 SubscriptionId = id
             };
 
-            var result = await _mediator.Send(command);
+            var result = await Mediator.Send(command);
             if (!result.Success)
             {
                 return BadRequest(result);
@@ -198,7 +192,7 @@ namespace Orbito.API.Controllers
             Guid id,
             [FromBody] CancelSubscriptionRequest request)
         {
-            _logger.LogInformation("Cancelling subscription {SubscriptionId}", id);
+            Logger.LogInformation("Cancelling subscription {SubscriptionId}", id);
 
             var command = new CancelSubscriptionCommand
             {
@@ -206,7 +200,7 @@ namespace Orbito.API.Controllers
                 Reason = request.Reason
             };
 
-            var result = await _mediator.Send(command);
+            var result = await Mediator.Send(command);
             if (!result.Success)
             {
                 return BadRequest(result);
@@ -227,7 +221,7 @@ namespace Orbito.API.Controllers
             Guid id,
             [FromBody] SuspendSubscriptionRequest request)
         {
-            _logger.LogInformation("Suspending subscription {SubscriptionId}", id);
+            Logger.LogInformation("Suspending subscription {SubscriptionId}", id);
 
             var command = new SuspendSubscriptionCommand
             {
@@ -235,7 +229,7 @@ namespace Orbito.API.Controllers
                 Reason = request.Reason
             };
 
-            var result = await _mediator.Send(command);
+            var result = await Mediator.Send(command);
             if (!result.Success)
             {
                 return BadRequest(result);
@@ -253,14 +247,14 @@ namespace Orbito.API.Controllers
         [Authorize(Roles = "Provider,PlatformAdmin")]
         public async Task<ActionResult<ResumeSubscriptionResult>> ResumeSubscription(Guid id)
         {
-            _logger.LogInformation("Resuming subscription {SubscriptionId}", id);
+            Logger.LogInformation("Resuming subscription {SubscriptionId}", id);
 
             var command = new ResumeSubscriptionCommand
             {
                 SubscriptionId = id
             };
 
-            var result = await _mediator.Send(command);
+            var result = await Mediator.Send(command);
             if (!result.Success)
             {
                 return BadRequest(result);
@@ -281,7 +275,7 @@ namespace Orbito.API.Controllers
             Guid id,
             [FromBody] UpgradeSubscriptionRequest request)
         {
-            _logger.LogInformation("Upgrading subscription {SubscriptionId} to plan {NewPlanId}", 
+            Logger.LogInformation("Upgrading subscription {SubscriptionId} to plan {NewPlanId}", 
                 id, request.NewPlanId);
 
             var command = new UpgradeSubscriptionCommand
@@ -292,7 +286,7 @@ namespace Orbito.API.Controllers
                 Currency = request.Currency
             };
 
-            var result = await _mediator.Send(command);
+            var result = await Mediator.Send(command);
             if (!result.Success)
             {
                 return BadRequest(result);
@@ -313,7 +307,7 @@ namespace Orbito.API.Controllers
             Guid id,
             [FromBody] DowngradeSubscriptionRequest request)
         {
-            _logger.LogInformation("Downgrading subscription {SubscriptionId} to plan {NewPlanId}", 
+            Logger.LogInformation("Downgrading subscription {SubscriptionId} to plan {NewPlanId}", 
                 id, request.NewPlanId);
 
             var command = new DowngradeSubscriptionCommand
@@ -324,7 +318,7 @@ namespace Orbito.API.Controllers
                 Currency = request.Currency
             };
 
-            var result = await _mediator.Send(command);
+            var result = await Mediator.Send(command);
             if (!result.Success)
             {
                 return BadRequest(result);
@@ -345,7 +339,7 @@ namespace Orbito.API.Controllers
             Guid id,
             [FromBody] RenewSubscriptionRequest request)
         {
-            _logger.LogInformation("Renewing subscription {SubscriptionId}", id);
+            Logger.LogInformation("Renewing subscription {SubscriptionId}", id);
 
             var command = new RenewSubscriptionCommand
             {
@@ -355,7 +349,7 @@ namespace Orbito.API.Controllers
                 ExternalPaymentId = request.ExternalPaymentId
             };
 
-            var result = await _mediator.Send(command);
+            var result = await Mediator.Send(command);
             if (!result.Success)
             {
                 return BadRequest(result);

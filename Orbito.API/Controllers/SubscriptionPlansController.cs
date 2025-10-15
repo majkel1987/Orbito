@@ -11,16 +11,12 @@ using Orbito.Application.SubscriptionPlans.Queries.GetSubscriptionPlansByProvide
 
 namespace Orbito.API.Controllers
 {
-    [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
-    public class SubscriptionPlansController : ControllerBase
+    public class SubscriptionPlansController : BaseController
     {
-        private readonly IMediator _mediator;
-
-        public SubscriptionPlansController(IMediator mediator)
+        public SubscriptionPlansController(IMediator mediator, ILogger<SubscriptionPlansController> logger)
+            : base(mediator, logger)
         {
-            _mediator = mediator;
         }
 
         /// <summary>
@@ -33,7 +29,7 @@ namespace Orbito.API.Controllers
         public async Task<ActionResult<CreateSubscriptionPlanResult>> CreateSubscriptionPlan(
             [FromBody] CreateSubscriptionPlanCommand command)
         {
-            var result = await _mediator.Send(command);
+            var result = await Mediator.Send(command);
             return CreatedAtAction(nameof(GetSubscriptionPlan), new { id = result.Id }, result);
         }
 
@@ -64,7 +60,7 @@ namespace Orbito.API.Controllers
                 SearchTerm = searchTerm
             };
 
-            var result = await _mediator.Send(query);
+            var result = await Mediator.Send(query);
             return Ok(result);
         }
 
@@ -78,7 +74,7 @@ namespace Orbito.API.Controllers
         public async Task<ActionResult<SubscriptionPlanDto>> GetSubscriptionPlan(Guid id)
         {
             var query = new GetSubscriptionPlanByIdQuery { Id = id };
-            var result = await _mediator.Send(query);
+            var result = await Mediator.Send(query);
 
             if (result == null)
                 return NotFound($"Subscription plan with ID {id} not found");
@@ -99,7 +95,7 @@ namespace Orbito.API.Controllers
             [FromBody] UpdateSubscriptionPlanCommand command)
         {
             command = command with { Id = id };
-            var result = await _mediator.Send(command);
+            var result = await Mediator.Send(command);
             return Ok(result);
         }
 
@@ -121,7 +117,7 @@ namespace Orbito.API.Controllers
                 HardDelete = hardDelete
             };
 
-            var result = await _mediator.Send(command);
+            var result = await Mediator.Send(command);
             return Ok(result);
         }
 
@@ -138,7 +134,7 @@ namespace Orbito.API.Controllers
             [FromBody] CloneSubscriptionPlanCommand command)
         {
             command = command with { Id = id };
-            var result = await _mediator.Send(command);
+            var result = await Mediator.Send(command);
             return CreatedAtAction(nameof(GetSubscriptionPlan), new { id = result.Id }, result);
         }
 
@@ -160,7 +156,7 @@ namespace Orbito.API.Controllers
                 Limit = limit
             };
 
-            var result = await _mediator.Send(query);
+            var result = await Mediator.Send(query);
             return Ok(result);
         }
     }
