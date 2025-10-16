@@ -86,6 +86,7 @@ public class RetryFailedPaymentCommandHandlerTests : BaseTestFixture
 
         _retryServiceMock.Setup(x => x.ScheduleRetryAsync(
                 paymentId,
+                clientId,
                 1,
                 "Manual retry request",
                 CancellationToken.None))
@@ -116,6 +117,7 @@ public class RetryFailedPaymentCommandHandlerTests : BaseTestFixture
         // Verify service calls
         _retryServiceMock.Verify(x => x.ScheduleRetryAsync(
             paymentId,
+            clientId,
             1,
             "Manual retry request",
             CancellationToken.None), Times.Once);
@@ -390,6 +392,7 @@ public class RetryFailedPaymentCommandHandlerTests : BaseTestFixture
 
         _retryServiceMock.Setup(x => x.ScheduleRetryAsync(
                 paymentId,
+                clientId,
                 1,
                 "Test",
                 CancellationToken.None))

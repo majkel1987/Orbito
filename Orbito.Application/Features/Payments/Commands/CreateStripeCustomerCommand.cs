@@ -1,12 +1,13 @@
 using MediatR;
 using Orbito.Application.Common.Interfaces;
+using Orbito.Domain.Common;
 
 namespace Orbito.Application.Features.Payments.Commands
 {
     /// <summary>
     /// Komenda do tworzenia klienta Stripe
     /// </summary>
-    public record CreateStripeCustomerCommand : IRequest<CreateStripeCustomerResult>
+    public record CreateStripeCustomerCommand : IRequest<Result<CreateStripeCustomerResult>>
     {
         /// <summary>
         /// ID klienta

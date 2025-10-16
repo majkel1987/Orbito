@@ -77,11 +77,12 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
 
             // Assert
             result.Should().NotBeNull();
-            result.ProviderId.Should().NotBeEmpty();
-            result.TenantId.Should().NotBeNull();
-            result.BusinessName.Should().Be(businessName);
-            result.SubdomainSlug.Should().Be(subdomainSlug);
-            result.IsActive.Should().BeTrue();
+            result.IsSuccess.Should().BeTrue();
+            result.Value.ProviderId.Should().NotBeEmpty();
+            result.Value.TenantId.Should().NotBeNull();
+            result.Value.BusinessName.Should().Be(businessName);
+            result.Value.SubdomainSlug.Should().Be(subdomainSlug);
+            result.Value.IsActive.Should().BeTrue();
 
             // Verify interactions
             _unitOfWorkMock.Verify(x => x.BeginTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -121,9 +122,10 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
 
             // Assert
             result.Should().NotBeNull();
-            result.ProviderId.Should().NotBeEmpty();
-            result.BusinessName.Should().Be(businessName);
-            result.SubdomainSlug.Should().Be(subdomainSlug);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.ProviderId.Should().NotBeEmpty();
+            result.Value.BusinessName.Should().Be(businessName);
+            result.Value.SubdomainSlug.Should().Be(subdomainSlug);
         }
 
         [Fact]
@@ -399,8 +401,9 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
 
             // Assert
             result.Should().NotBeNull();
-            result.SubdomainSlug.Should().NotContain("<script>");
-            result.SubdomainSlug.Should().NotContain("alert");
+            result.IsSuccess.Should().BeTrue();
+            result.Value.SubdomainSlug.Should().NotContain("<script>");
+            result.Value.SubdomainSlug.Should().NotContain("alert");
         }
 
         [Fact]
@@ -431,7 +434,8 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
 
             // Assert
             result.Should().NotBeNull();
-            result.BusinessName.Should().Be(maliciousBusinessName); // Should be stored as-is (parameterized queries prevent SQL injection)
+            result.IsSuccess.Should().BeTrue();
+            result.Value.BusinessName.Should().Be(maliciousBusinessName); // Should be stored as-is (parameterized queries prevent SQL injection)
             
             // Verify that the provider was created with the exact input (parameterized queries handle SQL injection)
             _providerRepositoryMock.Verify(x => x.AddAsync(

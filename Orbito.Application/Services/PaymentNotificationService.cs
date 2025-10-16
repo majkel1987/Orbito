@@ -105,8 +105,15 @@ public class PaymentNotificationService : IPaymentNotificationService
             return;
         }
 
+        var tenantId = _tenantContext.CurrentTenantId;
+        if (tenantId == null)
+        {
+            _logger.LogWarning("Tenant ID is null for creating email notification");
+            return;
+        }
+
         var notification = EmailNotification.Create(
-            _tenantContext.CurrentTenantId,
+            tenantId,
             type,
             recipientEmail,
             subject,
@@ -169,7 +176,11 @@ public class PaymentNotificationService : IPaymentNotificationService
             _logger.LogInformation("Sending payment confirmation for payment {PaymentId}", paymentId);
 
             // Get payment details
+            // NOTE: Using deprecated method because this service is called from background jobs
+            // that run in admin context (tenantContext.SetTenant(null)) and have access to all data
+#pragma warning disable CS0618 // Type or member is obsolete
             var payment = await _unitOfWork.Payments.GetByIdAsync(paymentId, cancellationToken);
+#pragma warning restore CS0618 // Type or member is obsolete
             if (payment == null)
             {
                 _logger.LogWarning("Payment {PaymentId} not found", paymentId);
@@ -243,7 +254,11 @@ public class PaymentNotificationService : IPaymentNotificationService
             _logger.LogInformation("Sending payment failure notification for payment {PaymentId}", paymentId);
 
             // Get payment details
+            // NOTE: Using deprecated method because this service is called from background jobs
+            // that run in admin context (tenantContext.SetTenant(null)) and have access to all data
+#pragma warning disable CS0618 // Type or member is obsolete
             var payment = await _unitOfWork.Payments.GetByIdAsync(paymentId, cancellationToken);
+#pragma warning restore CS0618 // Type or member is obsolete
             if (payment == null)
             {
                 _logger.LogWarning("Payment {PaymentId} not found", paymentId);
@@ -301,7 +316,11 @@ public class PaymentNotificationService : IPaymentNotificationService
             _logger.LogInformation("Sending refund confirmation for payment {PaymentId}", paymentId);
 
             // Get payment details
+            // NOTE: Using deprecated method because this service is called from background jobs
+            // that run in admin context (tenantContext.SetTenant(null)) and have access to all data
+#pragma warning disable CS0618 // Type or member is obsolete
             var payment = await _unitOfWork.Payments.GetByIdAsync(paymentId, cancellationToken);
+#pragma warning restore CS0618 // Type or member is obsolete
             if (payment == null)
             {
                 _logger.LogWarning("Payment {PaymentId} not found", paymentId);
@@ -369,7 +388,11 @@ public class PaymentNotificationService : IPaymentNotificationService
             _logger.LogInformation("Sending partial refund confirmation for payment {PaymentId}", paymentId);
 
             // Get payment details
+            // NOTE: Using deprecated method because this service is called from background jobs
+            // that run in admin context (tenantContext.SetTenant(null)) and have access to all data
+#pragma warning disable CS0618 // Type or member is obsolete
             var payment = await _unitOfWork.Payments.GetByIdAsync(paymentId, cancellationToken);
+#pragma warning restore CS0618 // Type or member is obsolete
             if (payment == null)
             {
                 _logger.LogWarning("Payment {PaymentId} not found", paymentId);

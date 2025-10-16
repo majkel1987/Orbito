@@ -1,7 +1,8 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
-using Orbito.Application.Common.Models;
+using Orbito.Domain.Common;
+using Orbito.Domain.Errors;
 using Orbito.Domain.Enums;
 using System.Text.Json;
 
@@ -89,11 +90,15 @@ namespace Orbito.Application.Features.Payments.Commands.UpdatePaymentFromWebhook
                 }
 
                 // Get the payment
+                // NOTE: Using deprecated method because this command is not used in production code
+                // and is only for testing purposes
+#pragma warning disable CS0618 // Type or member is obsolete
                 var payment = await _unitOfWork.Payments.GetByIdAsync(request.PaymentId, cancellationToken);
+#pragma warning restore CS0618 // Type or member is obsolete
                 if (payment == null)
                 {
                     _logger.LogWarning("Payment {PaymentId} not found", request.PaymentId);
-                    return Result.Failure("Payment not found");
+                    return Result.Failure(DomainErrors.Payment.NotFound);
                 }
 
                 // Security: Verify tenant context
@@ -101,7 +106,7 @@ namespace Orbito.Application.Features.Payments.Commands.UpdatePaymentFromWebhook
                 {
                     _logger.LogWarning("Tenant mismatch for payment {PaymentId}. Expected: {ExpectedTenant}, Actual: {ActualTenant}",
                         request.PaymentId, _tenantContext.CurrentTenantId, payment.TenantId);
-                    return Result.Failure("Access denied");
+                    return Result.Failure(DomainErrors.Tenant.CrossTenantAccess);
                 }
 
                 // Validate status transition
@@ -109,7 +114,7 @@ namespace Orbito.Application.Features.Payments.Commands.UpdatePaymentFromWebhook
                 {
                     _logger.LogWarning("Invalid status transition for payment {PaymentId} from {CurrentStatus} to {NewStatus}",
                         request.PaymentId, payment.Status, request.NewStatus);
-                    return Result.Failure($"Invalid status transition from {payment.Status} to {request.NewStatus}");
+                    return Result.Failure(DomainErrors.Payment.InvalidStatus);
                 }
 
                 // Verify ExternalPaymentId matches
@@ -119,7 +124,7 @@ namespace Orbito.Application.Features.Payments.Commands.UpdatePaymentFromWebhook
                 {
                     _logger.LogWarning("ExternalPaymentId mismatch for payment {PaymentId}. Expected: {Expected}, Received: {Received}",
                         request.PaymentId, payment.ExternalPaymentId, request.ExternalPaymentId);
-                    return Result.Failure("ExternalPaymentId mismatch");
+                    return Result.Failure(DomainErrors.Payment.ExternalPaymentIdRequired);
                 }
 
                 // Update payment status based on webhook event
@@ -155,7 +160,7 @@ namespace Orbito.Application.Features.Payments.Commands.UpdatePaymentFromWebhook
 
                     default:
                         _logger.LogWarning("Unknown webhook event type {EventType} for payment {PaymentId}", request.EventType, request.PaymentId);
-                        return Result.Failure($"Unknown event type: {request.EventType}");
+                        return Result.Failure(DomainErrors.General.UnexpectedError);
                 }
 
                 // Update external payment ID if provided
@@ -181,7 +186,7 @@ namespace Orbito.Application.Features.Payments.Commands.UpdatePaymentFromWebhook
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating payment {PaymentId} from webhook", request.PaymentId);
-                return Result.Failure($"Error updating payment: {ex.Message}");
+                return Result.Failure(DomainErrors.General.UnexpectedError);
             }
         }
     }

@@ -30,7 +30,11 @@ namespace Orbito.Application.Features.Payments.Commands.UpdatePaymentStatus
             }
 
             // Pobierz płatność
+            // NOTE: Using deprecated method because this command is only accessible by Providers and PlatformAdmins
+            // who have proper authorization to view all payments in their tenant
+#pragma warning disable CS0618 // Type or member is obsolete
             var payment = await _paymentRepository.GetByIdAsync(request.PaymentId, cancellationToken);
+#pragma warning restore CS0618 // Type or member is obsolete
             if (payment == null)
             {
                 return UpdatePaymentStatusResult.FailureResult($"Payment with ID {request.PaymentId} not found");

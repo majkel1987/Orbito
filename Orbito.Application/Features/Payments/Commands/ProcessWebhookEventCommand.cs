@@ -1,7 +1,8 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
-using Orbito.Application.Common.Models;
+using Orbito.Domain.Common;
+using Orbito.Domain.Errors;
 
 namespace Orbito.Application.Features.Payments.Commands.ProcessWebhookEvent
 {
@@ -62,7 +63,7 @@ namespace Orbito.Application.Features.Payments.Commands.ProcessWebhookEvent
                 if (!IsValidProvider(request.Provider))
                 {
                     _logger.LogWarning("Invalid provider {Provider} for webhook event {EventType}", request.Provider, request.EventType);
-                    return Result.Failure("Invalid provider");
+                    return Result.Failure(DomainErrors.General.ValidationFailed);
                 }
 
                 // Validate webhook signature
@@ -70,7 +71,7 @@ namespace Orbito.Application.Features.Payments.Commands.ProcessWebhookEvent
                 if (!validationResult.IsSuccess || !validationResult.Value)
                 {
                     _logger.LogWarning("Invalid webhook signature for event {EventType} from {Provider}", request.EventType, request.Provider);
-                    return Result.Failure("Invalid webhook signature");
+                    return Result.Failure(DomainErrors.General.Unauthorized);
                 }
 
                 // Check for idempotency
@@ -86,7 +87,7 @@ namespace Orbito.Application.Features.Payments.Commands.ProcessWebhookEvent
                 if (!processResult.IsSuccess)
                 {
                     _logger.LogError("Failed to process webhook event {EventId}: {Error}", request.EventId, processResult.ErrorMessage);
-                    return processResult;
+                    return Result.Failure(DomainErrors.General.UnexpectedError);
                 }
 
                 // Mark event as processed
@@ -102,7 +103,7 @@ namespace Orbito.Application.Features.Payments.Commands.ProcessWebhookEvent
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing webhook event {EventType} from {Provider}", request.EventType, request.Provider);
-                return Result.Failure($"Error processing webhook: {ex.Message}");
+                return Result.Failure(DomainErrors.General.UnexpectedError);
             }
         }
 

@@ -117,37 +117,29 @@ namespace Orbito.API.Controllers
         [Authorize(Roles = "PlatformAdmin")]
         public async Task<IActionResult> CreateProvider([FromBody] CreateProviderRequest request)
         {
-            try
-            {
-                var command = new CreateProviderCommand(
-                    request.UserId,
-                    request.BusinessName,
-                    request.SubdomainSlug,
-                    request.Description,
-                    request.Avatar,
-                    request.CustomDomain);
+            var command = new CreateProviderCommand(
+                request.UserId,
+                request.BusinessName,
+                request.SubdomainSlug,
+                request.Description,
+                request.Avatar,
+                request.CustomDomain);
 
-                var result = await Mediator.Send(command);
+            var result = await Mediator.Send(command);
 
-                Logger.LogInformation("Provider utworzony: {BusinessName} (ID: {ProviderId})", 
-                    result.BusinessName, result.ProviderId);
+            if (result.IsFailure)
+            {
+                return HandleResult(result);
+            }
 
-                return Ok(new
-                {
-                    message = "Provider został pomyślnie utworzony",
-                    provider = result
-                });
-            }
-            catch (InvalidOperationException ex)
+            Logger.LogInformation("Provider utworzony: {BusinessName} (ID: {ProviderId})",
+                result.Value.BusinessName, result.Value.ProviderId);
+
+            return Ok(new
             {
-                Logger.LogWarning(ex, "Błąd walidacji podczas tworzenia providera");
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "Błąd podczas tworzenia providera");
-                return StatusCode(500, new { message = "Wystąpił błąd podczas tworzenia providera" });
-            }
+                message = "Provider został pomyślnie utworzony",
+                provider = result.Value
+            });
         }
 
         /// <summary>

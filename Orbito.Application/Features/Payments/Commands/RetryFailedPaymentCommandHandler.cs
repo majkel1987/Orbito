@@ -117,6 +117,7 @@ namespace Orbito.Application.Features.Payments.Commands
                     // FIXED: Schedule the retry FIRST, then record attempt (correct order)
                     var createdSchedule = await _retryService.ScheduleRetryAsync(
                         request.PaymentId,
+                        request.ClientId,
                         attemptNumber,
                         request.Reason ?? "Manual retry requested",
                         cancellationToken);

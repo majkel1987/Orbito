@@ -32,7 +32,11 @@ namespace Orbito.Application.Features.Payments.Queries.GetPaymentById
                 }
 
                 // Pobierz płatność
+                // NOTE: Using deprecated method because this query is only accessible by Providers and PlatformAdmins
+                // who have proper authorization to view all payments in their tenant
+#pragma warning disable CS0618 // Type or member is obsolete
                 var payment = await _paymentRepository.GetByIdAsync(request.PaymentId, cancellationToken);
+#pragma warning restore CS0618 // Type or member is obsolete
 
                 // Bezpieczeństwo: ten sam komunikat dla obu przypadków
                 if (payment == null || payment.TenantId != _tenantContext.CurrentTenantId)

@@ -180,7 +180,11 @@ namespace Orbito.Application.Common.Services
         public async Task<IEnumerable<Subscription>> GetExpiringSubscriptionsAsync(int daysBeforeExpiration = 7, CancellationToken cancellationToken = default)
         {
             var checkDate = _dateTime.UtcNow;
+            // NOTE: Using deprecated method because this service is called from background jobs
+            // that run in admin context (tenantContext.SetTenant(null)) and have access to all data
+#pragma warning disable CS0618 // Type or member is obsolete
             return await _subscriptionRepository.GetExpiringSubscriptionsAsync(checkDate, daysBeforeExpiration, cancellationToken);
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         public async Task ProcessExpiredSubscriptionsAsync(CancellationToken cancellationToken = default)
@@ -188,7 +192,11 @@ namespace Orbito.Application.Common.Services
             _logger.LogInformation("Processing expired subscriptions");
 
             var checkDate = _dateTime.UtcNow;
+            // NOTE: Using deprecated method because this service is called from background jobs
+            // that run in admin context (tenantContext.SetTenant(null)) and have access to all data
+#pragma warning disable CS0618 // Type or member is obsolete
             var expiredSubscriptions = await _subscriptionRepository.GetExpiredSubscriptionsAsync(checkDate, cancellationToken);
+#pragma warning restore CS0618 // Type or member is obsolete
 
             foreach (var subscription in expiredSubscriptions)
             {

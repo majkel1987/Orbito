@@ -2,13 +2,15 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.Features.Payments.Commands;
+using Orbito.Domain.Common;
+using Orbito.Domain.Errors;
 
 namespace Orbito.Application.Features.Payments.Commands
 {
     /// <summary>
     /// Handler dla komendy tworzenia klienta Stripe
     /// </summary>
-    public class CreateStripeCustomerCommandHandler : IRequestHandler<CreateStripeCustomerCommand, CreateStripeCustomerResult>
+    public class CreateStripeCustomerCommandHandler : IRequestHandler<CreateStripeCustomerCommand, Result<CreateStripeCustomerResult>>
     {
         private readonly IPaymentProcessingService _paymentProcessingService;
         private readonly IUnitOfWork _unitOfWork;
@@ -27,7 +29,7 @@ namespace Orbito.Application.Features.Payments.Commands
             _logger = logger;
         }
 
-        public async Task<CreateStripeCustomerResult> Handle(CreateStripeCustomerCommand request, CancellationToken cancellationToken)
+        public async Task<Result<CreateStripeCustomerResult>> Handle(CreateStripeCustomerCommand request, CancellationToken cancellationToken)
         {
             try
             {
@@ -35,7 +37,7 @@ namespace Orbito.Application.Features.Payments.Commands
                 if (!_tenantContext.HasTenant)
                 {
                     _logger.LogWarning("Attempted to create Stripe customer without tenant context");
-                    return CreateStripeCustomerResult.Failure("Tenant context is required", "TENANT_CONTEXT_REQUIRED");
+                    return Result.Failure<CreateStripeCustomerResult>(DomainErrors.Tenant.NoTenantContext);
                 }
 
                 _logger.LogInformation("Creating Stripe customer for client {ClientId}", request.ClientId);
@@ -45,7 +47,7 @@ namespace Orbito.Application.Features.Payments.Commands
                 if (client == null)
                 {
                     _logger.LogWarning("Client {ClientId} not found", request.ClientId);
-                    return CreateStripeCustomerResult.Failure("Client not found", "CLIENT_NOT_FOUND");
+                    return Result.Failure<CreateStripeCustomerResult>(DomainErrors.Client.NotFound);
                 }
 
                 // Sprawdź czy klient należy do tego samego tenanta
@@ -53,7 +55,7 @@ namespace Orbito.Application.Features.Payments.Commands
                 {
                     _logger.LogWarning("Client {ClientId} does not belong to current tenant {TenantId}",
                         request.ClientId, _tenantContext.CurrentTenantId);
-                    return CreateStripeCustomerResult.Failure("Access denied", "ACCESS_DENIED");
+                    return Result.Failure<CreateStripeCustomerResult>(DomainErrors.Tenant.CrossTenantAccess);
                 }
 
                 // Sprawdź czy klient ma już utworzonego klienta Stripe
@@ -82,26 +84,24 @@ namespace Orbito.Application.Features.Payments.Commands
                     _logger.LogInformation("Stripe customer created for client {ClientId} with ID {StripeCustomerId}", 
                         request.ClientId, result.ExternalCustomerId);
 
-                    return CreateStripeCustomerResult.Success(
+                    return Result.Success(CreateStripeCustomerResult.Success(
                         result.ExternalCustomerId ?? string.Empty,
                         result.Email,
                         result.FirstName,
-                        result.LastName);
+                        result.LastName));
                 }
                 else
                 {
                     _logger.LogError("Failed to create Stripe customer for client {ClientId}: {ErrorMessage}", 
                         request.ClientId, result.ErrorMessage);
 
-                    return CreateStripeCustomerResult.Failure(
-                        result.ErrorMessage ?? "Failed to create Stripe customer",
-                        result.ErrorCode);
+                    return Result.Failure<CreateStripeCustomerResult>(DomainErrors.General.UnexpectedError);
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating Stripe customer for client {ClientId}", request.ClientId);
-                return CreateStripeCustomerResult.Failure("An error occurred while creating Stripe customer", "CUSTOMER_CREATION_ERROR");
+                return Result.Failure<CreateStripeCustomerResult>(DomainErrors.General.UnexpectedError);
             }
         }
     }

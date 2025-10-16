@@ -81,16 +81,16 @@ namespace Orbito.API.Controllers
                 // Webhook best practice: return 200 for known errors to prevent retries
                 if (!result.IsSuccess)
                 {
-                    if (IsKnownError(result.ErrorMessage))
+                    if (IsKnownError(result.Error.Message))
                     {
                         _logger.LogWarning("Known error processing webhook {EventId}: {Error}",
-                            stripeEvent.Id, result.ErrorMessage);
+                            stripeEvent.Id, result.Error.Message);
                         return Ok(new { received = true, processed = false, reason = "already_processed_or_known_error" });
                     }
 
                     // 500 only for unexpected errors
                     _logger.LogError("Unexpected error processing webhook {EventId}: {Error}",
-                        stripeEvent.Id, result.ErrorMessage);
+                        stripeEvent.Id, result.Error.Message);
                     return StatusCode(500, new { error = "Unexpected error" });
                 }
 

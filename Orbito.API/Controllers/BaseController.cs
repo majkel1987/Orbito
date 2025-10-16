@@ -159,4 +159,84 @@ public abstract class BaseController : ControllerBase
 
         return null;
     }
+
+    /// <summary>
+    /// Handles Result<T> and converts it to appropriate ActionResult
+    /// Maps error codes to HTTP status codes
+    /// </summary>
+    /// <typeparam name="T">Type of the value</typeparam>
+    /// <param name="result">Result to handle</param>
+    /// <returns>ActionResult with appropriate status code and response</returns>
+    protected IActionResult HandleResult<T>(Orbito.Domain.Common.Result<T> result)
+    {
+        if (result.IsSuccess)
+        {
+            return Ok(result.Value);
+        }
+
+        return HandleErrorCode(result.Error);
+    }
+
+    /// <summary>
+    /// Handles Result (without value) and converts it to appropriate ActionResult
+    /// Maps error codes to HTTP status codes
+    /// </summary>
+    /// <param name="result">Result to handle</param>
+    /// <returns>ActionResult with appropriate status code and response</returns>
+    protected IActionResult HandleResult(Orbito.Domain.Common.Result result)
+    {
+        if (result.IsSuccess)
+        {
+            return Ok();
+        }
+
+        return HandleErrorCode(result.Error);
+    }
+
+    /// <summary>
+    /// Maps error codes to HTTP status codes and creates appropriate ErrorResponse
+    /// </summary>
+    /// <param name="error">Error to handle</param>
+    /// <returns>ActionResult with appropriate status code and error response</returns>
+    private IActionResult HandleErrorCode(Orbito.Domain.Common.Error error)
+    {
+        var errorResponse = new ErrorResponse
+        {
+            Code = error.Code,
+            Message = error.Message,
+            CorrelationId = HttpContext.TraceIdentifier
+        };
+
+        // Map error codes to HTTP status codes
+        return error.Code switch
+        {
+            // NotFound errors (404)
+            var code when code.Contains("NotFound") => NotFound(errorResponse),
+
+            // AlreadyExists/Conflict errors (409)
+            var code when code.Contains("AlreadyExists") => Conflict(errorResponse),
+            var code when code.Contains("Conflict") => Conflict(errorResponse),
+            var code when code.Contains("Duplicate") => Conflict(errorResponse),
+
+            // Unauthorized errors (401)
+            var code when code.Contains("Unauthorized") => Unauthorized(errorResponse),
+            var code when code.Contains("InvalidCredentials") => Unauthorized(errorResponse),
+
+            // Forbidden errors (403)
+            var code when code.Contains("CrossTenant") => StatusCode(StatusCodes.Status403Forbidden, errorResponse),
+            var code when code.Contains("NoTenantContext") => StatusCode(StatusCodes.Status403Forbidden, errorResponse),
+
+            // Validation/Bad Request errors (400)
+            var code when code.Contains("Invalid") => BadRequest(errorResponse),
+            var code when code.Contains("Validation") => BadRequest(errorResponse),
+            var code when code.Contains("Cannot") => BadRequest(errorResponse),
+            var code when code.Contains("Inactive") => BadRequest(errorResponse),
+
+            // Too Many Requests (429)
+            var code when code.Contains("RateLimit") => StatusCode(StatusCodes.Status429TooManyRequests, errorResponse),
+
+            // Default to BadRequest (400) for unknown errors
+            _ => BadRequest(errorResponse)
+        };
+    }
 }

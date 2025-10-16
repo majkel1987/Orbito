@@ -110,10 +110,11 @@ namespace Orbito.Tests.Integration
 
             // Assert
             result.Should().NotBeNull();
-            result.ProviderId.Should().NotBeEmpty();
-            result.BusinessName.Should().Be(businessName);
-            result.SubdomainSlug.Should().Be(subdomainSlug);
-            result.IsActive.Should().BeTrue();
+            result.IsSuccess.Should().BeTrue();
+            result.Value.ProviderId.Should().NotBeEmpty();
+            result.Value.BusinessName.Should().Be(businessName);
+            result.Value.SubdomainSlug.Should().Be(subdomainSlug);
+            result.Value.IsActive.Should().BeTrue();
 
             _providerRepositoryMock.Verify(x => x.GetBySubdomainSlugAsync(subdomainSlug, It.IsAny<CancellationToken>()), Times.Once);
             _providerRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Provider>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -384,9 +385,10 @@ namespace Orbito.Tests.Integration
 
             // Assert
             createResult.Should().NotBeNull();
-            createResult.ProviderId.Should().NotBeEmpty();
-            createResult.BusinessName.Should().Be(businessName);
-            createResult.SubdomainSlug.Should().Be(subdomainSlug);
+            createResult.IsSuccess.Should().BeTrue();
+            createResult.Value.ProviderId.Should().NotBeEmpty();
+            createResult.Value.BusinessName.Should().Be(businessName);
+            createResult.Value.SubdomainSlug.Should().Be(subdomainSlug);
 
             // Test 2: Update Provider with business logic
             var providerId = createdProvider.Id;

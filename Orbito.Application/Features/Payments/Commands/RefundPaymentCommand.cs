@@ -1,5 +1,6 @@
 using MediatR;
 using Orbito.Application.Common.Interfaces;
+using Orbito.Domain.Common;
 using Orbito.Domain.ValueObjects;
 
 namespace Orbito.Application.Features.Payments.Commands
@@ -7,7 +8,7 @@ namespace Orbito.Application.Features.Payments.Commands
     /// <summary>
     /// Komenda do zwrotu płatności
     /// </summary>
-    public record RefundPaymentCommand : IRequest<RefundPaymentResult>
+    public record RefundPaymentCommand : IRequest<Result<RefundPaymentResult>>
     {
         /// <summary>
         /// ID płatności

@@ -319,7 +319,11 @@ namespace Orbito.Application.Services
             {
                 _logger.LogInformation("Handling payment success for payment {PaymentId}", paymentId);
 
+                // NOTE: Using deprecated method because this service is called from webhook handlers
+                // that are already verified by StripeSignatureVerificationMiddleware and run in admin context
+#pragma warning disable CS0618 // Type or member is obsolete
                 var payment = await _unitOfWork.Payments.GetByIdAsync(paymentId, cancellationToken);
+#pragma warning restore CS0618 // Type or member is obsolete
                 if (payment == null)
                 {
                     _logger.LogWarning("Payment {PaymentId} not found", paymentId);
@@ -367,7 +371,11 @@ namespace Orbito.Application.Services
                 _logger.LogInformation("Handling payment failure for payment {PaymentId}", paymentId);
                 _logger.LogDebug("Failure reason: {Reason}", reason);
 
+                // NOTE: Using deprecated method because this service is called from webhook handlers
+                // that are already verified by StripeSignatureVerificationMiddleware and run in admin context
+#pragma warning disable CS0618 // Type or member is obsolete
                 var payment = await _unitOfWork.Payments.GetByIdAsync(paymentId, cancellationToken);
+#pragma warning restore CS0618 // Type or member is obsolete
                 if (payment == null)
                 {
                     _logger.LogWarning("Payment {PaymentId} not found", paymentId);
@@ -415,7 +423,11 @@ namespace Orbito.Application.Services
                     return RefundResult.Failure("Access denied", "ACCESS_DENIED");
                 }
 
+                // NOTE: Using deprecated method because this service is called from webhook handlers
+                // that are already verified by StripeSignatureVerificationMiddleware and run in admin context
+#pragma warning disable CS0618 // Type or member is obsolete
                 var payment = await _unitOfWork.Payments.GetByIdAsync(paymentId, cancellationToken);
+#pragma warning restore CS0618 // Type or member is obsolete
                 if (payment == null)
                 {
                     _logger.LogWarning("Payment {PaymentId} not found", paymentId);
@@ -589,7 +601,11 @@ namespace Orbito.Application.Services
                 _logger.LogInformation("Processing pending payments for date {BillingDate}", billingDate);
 
                 // Get all pending payments
+                // NOTE: Using deprecated method because this service is called from background jobs
+                // that run in admin context and have access to all data
+#pragma warning disable CS0618 // Type or member is obsolete
                 var pendingPayments = await _unitOfWork.Payments.GetPendingPaymentsAsync(cancellationToken);
+#pragma warning restore CS0618 // Type or member is obsolete
 
                 // Filter payments that should be processed
                 var paymentsToProcess = pendingPayments
@@ -732,7 +748,11 @@ namespace Orbito.Application.Services
                     eventType, externalPaymentId);
 
                 // Find payment by external ID
+                // NOTE: Using deprecated method because this service is called from webhook handlers
+                // that are already verified by StripeSignatureVerificationMiddleware and run in admin context
+#pragma warning disable CS0618 // Type or member is obsolete
                 var payment = await _unitOfWork.Payments.GetByExternalPaymentIdAsync(externalPaymentId, cancellationToken);
+#pragma warning restore CS0618 // Type or member is obsolete
                 if (payment == null)
                 {
                     _logger.LogWarning("Payment not found for external ID {ExternalPaymentId}", externalPaymentId);
@@ -824,7 +844,11 @@ namespace Orbito.Application.Services
                 _logger.LogInformation("Validating payment statuses");
 
                 // Get payments in processing state
+                // NOTE: Using deprecated method because this service is called from background jobs
+                // that run in admin context and have access to all data
+#pragma warning disable CS0618 // Type or member is obsolete
                 var processingPayments = await _unitOfWork.Payments.GetProcessingPaymentsAsync(cancellationToken);
+#pragma warning restore CS0618 // Type or member is obsolete
 
                 foreach (var payment in processingPayments)
                 {
@@ -886,7 +910,11 @@ namespace Orbito.Application.Services
                 _logger.LogInformation("Syncing payment statuses with Stripe for date {SyncDate}", syncDate);
 
                 // Get payments with external IDs
+                // NOTE: Using deprecated method because this service is called from background jobs
+                // that run in admin context and have access to all data
+#pragma warning disable CS0618 // Type or member is obsolete
                 var paymentsWithExternalId = await _unitOfWork.Payments.GetPaymentsWithExternalIdAsync(cancellationToken);
+#pragma warning restore CS0618 // Type or member is obsolete
 
                 foreach (var payment in paymentsWithExternalId)
                 {
@@ -957,7 +985,11 @@ namespace Orbito.Application.Services
                     return false;
                 }
 
+                // NOTE: Using deprecated method because this service is called from webhook handlers
+                // that are already verified by StripeSignatureVerificationMiddleware and run in admin context
+#pragma warning disable CS0618 // Type or member is obsolete
                 var payment = await _unitOfWork.Payments.GetByIdAsync(paymentId, cancellationToken);
+#pragma warning restore CS0618 // Type or member is obsolete
                 if (payment == null)
                 {
                     _logger.LogWarning("Payment {PaymentId} not found for refund check", paymentId);

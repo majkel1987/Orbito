@@ -4,6 +4,7 @@ using Moq;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.Common.Models.PaymentGateway;
 using Orbito.Application.Features.Payments.Commands;
+using Orbito.Domain.Common;
 using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
 using Orbito.Domain.ValueObjects;
@@ -92,10 +93,9 @@ public class RefundPaymentCommandHandlerTests : BaseTestFixture
         // Assert
         result.Should().NotBeNull();
         result.IsSuccess.Should().BeTrue();
-        result.ExternalRefundId.Should().Be("re_test_123");
-        result.Status.Should().Be(RefundStatus.Completed.ToString());
-        result.ErrorMessage.Should().BeNull();
-        result.ErrorCode.Should().BeNull();
+        result.Value.ExternalRefundId.Should().Be("re_test_123");
+        result.Value.Status.Should().Be(RefundStatus.Completed.ToString());
+        result.Error.Should().Be(Error.None);
 
         _paymentProcessingServiceMock.Verify(x => x.RefundPaymentAsync(
             paymentId,
@@ -157,8 +157,8 @@ public class RefundPaymentCommandHandlerTests : BaseTestFixture
         // Assert
         result.Should().NotBeNull();
         result.IsSuccess.Should().BeTrue();
-        result.ExternalRefundId.Should().Be("re_test_456");
-        result.Status.Should().Be(RefundStatus.PartiallyRefunded.ToString());
+        result.Value.ExternalRefundId.Should().Be("re_test_456");
+        result.Value.Status.Should().Be(RefundStatus.PartiallyRefunded.ToString());
     }
 
     #endregion
@@ -185,8 +185,8 @@ public class RefundPaymentCommandHandlerTests : BaseTestFixture
         // Assert
         result.Should().NotBeNull();
         result.IsSuccess.Should().BeFalse();
-        result.ErrorMessage.Should().Be("Tenant context is required");
-        result.ErrorCode.Should().Be("TENANT_CONTEXT_REQUIRED");
+        result.Error.Message.Should().Be("Tenant context is required");
+        result.Error.Code.Should().Be("TENANT_CONTEXT_REQUIRED");
     }
 
     [Fact]
@@ -211,8 +211,8 @@ public class RefundPaymentCommandHandlerTests : BaseTestFixture
         // Assert
         result.Should().NotBeNull();
         result.IsSuccess.Should().BeFalse();
-        result.ErrorMessage.Should().Be("Payment not found");
-        result.ErrorCode.Should().Be("PAYMENT_NOT_FOUND");
+        result.Error.Message.Should().Be("Payment not found");
+        result.Error.Code.Should().Be("PAYMENT_NOT_FOUND");
     }
 
     [Fact]
@@ -257,8 +257,8 @@ public class RefundPaymentCommandHandlerTests : BaseTestFixture
         // Assert
         result.Should().NotBeNull();
         result.IsSuccess.Should().BeFalse();
-        result.ErrorMessage.Should().Be("Refund amount exceeds payment amount");
-        result.ErrorCode.Should().Be("REFUND_AMOUNT_EXCEEDS_PAYMENT");
+        result.Error.Message.Should().Be("Refund amount exceeds payment amount");
+        result.Error.Code.Should().Be("REFUND_AMOUNT_EXCEEDS_PAYMENT");
     }
 
     #endregion
@@ -318,8 +318,8 @@ public class RefundPaymentCommandHandlerTests : BaseTestFixture
         // Assert
         result.Should().NotBeNull();
         result.IsSuccess.Should().BeFalse();
-        result.ErrorMessage.Should().Be("Payment gateway error");
-        result.ErrorCode.Should().Be("GATEWAY_ERROR");
+        result.Error.Message.Should().Be("Payment gateway error");
+        result.Error.Code.Should().Be("GATEWAY_ERROR");
     }
 
     [Fact]
@@ -344,8 +344,8 @@ public class RefundPaymentCommandHandlerTests : BaseTestFixture
         // Assert
         result.Should().NotBeNull();
         result.IsSuccess.Should().BeFalse();
-        result.ErrorMessage.Should().Be("An error occurred while processing refund");
-        result.ErrorCode.Should().Be("REFUND_PROCESSING_ERROR");
+        result.Error.Message.Should().Be("An error occurred while processing refund");
+        result.Error.Code.Should().Be("REFUND_PROCESSING_ERROR");
     }
 
     #endregion

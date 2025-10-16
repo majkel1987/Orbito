@@ -146,7 +146,7 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
             _unitOfWorkMock.Setup(x => x.BeginTransactionAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Result.Success());
 
-            _retryServiceMock.Setup(x => x.ScheduleRetryAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            _retryServiceMock.Setup(x => x.ScheduleRetryAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(PaymentRetrySchedule.Create(TenantId.New(), Guid.NewGuid(), Guid.NewGuid(), 1));
 
             _unitOfWorkMock.Setup(x => x.Payments.RecordPaymentAttemptsAsync(clientId, 2, It.IsAny<CancellationToken>()))
@@ -323,7 +323,7 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
             _unitOfWorkMock.Setup(x => x.BeginTransactionAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Result.Success());
 
-            _retryServiceMock.Setup(x => x.ScheduleRetryAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            _retryServiceMock.Setup(x => x.ScheduleRetryAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(PaymentRetrySchedule.Create(TenantId.New(), Guid.NewGuid(), Guid.NewGuid(), 1));
 
             _unitOfWorkMock.Setup(x => x.CommitAsync(It.IsAny<CancellationToken>()))
@@ -412,10 +412,10 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
             _unitOfWorkMock.Setup(x => x.BeginTransactionAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Result.Success());
 
-            _retryServiceMock.Setup(x => x.ScheduleRetryAsync(paymentIds[0], 1, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            _retryServiceMock.Setup(x => x.ScheduleRetryAsync(paymentIds[0], clientId, 1, It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(PaymentRetrySchedule.Create(TenantId.New(), clientId, paymentIds[0], 1));
 
-            _retryServiceMock.Setup(x => x.ScheduleRetryAsync(paymentIds[1], 1, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            _retryServiceMock.Setup(x => x.ScheduleRetryAsync(paymentIds[1], clientId, 1, It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new Exception("Retry failed"));
 
             _unitOfWorkMock.Setup(x => x.Payments.RecordPaymentAttemptsAsync(clientId, 1, It.IsAny<CancellationToken>()))

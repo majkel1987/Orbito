@@ -2,6 +2,8 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.Features.Payments.Commands;
+using Orbito.Domain.Common;
+using Orbito.Domain.Errors;
 using Orbito.Domain.ValueObjects;
 
 namespace Orbito.Application.Features.Payments.Commands
@@ -9,7 +11,7 @@ namespace Orbito.Application.Features.Payments.Commands
     /// <summary>
     /// Handler dla komendy zwrotu płatności
     /// </summary>
-    public class RefundPaymentCommandHandler : IRequestHandler<RefundPaymentCommand, RefundPaymentResult>
+    public class RefundPaymentCommandHandler : IRequestHandler<RefundPaymentCommand, Result<RefundPaymentResult>>
     {
         private readonly IPaymentProcessingService _paymentProcessingService;
         private readonly IUnitOfWork _unitOfWork;
@@ -28,7 +30,7 @@ namespace Orbito.Application.Features.Payments.Commands
             _logger = logger;
         }
 
-        public async Task<RefundPaymentResult> Handle(RefundPaymentCommand request, CancellationToken cancellationToken)
+        public async Task<Result<RefundPaymentResult>> Handle(RefundPaymentCommand request, CancellationToken cancellationToken)
         {
             try
             {
@@ -36,18 +38,22 @@ namespace Orbito.Application.Features.Payments.Commands
                 if (!_tenantContext.HasTenant)
                 {
                     _logger.LogWarning("Attempted to refund payment without tenant context");
-                    return RefundPaymentResult.Failure("Tenant context is required", "TENANT_CONTEXT_REQUIRED");
+                    return Result.Failure<RefundPaymentResult>(DomainErrors.Tenant.NoTenantContext);
                 }
 
                 _logger.LogInformation("Processing refund for payment {PaymentId} with amount {Amount} {Currency}",
                     request.PaymentId, request.Amount, request.Currency);
 
                 // Sprawdź czy płatność istnieje
+                // NOTE: Using deprecated method because this command is only accessible by Providers and PlatformAdmins
+                // who have proper authorization to view all payments in their tenant
+#pragma warning disable CS0618 // Type or member is obsolete
                 var payment = await _unitOfWork.Payments.GetByIdAsync(request.PaymentId, cancellationToken);
+#pragma warning restore CS0618 // Type or member is obsolete
                 if (payment == null)
                 {
                     _logger.LogWarning("Payment {PaymentId} not found", request.PaymentId);
-                    return RefundPaymentResult.Failure("Payment not found", "PAYMENT_NOT_FOUND");
+                    return Result.Failure<RefundPaymentResult>(DomainErrors.Payment.NotFound);
                 }
 
                 // Sprawdź czy płatność należy do klienta w ramach tego samego tenanta
@@ -56,14 +62,14 @@ namespace Orbito.Application.Features.Payments.Commands
                 {
                     _logger.LogWarning("Payment {PaymentId} does not belong to current tenant {TenantId}",
                         request.PaymentId, _tenantContext.CurrentTenantId);
-                    return RefundPaymentResult.Failure("Access denied", "ACCESS_DENIED");
+                    return Result.Failure<RefundPaymentResult>(DomainErrors.Tenant.CrossTenantAccess);
                 }
 
                 // Sprawdź czy płatność może być zwrócona
                 if (!payment.CanBeRefunded())
                 {
                     _logger.LogWarning("Payment {PaymentId} cannot be refunded", request.PaymentId);
-                    return RefundPaymentResult.Failure("Payment cannot be refunded", "PAYMENT_CANNOT_BE_REFUNDED");
+                    return Result.Failure<RefundPaymentResult>(DomainErrors.Payment.CannotRefund);
                 }
 
                 // Sprawdź czy kwota zwrotu nie przekracza kwoty płatności
@@ -72,7 +78,7 @@ namespace Orbito.Application.Features.Payments.Commands
                 {
                     _logger.LogWarning("Refund amount {RefundAmount} exceeds payment amount {PaymentAmount}", 
                         refundAmount.Amount, payment.Amount.Amount);
-                    return RefundPaymentResult.Failure("Refund amount exceeds payment amount", "REFUND_AMOUNT_EXCEEDS_PAYMENT");
+                    return Result.Failure<RefundPaymentResult>(DomainErrors.Payment.AmountMismatch);
                 }
 
                 // Przetwórz zwrot przez payment gateway
@@ -87,24 +93,22 @@ namespace Orbito.Application.Features.Payments.Commands
                     _logger.LogInformation("Payment {PaymentId} refunded successfully with external ID {ExternalRefundId}", 
                         request.PaymentId, result.ExternalRefundId);
 
-                    return RefundPaymentResult.Success(
+                    return Result.Success(RefundPaymentResult.Success(
                         result.ExternalRefundId ?? string.Empty,
-                        result.Status.ToString());
+                        result.Status.ToString()));
                 }
                 else
                 {
                     _logger.LogError("Failed to refund payment {PaymentId}: {ErrorMessage}", 
                         request.PaymentId, result.ErrorMessage);
 
-                    return RefundPaymentResult.Failure(
-                        result.ErrorMessage ?? "Refund failed",
-                        result.ErrorCode);
+                    return Result.Failure<RefundPaymentResult>(DomainErrors.Payment.ProcessingFailed);
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing refund for payment {PaymentId}", request.PaymentId);
-                return RefundPaymentResult.Failure("An error occurred while processing refund", "REFUND_PROCESSING_ERROR");
+                return Result.Failure<RefundPaymentResult>(DomainErrors.General.UnexpectedError);
             }
         }
     }

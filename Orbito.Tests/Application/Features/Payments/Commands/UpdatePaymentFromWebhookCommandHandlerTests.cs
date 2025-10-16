@@ -218,7 +218,7 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
             // Assert
             result.Should().NotBeNull();
             result.IsSuccess.Should().BeFalse();
-            result.ErrorMessage.Should().Contain("tenant context");
+            result.Error.Message.Should().Contain("tenant context");
         }
 
         [Fact]
@@ -250,7 +250,7 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
             // Assert
             result.Should().NotBeNull();
             result.IsSuccess.Should().BeFalse();
-            result.ErrorMessage.Should().Contain("not found");
+            result.Error.Message.Should().Contain("not found");
         }
 
         [Fact]
@@ -285,7 +285,7 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
             // Assert
             result.Should().NotBeNull();
             result.IsSuccess.Should().BeFalse();
-            result.ErrorMessage.Should().Contain("access denied");
+            result.Error.Message.Should().Contain("access denied");
         }
 
         [Fact]
@@ -321,7 +321,7 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
             // Assert
             result.Should().NotBeNull();
             result.IsSuccess.Should().BeFalse();
-            result.ErrorMessage.Should().Contain("Database error");
+            result.Error.Message.Should().Contain("Database error");
         }
 
         [Fact]
@@ -353,7 +353,7 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
             // Assert
             result.Should().NotBeNull();
             result.IsSuccess.Should().BeFalse();
-            result.ErrorMessage.Should().Contain("Repository error");
+            result.Error.Message.Should().Contain("Repository error");
         }
 
         [Fact]

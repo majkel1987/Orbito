@@ -4,7 +4,45 @@
 
 Orbito to nowoczesna platforma SaaS zbudowana w architekturze Clean Architecture, wykorzystująca wzorce DDD (Domain-Driven Design) i CQRS z MediatR.
 
-## 🆕 Najnowsze Funkcje (v2.8.1) - Critical Security & Performance Fixes
+## 🆕 Najnowsze Funkcje (v2.9.0) - Result Pattern Migration
+
+### 🎯 Result Pattern Implementation ✅
+
+#### **Domain-Driven Error Handling**
+- **New Result Pattern** - `Orbito.Domain.Common.Result<T>` i `Orbito.Domain.Common.Error`
+- **DomainErrors Catalog** - Centralizowane błędy domenowe w `Orbito.Domain.Errors.DomainErrors`
+- **Type-Safe Error Handling** - Kompilator wymusza obsługę błędów
+- **HTTP Status Mapping** - Automatyczne mapowanie błędów na kody HTTP w BaseController
+
+#### **Migrated Core Handlers**
+- ✅ `ProcessPaymentCommandHandler` - Payment processing
+- ✅ `CreateProviderCommandHandler` - Provider creation
+- ✅ `CreateStripeCustomerCommandHandler` - Stripe customer management
+- ✅ `RefundPaymentCommandHandler` - Payment refunds
+- ✅ `UpdatePaymentFromWebhookCommandHandler` - Webhook processing
+- ✅ `ProcessWebhookEventCommandHandler` - Event handling
+
+#### **Updated Controllers**
+- ✅ `PaymentController` - Payment endpoints
+- ✅ `ProvidersController` - Provider management
+- ✅ `PaymentRetryController` - Retry operations
+- ✅ `PaymentMetricsController` - Metrics and statistics
+- ✅ `WebhookController` - Webhook handling
+
+#### **Test Coverage**
+- ✅ All migrated handlers have updated unit tests
+- ✅ New Result API testing patterns
+- ✅ Error scenario validation
+
+### 🔧 Technical Benefits
+
+- **Explicit Error Handling** - No more unexpected exceptions
+- **Better Testability** - Easier error case testing
+- **Consistent API** - Uniform response structure
+- **Separation of Concerns** - Domain errors separated from HTTP
+- **Cleaner Code** - Reduced try-catch blocks
+
+## 🆕 Previous Features (v2.8.1) - Critical Security & Performance Fixes
 
 ### 🔴 Krytyczne Poprawki Bezpieczeństwa (11 Fixes)
 

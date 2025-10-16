@@ -157,10 +157,10 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
             // Assert
             result.Should().NotBeNull();
             result.IsSuccess.Should().BeTrue();
-            result.StripeCustomerId.Should().Be("cus_stripe123");
-            result.Email.Should().Be(command.Email);
-            result.FirstName.Should().Be(command.FirstName);
-            result.LastName.Should().Be(command.LastName);
+            result.Value.StripeCustomerId.Should().Be("cus_stripe123");
+            result.Value.Email.Should().Be(command.Email);
+            result.Value.FirstName.Should().Be(command.FirstName);
+            result.Value.LastName.Should().Be(command.LastName);
         }
 
         [Fact]
@@ -184,8 +184,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
             // Assert
             result.Should().NotBeNull();
             result.IsSuccess.Should().BeFalse();
-            result.ErrorMessage.Should().Contain("Tenant context is required");
-            result.ErrorCode.Should().Be("TENANT_CONTEXT_REQUIRED");
+            result.Error.Message.Should().Contain("Tenant context is required");
+            result.Error.Code.Should().Be("TENANT_CONTEXT_REQUIRED");
         }
 
         [Fact]
@@ -214,8 +214,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
             // Assert
             result.Should().NotBeNull();
             result.IsSuccess.Should().BeFalse();
-            result.ErrorMessage.Should().Contain("Client not found");
-            result.ErrorCode.Should().Be("CLIENT_NOT_FOUND");
+            result.Error.Message.Should().Contain("Client not found");
+            result.Error.Code.Should().Be("CLIENT_NOT_FOUND");
         }
 
         [Fact]
@@ -247,8 +247,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
             // Assert
             result.Should().NotBeNull();
             result.IsSuccess.Should().BeFalse();
-            result.ErrorMessage.Should().Contain("Access denied");
-            result.ErrorCode.Should().Be("ACCESS_DENIED");
+            result.Error.Message.Should().Contain("Access denied");
+            result.Error.Code.Should().Be("ACCESS_DENIED");
         }
 
         [Fact]
@@ -294,8 +294,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
             // Assert
             result.Should().NotBeNull();
             result.IsSuccess.Should().BeFalse();
-            result.ErrorMessage.Should().Contain("Stripe API error");
-            result.ErrorCode.Should().Be("STRIPE_API_ERROR");
+            result.Error.Message.Should().Contain("Stripe API error");
+            result.Error.Code.Should().Be("STRIPE_API_ERROR");
         }
 
         [Fact]
@@ -323,8 +323,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
             // Assert
             result.Should().NotBeNull();
             result.IsSuccess.Should().BeFalse();
-            result.ErrorMessage.Should().Contain("An error occurred while creating Stripe customer");
-            result.ErrorCode.Should().Be("CUSTOMER_CREATION_ERROR");
+            result.Error.Message.Should().Contain("An error occurred while creating Stripe customer");
+            result.Error.Code.Should().Be("CUSTOMER_CREATION_ERROR");
         }
 
         [Fact]

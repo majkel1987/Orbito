@@ -39,7 +39,7 @@ namespace Orbito.Application.Services
         /// NOTE: Race condition protection is handled by unique constraint in database:
         /// IX_PaymentRetrySchedule_Payment_Active on PaymentId WHERE Status IN ('Scheduled', 'InProgress')
         /// </summary>
-        public async Task<PaymentRetrySchedule> ScheduleRetryAsync(Guid paymentId, int attemptNumber, string errorReason, CancellationToken cancellationToken = default)
+        public async Task<PaymentRetrySchedule> ScheduleRetryAsync(Guid paymentId, Guid clientId, int attemptNumber, string errorReason, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Scheduling retry for payment {PaymentId}, attempt {AttemptNumber}", paymentId, attemptNumber);
 
@@ -49,11 +49,8 @@ namespace Orbito.Application.Services
                 throw new ArgumentException($"Invalid attempt number: {attemptNumber}. Must be between 1 and {_options.MaxAttempts}.");
             }
 
-            // NOTE: In ScheduleRetryAsync, we use GetByIdAsync because this method is only called
-            // from already-authorized handlers that have verified client ownership
-#pragma warning disable CS0618 // Type or member is obsolete
-            var payment = await _paymentRepository.GetByIdAsync(paymentId, cancellationToken);
-#pragma warning restore CS0618 // Type or member is obsolete
+            // Use secure method with client verification
+            var payment = await _paymentRepository.GetByIdForClientAsync(paymentId, clientId, cancellationToken);
             if (payment == null)
             {
                 throw new InvalidOperationException($"Payment {paymentId} not found");
@@ -72,8 +69,14 @@ namespace Orbito.Application.Services
             }
 
             // Create new retry schedule
+            var tenantId = _tenantProvider.GetCurrentTenantId();
+            if (tenantId == null)
+            {
+                throw new InvalidOperationException("Tenant context is required for creating retry schedule");
+            }
+
             var retrySchedule = PaymentRetrySchedule.Create(
-                _tenantProvider.GetCurrentTenantId(),
+                tenantId,
                 payment.ClientId,
                 paymentId,
                 attemptNumber,

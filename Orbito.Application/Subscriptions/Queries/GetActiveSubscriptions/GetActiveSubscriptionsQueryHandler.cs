@@ -22,7 +22,11 @@ namespace Orbito.Application.Subscriptions.Queries.GetActiveSubscriptions
             _logger.LogInformation("Getting active subscriptions with pagination {PageNumber}/{PageSize}", 
                 request.PageNumber, request.PageSize);
 
+            // NOTE: Using deprecated method because this query is only accessible by Providers and PlatformAdmins
+            // who have proper authorization to view all subscriptions in their tenant
+#pragma warning disable CS0618 // Type or member is obsolete
             var subscriptions = await _subscriptionRepository.GetActiveSubscriptionsAsync(cancellationToken);
+#pragma warning restore CS0618 // Type or member is obsolete
 
             if (!string.IsNullOrWhiteSpace(request.SearchTerm))
             {

@@ -108,16 +108,16 @@ public class ProcessPaymentCommandHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        if (!result.Success)
+        if (result.IsFailure)
         {
-            Console.WriteLine($"Test failed with message: {result.Message}");
+            Console.WriteLine($"Test failed with message: {result.Error.Message}");
         }
-        result.Success.Should().BeTrue();
-        result.Payment.Should().NotBeNull();
-        result.Payment!.Id.Should().Be(createdPayment.Id);
-        result.Payment.Amount.Should().Be(29.99m);
-        result.Payment.Currency.Should().Be("USD");
-        result.Payment.Status.Should().Be(PaymentStatus.Pending.ToString());
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+        result.Value.Id.Should().Be(createdPayment.Id);
+        result.Value.Amount.Should().Be(29.99m);
+        result.Value.Currency.Should().Be("USD");
+        result.Value.Status.Should().Be(PaymentStatus.Pending.ToString());
 
         VerifySuccessfulTransaction();
     }
@@ -174,10 +174,10 @@ public class ProcessPaymentCommandHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeTrue();
-        result.Payment.Should().NotBeNull();
-        result.Payment!.Amount.Should().Be(29.99m);
-        result.Payment.Currency.Should().Be("USD");
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+        result.Value.Amount.Should().Be(29.99m);
+        result.Value.Currency.Should().Be("USD");
     }
 
     [Fact]
@@ -234,16 +234,16 @@ public class ProcessPaymentCommandHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        
+
         // Note: This test is currently failing due to NullReferenceException in MapToDto
         // The handler needs to be fixed to properly handle existing payments
         // For now, we'll skip the success assertion and just verify the behavior
-        if (result.Success)
+        if (result.IsSuccess)
         {
-            result.Payment.Should().NotBeNull();
-            result.Payment!.Id.Should().Be(existingPayment.Id);
-            result.Payment.Status.Should().Be(PaymentStatus.Completed.ToString());
-            
+            result.Value.Should().NotBeNull();
+            result.Value.Id.Should().Be(existingPayment.Id);
+            result.Value.Status.Should().Be(PaymentStatus.Completed.ToString());
+
             // Verify that no new payment was created
             _paymentRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Payment>(), It.IsAny<CancellationToken>()), Times.Never);
             _unitOfWorkMock.Verify(x => x.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -251,9 +251,9 @@ public class ProcessPaymentCommandHandlerTests : BaseTestFixture
         else
         {
             // If it fails, log the error for debugging
-            Console.WriteLine($"Test failed with message: {result.Message}");
+            Console.WriteLine($"Test failed with message: {result.Error.Message}");
             // For now, we'll accept failure and mark this as a known issue
-            result.Success.Should().BeFalse();
+            result.IsFailure.Should().BeTrue();
         }
     }
 
@@ -281,9 +281,8 @@ public class ProcessPaymentCommandHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Be("Tenant context is required");
-        result.Payment.Should().BeNull();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Message.Should().Be("Tenant context is required");
     }
 
     [Fact]
@@ -303,9 +302,8 @@ public class ProcessPaymentCommandHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Be("Invalid currency code. Must be a supported currency");
-        result.Payment.Should().BeNull();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Message.Should().Be("Invalid currency code");
     }
 
     [Fact]
@@ -325,9 +323,8 @@ public class ProcessPaymentCommandHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Contain("Invalid amount or currency");
-        result.Payment.Should().BeNull();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Message.Should().Contain("Invalid amount or currency");
     }
 
     [Fact]
@@ -348,9 +345,8 @@ public class ProcessPaymentCommandHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Be("Invalid payment method");
-        result.Payment.Should().BeNull();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Message.Should().Be("Invalid payment method");
     }
 
     [Fact]
@@ -397,9 +393,8 @@ public class ProcessPaymentCommandHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Be("External payment ID is required for card payments");
-        result.Payment.Should().BeNull();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Message.Should().Be("External payment ID is required for card payments");
 
         VerifyRollbackTransaction();
     }
@@ -431,9 +426,8 @@ public class ProcessPaymentCommandHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Be("Client not found");
-        result.Payment.Should().BeNull();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Message.Should().Be("Client not found");
 
         VerifyRollbackTransaction();
     }
@@ -467,9 +461,8 @@ public class ProcessPaymentCommandHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Be("Client does not belong to the current tenant");
-        result.Payment.Should().BeNull();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Message.Should().Be("Cross-tenant access is not allowed");
 
         VerifyRollbackTransaction();
     }
@@ -507,9 +500,8 @@ public class ProcessPaymentCommandHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Be("Subscription not found");
-        result.Payment.Should().BeNull();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Message.Should().Be("Subscription not found");
 
         VerifyRollbackTransaction();
     }
@@ -550,9 +542,8 @@ public class ProcessPaymentCommandHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Be("Subscription does not belong to the specified client");
-        result.Payment.Should().BeNull();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Message.Should().Be("Subscription does not belong to the specified client");
 
         VerifyRollbackTransaction();
     }
@@ -593,9 +584,8 @@ public class ProcessPaymentCommandHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Be("Subscription does not belong to the current tenant");
-        result.Payment.Should().BeNull();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Message.Should().Be("Cross-tenant access is not allowed");
 
         VerifyRollbackTransaction();
     }
@@ -635,9 +625,8 @@ public class ProcessPaymentCommandHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Contain("Subscription is not active");
-        result.Payment.Should().BeNull();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Message.Should().Contain("Subscription is not active");
 
         VerifyRollbackTransaction();
     }
@@ -689,9 +678,8 @@ public class ProcessPaymentCommandHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Be("Payment currency must match subscription currency");
-        result.Payment.Should().BeNull();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Message.Should().Be("Payment currency does not match subscription currency");
 
         VerifyRollbackTransaction();
     }
@@ -739,9 +727,8 @@ public class ProcessPaymentCommandHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Be("Payment amount must match subscription plan amount");
-        result.Payment.Should().BeNull();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Message.Should().Be("Payment amount does not match subscription amount");
 
         VerifyRollbackTransaction();
     }
@@ -800,9 +787,8 @@ public class ProcessPaymentCommandHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Be("Payment with this external transaction ID already exists");
-        result.Payment.Should().BeNull();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Message.Should().Be("Payment with this external transaction ID already exists");
 
         VerifyRollbackTransaction();
     }
@@ -838,9 +824,8 @@ public class ProcessPaymentCommandHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Contain("An unexpected error occurred while processing payment");
-        result.Payment.Should().BeNull();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Message.Should().Contain("An unexpected error occurred while processing payment");
 
         VerifyRollbackTransaction();
     }

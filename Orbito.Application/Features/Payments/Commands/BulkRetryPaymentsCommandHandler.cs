@@ -273,6 +273,7 @@ namespace Orbito.Application.Features.Payments.Commands
                 // Schedule the retry - now returns the full object
                 var createdSchedule = await _retryService.ScheduleRetryAsync(
                     paymentId,
+                    clientId,
                     attemptNumber,
                     reason ?? "Bulk retry requested",
                     cancellationToken);

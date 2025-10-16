@@ -4,8 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Orbito.Application.Features.Payments.Commands;
 using Orbito.Application.Features.Payments.Queries;
-using Orbito.Application.Common.Models;
 using Orbito.Application.Common.Interfaces;
+using Orbito.Application.Common.Models;
 
 namespace Orbito.API.Controllers
 {

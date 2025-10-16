@@ -27,22 +27,16 @@ namespace Orbito.API.Controllers
         /// <returns>Wynik przetwarzania płatności</returns>
         [HttpPost("process")]
         [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<ProcessPaymentResult>> ProcessPayment([FromBody] ProcessPaymentCommand command)
+        public async Task<IActionResult> ProcessPayment([FromBody] ProcessPaymentCommand command)
         {
             var result = await Mediator.Send(command);
 
-            if (!result.Success)
+            if (result.IsFailure)
             {
-                return BadRequest(result);
+                return HandleResult(result);
             }
 
-            // Null-safe CreatedAtAction
-            if (result.Payment == null)
-            {
-                return BadRequest(new { error = "Payment was not created" });
-            }
-
-            return CreatedAtAction(nameof(GetPaymentById), new { id = result.Payment.Id }, result);
+            return CreatedAtAction(nameof(GetPaymentById), new { id = result.Value.Id }, result.Value);
         }
 
         /// <summary>

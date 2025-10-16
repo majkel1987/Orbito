@@ -72,7 +72,7 @@ namespace Orbito.Application.Providers.Commands.UpdateProvider
                     // Update in repository
                     await _providerRepository.UpdateAsync(provider, cancellationToken);
                     await _unitOfWork.SaveChangesAsync(cancellationToken);
-                    await _unitOfWork.CommitTransactionAsync(cancellationToken);
+                    await _unitOfWork.CommitAsync(cancellationToken);
 
                     // Get updated provider with all relations
                     var updatedProvider = await _providerRepository.GetByIdAsync(request.Id, cancellationToken);
@@ -84,7 +84,7 @@ namespace Orbito.Application.Providers.Commands.UpdateProvider
                 }
                 catch (Exception)
                 {
-                    await _unitOfWork.RollbackTransactionAsync(cancellationToken);
+                    await _unitOfWork.RollbackAsync(cancellationToken);
                     throw;
                 }
             }

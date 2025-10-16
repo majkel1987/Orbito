@@ -89,24 +89,24 @@ namespace Orbito.Application.Providers.Commands.RegisterProvider
                 var createProviderResult = await _mediator.Send(createProviderCommand, cancellationToken);
 
                 // Jeśli utworzenie providera się nie powiodło, usuń użytkownika
-                if (createProviderResult == null)
+                if (createProviderResult.IsFailure)
                 {
                     await _userManager.DeleteAsync(user);
                     return RegisterProviderResult.FailureResult(
-                        "Błąd podczas tworzenia providera",
-                        new List<string> { "Nie udało się utworzyć providera" });
+                        createProviderResult.Error.Message,
+                        new List<string> { createProviderResult.Error.Code });
                 }
 
                 // Aktualizuj TenantId użytkownika
-                user.TenantId = TenantId.Create(createProviderResult.ProviderId);
+                user.TenantId = TenantId.Create(createProviderResult.Value.ProviderId);
                 await _userManager.UpdateAsync(user);
 
-                _logger.LogInformation("Provider zarejestrowany: {Email} (ID: {ProviderId})", 
-                    request.Email, createProviderResult.ProviderId);
+                _logger.LogInformation("Provider zarejestrowany: {Email} (ID: {ProviderId})",
+                    request.Email, createProviderResult.Value.ProviderId);
 
                 return RegisterProviderResult.SuccessResult(
                     user.Id,
-                    createProviderResult.ProviderId,
+                    createProviderResult.Value.ProviderId,
                     request.BusinessName,
                     request.SubdomainSlug);
             }

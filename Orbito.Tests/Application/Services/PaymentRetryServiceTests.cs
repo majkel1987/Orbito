@@ -55,6 +55,7 @@ public class PaymentRetryServiceTests : BaseTestFixture
     {
         // Arrange
         var paymentId = Guid.NewGuid();
+        var clientId = TestClientId;
         var attemptNumber = 1;
         var errorReason = "Network timeout";
 
@@ -78,7 +79,7 @@ public class PaymentRetryServiceTests : BaseTestFixture
             .Returns(Task.CompletedTask);
 
         // Act
-        var result = await _service.ScheduleRetryAsync(paymentId, attemptNumber, errorReason, CancellationToken.None);
+        var result = await _service.ScheduleRetryAsync(paymentId, clientId, attemptNumber, errorReason, CancellationToken.None);
 
         // Assert
         result.Should().NotBeNull();
@@ -97,6 +98,7 @@ public class PaymentRetryServiceTests : BaseTestFixture
     {
         // Arrange
         var paymentId = Guid.NewGuid();
+        var clientId = TestClientId;
         var attemptNumber = 2;
         var errorReason = "Gateway error";
 
@@ -119,7 +121,7 @@ public class PaymentRetryServiceTests : BaseTestFixture
             .Returns(Task.CompletedTask);
 
         // Act
-        var result = await _service.ScheduleRetryAsync(paymentId, attemptNumber, errorReason, CancellationToken.None);
+        var result = await _service.ScheduleRetryAsync(paymentId, clientId, attemptNumber, errorReason, CancellationToken.None);
 
         // Assert
         result.Should().NotBeNull();
@@ -134,6 +136,7 @@ public class PaymentRetryServiceTests : BaseTestFixture
     {
         // Arrange
         var paymentId = Guid.NewGuid();
+        var clientId = TestClientId;
         var attemptNumber = 1;
         var errorReason = "Network timeout";
 
@@ -153,7 +156,7 @@ public class PaymentRetryServiceTests : BaseTestFixture
             .ReturnsAsync(existingRetry);
 
         // Act & Assert
-        var action = async () => await _service.ScheduleRetryAsync(paymentId, attemptNumber, errorReason, CancellationToken.None);
+        var action = async () => await _service.ScheduleRetryAsync(paymentId, clientId, attemptNumber, errorReason, CancellationToken.None);
         await action.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage($"Payment {paymentId} already has an active retry schedule");
     }
@@ -164,6 +167,7 @@ public class PaymentRetryServiceTests : BaseTestFixture
     {
         // Arrange
         var paymentId = Guid.NewGuid();
+        var clientId = TestClientId;
         var attemptNumber = 6; // Exceeds max attempts of 5
         var errorReason = "Network timeout";
 
@@ -176,7 +180,7 @@ public class PaymentRetryServiceTests : BaseTestFixture
             .ReturnsAsync(failedPayment);
 
         // Act & Assert
-        var action = async () => await _service.ScheduleRetryAsync(paymentId, attemptNumber, errorReason, CancellationToken.None);
+        var action = async () => await _service.ScheduleRetryAsync(paymentId, clientId, attemptNumber, errorReason, CancellationToken.None);
         await action.Should().ThrowAsync<ArgumentException>()
             .WithMessage($"Invalid attempt number: {attemptNumber}. Must be between 1 and 5.");
     }
@@ -351,7 +355,7 @@ public class PaymentRetryServiceTests : BaseTestFixture
         var results = new List<PaymentRetrySchedule>();
         foreach (var paymentId in paymentIds)
         {
-            var result = await _service.ScheduleRetryAsync(paymentId, 1, "Test error", CancellationToken.None);
+            var result = await _service.ScheduleRetryAsync(paymentId, TestClientId, 1, "Test error", CancellationToken.None);
             results.Add(result);
         }
 
@@ -375,7 +379,7 @@ public class PaymentRetryServiceTests : BaseTestFixture
         var limitedIds = paymentIds.Take(50).ToArray(); // Limit to MaxConcurrency
         foreach (var paymentId in limitedIds)
         {
-            var result = await _service.ScheduleRetryAsync(paymentId, 1, "Test error", CancellationToken.None);
+            var result = await _service.ScheduleRetryAsync(paymentId, TestClientId, 1, "Test error", CancellationToken.None);
             results.Add(result);
         }
 
@@ -393,6 +397,7 @@ public class PaymentRetryServiceTests : BaseTestFixture
     {
         // Arrange
         var paymentId = Guid.NewGuid();
+        var clientId = TestClientId;
         var differentTenantId = TenantId.New();
         var attemptNumber = 1;
         var errorReason = "Network timeout";
@@ -406,7 +411,7 @@ public class PaymentRetryServiceTests : BaseTestFixture
             .ReturnsAsync(paymentFromDifferentTenant);
 
         // Act & Assert
-        var action = async () => await _service.ScheduleRetryAsync(paymentId, attemptNumber, errorReason, CancellationToken.None);
+        var action = async () => await _service.ScheduleRetryAsync(paymentId, clientId, attemptNumber, errorReason, CancellationToken.None);
         await action.Should().ThrowAsync<UnauthorizedAccessException>()
             .WithMessage("Access denied: Payment belongs to different tenant");
     }
@@ -417,6 +422,7 @@ public class PaymentRetryServiceTests : BaseTestFixture
     {
         // Arrange
         var paymentId = Guid.NewGuid();
+        var clientId = TestClientId;
         var differentClientId = Guid.NewGuid();
         var attemptNumber = 1;
         var errorReason = "Network timeout";
@@ -430,7 +436,7 @@ public class PaymentRetryServiceTests : BaseTestFixture
             .ReturnsAsync((Payment?)null); // Payment not found for this client
 
         // Act & Assert
-        var action = async () => await _service.ScheduleRetryAsync(paymentId, attemptNumber, errorReason, CancellationToken.None);
+        var action = async () => await _service.ScheduleRetryAsync(paymentId, clientId, attemptNumber, errorReason, CancellationToken.None);
         await action.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage($"Payment {paymentId} not found or access denied");
     }

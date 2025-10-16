@@ -11,11 +11,12 @@ namespace Orbito.Application.Common.Interfaces
         /// Schedules a retry for a failed payment
         /// </summary>
         /// <param name="paymentId">ID of the payment to retry</param>
+        /// <param name="clientId">ID of the client (for security verification)</param>
         /// <param name="attemptNumber">Current attempt number (1-based)</param>
         /// <param name="errorReason">Reason for the failure</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Created retry schedule</returns>
-        Task<PaymentRetrySchedule> ScheduleRetryAsync(Guid paymentId, int attemptNumber, string errorReason, CancellationToken cancellationToken = default);
+        Task<PaymentRetrySchedule> ScheduleRetryAsync(Guid paymentId, Guid clientId, int attemptNumber, string errorReason, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Processes all scheduled retries that are due

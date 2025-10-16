@@ -54,7 +54,7 @@ namespace Orbito.Application.Providers.Commands.DeleteProvider
                         // Hard delete - remove from database
                         await _providerRepository.DeleteAsync(provider, cancellationToken);
                         await _unitOfWork.SaveChangesAsync(cancellationToken);
-                        await _unitOfWork.CommitTransactionAsync(cancellationToken);
+                        await _unitOfWork.CommitAsync(cancellationToken);
 
                         _logger.LogWarning("Provider hard deleted: {ProviderId}", request.Id);
 
@@ -67,7 +67,7 @@ namespace Orbito.Application.Providers.Commands.DeleteProvider
                         // Soft delete - deactivate provider
                         await _providerRepository.SoftDeleteAsync(provider, cancellationToken);
                         await _unitOfWork.SaveChangesAsync(cancellationToken);
-                        await _unitOfWork.CommitTransactionAsync(cancellationToken);
+                        await _unitOfWork.CommitAsync(cancellationToken);
 
                         _logger.LogInformation("Provider soft deleted (deactivated): {ProviderId}", request.Id);
 
@@ -78,7 +78,7 @@ namespace Orbito.Application.Providers.Commands.DeleteProvider
                 }
                 catch (Exception)
                 {
-                    await _unitOfWork.RollbackTransactionAsync(cancellationToken);
+                    await _unitOfWork.RollbackAsync(cancellationToken);
                     throw;
                 }
             }
