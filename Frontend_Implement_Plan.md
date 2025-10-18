@@ -16,122 +16,123 @@
 
 #### 0.1 Setup Next.js 🔴
 
-- [ ] Utwórz nowy projekt Next.js 14 z App Router (bez TypeScript)
-- [ ] Wybierz: Tailwind CSS - Yes, ESLint - Yes, App Router - Yes
-- [ ] Usuń niepotrzebne pliki startowe (przykładowy content)
-- [ ] Sprawdź czy projekt się uruchamia na localhost:3000
+- [x] ✅ Utwórz nowy projekt Next.js 14 z App Router (bez TypeScript)
+- [x] ✅ Wybierz: Tailwind CSS - Yes, ESLint - Yes, App Router - Yes
+- [x] ✅ Usuń niepotrzebne pliki startowe (przykładowy content)
+- [x] ✅ Sprawdź czy projekt się uruchamia na localhost:3000
 
 #### 0.2 Struktura Katalogów 🔴
 
-- [ ] Utwórz strukturę folderów zgodną z planem:
-  - [ ] `src/app/` - dla Next.js App Router
-  - [ ] `src/features/` - dla modułów funkcjonalnych
-  - [ ] `src/core/` - dla logiki biznesowej
-  - [ ] `src/shared/` - dla współdzielonych zasobów
-- [ ] Utwórz `jsconfig.json` z path aliases (@/features, @/core, @/shared)
+- [x] ✅ Utwórz strukturę folderów zgodną z planem:
+  - [x] ✅ `src/app/` - dla Next.js App Router
+  - [x] ✅ `src/features/` - dla modułów funkcjonalnych
+  - [x] ✅ `src/core/` - dla logiki biznesowej
+  - [x] ✅ `src/shared/` - dla współdzielonych zasobów
+- [x] ✅ Utwórz `jsconfig.json` z path aliases (@/features, @/core, @/shared)
 
 #### 0.3 Instalacja Podstawowych Zależności 🔴
 
-- [ ] Zainstaluj core dependencies:
-  - [ ] `zustand` - state management
-  - [ ] `@tanstack/react-query` - server state
-  - [ ] `axios` - HTTP client
-  - [ ] `next-auth` - autentykacja
-- [ ] Zainstaluj UI dependencies:
-  - [ ] `lucide-react` - ikony
-  - [ ] `clsx` - conditional classes
-  - [ ] `tailwind-merge` - merge Tailwind classes
+- [x] ✅ Zainstaluj core dependencies:
+  - [x] ✅ `zustand` - state management
+  - [x] ✅ `@tanstack/react-query` - server state
+  - [x] ✅ `axios` - HTTP client
+  - [x] ✅ `next-auth` - autentykacja
+- [x] ✅ Zainstaluj UI dependencies:
+  - [x] ✅ `lucide-react` - ikony
+  - [x] ✅ `clsx` - conditional classes
+  - [x] ✅ `tailwind-merge` - merge Tailwind classes
 
 ### Dzień 3-4: Konfiguracja Narzędzi
 
 #### 0.4 Tailwind CSS Setup 🔴
 
-- [ ] Skonfiguruj `tailwind.config.js`:
-  - [ ] Dodaj custom colors pasujące do brandingu
-  - [ ] Skonfiguruj spacing i typography
-  - [ ] Dodaj dark mode support (class-based)
-- [ ] Utwórz `globals.css` z custom utility classes
+- [x] ✅ Skonfiguruj `tailwind.config.js`:
+  - [x] ✅ Dodaj custom colors pasujące do brandingu (Orbito brand colors)
+  - [x] ✅ Skonfiguruj spacing i typography
+  - [x] ✅ Dodaj dark mode support (class-based)
+- [x] ✅ Utwórz `globals.css` z custom utility classes
 
 #### 0.5 shadcn/ui Installation 🔴
 
-- [ ] Wykonaj `npx shadcn-ui@latest init`
-- [ ] Wybierz style: Default
-- [ ] Wybierz base color: Slate
-- [ ] Sprawdź czy folder `components/ui` został utworzony
+- [x] ✅ Wykonaj `npx shadcn@latest init`
+- [x] ✅ Wybierz style: New York (Recommended)
+- [x] ✅ Wybierz base color: Neutral
+- [x] ✅ Sprawdź czy folder `components/ui` został utworzony
 
 #### 0.6 ESLint & Prettier Setup 🟡
 
-- [ ] Skonfiguruj `.eslintrc.json` dla Next.js
-- [ ] Dodaj `.prettierrc` z regułami formatowania
-- [ ] Dodaj skrypty w `package.json`:
-  - [ ] `"lint": "next lint"`
-  - [ ] `"format": "prettier --write ."`
+- [x] ✅ Skonfiguruj `.eslintrc.json` dla Next.js
+- [x] ✅ Dodaj `.prettierrc` z regułami formatowania
+- [x] ✅ Dodaj skrypty w `package.json`:
+  - [x] ✅ `"lint": "next lint"`
+  - [x] ✅ `"format": "prettier --write ."`
 
 ### Dzień 5-6: Environment & API Client
 
 #### 0.7 Environment Variables 🔴
 
-- [ ] Utwórz `.env.local` z podstawowymi zmiennymi:
-  - [ ] `NEXT_PUBLIC_API_URL` - URL backendu
-  - [ ] `NEXTAUTH_URL` - URL aplikacji
-  - [ ] `NEXTAUTH_SECRET` - secret dla NextAuth
-  - [ ] `NEXT_PUBLIC_STRIPE_KEY` - publiczny klucz Stripe
-- [ ] Utwórz `.env.example` jako template
+- [x] ✅ Utwórz `.env.local` z podstawowymi zmiennymi:
+  - [x] ✅ `NEXT_PUBLIC_API_URL` - URL backendu
+  - [x] ✅ `NEXTAUTH_URL` - URL aplikacji
+  - [x] ✅ `NEXTAUTH_SECRET` - secret dla NextAuth
+  - [x] ✅ `NEXT_PUBLIC_STRIPE_KEY` - publiczny klucz Stripe
+- [x] ✅ Utwórz `.env.example` jako template
 
 #### 0.8 Axios Client Setup 🔴
 
-- [ ] Utwórz `src/core/api/client.js`:
-  - [ ] Skonfiguruj base URL z env
-  - [ ] Ustaw default headers
-  - [ ] Dodaj timeout (30s)
-- [ ] Utwórz `src/core/api/interceptors.js`:
-  - [ ] Request interceptor (będzie dodawać token później)
-  - [ ] Response interceptor z error handling
+- [x] ✅ Utwórz `src/core/api/client.js`:
+  - [x] ✅ Skonfiguruj base URL z env
+  - [x] ✅ Ustaw default headers
+  - [x] ✅ Dodaj timeout (30s)
+- [x] ✅ Utwórz `src/core/api/interceptors.js`:
+  - [x] ✅ Request interceptor (będzie dodawać token później)
+  - [x] ✅ Response interceptor z error handling
 
 #### 0.9 React Query Setup 🔴
 
-- [ ] Utwórz `src/core/lib/react-query.js`:
-  - [ ] Skonfiguruj QueryClient z default options
-  - [ ] Ustaw staleTime i cacheTime
-  - [ ] Skonfiguruj retry logic
-- [ ] Dodaj QueryClientProvider do `app/layout.js`
+- [x] ✅ **UKOŃCZONE** - Utwórz `src/core/lib/react-query.js`:
+  - [x] ✅ Skonfiguruj QueryClient z default options
+  - [x] ✅ Ustaw staleTime i cacheTime
+  - [x] ✅ Skonfiguruj retry logic
+- [x] ✅ **UKOŃCZONE** - Dodaj QueryClientProvider do `app/layout.js`
 
 ### Dzień 7-8: Podstawowe Komponenty UI
 
 #### 0.10 shadcn Components Import 🔴
 
-- [ ] Zaimportuj podstawowe komponenty:
-  - [ ] `npx shadcn-ui@latest add button`
-  - [ ] `npx shadcn-ui@latest add card`
-  - [ ] `npx shadcn-ui@latest add input`
-  - [ ] `npx shadcn-ui@latest add label`
-  - [ ] `npx shadcn-ui@latest add toast`
-  - [ ] `npx shadcn-ui@latest add dialog`
-  - [ ] `npx shadcn-ui@latest add dropdown-menu`
-  - [ ] `npx shadcn-ui@latest add skeleton`
-  - [ ] `npx shadcn-ui@latest add alert`
-  - [ ] `npx shadcn-ui@latest add badge`
+- [x] ✅ **UKOŃCZONE** - Zaimportuj podstawowe komponenty:
+  - [x] ✅ `npx shadcn-ui@latest add button`
+  - [x] ✅ `npx shadcn-ui@latest add card`
+  - [x] ✅ `npx shadcn-ui@latest add input`
+  - [x] ✅ `npx shadcn-ui@latest add label`
+  - [x] ✅ `npx shadcn-ui@latest add toast`
+  - [x] ✅ `npx shadcn-ui@latest add dialog`
+  - [x] ✅ `npx shadcn-ui@latest add dropdown-menu`
+  - [x] ✅ `npx shadcn-ui@latest add skeleton`
+  - [x] ✅ `npx shadcn-ui@latest add alert`
+  - [x] ✅ `npx shadcn-ui@latest add badge`
 
 #### 0.11 Custom Components 🟡
 
-- [ ] Utwórz `src/shared/components/layouts/PageHeader.jsx`:
-  - [ ] Props: title, subtitle, actions
-  - [ ] Responsive design
-- [ ] Utwórz `src/shared/components/ui/LoadingSpinner.jsx`:
-  - [ ] Props: size, fullScreen
-  - [ ] Z użyciem lucide-react icons
-- [ ] Utwórz `src/shared/components/ui/ErrorMessage.jsx`:
-  - [ ] Props: error, onRetry
-  - [ ] Friendly error display
+- [x] ✅ **UKOŃCZONE** - Utwórz `src/shared/components/layouts/PageHeader.jsx`:
+  - [x] ✅ Props: title, subtitle, actions
+  - [x] ✅ Responsive design
+- [x] ✅ **UKOŃCZONE** - Utwórz `src/shared/components/ui/LoadingSpinner.jsx`:
+  - [x] ✅ Props: size, fullScreen
+  - [x] ✅ Z użyciem lucide-react icons
+- [x] ✅ **UKOŃCZONE** - Utwórz `src/shared/components/ui/ErrorMessage.jsx`:
+  - [x] ✅ Props: error, onRetry
+  - [x] ✅ Friendly error display
 
 #### 0.12 Layout Components 🔴
 
-- [ ] Utwórz `src/shared/components/layouts/MainLayout.jsx`:
-  - [ ] Placeholder dla header i sidebar
-  - [ ] Main content area z paddingiem
-- [ ] Zaktualizuj `app/layout.js`:
-  - [ ] Dodaj Toaster provider
-  - [ ] Dodaj podstawowe meta tags
+- [x] ✅ **UKOŃCZONE** - Utwórz `src/shared/components/layouts/MainLayout.jsx`:
+  - [x] ✅ Placeholder dla header i sidebar
+  - [x] ✅ Main content area z paddingiem
+- [x] ✅ **UKOŃCZONE** - Zaktualizuj `app/layout.js`:
+  - [x] ✅ Dodaj Toaster provider (w providers.js)
+  - [x] ✅ Dodaj podstawowe meta tags
+  - [x] ✅ Dodaj globals.css z cyberpunk theme
 
 ---
 
