@@ -364,3 +364,11 @@ FodyWeavers.xsd
 
 # Windows special files
 nul
+
+# Application settings (contain sensitive data)
+appsettings.json
+appsettings.*.json
+!appsettings.Development.json
+!appsettings.Production.json.example
+# Production settings should not be committed
+appsettings.Production.json
