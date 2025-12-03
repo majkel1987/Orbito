@@ -8,7 +8,7 @@ using Orbito.Domain.Errors;
 
 namespace Orbito.Application.SubscriptionPlans.Queries.GetSubscriptionPlansByProvider
 {
-    public class GetSubscriptionPlansByProviderQueryHandler : IRequestHandler<GetSubscriptionPlansByProviderQuery, Result<PaginatedList<SubscriptionPlanListItemDto>>>
+    public class GetSubscriptionPlansByProviderQueryHandler : IRequestHandler<GetSubscriptionPlansByProviderQuery, Domain.Common.Result<PaginatedList<SubscriptionPlanListItemDto>>>
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ITenantContext _tenantContext;
@@ -24,12 +24,12 @@ namespace Orbito.Application.SubscriptionPlans.Queries.GetSubscriptionPlansByPro
             _logger = logger;
         }
 
-        public async Task<Result<PaginatedList<SubscriptionPlanListItemDto>>> Handle(GetSubscriptionPlansByProviderQuery request, CancellationToken cancellationToken)
+        public async Task<Domain.Common.Result<PaginatedList<SubscriptionPlanListItemDto>>> Handle(GetSubscriptionPlansByProviderQuery request, CancellationToken cancellationToken)
         {
             if (!_tenantContext.HasTenant)
             {
                 _logger.LogWarning("Attempted to get subscription plans without tenant context");
-                return Result.Failure<PaginatedList<SubscriptionPlanListItemDto>>(DomainErrors.Tenant.NoTenantContext);
+                return Domain.Common.Result.Failure<PaginatedList<SubscriptionPlanListItemDto>>(DomainErrors.Tenant.NoTenantContext);
             }
 
             var subscriptionPlans = await _unitOfWork.SubscriptionPlans.GetAllAsync(
@@ -71,7 +71,7 @@ namespace Orbito.Application.SubscriptionPlans.Queries.GetSubscriptionPlansByPro
 
             _logger.LogInformation("Successfully retrieved {Count} subscription plans for page {PageNumber}", items.Count, request.PageNumber);
 
-            return Result.Success(paginatedList);
+            return Domain.Common.Result.Success(paginatedList);
         }
     }
 }

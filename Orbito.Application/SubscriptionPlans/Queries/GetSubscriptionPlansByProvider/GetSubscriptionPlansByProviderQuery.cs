@@ -4,7 +4,7 @@ using Orbito.Domain.Common;
 
 namespace Orbito.Application.SubscriptionPlans.Queries.GetSubscriptionPlansByProvider
 {
-    public record GetSubscriptionPlansByProviderQuery : IRequest<Result<PaginatedList<SubscriptionPlanListItemDto>>>
+    public record GetSubscriptionPlansByProviderQuery : IRequest<Domain.Common.Result<PaginatedList<SubscriptionPlanListItemDto>>>
     {
         public int PageNumber { get; init; } = 1;
         public int PageSize { get; init; } = 10;

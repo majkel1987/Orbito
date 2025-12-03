@@ -40,19 +40,15 @@ builder.Services.AddProblemDetails();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
-// Configure CORS for frontend integration
+// Configure CORS from configuration (appsettings.json or appsettings.{Environment}.json)
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() 
+    ?? new[] { "http://localhost:3000", "https://localhost:3000" }; // Fallback for development
+
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins(
-                "http://localhost:3000",  // Next.js dev server
-                "https://localhost:3000", // Next.js dev server (HTTPS)
-                "http://localhost:3001",  // Next.js dev server (alternate port)
-                "https://localhost:3001", // Next.js dev server (HTTPS, alternate port)
-                "http://localhost:5173",  // Vite dev server (backup)
-                "https://localhost:5173"  // Vite dev server (HTTPS)
-            )
+        policy.WithOrigins(allowedOrigins)
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials(); // Required for NextAuth cookies

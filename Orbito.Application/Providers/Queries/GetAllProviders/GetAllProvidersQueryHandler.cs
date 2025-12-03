@@ -8,7 +8,7 @@ using Orbito.Domain.Entities;
 
 namespace Orbito.Application.Providers.Queries.GetAllProviders
 {
-    public class GetAllProvidersQueryHandler : IRequestHandler<GetAllProvidersQuery, Result<PaginatedList<ProviderDto>>>
+    public class GetAllProvidersQueryHandler : IRequestHandler<GetAllProvidersQuery, Domain.Common.Result<PaginatedList<ProviderDto>>>
     {
         private readonly IProviderRepository _providerRepository;
         private readonly ILogger<GetAllProvidersQueryHandler> _logger;
@@ -21,7 +21,7 @@ namespace Orbito.Application.Providers.Queries.GetAllProviders
             _logger = logger;
         }
 
-        public async Task<Result<PaginatedList<ProviderDto>>> Handle(GetAllProvidersQuery request, CancellationToken cancellationToken)
+        public async Task<Domain.Common.Result<PaginatedList<ProviderDto>>> Handle(GetAllProvidersQuery request, CancellationToken cancellationToken)
         {
             IEnumerable<Provider> providers;
             int totalCount;
@@ -50,7 +50,7 @@ namespace Orbito.Application.Providers.Queries.GetAllProviders
             _logger.LogInformation("Retrieved {Count} providers (Page {PageNumber}/{TotalPages})",
                 providerDtos.Count, request.PageNumber, paginatedList.TotalPages);
 
-            return Result.Success(paginatedList);
+            return Domain.Common.Result.Success(paginatedList);
         }
 
         private static ProviderDto MapToDto(Provider provider)

@@ -9,5 +9,5 @@ namespace Orbito.Application.Providers.Queries.GetAllProviders
         int PageNumber = 1,
         int PageSize = 10,
         bool ActiveOnly = false
-    ) : IRequest<Result<PaginatedList<ProviderDto>>>;
+    ) : IRequest<Domain.Common.Result<PaginatedList<ProviderDto>>>;
 }
