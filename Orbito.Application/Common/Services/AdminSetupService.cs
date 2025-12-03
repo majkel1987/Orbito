@@ -12,17 +12,20 @@ namespace Orbito.Application.Common.Services
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<ApplicationRole> _roleManager;
+        private readonly ITenantValidationBypass _tenantValidationBypass;
         private readonly IConfiguration _configuration;
         private readonly ILogger<AdminSetupService> _logger;
 
         public AdminSetupService(
             UserManager<ApplicationUser> userManager,
             RoleManager<ApplicationRole> roleManager,
+            ITenantValidationBypass tenantValidationBypass,
             IConfiguration configuration,
             ILogger<AdminSetupService> logger)
         {
             _userManager = userManager;
             _roleManager = roleManager;
+            _tenantValidationBypass = tenantValidationBypass;
             _configuration = configuration;
             _logger = logger;
         }
@@ -68,29 +71,43 @@ namespace Orbito.Application.Common.Services
                     return false;
                 }
 
-                // Utwórz nowego użytkownika
-                var user = new ApplicationUser
-                {
-                    Id = Guid.NewGuid(),
-                    UserName = email,
-                    Email = email,
-                    FirstName = firstName,
-                    LastName = lastName,
-                    TenantId = null, // PlatformAdmin nie ma TenantId
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow
-                };
+                // CRITICAL: Disable tenant validation for admin setup operations
+                // This is necessary because admin setup happens before any tenant context exists
+                // UserManager uses the same ApplicationDbContext instance, so this flag will be respected
+                _tenantValidationBypass.SkipTenantValidation();
 
-                var result = await _userManager.CreateAsync(user, password);
-                if (!result.Succeeded)
+                try
                 {
-                    _logger.LogError("Błąd podczas tworzenia użytkownika admina: {Errors}",
-                        string.Join(", ", result.Errors.Select(e => e.Description)));
-                    return false;
+                    // Utwórz nowego użytkownika
+                    var user = new ApplicationUser
+                    {
+                        Id = Guid.NewGuid(),
+                        UserName = email,
+                        Email = email,
+                        FirstName = firstName,
+                        LastName = lastName,
+                        TenantId = null, // PlatformAdmin nie ma TenantId
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    var result = await _userManager.CreateAsync(user, password);
+                    if (!result.Succeeded)
+                    {
+                        _logger.LogError("Błąd podczas tworzenia użytkownika admina: {Errors}",
+                            string.Join(", ", result.Errors.Select(e => e.Description)));
+                        return false;
+                    }
+
+                    // Dodaj rolę PlatformAdmin
+                    await _userManager.AddToRoleAsync(user, UserRole.PlatformAdmin.ToString());
                 }
-
-                // Dodaj rolę PlatformAdmin
-                await _userManager.AddToRoleAsync(user, UserRole.PlatformAdmin.ToString());
+                finally
+                {
+                    // Re-enable tenant validation after admin setup operations
+                    // This ensures security checks are restored even if an error occurs
+                    _tenantValidationBypass.ResetTenantValidation();
+                }
 
                 _logger.LogInformation("Początkowy administrator został utworzony: {Email}", email);
 

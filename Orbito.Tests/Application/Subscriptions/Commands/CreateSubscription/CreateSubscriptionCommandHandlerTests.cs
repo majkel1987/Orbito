@@ -76,13 +76,14 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.CreateSubscription
 
             // Assert
             result.Should().NotBeNull();
-            result.SubscriptionId.Should().Be(subscription.Id);
-            result.ClientId.Should().Be(clientId);
-            result.PlanId.Should().Be(planId);
-            result.Status.Should().Be(SubscriptionStatus.Active.ToString());
-            result.IsInTrial.Should().BeTrue();
-            result.TrialEndDate.Should().BeCloseTo(DateTime.UtcNow.AddDays(14), TimeSpan.FromSeconds(1));
-            result.Message.Should().Be("Subscription created successfully");
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Id.Should().Be(subscription.Id);
+            result.Value.ClientId.Should().Be(clientId);
+            result.Value.PlanId.Should().Be(planId);
+            result.Value.Status.Should().Be(SubscriptionStatus.Active.ToString());
+            result.Value.IsInTrial.Should().BeTrue();
+            result.Value.TrialEndDate.Should().BeCloseTo(DateTime.UtcNow.AddDays(14), TimeSpan.FromSeconds(1));
 
             _subscriptionServiceMock.Verify(x => x.CreateSubscriptionAsync(
                 clientId, planId, It.IsAny<Money>(), It.IsAny<BillingPeriod>(), 14, It.IsAny<CancellationToken>()), Times.Once);
@@ -90,7 +91,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.CreateSubscription
 
         [Fact]
         [Trait("Category", "Unit")]
-        public async Task Handle_WithNonExistentClient_ShouldThrowInvalidOperationException()
+        public async Task Handle_WithNonExistentClient_ShouldReturnFailure()
         {
             // Arrange
             var clientId = Guid.NewGuid();
@@ -108,19 +109,23 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.CreateSubscription
             _clientRepositoryMock.Setup(x => x.GetByIdAsync(clientId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync((Client?)null);
 
-            // Act & Assert
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
-                _handler.Handle(command, CancellationToken.None));
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
 
-            exception.Message.Should().Be($"Client with ID {clientId} not found");
+            // Assert
+            result.Should().NotBeNull();
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Client.NotFound");
+            result.Error.Message.Should().Contain("not found");
+
             _subscriptionServiceMock.Verify(x => x.CreateSubscriptionAsync(
-                It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<Money>(), It.IsAny<BillingPeriod>(), 
+                It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<Money>(), It.IsAny<BillingPeriod>(),
                 It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
         [Trait("Category", "Unit")]
-        public async Task Handle_WithNonExistentPlan_ShouldThrowInvalidOperationException()
+        public async Task Handle_WithNonExistentPlan_ShouldReturnFailure()
         {
             // Arrange
             var clientId = Guid.NewGuid();
@@ -142,19 +147,23 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.CreateSubscription
             _subscriptionPlanRepositoryMock.Setup(x => x.GetByIdAsync(planId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync((SubscriptionPlan?)null);
 
-            // Act & Assert
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
-                _handler.Handle(command, CancellationToken.None));
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
 
-            exception.Message.Should().Be($"Plan with ID {planId} not found");
+            // Assert
+            result.Should().NotBeNull();
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("SubscriptionPlan.NotFound");
+            result.Error.Message.Should().Contain("not found");
+
             _subscriptionServiceMock.Verify(x => x.CreateSubscriptionAsync(
-                It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<Money>(), It.IsAny<BillingPeriod>(), 
+                It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<Money>(), It.IsAny<BillingPeriod>(),
                 It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
         [Trait("Category", "Unit")]
-        public async Task Handle_WithInactivePlan_ShouldThrowInvalidOperationException()
+        public async Task Handle_WithInactivePlan_ShouldReturnFailure()
         {
             // Arrange
             var clientId = Guid.NewGuid();
@@ -178,13 +187,17 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.CreateSubscription
             _subscriptionPlanRepositoryMock.Setup(x => x.GetByIdAsync(planId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(plan);
 
-            // Act & Assert
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
-                _handler.Handle(command, CancellationToken.None));
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
 
-            exception.Message.Should().Be($"Plan with ID {planId} is not active");
+            // Assert
+            result.Should().NotBeNull();
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("SubscriptionPlan.Inactive");
+            result.Error.Message.Should().Contain("not active");
+
             _subscriptionServiceMock.Verify(x => x.CreateSubscriptionAsync(
-                It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<Money>(), It.IsAny<BillingPeriod>(), 
+                It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<Money>(), It.IsAny<BillingPeriod>(),
                 It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
@@ -231,8 +244,10 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.CreateSubscription
 
             // Assert
             result.Should().NotBeNull();
-            result.IsInTrial.Should().BeFalse();
-            result.TrialEndDate.Should().BeNull();
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.IsInTrial.Should().BeFalse();
+            result.Value.TrialEndDate.Should().BeNull();
 
             _subscriptionServiceMock.Verify(x => x.CreateSubscriptionAsync(
                 clientId, planId, It.IsAny<Money>(), It.IsAny<BillingPeriod>(), 0, It.IsAny<CancellationToken>()), Times.Once);
@@ -281,7 +296,9 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.CreateSubscription
 
             // Assert
             result.Should().NotBeNull();
-            result.SubscriptionId.Should().Be(subscription.Id);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Id.Should().Be(subscription.Id);
 
             _subscriptionServiceMock.Verify(x => x.CreateSubscriptionAsync(
                 clientId, planId, It.IsAny<Money>(), It.IsAny<BillingPeriod>(), 0, It.IsAny<CancellationToken>()), Times.Once);

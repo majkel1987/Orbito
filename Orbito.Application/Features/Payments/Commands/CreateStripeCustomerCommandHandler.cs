@@ -23,16 +23,19 @@ namespace Orbito.Application.Features.Payments.Commands
             ITenantContext tenantContext,
             ILogger<CreateStripeCustomerCommandHandler> logger)
         {
-            _paymentProcessingService = paymentProcessingService;
-            _unitOfWork = unitOfWork;
-            _tenantContext = tenantContext;
-            _logger = logger;
+            _paymentProcessingService = paymentProcessingService ?? throw new ArgumentNullException(nameof(paymentProcessingService));
+            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+            _tenantContext = tenantContext ?? throw new ArgumentNullException(nameof(tenantContext));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         public async Task<Result<CreateStripeCustomerResult>> Handle(CreateStripeCustomerCommand request, CancellationToken cancellationToken)
         {
             try
             {
+                // Check for cancellation before starting
+                cancellationToken.ThrowIfCancellationRequested();
+
                 // Sprawdź czy mamy kontekst tenanta
                 if (!_tenantContext.HasTenant)
                 {
@@ -97,6 +100,11 @@ namespace Orbito.Application.Features.Payments.Commands
 
                     return Result.Failure<CreateStripeCustomerResult>(DomainErrors.General.UnexpectedError);
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                // Rethrow cancellation exceptions - they should not be caught
+                throw;
             }
             catch (Exception ex)
             {

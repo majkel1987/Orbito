@@ -12,6 +12,11 @@ namespace Orbito.Application.Common.Models
         public required bool IsSuccess { get; init; }
 
         /// <summary>
+        /// Whether the operation failed
+        /// </summary>
+        public bool IsFailure => !IsSuccess;
+
+        /// <summary>
         /// The value if successful
         /// </summary>
         public T? Value { get; init; }

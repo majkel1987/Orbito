@@ -2,9 +2,12 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
 
+using Orbito.Application.DTOs;
+using Orbito.Domain.Common;
+
 namespace Orbito.Application.Subscriptions.Queries.GetSubscriptionsByClient
 {
-    public class GetSubscriptionsByClientQueryHandler : IRequestHandler<GetSubscriptionsByClientQuery, GetSubscriptionsByClientResult>
+    public class GetSubscriptionsByClientQueryHandler : IRequestHandler<GetSubscriptionsByClientQuery, Result<Common.Models.PaginatedList<SubscriptionDto>>>
     {
         private readonly ISubscriptionRepository _subscriptionRepository;
         private readonly ILogger<GetSubscriptionsByClientQueryHandler> _logger;
@@ -17,9 +20,9 @@ namespace Orbito.Application.Subscriptions.Queries.GetSubscriptionsByClient
             _logger = logger;
         }
 
-        public async Task<GetSubscriptionsByClientResult> Handle(GetSubscriptionsByClientQuery request, CancellationToken cancellationToken)
+        public async Task<Result<Common.Models.PaginatedList<SubscriptionDto>>> Handle(GetSubscriptionsByClientQuery request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Getting subscriptions for client {ClientId} with pagination {PageNumber}/{PageSize}", 
+            _logger.LogInformation("Getting subscriptions for client {ClientId} with pagination {PageNumber}/{PageSize}",
                 request.ClientId, request.PageNumber, request.PageSize);
 
             var subscriptions = await _subscriptionRepository.GetByClientIdAsync(request.ClientId, cancellationToken);
@@ -38,36 +41,37 @@ namespace Orbito.Application.Subscriptions.Queries.GetSubscriptionsByClient
             var subscriptionDtos = pagedSubscriptions.Select(s => new SubscriptionDto
             {
                 Id = s.Id,
+                TenantId = s.TenantId.Value,
                 ClientId = s.ClientId,
                 PlanId = s.PlanId,
-                Status = s.Status,
-                CurrentPrice = s.CurrentPrice.Amount,
+                Status = s.Status.ToString(),
+                Amount = s.CurrentPrice.Amount,
                 Currency = s.CurrentPrice.Currency,
-                BillingPeriod = s.BillingPeriod.ToString(),
+                BillingPeriodValue = s.BillingPeriod.Value,
+                BillingPeriodType = s.BillingPeriod.Type.ToString(),
                 StartDate = s.StartDate,
                 EndDate = s.EndDate,
                 NextBillingDate = s.NextBillingDate,
                 IsInTrial = s.IsInTrial,
                 TrialEndDate = s.TrialEndDate,
+                ExternalSubscriptionId = s.ExternalSubscriptionId,
                 CreatedAt = s.CreatedAt,
                 CancelledAt = s.CancelledAt,
+                UpdatedAt = s.UpdatedAt,
                 PlanName = s.Plan?.Name,
                 PlanDescription = s.Plan?.Description
             }).ToList();
 
-            var result = new GetSubscriptionsByClientResult
-            {
-                Subscriptions = subscriptionDtos,
-                TotalCount = totalCount,
-                PageNumber = request.PageNumber,
-                PageSize = request.PageSize,
-                TotalPages = (int)Math.Ceiling((double)totalCount / request.PageSize)
-            };
+            var paginatedList = new Common.Models.PaginatedList<SubscriptionDto>(
+                subscriptionDtos,
+                totalCount,
+                request.PageNumber,
+                request.PageSize);
 
-            _logger.LogInformation("Successfully retrieved {Count} subscriptions for client {ClientId}", 
+            _logger.LogInformation("Successfully retrieved {Count} subscriptions for client {ClientId}",
                 subscriptionDtos.Count, request.ClientId);
 
-            return result;
+            return Result.Success(paginatedList);
         }
     }
 }

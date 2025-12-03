@@ -178,9 +178,7 @@ public class PaymentNotificationService : IPaymentNotificationService
             // Get payment details
             // NOTE: Using deprecated method because this service is called from background jobs
             // that run in admin context (tenantContext.SetTenant(null)) and have access to all data
-#pragma warning disable CS0618 // Type or member is obsolete
-            var payment = await _unitOfWork.Payments.GetByIdAsync(paymentId, cancellationToken);
-#pragma warning restore CS0618 // Type or member is obsolete
+            var payment = await _unitOfWork.Payments.GetByIdUnsafeAsync(paymentId, cancellationToken);
             if (payment == null)
             {
                 _logger.LogWarning("Payment {PaymentId} not found", paymentId);
@@ -199,6 +197,14 @@ public class PaymentNotificationService : IPaymentNotificationService
             if (subscription == null)
             {
                 _logger.LogWarning("Subscription {SubscriptionId} not found for payment {PaymentId}", payment.SubscriptionId, paymentId);
+                return;
+            }
+
+            // SECURITY: Verify tenant ownership (if tenant context available)
+            if (_tenantContext.HasTenant && subscription.TenantId != _tenantContext.CurrentTenantId)
+            {
+                _logger.LogWarning("Cross-tenant access attempt: Subscription {SubscriptionId} does not belong to tenant {TenantId}",
+                    payment.SubscriptionId, _tenantContext.CurrentTenantId);
                 return;
             }
 
@@ -256,9 +262,7 @@ public class PaymentNotificationService : IPaymentNotificationService
             // Get payment details
             // NOTE: Using deprecated method because this service is called from background jobs
             // that run in admin context (tenantContext.SetTenant(null)) and have access to all data
-#pragma warning disable CS0618 // Type or member is obsolete
-            var payment = await _unitOfWork.Payments.GetByIdAsync(paymentId, cancellationToken);
-#pragma warning restore CS0618 // Type or member is obsolete
+            var payment = await _unitOfWork.Payments.GetByIdUnsafeAsync(paymentId, cancellationToken);
             if (payment == null)
             {
                 _logger.LogWarning("Payment {PaymentId} not found", paymentId);
@@ -277,6 +281,14 @@ public class PaymentNotificationService : IPaymentNotificationService
             if (subscription == null)
             {
                 _logger.LogWarning("Subscription {SubscriptionId} not found for payment {PaymentId}", payment.SubscriptionId, paymentId);
+                return;
+            }
+
+            // SECURITY: Verify tenant ownership (if tenant context available)
+            if (_tenantContext.HasTenant && subscription.TenantId != _tenantContext.CurrentTenantId)
+            {
+                _logger.LogWarning("Cross-tenant access attempt: Subscription {SubscriptionId} does not belong to tenant {TenantId}",
+                    payment.SubscriptionId, _tenantContext.CurrentTenantId);
                 return;
             }
 
@@ -318,9 +330,7 @@ public class PaymentNotificationService : IPaymentNotificationService
             // Get payment details
             // NOTE: Using deprecated method because this service is called from background jobs
             // that run in admin context (tenantContext.SetTenant(null)) and have access to all data
-#pragma warning disable CS0618 // Type or member is obsolete
-            var payment = await _unitOfWork.Payments.GetByIdAsync(paymentId, cancellationToken);
-#pragma warning restore CS0618 // Type or member is obsolete
+            var payment = await _unitOfWork.Payments.GetByIdUnsafeAsync(paymentId, cancellationToken);
             if (payment == null)
             {
                 _logger.LogWarning("Payment {PaymentId} not found", paymentId);
@@ -390,9 +400,7 @@ public class PaymentNotificationService : IPaymentNotificationService
             // Get payment details
             // NOTE: Using deprecated method because this service is called from background jobs
             // that run in admin context (tenantContext.SetTenant(null)) and have access to all data
-#pragma warning disable CS0618 // Type or member is obsolete
-            var payment = await _unitOfWork.Payments.GetByIdAsync(paymentId, cancellationToken);
-#pragma warning restore CS0618 // Type or member is obsolete
+            var payment = await _unitOfWork.Payments.GetByIdUnsafeAsync(paymentId, cancellationToken);
             if (payment == null)
             {
                 _logger.LogWarning("Payment {PaymentId} not found", paymentId);
@@ -443,6 +451,14 @@ public class PaymentNotificationService : IPaymentNotificationService
             if (subscription == null)
             {
                 _logger.LogWarning("Subscription {SubscriptionId} not found", subscriptionId);
+                return;
+            }
+
+            // SECURITY: Verify tenant ownership (if tenant context available)
+            if (_tenantContext.HasTenant && subscription.TenantId != _tenantContext.CurrentTenantId)
+            {
+                _logger.LogWarning("Cross-tenant access attempt: Subscription {SubscriptionId} does not belong to tenant {TenantId}",
+                    subscriptionId, _tenantContext.CurrentTenantId);
                 return;
             }
 

@@ -2,10 +2,12 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.DTOs;
+using Orbito.Domain.Common;
+using Orbito.Domain.Errors;
 
 namespace Orbito.Application.Features.Payments.Queries.GetPaymentsBySubscription
 {
-    public class GetPaymentsBySubscriptionQueryHandler : IRequestHandler<GetPaymentsBySubscriptionQuery, GetPaymentsBySubscriptionResult>
+    public class GetPaymentsBySubscriptionQueryHandler : IRequestHandler<GetPaymentsBySubscriptionQuery, Result<GetPaymentsBySubscriptionResponse>>
     {
         private readonly IPaymentRepository _paymentRepository;
         private readonly ISubscriptionRepository _subscriptionRepository;
@@ -24,7 +26,7 @@ namespace Orbito.Application.Features.Payments.Queries.GetPaymentsBySubscription
             _logger = logger;
         }
 
-        public async Task<GetPaymentsBySubscriptionResult> Handle(GetPaymentsBySubscriptionQuery request, CancellationToken cancellationToken)
+        public async Task<Result<GetPaymentsBySubscriptionResponse>> Handle(GetPaymentsBySubscriptionQuery request, CancellationToken cancellationToken)
         {
             try
             {
@@ -35,31 +37,33 @@ namespace Orbito.Application.Features.Payments.Queries.GetPaymentsBySubscription
                 if (!_tenantContext.HasTenant)
                 {
                     _logger.LogWarning("Missing tenant context for payments query");
-                    return GetPaymentsBySubscriptionResult.FailureResult("Access denied");
+                    return Result.Failure<GetPaymentsBySubscriptionResponse>(DomainErrors.Tenant.NoTenantContext);
                 }
 
                 // Validate pagination parameters
                 if (request.PageNumber < 1)
                 {
                     _logger.LogWarning("Invalid page number: {PageNumber}", request.PageNumber);
-                    return GetPaymentsBySubscriptionResult.FailureResult("Invalid page number");
+                    return Result.Failure<GetPaymentsBySubscriptionResponse>(DomainErrors.Validation.InvalidPageNumber);
                 }
 
                 if (request.PageSize < 1 || request.PageSize > 100)
                 {
                     _logger.LogWarning("Invalid page size: {PageSize}", request.PageSize);
-                    return GetPaymentsBySubscriptionResult.FailureResult("Invalid page size");
+                    return Result.Failure<GetPaymentsBySubscriptionResponse>(DomainErrors.Validation.InvalidPageSize);
                 }
 
-                var subscription = await _subscriptionRepository.GetByIdAsync(request.SubscriptionId, cancellationToken);
+                // SECURITY: Use ForClient method to verify ownership
+                var subscription = await _subscriptionRepository.GetByIdForClientAsync(request.SubscriptionId, request.ClientId, cancellationToken);
 
                 if (subscription == null || subscription.TenantId != _tenantContext.CurrentTenantId)
                 {
                     _logger.LogWarning(
-                        "Unauthorized access attempt or subscription not found. SubscriptionId: {SubscriptionId}, TenantId: {TenantId}",
+                        "Unauthorized access attempt or subscription not found. SubscriptionId: {SubscriptionId}, ClientId: {ClientId}, TenantId: {TenantId}",
                         request.SubscriptionId,
+                        request.ClientId,
                         _tenantContext.CurrentTenantId);
-                    return GetPaymentsBySubscriptionResult.FailureResult("Subscription not found");
+                    return Result.Failure<GetPaymentsBySubscriptionResponse>(DomainErrors.Subscription.NotFound);
                 }
 
                 // Get payments for subscription
@@ -75,15 +79,21 @@ namespace Orbito.Application.Features.Payments.Queries.GetPaymentsBySubscription
                     cancellationToken);
 
                 var paymentDtos = payments.Select(MapToDto).ToList();
+                var totalPages = (int)Math.Ceiling((double)totalCount / request.PageSize);
 
                 _logger.LogDebug("Retrieved {PaymentCount} payments for subscription {SubscriptionId} (total: {TotalCount})",
                     paymentDtos.Count, request.SubscriptionId, totalCount);
 
-                return GetPaymentsBySubscriptionResult.SuccessResult(
-                    paymentDtos,
-                    totalCount,
-                    request.PageNumber,
-                    request.PageSize);
+                var response = new GetPaymentsBySubscriptionResponse
+                {
+                    Payments = paymentDtos,
+                    TotalCount = totalCount,
+                    PageNumber = request.PageNumber,
+                    PageSize = request.PageSize,
+                    TotalPages = totalPages
+                };
+
+                return Result.Success(response);
             }
             catch (Exception ex)
             {
@@ -91,7 +101,7 @@ namespace Orbito.Application.Features.Payments.Queries.GetPaymentsBySubscription
                     "Error retrieving payments. SubscriptionId: {SubscriptionId}, TenantId: {TenantId}",
                     request.SubscriptionId,
                     _tenantContext.CurrentTenantId);
-                return GetPaymentsBySubscriptionResult.FailureResult("An error occurred while retrieving payments");
+                return Result.Failure<GetPaymentsBySubscriptionResponse>(DomainErrors.General.UnexpectedError);
             }
         }
 

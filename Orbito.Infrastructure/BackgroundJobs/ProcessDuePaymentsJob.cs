@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.Services;
+using Orbito.Domain.ValueObjects;
 using Orbito.Infrastructure.Data;
 
 namespace Orbito.Infrastructure.BackgroundJobs
@@ -16,6 +17,7 @@ namespace Orbito.Infrastructure.BackgroundJobs
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<ProcessDuePaymentsJob> _logger;
         private readonly TimeSpan _period = TimeSpan.FromHours(1);
+        private readonly TimeSpan _initialDelay;
         
         // Health check properties
         private DateTime? _lastSuccessfulRun;
@@ -23,10 +25,12 @@ namespace Orbito.Infrastructure.BackgroundJobs
 
         public ProcessDuePaymentsJob(
             IServiceProvider serviceProvider,
-            ILogger<ProcessDuePaymentsJob> logger)
+            ILogger<ProcessDuePaymentsJob> logger,
+            TimeSpan? initialDelay = null)
         {
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _initialDelay = initialDelay ?? TimeSpan.FromMinutes(5);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -34,7 +38,7 @@ namespace Orbito.Infrastructure.BackgroundJobs
             _logger.LogInformation("ProcessDuePaymentsJob started");
 
             // Initial delay to offset between jobs
-            await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+            await Task.Delay(_initialDelay, stoppingToken);
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -69,7 +73,7 @@ namespace Orbito.Infrastructure.BackgroundJobs
         {
             try
             {
-                using var scope = _serviceProvider.CreateScope();
+                await using var scope = _serviceProvider.CreateAsyncScope();
                 var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 var paymentService = scope.ServiceProvider.GetRequiredService<IPaymentProcessingService>();
                 var tenantProvider = scope.ServiceProvider.GetRequiredService<ITenantProvider>();
@@ -138,7 +142,9 @@ namespace Orbito.Infrastructure.BackgroundJobs
 
                 _logger.LogDebug("Processing payments for tenant {TenantId}", tenantId);
 
-                await paymentService.ProcessPendingPaymentsAsync(
+                var tenantIdValueObject = TenantId.Create(tenantId);
+                await paymentService.ProcessPendingPaymentsForTenantAsync(
+                    tenantIdValueObject,
                     dateTime.UtcNow,
                     cts.Token);
 

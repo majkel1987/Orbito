@@ -47,16 +47,15 @@ namespace Orbito.Tests.Application.Clients.Commands.UpdateClient
                 .ReturnsAsync(client);
             _clientRepositoryMock.Setup(x => x.UpdateAsync(It.IsAny<Client>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.CompletedTask);
-            _clientRepositoryMock.Setup(x => x.GetByIdAsync(_clientId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(client);
 
             // Act
             var result = await _handler.Handle(command, CancellationToken.None);
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
-            result.Client.Should().NotBeNull();
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Id.Should().Be(_clientId);
 
             _clientRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Client>(), It.IsAny<CancellationToken>()), Times.Once);
             _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -75,8 +74,8 @@ namespace Orbito.Tests.Application.Clients.Commands.UpdateClient
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Tenant context is required");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Tenant.NoTenantContext");
         }
 
         [Fact]
@@ -94,8 +93,8 @@ namespace Orbito.Tests.Application.Clients.Commands.UpdateClient
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Client not found");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Client.NotFound");
         }
 
         [Fact]
@@ -117,8 +116,8 @@ namespace Orbito.Tests.Application.Clients.Commands.UpdateClient
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Access denied");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Tenant.CrossTenantAccess");
         }
 
         [Fact]
@@ -144,8 +143,8 @@ namespace Orbito.Tests.Application.Clients.Commands.UpdateClient
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Email is already used by another client");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Client.EmailAlreadyExists");
         }
 
         [Fact]
@@ -169,7 +168,8 @@ namespace Orbito.Tests.Application.Clients.Commands.UpdateClient
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
         }
 
         [Fact]
@@ -194,7 +194,8 @@ namespace Orbito.Tests.Application.Clients.Commands.UpdateClient
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
         }
 
         [Fact]
@@ -220,13 +221,14 @@ namespace Orbito.Tests.Application.Clients.Commands.UpdateClient
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
             // Direct info should not be updated for clients with User
         }
 
         [Fact]
         [Trait("Category", "Unit")]
-        public async Task Handle_WhenRepositoryThrowsException_ShouldReturnFailure()
+        public async Task Handle_WhenRepositoryThrowsException_ShouldPropagateException()
         {
             // Arrange
             var client = Client.CreateWithUser(_tenantId, Guid.NewGuid(), "Test Company");
@@ -239,13 +241,8 @@ namespace Orbito.Tests.Application.Clients.Commands.UpdateClient
             _clientRepositoryMock.Setup(x => x.UpdateAsync(It.IsAny<Client>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new Exception("Database error"));
 
-            // Act
-            var result = await _handler.Handle(command, CancellationToken.None);
-
-            // Assert
-            result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Contain("An error occurred while updating client");
+            // Act & Assert
+            await Assert.ThrowsAsync<Exception>(() => _handler.Handle(command, CancellationToken.None));
         }
 
 
@@ -256,13 +253,16 @@ namespace Orbito.Tests.Application.Clients.Commands.UpdateClient
             // Arrange
             var command = new UpdateClientCommand(Guid.Empty, "New Company", null, null, null, null);
 
+            _clientRepositoryMock.Setup(x => x.GetByIdAsync(Guid.Empty, It.IsAny<CancellationToken>()))
+                .ReturnsAsync((Client?)null);
+
             // Act
             var result = await _handler.Handle(command, CancellationToken.None);
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Client not found");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Client.NotFound");
         }
 
         [Fact]
@@ -285,7 +285,8 @@ namespace Orbito.Tests.Application.Clients.Commands.UpdateClient
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
         }
 
         [Fact]
@@ -308,7 +309,8 @@ namespace Orbito.Tests.Application.Clients.Commands.UpdateClient
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
         }
     }
 }

@@ -1,0 +1,251 @@
+---
+alwaysApply: true
+---
+
+# Workflow Guidelines - Orbito Platform
+
+## Development Workflow
+
+### Task Approach
+
+1. Read task requirements completely
+2. Check existing code for patterns
+3. Install dependencies first
+4. Implement incrementally
+5. Test after each step
+6. Commit working code frequently
+
+### AI-Assisted Coding
+
+- Provide complete context upfront
+- Break complex tasks into steps
+- Specify exact file paths
+- Include error messages fully
+- State what was already tried
+- Ask for clarification if unclear
+
+### Code Review Process
+
+- Self-review before submission
+- Check for security issues
+- Verify business logic
+- Ensure consistent style
+- Add necessary comments
+- Update related documentation
+
+## Git Conventions
+
+### Branch Strategy
+
+- main: production-ready
+- develop: integration branch
+- feature/[task-name]: new features
+- fix/[issue-name]: bug fixes
+- hotfix/[issue]: urgent production fixes
+
+### Commit Messages
+
+- feat: new feature
+- fix: bug fix
+- refactor: code restructuring
+- docs: documentation updates
+- test: test additions/changes
+- chore: maintenance tasks
+
+### Pull Requests
+
+- Link to issue/task
+- Describe changes clearly
+- Include testing steps
+- Add screenshots for UI
+- Request specific reviewers
+- Resolve conflicts locally
+
+## Naming Conventions
+
+### Backend
+
+- PascalCase: Classes, Methods, Properties
+- camelCase: variables, parameters
+- UPPERCASE: constants
+- Prefix interfaces with I
+- Suffix handlers with Handler
+- Suffix validators with Validator
+
+### Frontend
+
+- PascalCase: Components, Types
+- camelCase: functions, variables
+- kebab-case: file names
+- UPPERCASE: constants
+- use prefix for hooks
+- Props suffix for prop types
+
+### Database
+
+- PascalCase: Table names
+- PascalCase: Column names
+- IX\_: Index prefix
+- FK\_: Foreign key prefix
+- UK\_: Unique constraint prefix
+- CK\_: Check constraint prefix
+
+## Documentation Standards
+
+### Code Comments
+
+- Explain why, not what
+- Document complex algorithms
+- Note important decisions
+- Add TODO with assignee
+- Reference issue numbers
+- Keep comments updated
+
+### API Documentation
+
+- Document all endpoints
+- Include request/response examples
+- Specify error codes
+- Note authentication requirements
+- Document rate limits
+- Version changes clearly
+
+### README Files
+
+- Project overview first
+- Setup instructions
+- Environment variables
+- Common issues/solutions
+- Development guidelines
+- Contact information
+
+## Error Handling
+
+### Backend Errors
+
+- Use Result<T> pattern
+- Return specific error codes
+- Log with correlation ID
+- Include helpful messages
+- Don't expose internals
+- Handle gracefully
+
+### Frontend Errors
+
+- Show user-friendly messages
+- Log to console in development
+- Provide retry options
+- Handle network failures
+- Show loading states
+- Fallback UI for crashes
+
+## Testing Workflow
+
+### Before Implementation
+
+- Understand requirements
+- Plan test scenarios
+- Consider edge cases
+- Identify dependencies
+
+### During Implementation
+
+- Write tests alongside code
+- Run tests frequently
+- Fix failures immediately
+- Refactor with confidence
+
+### After Implementation
+
+- Run full test suite
+- Check code coverage
+- Test manually
+- Verify in different environments
+
+## Communication Patterns
+
+### With AI Assistants
+
+- Start fresh session if stuck
+- Provide complete file contents
+- Include exact error messages
+- State attempted solutions
+- Ask for specific approaches
+- Confirm understanding
+
+### With Team
+
+- Daily standup updates
+- Blocker communication ASAP
+- Document decisions
+- Share learnings
+- Review PRs promptly
+- Provide constructive feedback
+
+## Quality Checklist
+
+### Before Starting
+
+- [ ] Requirements clear
+- [ ] Dependencies identified
+- [ ] Approach planned
+- [ ] Existing patterns reviewed
+
+### During Development
+
+- [ ] Following conventions
+- [ ] Tests written
+- [ ] Error handling added
+- [ ] Security considered
+- [ ] Performance checked
+
+### Before Submission
+
+- [ ] Code self-reviewed
+- [ ] Tests passing
+- [ ] Documentation updated
+- [ ] No console.logs
+- [ ] No commented code
+- [ ] Migrations tested
+
+## Debugging Strategy
+
+### Systematic Approach
+
+1. Reproduce consistently
+2. Isolate the problem
+3. Check recent changes
+4. Review error messages
+5. Add logging
+6. Test hypothesis
+7. Fix root cause
+
+### When Stuck
+
+- Take a break
+- Start fresh session
+- Ask for different approach
+- Check documentation
+- Review similar code
+- Pair program
+- Break into smaller parts
+
+## Performance Monitoring
+
+### Key Metrics
+
+- Response time <200ms
+- Error rate <1%
+- Database query time
+- Memory usage
+- CPU utilization
+- Concurrent users
+
+### Optimization Priority
+
+1. Database queries
+2. External API calls
+3. Algorithm efficiency
+4. Caching strategy
+5. Bundle size
+6. Image optimization

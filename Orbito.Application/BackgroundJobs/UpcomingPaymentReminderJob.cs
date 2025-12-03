@@ -60,7 +60,7 @@ public class UpcomingPaymentReminderJob : BackgroundService
 
     private async Task SendUpcomingPaymentRemindersAsync(CancellationToken cancellationToken)
     {
-        using var scope = _serviceProvider.CreateScope();
+        await using var scope = _serviceProvider.CreateAsyncScope();
 
         var unitOfWork = scope.ServiceProvider.GetService<IUnitOfWork>();
         var notificationService = scope.ServiceProvider.GetService<IPaymentNotificationService>();
@@ -146,6 +146,12 @@ public class UpcomingPaymentReminderJob : BackgroundService
         {
             // Clear tenant context
             tenantContext.ClearTenant();
+            
+            // Properly dispose UnitOfWork
+            if (unitOfWork is IAsyncDisposable asyncDisposable)
+            {
+                await asyncDisposable.DisposeAsync();
+            }
         }
     }
 }

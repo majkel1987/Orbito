@@ -15,27 +15,22 @@ public class IdempotencyMiddleware
     private readonly RequestDelegate _next;
     private readonly ILogger<IdempotencyMiddleware> _logger;
     private readonly IdempotencySettings _settings;
-    private readonly IIdempotencyCacheService _cacheService;
-    private readonly ITenantContext _tenantContext;
-    private readonly IUserContextService _userContextService;
 
     public IdempotencyMiddleware(
         RequestDelegate next,
         ILogger<IdempotencyMiddleware> logger,
-        IOptions<IdempotencySettings> settings,
-        IIdempotencyCacheService cacheService,
-        ITenantContext tenantContext,
-        IUserContextService userContextService)
+        IOptions<IdempotencySettings> settings)
     {
         _next = next ?? throw new ArgumentNullException(nameof(next));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _settings = settings?.Value ?? throw new ArgumentNullException(nameof(settings));
-        _cacheService = cacheService ?? throw new ArgumentNullException(nameof(cacheService));
-        _tenantContext = tenantContext ?? throw new ArgumentNullException(nameof(tenantContext));
-        _userContextService = userContextService ?? throw new ArgumentNullException(nameof(userContextService));
     }
 
-    public async Task InvokeAsync(HttpContext context)
+    public async Task InvokeAsync(
+        HttpContext context,
+        IIdempotencyCacheService cacheService,
+        ITenantContext tenantContext,
+        IUserContextService userContextService)
     {
         // Only apply to POST requests to payment endpoints
         if (!ShouldProcessRequest(context))
@@ -68,7 +63,7 @@ public class IdempotencyMiddleware
             return;
         }
 
-        var cacheKey = BuildCacheKey(idempotencyKey, context);
+        var cacheKey = BuildCacheKey(idempotencyKey, context, tenantContext, userContextService);
         var lockAcquired = false;
 
         try
@@ -77,7 +72,7 @@ public class IdempotencyMiddleware
             if (_settings.UseDistributedLock)
             {
                 var lockTimeout = TimeSpan.FromSeconds(_settings.LockTimeoutSeconds);
-                lockAcquired = await _cacheService.TryAcquireLockAsync(cacheKey, lockTimeout);
+                lockAcquired = await cacheService.TryAcquireLockAsync(cacheKey, lockTimeout);
 
                 if (!lockAcquired)
                 {
@@ -89,7 +84,7 @@ public class IdempotencyMiddleware
 
                 // FIXED: Double-checked locking pattern - check cache INSIDE lock
                 // This prevents race condition where two requests pass the first check
-                var cachedResponse = await _cacheService.TryGetCachedResponseAsync(cacheKey);
+                var cachedResponse = await cacheService.TryGetCachedResponseAsync(cacheKey);
                 if (cachedResponse != null)
                 {
                     _logger.LogInformation("Returning cached response for idempotency key {Key} (duplicate request prevented)", idempotencyKey);
@@ -98,12 +93,12 @@ public class IdempotencyMiddleware
                 }
 
                 // Process the request and capture the response (protected by lock)
-                await ProcessRequestWithResponseCapture(context, cacheKey, idempotencyKey);
+                await ProcessRequestWithResponseCapture(context, cacheKey, idempotencyKey, cacheService, tenantContext, userContextService);
             }
             else
             {
                 // No lock: check cache before processing
-                var cachedResponse = await _cacheService.TryGetCachedResponseAsync(cacheKey);
+                var cachedResponse = await cacheService.TryGetCachedResponseAsync(cacheKey);
                 if (cachedResponse != null)
                 {
                     _logger.LogDebug("Returning cached response for idempotency key {Key}", idempotencyKey);
@@ -112,7 +107,7 @@ public class IdempotencyMiddleware
                 }
 
                 // Process the request and capture the response
-                await ProcessRequestWithResponseCapture(context, cacheKey, idempotencyKey);
+                await ProcessRequestWithResponseCapture(context, cacheKey, idempotencyKey, cacheService, tenantContext, userContextService);
             }
         }
         catch (Exception ex)
@@ -125,7 +120,7 @@ public class IdempotencyMiddleware
             // Release the lock if we acquired it
             if (lockAcquired && _settings.UseDistributedLock)
             {
-                await _cacheService.ReleaseLockAsync(cacheKey);
+                await cacheService.ReleaseLockAsync(cacheKey);
             }
         }
     }
@@ -174,17 +169,17 @@ public class IdempotencyMiddleware
         return key.All(c => char.IsLetterOrDigit(c) || c == '-' || c == '_');
     }
 
-    private string BuildCacheKey(string idempotencyKey, HttpContext context)
+    private string BuildCacheKey(string idempotencyKey, HttpContext context, ITenantContext tenantContext, IUserContextService userContextService)
     {
         // FIXED: Require tenant and user context for security
-        if (!_tenantContext.HasTenant)
+        if (!tenantContext.HasTenant)
             throw new InvalidOperationException("Tenant context is required for idempotency operations");
 
-        var userId = _userContextService.GetCurrentUserId();
+        var userId = userContextService.GetCurrentUserId();
         if (userId == null)
             throw new InvalidOperationException("User context is required for idempotency operations");
 
-        var tenantId = _tenantContext.CurrentTenantId.Value.ToString();
+        var tenantId = tenantContext.CurrentTenantId.Value.ToString();
         var clientId = userId.Value.ToString();
 
         // FIXED: Sanitize path to prevent cache key injection
@@ -196,7 +191,7 @@ public class IdempotencyMiddleware
         return $"{_settings.CacheKeyPrefix}{tenantId}:{clientId}:{normalizedPath}:{sanitizedKey}";
     }
 
-    private async Task ProcessRequestWithResponseCapture(HttpContext context, string cacheKey, string idempotencyKey)
+    private async Task ProcessRequestWithResponseCapture(HttpContext context, string cacheKey, string idempotencyKey, IIdempotencyCacheService cacheService, ITenantContext tenantContext, IUserContextService userContextService)
     {
         // Store the original response stream
         var originalResponseStream = context.Response.Body;
@@ -237,13 +232,13 @@ public class IdempotencyMiddleware
                         h => string.Join(", ", h.Value.ToArray())),
                     Body = responseBody,
                     ContentType = context.Response.ContentType ?? "application/json",
-                    TenantId = _tenantContext.HasTenant ? _tenantContext.CurrentTenantId.Value : null,
-                    ClientId = _userContextService.GetCurrentUserId()
+                    TenantId = tenantContext.HasTenant ? tenantContext.CurrentTenantId.Value : null,
+                    ClientId = userContextService.GetCurrentUserId()
                 };
 
                 // Cache the response
                 var ttl = TimeSpan.FromHours(_settings.CacheTtlHours);
-                await _cacheService.CacheResponseAsync(cacheKey, cacheEntry, ttl);
+                await cacheService.CacheResponseAsync(cacheKey, cacheEntry, ttl);
 
                 _logger.LogInformation("Cached successful response for idempotency key {Key} with status {StatusCode}",
                     idempotencyKey, context.Response.StatusCode);

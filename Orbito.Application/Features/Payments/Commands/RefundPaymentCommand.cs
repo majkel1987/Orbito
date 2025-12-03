@@ -16,6 +16,11 @@ namespace Orbito.Application.Features.Payments.Commands
         public Guid PaymentId { get; init; }
 
         /// <summary>
+        /// ID klienta (security: ClientId verification)
+        /// </summary>
+        public Guid ClientId { get; init; }
+
+        /// <summary>
         /// Kwota zwrotu
         /// </summary>
         public decimal Amount { get; init; }

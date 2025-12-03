@@ -1,24 +1,36 @@
 using MediatR;
+using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
+using Orbito.Application.Common.Models;
+using Orbito.Domain.Common;
 using Orbito.Domain.Enums;
+using Orbito.Domain.Errors;
 
 namespace Orbito.Application.SubscriptionPlans.Queries.GetSubscriptionPlansByProvider
 {
-    public class GetSubscriptionPlansByProviderQueryHandler : IRequestHandler<GetSubscriptionPlansByProviderQuery, SubscriptionPlansListDto>
+    public class GetSubscriptionPlansByProviderQueryHandler : IRequestHandler<GetSubscriptionPlansByProviderQuery, Result<PaginatedList<SubscriptionPlanListItemDto>>>
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ITenantContext _tenantContext;
+        private readonly ILogger<GetSubscriptionPlansByProviderQueryHandler> _logger;
 
-        public GetSubscriptionPlansByProviderQueryHandler(IUnitOfWork unitOfWork, ITenantContext tenantContext)
+        public GetSubscriptionPlansByProviderQueryHandler(
+            IUnitOfWork unitOfWork,
+            ITenantContext tenantContext,
+            ILogger<GetSubscriptionPlansByProviderQueryHandler> logger)
         {
             _unitOfWork = unitOfWork;
             _tenantContext = tenantContext;
+            _logger = logger;
         }
 
-        public async Task<SubscriptionPlansListDto> Handle(GetSubscriptionPlansByProviderQuery request, CancellationToken cancellationToken)
+        public async Task<Result<PaginatedList<SubscriptionPlanListItemDto>>> Handle(GetSubscriptionPlansByProviderQuery request, CancellationToken cancellationToken)
         {
             if (!_tenantContext.HasTenant)
-                throw new InvalidOperationException("Tenant context is required to get subscription plans");
+            {
+                _logger.LogWarning("Attempted to get subscription plans without tenant context");
+                return Result.Failure<PaginatedList<SubscriptionPlanListItemDto>>(DomainErrors.Tenant.NoTenantContext);
+            }
 
             var subscriptionPlans = await _unitOfWork.SubscriptionPlans.GetAllAsync(
                 request.PageNumber,
@@ -33,8 +45,6 @@ namespace Orbito.Application.SubscriptionPlans.Queries.GetSubscriptionPlansByPro
                 request.ActiveOnly,
                 request.PublicOnly,
                 cancellationToken);
-
-            var totalPages = (int)Math.Ceiling((double)totalCount / request.PageSize);
 
             var items = subscriptionPlans.Select(plan => new SubscriptionPlanListItemDto
             {
@@ -53,16 +63,15 @@ namespace Orbito.Application.SubscriptionPlans.Queries.GetSubscriptionPlansByPro
                 TotalSubscriptionsCount = plan.Subscriptions.Count
             }).ToList();
 
-            return new SubscriptionPlansListDto
-            {
-                Items = items,
-                TotalCount = totalCount,
-                PageNumber = request.PageNumber,
-                PageSize = request.PageSize,
-                TotalPages = totalPages,
-                HasPreviousPage = request.PageNumber > 1,
-                HasNextPage = request.PageNumber < totalPages
-            };
+            var paginatedList = new PaginatedList<SubscriptionPlanListItemDto>(
+                items,
+                totalCount,
+                request.PageNumber,
+                request.PageSize);
+
+            _logger.LogInformation("Successfully retrieved {Count} subscription plans for page {PageNumber}", items.Count, request.PageNumber);
+
+            return Result.Success(paginatedList);
         }
     }
 }

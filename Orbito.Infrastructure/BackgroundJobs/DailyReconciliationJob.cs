@@ -102,7 +102,7 @@ public class DailyReconciliationJob : BackgroundService
     /// </summary>
     private async Task RunReconciliationAsync(CancellationToken stoppingToken)
     {
-        using var scope = _serviceProvider.CreateScope();
+        await using var scope = _serviceProvider.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var reconciliationService = scope.ServiceProvider.GetRequiredService<IPaymentReconciliationService>();
         var tenantProvider = scope.ServiceProvider.GetRequiredService<ITenantProvider>();

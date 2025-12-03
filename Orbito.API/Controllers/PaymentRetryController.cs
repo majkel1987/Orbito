@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Orbito.Application.Common.Authorization;
 using Microsoft.Extensions.Caching.Memory;
 using Orbito.Application.Features.Payments.Commands;
 using Orbito.Application.Features.Payments.Queries;
@@ -12,7 +13,7 @@ namespace Orbito.API.Controllers
     /// <summary>
     /// Controller for managing payment retry operations
     /// </summary>
-    [Authorize(Roles = "Provider,Client")]
+    [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
     [Route("api/payments/retry")]
     public class PaymentRetryController : BaseController
     {
@@ -41,56 +42,43 @@ namespace Orbito.API.Controllers
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Result of the retry operation</returns>
         [HttpPost("{paymentId}")]
-        [ProducesResponseType(typeof(RetryFailedPaymentResult), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(RetryFailedPaymentResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<RetryFailedPaymentResult>> RetryPayment(
+        public async Task<IActionResult> RetryPayment(
             Guid paymentId,
             [FromBody] RetryPaymentRequest request,
             CancellationToken cancellationToken = default)
         {
-            try
+            Logger.LogInformation("Retry payment request for payment {PaymentId}", paymentId);
+
+            // SECURITY: Get ClientId from user context with caching
+            var currentClientId = await GetCachedClientIdAsync(cancellationToken);
+            if (currentClientId == null)
             {
-                Logger.LogInformation("Retry payment request for payment {PaymentId}", paymentId);
-
-                // SECURITY: Get ClientId from user context with caching
-                var currentClientId = await GetCachedClientIdAsync(cancellationToken);
-                if (currentClientId == null)
-                {
-                    Logger.LogWarning("User context does not contain valid ClientId");
-                    return Unauthorized(new { error = "Unable to determine client context" });
-                }
-
-                // Validate payment ID format
-                if (paymentId == Guid.Empty)
-                {
-                    return BadRequest(new { error = "Invalid payment ID" });
-                }
-
-                var command = new RetryFailedPaymentCommand
-                {
-                    PaymentId = paymentId,
-                    ClientId = currentClientId.Value, // SECURITY: Use authenticated client ID
-                    Reason = request.Reason
-                };
-
-                var result = await Mediator.Send(command, cancellationToken);
-
-                if (!result.Success)
-                {
-                    return BadRequest(new { error = result.ErrorMessage });
-                }
-
-                Logger.LogInformation("Successfully scheduled retry for payment {PaymentId}", paymentId);
-                return Ok(result);
+                Logger.LogWarning("User context does not contain valid ClientId");
+                return Unauthorized(new { error = "Unable to determine client context" });
             }
-            catch (Exception ex)
+
+            // Validate payment ID format
+            if (paymentId == Guid.Empty)
             {
-                Logger.LogError(ex, "Error processing retry request for payment {PaymentId}", paymentId);
-                return StatusCode(StatusCodes.Status500InternalServerError, new { error = "An error occurred while processing the retry request" });
+                return BadRequest(new { error = "Invalid payment ID" });
             }
+
+            var command = new RetryFailedPaymentCommand
+            {
+                PaymentId = paymentId,
+                ClientId = currentClientId.Value, // SECURITY: Use authenticated client ID
+                Reason = request.Reason
+            };
+
+            var result = await Mediator.Send(command, cancellationToken);
+
+            return HandleResult(result);
         }
 
         /// <summary>
@@ -100,11 +88,11 @@ namespace Orbito.API.Controllers
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Result of the bulk retry operation</returns>
         [HttpPost("bulk")]
-        [ProducesResponseType(typeof(BulkRetryPaymentsResult), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BulkRetryPaymentsResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<BulkRetryPaymentsResult>> BulkRetry(
+        public async Task<IActionResult> BulkRetry(
             [FromBody] BulkRetryPaymentsRequest request,
             CancellationToken cancellationToken = default)
         {
@@ -146,10 +134,13 @@ namespace Orbito.API.Controllers
 
                 var result = await Mediator.Send(command, cancellationToken);
 
-                Logger.LogInformation("Bulk retry completed: {Successful} successful, {Failed} failed",
-                    result.SuccessfulRetries, result.FailedRetries);
+                if (result.IsSuccess)
+                {
+                    Logger.LogInformation("Bulk retry completed: {Successful} successful, {Failed} failed",
+                        result.Value.SuccessfulRetries, result.Value.FailedRetries);
+                }
 
-                return Ok(result);
+                return HandleResult(result);
             }
             catch (Exception ex)
             {

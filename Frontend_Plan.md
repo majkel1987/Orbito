@@ -1,48 +1,43 @@
-# Plan Implementacji Frontendu dla Orbito Platform v4.0
+# Frontend Plan v6.0 - Orbito Platform
 
-**Wersja**: 4.0  
-**Data**: 2025-01-14  
-**Stack**: Next.js 14 + JavaScript + Tailwind CSS + TanStack Query + Zustand  
-**Czas realizacji**: 24 tygodnie (6 miesięcy)
+**Wersja**: 6.0 (Fresh Start)  
+**Data**: 2025-11-29  
+**Stack**: Next.js 15 + TypeScript Strict + Tailwind CSS + TanStack Query + Zustand  
+**Czas realizacji**: 10-12 tygodni (MVP)  
+**Status**: 🆕 Nowy start od zera
 
 ---
 
-## 📊 Executive Summary
+## 📋 Executive Summary
 
-### Kluczowe Zmiany vs v3.0
+### Kluczowe Zmiany vs Poprzednia Wersja
 
-| Obszar               | Było (v3.0)      | Jest (v4.0)              | Uzasadnienie                         |
-| -------------------- | ---------------- | ------------------------ | ------------------------------------ |
-| **Framework**        | Create React App | Next.js 14               | SSR, lepsze SEO, routing, middleware |
-| **Czas realizacji**  | 12 tygodni       | 24 tygodnie              | Realistyczne podejście               |
-| **State Management** | Context API      | Zustand + TanStack Query | Lepsza wydajność, DevTools           |
-| **Bezpieczeństwo**   | localStorage JWT | httpOnly cookies         | Ochrona przed XSS                    |
-| **Architektura**     | Component-based  | Feature-based            | Lepsza skalowalność                  |
-| **API Integration**  | Manual           | OpenAPI Generator        | Type safety (w JSDoc)                |
-
-### Statystyki Projektu
-
-| Metryka                | Wartość                          |
-| ---------------------- | -------------------------------- |
-| **Fazy implementacji** | 8 faz                            |
-| **MVP Timeline**       | 10 tygodni                       |
-| **Full Release**       | 24 tygodnie                      |
-| **Komponenty**         | ~80+                             |
-| **Features**           | 12 modułów                       |
-| **API Endpoints**      | 45+ (zsynchronizowane z backend) |
-| **Test Coverage Goal** | 70%+                             |
+| Obszar             | Było (v5.x)                 | Jest (v6.0)                               | Uzasadnienie                         |
+| ------------------ | --------------------------- | ----------------------------------------- | ------------------------------------ |
+| **TypeScript**     | Hybrid (allowJs: true)      | **Strict od dnia 0**                      | Type safety 1:1 z backendem          |
+| **API Layer**      | Ręczne pisanie \*Api.ts     | **Automatyczna generacja (orval)**        | Eliminacja błędów, oszczędność czasu |
+| **Architektura**   | Feature-based               | **Vertical Slices (lustro backendu)**     | Spójność z CQRS backend              |
+| **Kolejność faz**  | Auth → Dashboard → Clients  | **Auth → Tenant Context → UI → Features** | Multi-tenancy jako fundament         |
+| **Error Handling** | Try-catch w hookach         | **Centralny interceptor Result<T>**       | DRY, spójność                        |
+| **Struktura**      | components/, hooks/, pages/ | **features/{domain}/**                    | Domeny biznesowe                     |
 
 ---
 
 ## 🏗️ Architektura Aplikacji
 
+### Zasady Przewodnie
+
+1. **Backend jest źródłem prawdy** - Frontend tylko odwzorowuje typy i struktury
+2. **Tenant Context wszędzie** - Każda operacja wymaga kontekstu tenanta
+3. **Fail fast** - TypeScript strict wyłapie błędy przy kompilacji
+4. **DRY API** - Generowanie z Swaggera eliminuje duplikację
+
 ### Stack Technologiczny
 
-```javascript
-// next.config.js
-const config = {
-  framework: "Next.js 14.2.x",
-  language: "JavaScript (ES2024)",
+```typescript
+const stack = {
+  framework: "Next.js 15.x (App Router)",
+  language: "TypeScript 5.x (strict: true)",
   styling: {
     css: "Tailwind CSS 3.4",
     components: "shadcn/ui",
@@ -50,1190 +45,690 @@ const config = {
   },
   state: {
     server: "TanStack Query v5",
-    client: "Zustand v4",
+    client: "Zustand v5",
     forms: "React Hook Form v7",
   },
-  validation: "Zod v3 (z JSDoc)",
+  validation: "Zod v3",
   api: {
-    client: "Axios v1.6",
-    generation: "OpenAPI Generator",
+    generator: "orval", // Automatyczna generacja z OpenAPI
+    client: "axios",
+    types: "Auto-generated from swagger.json",
   },
-  auth: "NextAuth.js v4",
+  auth: "NextAuth.js v5 (Auth.js)",
   testing: {
-    unit: "Jest + React Testing Library",
+    unit: "Vitest + React Testing Library",
     e2e: "Playwright",
-    api: "MSW v2",
+    types: "tsc --noEmit",
   },
 };
 ```
 
-### Struktura Katalogów (Feature-Based)
+### Struktura Katalogów (Vertical Slices)
 
 ```
 orbito-frontend/
 ├── src/
-│   ├── app/                    # Next.js App Router
-│   │   ├── (auth)/             # Auth group layout
-│   │   │   ├── login/
-│   │   │   ├── register/
-│   │   │   └── setup/
-│   │   ├── (dashboard)/        # Dashboard group layout
-│   │   │   ├── layout.js
-│   │   │   ├── page.js
-│   │   │   └── loading.js
-│   │   ├── api/                # API routes (BFF pattern)
-│   │   │   ├── auth/[...nextauth]/
-│   │   │   └── proxy/          # Backend proxy
-│   │   └── layout.js           # Root layout
-│   ├── features/               # Feature modules
+│   ├── app/                      # Next.js App Router (tylko routing)
+│   │   ├── (auth)/               # Public routes group
+│   │   │   ├── login/page.tsx
+│   │   │   ├── register/page.tsx
+│   │   │   └── layout.tsx
+│   │   ├── (dashboard)/          # Protected routes group
+│   │   │   ├── layout.tsx        # Dashboard layout z TenantProvider
+│   │   │   ├── page.tsx          # Dashboard home
+│   │   │   ├── team/
+│   │   │   ├── clients/
+│   │   │   ├── plans/
+│   │   │   ├── subscriptions/
+│   │   │   ├── payments/
+│   │   │   └── analytics/
+│   │   ├── api/                  # API Routes (NextAuth)
+│   │   │   └── auth/[...nextauth]/
+│   │   ├── layout.tsx            # Root layout
+│   │   └── page.tsx              # Landing page
+│   │
+│   ├── features/                 # 🎯 Vertical Slices (lustro backendu)
 │   │   ├── auth/
-│   │   │   ├── api/            # API calls
-│   │   │   ├── components/     # Feature components
-│   │   │   ├── hooks/          # Feature hooks
-│   │   │   ├── stores/         # Zustand stores
-│   │   │   ├── utils/          # Utils
-│   │   │   └── validators/     # Zod schemas
-│   │   ├── clients/
-│   │   ├── subscriptions/
-│   │   ├── payments/
-│   │   ├── analytics/
-│   │   └── [other features]/
-│   ├── core/                   # Core business logic
+│   │   │   ├── components/       # LoginForm, RegisterForm, UserMenu
+│   │   │   ├── hooks/            # useAuth, useSession
+│   │   │   ├── stores/           # authStore.ts
+│   │   │   └── types/            # auth.types.ts (jeśli custom)
+│   │   │
+│   │   ├── tenant/               # 🆕 Tenant/Team Context
+│   │   │   ├── components/       # TenantSwitcher, TenantGuard
+│   │   │   ├── hooks/            # useTenant, useTeamContext
+│   │   │   ├── stores/           # tenantStore.ts
+│   │   │   └── providers/        # TenantProvider.tsx
+│   │   │
+│   │   ├── team/                 # Team Management
+│   │   │   ├── components/       # MemberList, InviteDialog, RoleSelect
+│   │   │   ├── hooks/            # useTeamMembers, useInvitations
+│   │   │   └── views/            # TeamPage, MemberDetailPage
+│   │   │
+│   │   ├── clients/              # Client Management
+│   │   │   ├── components/       # ClientTable, ClientForm, ClientCard
+│   │   │   ├── hooks/            # useClients, useClient, useClientMutations
+│   │   │   └── views/            # ClientsPage, ClientDetailPage
+│   │   │
+│   │   ├── plans/                # Subscription Plans
+│   │   │   ├── components/       # PlanCard, PlanForm, PricingTable
+│   │   │   ├── hooks/            # usePlans, usePlanMutations
+│   │   │   └── views/            # PlansPage, PlanDetailPage
+│   │   │
+│   │   ├── subscriptions/        # Subscriptions
+│   │   │   ├── components/       # SubscriptionCard, SubscriptionStatus
+│   │   │   ├── hooks/            # useSubscriptions, useSubscriptionActions
+│   │   │   └── views/            # SubscriptionsPage
+│   │   │
+│   │   ├── payments/             # Payments & Billing
+│   │   │   ├── components/       # PaymentHistory, PaymentMethodForm
+│   │   │   ├── hooks/            # usePayments, usePaymentMethods
+│   │   │   └── views/            # PaymentsPage, BillingPage
+│   │   │
+│   │   └── analytics/            # Reports & Analytics
+│   │       ├── components/       # RevenueChart, ClientStats
+│   │       ├── hooks/            # useAnalytics, useReports
+│   │       └── views/            # AnalyticsDashboard
+│   │
+│   ├── shared/                   # Współdzielone komponenty i utilities
+│   │   ├── components/
+│   │   │   ├── ui/               # shadcn/ui components
+│   │   │   ├── layout/           # Header, Sidebar, Footer
+│   │   │   ├── feedback/         # LoadingSpinner, ErrorBoundary, EmptyState
+│   │   │   └── data-display/     # DataTable, Pagination, StatusBadge
+│   │   ├── hooks/
+│   │   │   ├── useDebounce.ts
+│   │   │   ├── useLocalStorage.ts
+│   │   │   └── useMediaQuery.ts
+│   │   └── utils/
+│   │       ├── formatters.ts     # formatCurrency, formatDate
+│   │       ├── validators.ts     # Zod schemas
+│   │       └── constants.ts
+│   │
+│   ├── core/                     # Infrastruktura aplikacji
 │   │   ├── api/
-│   │   │   ├── client.js       # Axios instance
-│   │   │   ├── interceptors.js # Request/Response interceptors
-│   │   │   └── generated/      # OpenAPI generated
-│   │   ├── config/
-│   │   ├── constants/
-│   │   └── security/
-│   ├── shared/                 # Shared resources
-│   │   ├── components/         # UI components
-│   │   │   ├── ui/            # shadcn components
-│   │   │   └── layouts/
-│   │   ├── hooks/             # Global hooks
-│   │   ├── utils/             # Global utils
-│   │   └── lib/               # External lib configs
-│   └── styles/
-│       └── globals.css
+│   │   │   ├── client.ts         # Axios instance
+│   │   │   ├── interceptors.ts   # Result<T> handling, error mapping
+│   │   │   └── generated/        # 🎯 Auto-generated by orval
+│   │   │       ├── api.ts        # API functions
+│   │   │       ├── model.ts      # TypeScript types (DTOs)
+│   │   │       └── hooks.ts      # React Query hooks
+│   │   ├── auth/
+│   │   │   └── auth.config.ts    # NextAuth configuration
+│   │   └── providers/
+│   │       ├── QueryProvider.tsx
+│   │       ├── AuthProvider.tsx
+│   │       └── ThemeProvider.tsx
+│   │
+│   ├── types/                    # Globalne typy (rozszerzenia, utility types)
+│   │   ├── next-auth.d.ts        # Rozszerzenie sesji NextAuth
+│   │   └── globals.d.ts
+│   │
+│   └── middleware.ts             # Route protection, tenant validation
+│
 ├── public/
-├── tests/
-│   ├── unit/
-│   ├── integration/
-│   └── e2e/
-├── .env.local
-├── .env.production
-├── next.config.js
-├── package.json
-├── jsconfig.json               # Path aliases
-├── .eslintrc.json
-└── playwright.config.js
-```
-
-### Architektura Warstw
-
-```
-┌─────────────────────────────────────────────────┐
-│             Next.js Pages/App Router            │
-│          (SSR/SSG/ISR + API Routes)             │
-└─────────────────────┬───────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────┐
-│              Feature Modules                    │
-│  (Self-contained features with own logic)       │
-└─────────────────────┬───────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────┐
-│           State Management Layer                │
-│     (Zustand stores + TanStack Query)           │
-└─────────────────────┬───────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────┐
-│              API Client Layer                   │
-│   (Axios + Interceptors + Error Handling)       │
-└─────────────────────┬───────────────────────────┘
-                      │
-┌─────────────────────▼──────────────────────────-─┐
-│            Backend API (.NET)                    │
-│     (Multi-tenant + CQRS + Clean Arch)           │
-└──────────────────────────────────────────────────┘
+├── orval.config.ts               # 🎯 Konfiguracja generatora API
+├── tsconfig.json                 # strict: true
+├── tailwind.config.ts
+├── next.config.ts
+└── package.json
 ```
 
 ---
 
-## 🔐 Bezpieczeństwo i Autentykacja
+## 🔧 Konfiguracja TypeScript (Strict Mode)
 
-### NextAuth.js Configuration
+### tsconfig.json
 
-```javascript
-// src/app/api/auth/[...nextauth]/route.js
-import NextAuth from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
-import { apiClient } from "@/core/api/client";
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "preserve",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
 
-export const authOptions = {
-  providers: [
-    CredentialsProvider({
-      name: "credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        try {
-          const response = await apiClient.post("/api/account/login", {
-            email: credentials.email,
-            password: credentials.password,
-          });
+    // 🎯 STRICT MODE - bez kompromisów
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
 
-          if (response.data.token) {
-            // Decode JWT to get user info
-            const user = {
-              id: response.data.userId,
-              email: response.data.email,
-              name: response.data.name,
-              role: response.data.role,
-              tenantId: response.data.tenantId,
-              accessToken: response.data.token,
-            };
-            return user;
-          }
-          return null;
-        } catch (error) {
-          console.error("Auth error:", error);
-          return null;
-        }
-      },
-    }),
-  ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.accessToken = user.accessToken;
-        token.role = user.role;
-        token.tenantId = user.tenantId;
-        token.userId = user.id;
-      }
-      return token;
+    // 🚫 Bez allowJs - tylko TypeScript
+    "allowJs": false,
+
+    "noEmit": true,
+    "incremental": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "paths": {
+      "@/*": ["./src/*"],
+      "@/features/*": ["./src/features/*"],
+      "@/shared/*": ["./src/shared/*"],
+      "@/core/*": ["./src/core/*"]
     },
-    async session({ session, token }) {
-      session.accessToken = token.accessToken;
-      session.user.role = token.role;
-      session.user.tenantId = token.tenantId;
-      session.user.id = token.userId;
-      return session;
-    },
-  },
-  pages: {
-    signIn: "/login",
-    error: "/auth/error",
-  },
-  session: {
-    strategy: "jwt",
-    maxAge: 30 * 60, // 30 minutes
-  },
-  cookies: {
-    sessionToken: {
-      name: `__Secure-orbito.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: true, // tylko HTTPS w produkcji
-      },
-    },
-  },
-};
 
-const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST };
+    "plugins": [{ "name": "next" }]
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
 ```
 
-### Multi-Tenancy Implementation
+---
 
-```javascript
-// src/core/api/interceptors.js
-import { getSession } from "next-auth/react";
+## 🔌 Automatyzacja API (orval)
 
-export const setupInterceptors = (axiosInstance) => {
-  // Request interceptor
-  axiosInstance.interceptors.request.use(
-    async (config) => {
-      const session = await getSession();
+### Dlaczego orval?
 
-      if (session?.accessToken) {
-        config.headers.Authorization = `Bearer ${session.accessToken}`;
-      }
+| Aspekt                     | Ręczne pisanie | orval        |
+| -------------------------- | -------------- | ------------ |
+| Czas                       | Dni/tygodnie   | Minuty       |
+| Błędy typów                | Częste         | Niemożliwe   |
+| Synchronizacja z backendem | Ręczna         | Automatyczna |
+| React Query hooks          | Pisane ręcznie | Generowane   |
+| Maintenance                | Wysoki         | Zerowy       |
 
-      if (session?.user?.tenantId) {
-        config.headers["X-Tenant-Id"] = session.user.tenantId;
-      }
+### orval.config.ts
 
-      // Idempotency key dla POST/PUT/DELETE
-      if (["post", "put", "delete"].includes(config.method)) {
-        config.headers["X-Idempotency-Key"] = crypto.randomUUID();
-      }
+```typescript
+import { defineConfig } from "orval";
 
-      return config;
+export default defineConfig({
+  orbito: {
+    input: {
+      target: "http://localhost:5001/swagger/v1/swagger.json",
     },
-    (error) => Promise.reject(error)
-  );
-
-  // Response interceptor
-  axiosInstance.interceptors.response.use(
-    (response) => response,
-    async (error) => {
-      if (error.response?.status === 401) {
-        // Token wygasł - wyloguj
-        await signOut({ callbackUrl: "/login" });
-      }
-
-      if (error.response?.status === 429) {
-        // Rate limiting - pokaż toast
-        showToast("Too many requests. Please wait a moment.");
-      }
-
-      return Promise.reject(error);
-    }
-  );
-};
-```
-
-### Protected Routes Middleware
-
-```javascript
-// src/middleware.js
-import { withAuth } from "next-auth/middleware";
-
-export default withAuth({
-  callbacks: {
-    authorized: ({ token, req }) => {
-      const path = req.nextUrl.pathname;
-
-      // Public routes
-      if (
-        path.startsWith("/login") ||
-        path.startsWith("/register") ||
-        path === "/"
-      ) {
-        return true;
-      }
-
-      // Authenticated routes
-      if (!token) return false;
-
-      // Admin only routes
-      if (path.startsWith("/admin")) {
-        return token.role === "PlatformAdmin";
-      }
-
-      // Provider routes
-      if (path.startsWith("/provider")) {
-        return ["Provider", "PlatformAdmin"].includes(token.role);
-      }
-
-      return true;
+    output: {
+      mode: "tags-split",
+      target: "./src/core/api/generated",
+      schemas: "./src/core/api/generated/model",
+      client: "react-query",
+      httpClient: "axios",
+      override: {
+        mutator: {
+          path: "./src/core/api/client.ts",
+          name: "apiClient",
+        },
+        query: {
+          useQuery: true,
+          useMutation: true,
+          signal: true,
+        },
+      },
+    },
+    hooks: {
+      afterAllFilesWrite: "prettier --write",
     },
   },
 });
-
-export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
-};
 ```
 
----
+### Workflow generowania
 
-## 📦 Feature Modules - Szczegółowy Opis
+```bash
+# Jednorazowo po zmianach w backendzie
+npm run api:generate
 
-### 1. Auth Module (`src/features/auth/`)
-
-```javascript
-// src/features/auth/stores/authStore.js
-import { create } from "zustand";
-import { devtools } from "zustand/middleware";
-
-export const useAuthStore = create(
-  devtools(
-    (set, get) => ({
-      user: null,
-      isLoading: false,
-      error: null,
-
-      // Actions
-      setUser: (user) => set({ user }),
-      setLoading: (isLoading) => set({ isLoading }),
-      setError: (error) => set({ error }),
-
-      // Computed
-      isAuthenticated: () => !!get().user,
-      hasRole: (role) => get().user?.role === role,
-      isProvider: () =>
-        ["Provider", "PlatformAdmin"].includes(get().user?.role),
-      isAdmin: () => get().user?.role === "PlatformAdmin",
-
-      // Clear
-      logout: () => set({ user: null, error: null }),
-    }),
-    { name: "auth-store" }
-  )
-);
+# Script w package.json
+{
+  "scripts": {
+    "api:generate": "orval --config orval.config.ts",
+    "api:watch": "orval --config orval.config.ts --watch"
+  }
+}
 ```
 
-### 2. Clients Module (`src/features/clients/`)
+### Co zostanie wygenerowane
 
-```javascript
-// src/features/clients/api/clientsApi.js
-import { apiClient } from "@/core/api/client";
-
-export const clientsApi = {
-  // Queries
-  getClients: async (params) => {
-    const { data } = await apiClient.get("/api/clients", { params });
-    return data;
-  },
-
-  getClientById: async (id) => {
-    const { data } = await apiClient.get(`/api/clients/${id}`);
-    return data;
-  },
-
-  searchClients: async (searchTerm, params) => {
-    const { data } = await apiClient.get("/api/clients/search", {
-      params: { searchTerm, ...params },
-    });
-    return data;
-  },
-
-  getClientStats: async () => {
-    const { data } = await apiClient.get("/api/clients/stats");
-    return data;
-  },
-
-  // Mutations
-  createClient: async (clientData) => {
-    const { data } = await apiClient.post("/api/clients", clientData);
-    return data;
-  },
-
-  updateClient: async ({ id, ...clientData }) => {
-    const { data } = await apiClient.put(`/api/clients/${id}`, clientData);
-    return data;
-  },
-
-  deleteClient: async (id, hardDelete = false) => {
-    const { data } = await apiClient.delete(`/api/clients/${id}`, {
-      params: { hardDelete },
-    });
-    return data;
-  },
-
-  activateClient: async (id) => {
-    const { data } = await apiClient.post(`/api/clients/${id}/activate`);
-    return data;
-  },
-
-  deactivateClient: async (id) => {
-    const { data } = await apiClient.post(`/api/clients/${id}/deactivate`);
-    return data;
-  },
-};
-
-// src/features/clients/hooks/useClients.js
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { clientsApi } from "../api/clientsApi";
-import { toast } from "sonner";
-
-export const useClients = (params) => {
+```typescript
+// src/core/api/generated/clients.ts
+export const useGetClients = (params?: GetClientsParams) => {
   return useQuery({
-    queryKey: ["clients", params],
-    queryFn: () => clientsApi.getClients(params),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-};
-
-export const useClient = (id) => {
-  return useQuery({
-    queryKey: ["clients", id],
-    queryFn: () => clientsApi.getClientById(id),
-    enabled: !!id,
+    queryKey: getClientsQueryKey(params),
+    queryFn: () => getClients(params),
   });
 };
 
 export const useCreateClient = () => {
-  const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: clientsApi.createClient,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["clients"] });
-      toast.success("Klient został utworzony");
-    },
-    onError: (error) => {
-      toast.error(
-        error.response?.data?.message || "Błąd podczas tworzenia klienta"
-      );
-    },
+    mutationFn: createClient,
   });
 };
+
+// src/core/api/generated/model/clientDto.ts
+export interface ClientDto {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  // ... wszystkie pola z backendu
+}
 ```
 
-### 3. Payments Module (`src/features/payments/`)
+---
 
-```javascript
-// src/features/payments/components/StripePaymentForm.jsx
-import { loadStripe } from "@stripe/stripe-js";
-import {
-  Elements,
-  CardElement,
-  useStripe,
-  useElements,
-} from "@stripe/react-stripe-js";
-import { useState } from "react";
-import { useProcessPayment } from "../hooks/usePayments";
+## 🔒 Obsługa Result<T> i Błędów Domenowych
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_KEY);
+### Centralny Interceptor
 
-function PaymentForm({ amount, currency, subscriptionId, onSuccess }) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [isProcessing, setIsProcessing] = useState(false);
-  const processPayment = useProcessPayment();
+```typescript
+// src/core/api/interceptors.ts
+import axios, { AxiosError, AxiosResponse } from "axios";
+import { toast } from "sonner";
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+interface ApiResult<T> {
+  isSuccess: boolean;
+  value?: T;
+  error?: {
+    code: string;
+    message: string;
+    details?: Record<string, string[]>;
+  };
+}
 
-    if (!stripe || !elements) return;
+interface ProblemDetails {
+  type: string;
+  title: string;
+  status: number;
+  detail: string;
+  errors?: Record<string, string[]>;
+}
 
-    setIsProcessing(true);
+// Response interceptor - rozpakowuje Result<T>
+apiClient.interceptors.response.use(
+  (response: AxiosResponse<ApiResult<unknown>>) => {
+    const data = response.data;
 
-    try {
-      // Create payment method
-      const { error, paymentMethod } = await stripe.createPaymentMethod({
-        type: "card",
-        card: elements.getElement(CardElement),
-      });
+    // Jeśli backend zwraca Result<T>
+    if ("isSuccess" in data) {
+      if (data.isSuccess) {
+        // Zwróć tylko wartość
+        response.data = data.value;
+        return response;
+      } else {
+        // Rzuć błąd domenowy
+        const error = new DomainError(data.error!);
+        return Promise.reject(error);
+      }
+    }
 
-      if (error) throw error;
+    return response;
+  },
+  (error: AxiosError<ProblemDetails>) => {
+    // Obsługa błędów HTTP
+    if (error.response?.data) {
+      const problemDetails = error.response.data;
 
-      // Process payment through backend
-      const result = await processPayment.mutateAsync({
-        subscriptionId,
-        paymentMethodId: paymentMethod.id,
-        amount,
-        currency,
-      });
-
-      // Handle 3D Secure if required
-      if (result.requiresAction) {
-        const { error: confirmError } = await stripe.confirmCardPayment(
-          result.clientSecret
-        );
-
-        if (confirmError) throw confirmError;
+      // Mapowanie błędów walidacji na formularze
+      if (error.response.status === 400 && problemDetails.errors) {
+        const validationError = new ValidationError(problemDetails.errors);
+        return Promise.reject(validationError);
       }
 
-      onSuccess?.(result);
-    } catch (error) {
-      console.error("Payment error:", error);
-      toast.error(error.message || "Błąd płatności");
-    } finally {
-      setIsProcessing(false);
+      // Błędy autoryzacji
+      if (error.response.status === 401) {
+        // Redirect do login
+        window.location.href = "/login";
+      }
+
+      // Błędy biznesowe
+      if (error.response.status === 422) {
+        toast.error(problemDetails.detail);
+      }
     }
-  };
 
-  return (
-    <form onSubmit={handleSubmit}>
-      <CardElement />
-      <button type="submit" disabled={!stripe || isProcessing}>
-        {isProcessing ? "Przetwarzanie..." : `Zapłać ${amount} ${currency}`}
-      </button>
-    </form>
-  );
-}
-
-export default function StripePaymentForm(props) {
-  return (
-    <Elements stripe={stripePromise}>
-      <PaymentForm {...props} />
-    </Elements>
-  );
-}
-```
-
-### 4. Real-time Updates Module
-
-```javascript
-// src/features/realtime/hooks/useWebSocket.js
-import { useEffect, useRef } from "react";
-import { useSession } from "next-auth/react";
-
-export const useWebSocket = (url, options = {}) => {
-  const { data: session } = useSession();
-  const ws = useRef(null);
-  const reconnectTimeout = useRef(null);
-
-  useEffect(() => {
-    if (!session?.accessToken) return;
-
-    const connect = () => {
-      ws.current = new WebSocket(`${url}?token=${session.accessToken}`);
-
-      ws.current.onopen = () => {
-        console.log("WebSocket connected");
-        options.onOpen?.();
-      };
-
-      ws.current.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        options.onMessage?.(data);
-      };
-
-      ws.current.onerror = (error) => {
-        console.error("WebSocket error:", error);
-        options.onError?.(error);
-      };
-
-      ws.current.onclose = () => {
-        console.log("WebSocket disconnected");
-        options.onClose?.();
-
-        // Auto-reconnect after 5 seconds
-        if (options.autoReconnect !== false) {
-          reconnectTimeout.current = setTimeout(connect, 5000);
-        }
-      };
-    };
-
-    connect();
-
-    return () => {
-      clearTimeout(reconnectTimeout.current);
-      ws.current?.close();
-    };
-  }, [session, url]);
-
-  const send = (data) => {
-    if (ws.current?.readyState === WebSocket.OPEN) {
-      ws.current.send(JSON.stringify(data));
-    }
-  };
-
-  return { send, ws: ws.current };
-};
-```
-
----
-
-## 🚀 Fazy Implementacji (Realistyczny Timeline)
-
-### **FAZA 0: Setup & Foundation (Tydzień 1-2)**
-
-#### Zadania
-
-- [x] ✅ Inicjalizacja Next.js 14 z App Router
-- [x] ✅ Konfiguracja Tailwind CSS + shadcn/ui
-- [x] ✅ Setup ESLint + Prettier
-- [x] ✅ Konfiguracja path aliases
-- [x] ✅ Setup Zustand + TanStack Query
-- [x] ✅ Axios client z interceptorami
-- [ ] NextAuth.js basic setup
-- [x] ✅ Podstawowe komponenty UI (10 komponentów)
-
-#### Deliverables
-
-- Działający projekt Next.js
-- Skonfigurowane narzędzia deweloperskie
-- Basic authentication flow
-- 10 komponentów UI z shadcn
-
----
-
-### **FAZA 1: Authentication & Security (Tydzień 3-4)**
-
-#### Zadania
-
-- [ ] Pełna konfiguracja NextAuth.js
-- [ ] Login/Register pages
-- [ ] Protected routes middleware
-- [ ] Session management
-- [ ] Role-based access control
-- [ ] Multi-tenancy context
-- [ ] Error boundary components
-- [ ] Security headers
-
-#### Deliverables
-
-- Kompletny system autentykacji
-- RBAC implementation
-- Secure cookie management
-
----
-
-### **FAZA 2: Layout & Navigation (Tydzień 5-6)**
-
-#### Zadania
-
-- [ ] Dashboard layouts (Provider, Client, Admin)
-- [ ] Responsive sidebar
-- [ ] Header z user menu
-- [ ] Breadcrumbs system
-- [ ] Loading states
-- [ ] Error pages (404, 500)
-- [ ] Theme system (light/dark przygotowanie)
-
-#### Deliverables
-
-- Kompletny system layoutów
-- Nawigacja działająca
-- Responsive design
-
----
-
-### **FAZA 3: Client Management (Tydzień 7-10)**
-
-#### Zadania
-
-- [ ] Client list z paginacją i filtrowaniem
-- [ ] Client detail page
-- [ ] Create/Edit client forms
-- [ ] Client search z debounce
-- [ ] Client statistics dashboard
-- [ ] Bulk operations
-- [ ] Export to Excel
-- [ ] Client activity timeline
-
-#### Deliverables
-
-- Pełny CRUD dla klientów
-- Advanced search i filtering
-- Statistics dashboard
-
----
-
-### **FAZA 4: Plans & Subscriptions (Tydzień 11-14)**
-
-#### Zadania
-
-- [ ] Plan management (CRUD)
-- [ ] Plan templates
-- [ ] Subscription wizard (multi-step)
-- [ ] Subscription lifecycle management
-- [ ] Subscription timeline
-- [ ] Plan comparison tool
-- [ ] Upgrade/downgrade flow
-- [ ] Cancellation flow
-
-#### Deliverables
-
-- Plan management kompletny
-- Subscription wizard działający
-- Lifecycle operations
-
----
-
-### **FAZA 5: Payment System (Tydzień 15-18)**
-
-#### Zadania
-
-- [ ] Stripe integration
-- [ ] Payment form z 3D Secure
-- [ ] Payment methods management
-- [ ] Payment history
-- [ ] Invoice generation
-- [ ] Refund processing
-- [ ] Failed payment retry
-- [ ] Payment notifications
-
-#### Deliverables
-
-- Pełna integracja Stripe
-- Payment processing flow
-- Invoice system
-
----
-
-### **FAZA 6: Analytics & Reports (Tydzień 19-21)**
-
-#### Zadania
-
-- [ ] Revenue dashboard
-- [ ] Payment analytics
-- [ ] Client analytics
-- [ ] Subscription metrics
-- [ ] Custom reports builder
-- [ ] Export functionality
-- [ ] Charts z Recharts
-- [ ] Real-time metrics
-
-#### Deliverables
-
-- Kompletny system analityk
-- Custom reports
-- Real-time dashboards
-
----
-
-### **FAZA 7: Testing & Optimization (Tydzień 22-24)**
-
-#### Zadania
-
-- [ ] Unit tests (70% coverage)
-- [ ] Integration tests
-- [ ] E2E tests z Playwright
-- [ ] Performance optimization
-- [ ] SEO optimization
-- [ ] Accessibility audit
-- [ ] Security audit
-- [ ] Load testing
-
-#### Deliverables
-
-- 70%+ test coverage
-- Performance < 3s load time
-- WCAG 2.1 AA compliance
-- Security audit passed
-
----
-
-## 🔄 Synchronizacja z Backendem
-
-### OpenAPI Integration
-
-```javascript
-// package.json scripts
-{
-  "scripts": {
-    "generate-api": "openapi-generator-cli generate -i http://localhost:5000/swagger/v1/swagger.json -g javascript -o ./src/core/api/generated",
-    "generate-api:watch": "nodemon --watch ../backend/swagger.json --exec npm run generate-api"
-  }
-}
-```
-
-### API Client z JSDoc Types
-
-```javascript
-// src/core/api/client.js
-import axios from "axios";
-
-/**
- * @typedef {Object} ApiResponse
- * @property {boolean} success
- * @property {any} data
- * @property {string} message
- * @property {Object} errors
- */
-
-/**
- * @typedef {Object} PaginatedResponse
- * @property {Array} items
- * @property {number} pageNumber
- * @property {number} pageSize
- * @property {number} totalPages
- * @property {number} totalCount
- */
-
-const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000",
-  timeout: 30000,
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
-// Error handler
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    // Standardized error format
-    const standardError = {
-      message: error.response?.data?.message || "Wystąpił błąd",
-      status: error.response?.status,
-      errors: error.response?.data?.errors || {},
-      code: error.response?.data?.code,
-    };
-
-    return Promise.reject(standardError);
+    return Promise.reject(error);
   }
 );
 
-export { apiClient };
+// Custom Error Classes
+export class DomainError extends Error {
+  constructor(public error: { code: string; message: string }) {
+    super(error.message);
+    this.name = "DomainError";
+  }
+}
+
+export class ValidationError extends Error {
+  constructor(public errors: Record<string, string[]>) {
+    super("Validation failed");
+    this.name = "ValidationError";
+  }
+}
 ```
 
-### Health Checks Integration
+### Integracja z React Hook Form
 
-```javascript
-// src/features/monitoring/hooks/useHealthChecks.js
-import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/core/api/client";
+```typescript
+// src/shared/hooks/useFormWithValidation.ts
+import { UseFormReturn, FieldValues } from "react-hook-form";
+import { ValidationError } from "@/core/api/interceptors";
 
-export const useHealthChecks = () => {
-  return useQuery({
-    queryKey: ["health-checks"],
-    queryFn: async () => {
-      const response = await apiClient.get("/health");
-      return response.data;
-    },
-    refetchInterval: 30000, // Check every 30 seconds
-    retry: false,
-  });
-};
-
-// Component usage
-export function SystemStatus() {
-  const { data: health, isLoading } = useHealthChecks();
-
-  if (isLoading) return <Skeleton />;
-
-  return (
-    <div className="grid grid-cols-3 gap-4">
-      <StatusCard
-        title="API"
-        status={health?.status}
-        details={health?.results?.api}
-      />
-      <StatusCard
-        title="Stripe"
-        status={health?.results?.stripe?.status}
-        responseTime={health?.results?.stripe?.data?.responseTime}
-      />
-      <StatusCard title="Database" status={health?.results?.database?.status} />
-    </div>
-  );
+export function applyServerErrors<T extends FieldValues>(
+  form: UseFormReturn<T>,
+  error: unknown
+) {
+  if (error instanceof ValidationError) {
+    Object.entries(error.errors).forEach(([field, messages]) => {
+      form.setError(field as any, {
+        type: "server",
+        message: messages[0],
+      });
+    });
+  }
 }
 ```
 
 ---
 
-## 🧪 Testing Strategy
+## 🏢 Tenant Context (Fundament Multi-Tenancy)
 
-### Unit Tests z Jest
+### TenantProvider
 
-```javascript
-// src/features/clients/hooks/__tests__/useClients.test.js
-import { renderHook, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useClients } from "../useClients";
-import { server } from "@/tests/mocks/server";
-import { rest } from "msw";
+```typescript
+// src/features/tenant/providers/TenantProvider.tsx
+"use client";
 
-const createWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
+import { createContext, useContext, useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+
+interface TenantContext {
+  tenantId: string | null;
+  teamRole: "Owner" | "Admin" | "Member" | null;
+  teamMemberId: string | null;
+  isLoading: boolean;
+  hasAccess: (requiredRole?: TeamRole[]) => boolean;
+}
+
+const TenantContext = createContext<TenantContext | null>(null);
+
+export function TenantProvider({ children }: { children: React.ReactNode }) {
+  const { data: session, status } = useSession();
+
+  const value: TenantContext = {
+    tenantId: session?.user?.tenantId ?? null,
+    teamRole: session?.user?.teamRole ?? null,
+    teamMemberId: session?.user?.teamMemberId ?? null,
+    isLoading: status === "loading",
+    hasAccess: (requiredRoles) => {
+      if (!requiredRoles) return true;
+      return requiredRoles.includes(session?.user?.teamRole!);
     },
-  });
+  };
 
-  return ({ children }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  return (
+    <TenantContext.Provider value={value}>{children}</TenantContext.Provider>
   );
-};
+}
 
-describe("useClients", () => {
-  it("should fetch clients successfully", async () => {
-    const { result } = renderHook(
-      () => useClients({ pageNumber: 1, pageSize: 10 }),
-      { wrapper: createWrapper() }
-    );
-
-    await waitFor(() => {
-      expect(result.current.isSuccess).toBe(true);
-    });
-
-    expect(result.current.data).toHaveProperty("items");
-    expect(result.current.data.items).toHaveLength(10);
-  });
-
-  it("should handle errors", async () => {
-    server.use(
-      rest.get("/api/clients", (req, res, ctx) => {
-        return res(ctx.status(500), ctx.json({ message: "Server error" }));
-      })
-    );
-
-    const { result } = renderHook(
-      () => useClients({ pageNumber: 1, pageSize: 10 }),
-      { wrapper: createWrapper() }
-    );
-
-    await waitFor(() => {
-      expect(result.current.isError).toBe(true);
-    });
-
-    expect(result.current.error).toHaveProperty("message", "Server error");
-  });
-});
+export function useTenant() {
+  const context = useContext(TenantContext);
+  if (!context) {
+    throw new Error("useTenant must be used within TenantProvider");
+  }
+  return context;
+}
 ```
 
-### E2E Tests z Playwright
+### Rozszerzenie NextAuth Types
 
-```javascript
-// tests/e2e/auth.spec.js
-import { test, expect } from "@playwright/test";
+```typescript
+// src/types/next-auth.d.ts
+import "next-auth";
 
-test.describe("Authentication", () => {
-  test("should login successfully", async ({ page }) => {
-    await page.goto("/login");
+declare module "next-auth" {
+  interface User {
+    id: string;
+    email: string;
+    role: "PlatformAdmin" | "Provider" | "Client" | "TeamMember";
+    tenantId: string;
+    teamRole?: "Owner" | "Admin" | "Member";
+    teamMemberId?: string;
+  }
 
-    // Fill login form
-    await page.fill('[name="email"]', "test@orbito.com");
-    await page.fill('[name="password"]', "Test123!");
+  interface Session {
+    user: User;
+    accessToken: string;
+  }
+}
 
-    // Submit form
-    await page.click('[type="submit"]');
-
-    // Wait for redirect
-    await page.waitForURL("/dashboard");
-
-    // Check if logged in
-    expect(page.url()).toContain("/dashboard");
-    await expect(page.locator('[data-testid="user-menu"]')).toBeVisible();
-  });
-
-  test("should handle invalid credentials", async ({ page }) => {
-    await page.goto("/login");
-
-    await page.fill('[name="email"]', "invalid@email.com");
-    await page.fill('[name="password"]', "wrong");
-
-    await page.click('[type="submit"]');
-
-    // Should show error
-    await expect(page.locator('[role="alert"]')).toContainText(
-      "Invalid credentials"
-    );
-  });
-});
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: string;
+    role: string;
+    tenantId: string;
+    teamRole?: string;
+    teamMemberId?: string;
+    accessToken: string;
+  }
+}
 ```
 
 ---
 
-## 🎯 MVP Scope (10 tygodni)
+## 📊 Fazy Implementacji (Nowa Kolejność)
+
+### Przegląd Faz
+
+| Faza  | Nazwa                 | Czas         | Zależności |
+| ----- | --------------------- | ------------ | ---------- |
+| **0** | Setup & Configuration | 1 tydzień    | -          |
+| **1** | Auth + Tenant Context | 1.5 tygodnia | Faza 0     |
+| **2** | Layout & Global UI    | 1 tydzień    | Faza 1     |
+| **3** | Team Management       | 1 tydzień    | Faza 2     |
+| **4** | Clients & Plans       | 2 tygodnie   | Faza 3     |
+| **5** | Subscriptions         | 1.5 tygodnia | Faza 4     |
+| **6** | Payments              | 1.5 tygodnia | Faza 5     |
+| **7** | Analytics & Dashboard | 1 tydzień    | Faza 6     |
+| **8** | Testing & Polish      | 1 tydzień    | Wszystkie  |
+| **9** | Client Portal         | 1 tydzień    | Faza 1 i 5 |
+
+**Łącznie: 11.5 tygodnia (MVP)**
+
+### Faza 0: Setup & Configuration
+
+**Cel**: Przygotowanie fundamentów projektu
+
+- Inicjalizacja Next.js 15 z TypeScript strict
+- Konfiguracja Tailwind CSS + shadcn/ui
+- Setup orval (OpenAPI Generator)
+- Konfiguracja ESLint + Prettier
+- Struktura katalogów
+- Axios client z interceptorami
+
+### Faza 1: Auth + Tenant Context
+
+**Cel**: Bezpieczna autentykacja z kontekstem tenanta
+
+- NextAuth v5 configuration
+- JWT token handling z claims (tenantId, teamRole)
+- TenantProvider + useTenant hook
+- Protected routes middleware
+- Auth store (Zustand)
+- Login/Register pages
+- Session management
+
+### Faza 2: Layout & Global UI
+
+**Cel**: Spójny interfejs z obsługą stanów globalnych
+
+- Dashboard layout (Sidebar, Header)
+- Suspense boundaries
+- Global ErrorBoundary
+- Loading states (skeletons)
+- Toast notifications (sonner)
+- Theme support (opcjonalnie)
+- Responsive design
+
+### Faza 3: Team Management
+
+**Cel**: Zarządzanie członkami zespołu providera
+
+- Team members list
+- Invite member dialog
+- Role management
+- Accept invitation page
+- Remove member
+- Team activity log (opcjonalnie)
+
+### Faza 4: Clients & Plans (Równolegle)
+
+**Cel**: Core business features
+
+**Clients:**
+
+- Clients list (table + grid view)
+- Client form (create/edit)
+- Client detail page
+- Client search + filters
+- Bulk operations
+- Client statistics
+
+**Plans:**
+
+- Plans list
+- Plan form (pricing, features)
+- Plan detail page
+- Plan activation/deactivation
+- Popular plans badge
+
+### Faza 5: Subscriptions
+
+**Cel**: Zarządzanie subskrypcjami klientów
+
+- Subscriptions list
+- Create subscription flow
+- Subscription status management
+- Cancel/pause subscription
+- Subscription history
+- Renewal handling
+
+### Faza 6: Payments
+
+**Cel**: Obsługa płatności z Stripe
+
+- Payment history
+- Payment methods (CRUD)
+- Manual payment recording
+- Refund handling
+- Idempotency keys w nagłówkach
+- Invoice generation
+
+### Faza 7: Analytics & Dashboard
+
+**Cel**: Metryki i raporty
+
+- Revenue dashboard
+- Client analytics
+- Subscription metrics
+- Export reports (CSV/Excel)
+- Date range filters
+- Charts (recharts)
+
+### Faza 8: Testing & Polish
+
+**Cel**: Jakość i finalizacja
+
+- Unit tests (Vitest)
+- E2E tests (Playwright)
+- Performance optimization
+- Accessibility audit
+- Documentation
+- Bug fixes
+
+---
+
+## 🎯 MVP Scope
 
 ### Must Have (MVP)
 
-- [ ] Authentication (login/register/logout)
-- [ ] Basic dashboard
-- [ ] Client CRUD
-- [ ] Plan management
-- [ ] Basic subscription creation
-- [ ] Simple payment processing
-- [ ] Basic reports
+- ✅ Authentication (login/register/logout)
+- ✅ Tenant Context
+- ✅ Team Management (basic)
+- ✅ Client CRUD
+- ✅ Plan CRUD
+- ✅ Basic subscription creation
+- ✅ Simple payment processing
+- ✅ Basic dashboard
 
 ### Nice to Have (Post-MVP)
 
-- [ ] Advanced analytics
-- [ ] Bulk operations
-- [ ] Export/Import
-- [ ] Webhook management UI
-- [ ] Audit logs viewer
-- [ ] Advanced search
-- [ ] Real-time notifications
-
-### Future Features (v2)
-
-- [ ] Mobile app (React Native)
-- [ ] AI-powered insights
-- [ ] Custom workflows
-- [ ] API for third-party integrations
-- [ ] White-label support
+- Advanced analytics
+- Bulk operations
+- Export/Import
+- Webhook management UI
+- Audit logs viewer
+- Real-time notifications
 
 ---
 
-## 📊 Monitoring & Performance
+## 📝 Definition of Done
 
-### Performance Metrics
+### Dla każdego zadania
 
-```javascript
-// src/core/monitoring/performance.js
-export const measurePerformance = () => {
-  if (typeof window === "undefined") return;
-
-  // Web Vitals
-  if (window.performance?.getEntriesByType) {
-    const navigation = performance.getEntriesByType("navigation")[0];
-
-    const metrics = {
-      // Time to First Byte
-      ttfb: navigation.responseStart - navigation.fetchStart,
-
-      // DOM Content Loaded
-      domContentLoaded:
-        navigation.domContentLoadedEventEnd - navigation.fetchStart,
-
-      // Load Complete
-      loadComplete: navigation.loadEventEnd - navigation.fetchStart,
-
-      // First Contentful Paint
-      fcp: performance.getEntriesByName("first-contentful-paint")[0]?.startTime,
-
-      // Largest Contentful Paint
-      lcp: 0, // Will be updated by PerformanceObserver
-    };
-
-    // Send to analytics
-    if (window.gtag) {
-      window.gtag("event", "page_performance", metrics);
-    }
-  }
-};
-
-// Next.js integration
-// src/app/layout.js
-import { GoogleAnalytics } from "@next/third-parties/google";
-
-export default function RootLayout({ children }) {
-  return (
-    <html>
-      <body>
-        {children}
-        <GoogleAnalytics gaId="G-XXXXXXXXXX" />
-      </body>
-    </html>
-  );
-}
-```
-
----
-
-## 🚨 Risk Mitigation
-
-### Identified Risks & Solutions
-
-| Risk                            | Probability | Impact   | Mitigation Strategy                             |
-| ------------------------------- | ----------- | -------- | ----------------------------------------------- |
-| **Backend API changes**         | Medium      | High     | OpenAPI generation, versioning, contract tests  |
-| **Performance issues**          | Medium      | High     | Code splitting, lazy loading, CDN, monitoring   |
-| **Security vulnerabilities**    | Low         | Critical | Regular audits, dependency updates, CSP headers |
-| **Browser compatibility**       | Low         | Medium   | Transpiling, polyfills, testing matrix          |
-| **State management complexity** | Medium      | Medium   | Clear patterns, documentation, code reviews     |
-| **Stripe integration issues**   | Low         | High     | Sandbox testing, error handling, fallbacks      |
-
----
-
-## ✅ Definition of Done
-
-### Feature Checklist
-
-- [ ] Kod napisany i przetestowany lokalnie
-- [ ] Unit testy (min. 70% coverage)
-- [ ] Integration tests dla critical paths
+- [ ] Kod w TypeScript strict (brak any, pełne typy)
+- [ ] Komponenty używają wygenerowanych typów z orval
+- [ ] Loading states zaimplementowane
+- [ ] Error handling zaimplementowany
+- [ ] Responsive design (mobile-first)
+- [ ] Accessibility basics (keyboard nav, aria labels)
+- [ ] Tenant context weryfikowany
 - [ ] Code review przeprowadzony
+
+### Dla każdej fazy
+
+- [ ] Wszystkie zadania ukończone
+- [ ] Integracja z backendem przetestowana
+- [ ] TypeScript build bez błędów (`tsc --noEmit`)
+- [ ] ESLint bez błędów
 - [ ] Dokumentacja zaktualizowana
-- [ ] Responsive design sprawdzony
-- [ ] Accessibility sprawdzone (keyboard nav + screen reader)
-- [ ] Performance metrics w normie (LCP < 2.5s)
-- [ ] Security headers configured
-- [ ] Error handling implemented
-- [ ] Loading states added
-- [ ] Deployed to staging
 
 ---
 
-## 📝 Development Guidelines
+## 🚀 Quick Start
 
-### Code Style
+```bash
+# 1. Inicjalizacja projektu
+npx create-next-app@latest orbito-frontend \
+  --typescript \
+  --tailwind \
+  --eslint \
+  --app \
+  --src-dir \
+  --import-alias "@/*"
 
-```javascript
-// ✅ Good - Clear naming, proper error handling
-export const useClient = (clientId) => {
-  const { data, error, isLoading } = useQuery({
-    queryKey: ["clients", clientId],
-    queryFn: () => clientsApi.getById(clientId),
-    enabled: !!clientId,
-    retry: 2,
-    staleTime: 5 * 60 * 1000,
-  });
+cd orbito-frontend
 
-  return {
-    client: data,
-    error,
-    isLoading,
-    isError: !!error,
-  };
-};
+# 2. Instalacja zależności
+npm install zustand @tanstack/react-query axios next-auth@beta \
+  lucide-react clsx tailwind-merge sonner zod react-hook-form \
+  @hookform/resolvers
 
-// ❌ Bad - Poor naming, no error handling
-export const useC = (id) => {
-  const q = useQuery(["c", id], () => fetch(`/api/c/${id}`));
-  return q.data;
-};
-```
+# 3. Instalacja orval (API generator)
+npm install -D orval
 
-### Component Pattern
+# 4. shadcn/ui setup
+npx shadcn@latest init
 
-```javascript
-// ✅ Preferred - Composition, clear props
-export function ClientCard({ client, onEdit, onDelete }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{client.name}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ClientInfo client={client} />
-      </CardContent>
-      <CardFooter>
-        <Button onClick={() => onEdit(client.id)}>Edit</Button>
-        <Button variant="destructive" onClick={() => onDelete(client.id)}>
-          Delete
-        </Button>
-      </CardFooter>
-    </Card>
-  );
-}
+# 5. Generowanie API z backendu
+npm run api:generate
 
-// ❌ Avoid - Too many responsibilities
-export function ClientCardBad({ clientId }) {
-  const client = useClient(clientId);
-  const updateClient = useUpdateClient();
-  const deleteClient = useDeleteClient();
-  // ... too much logic in one component
-}
+# 6. Development
+npm run dev
 ```
 
 ---
 
-## 🎯 Success Metrics
-
-### Technical KPIs
-
-- **Performance**: LCP < 2.5s, FID < 100ms, CLS < 0.1
-- **Test Coverage**: > 70% overall
-- **Bundle Size**: < 300KB initial JS (gzipped)
-- **Accessibility**: WCAG 2.1 AA compliant
-- **SEO**: Lighthouse score > 90
-
-### Business KPIs
-
-- **User Adoption**: 80% of users using new features
-- **Error Rate**: < 0.1% of requests
-- **Page Load Time**: < 3s on 3G
-- **User Satisfaction**: > 4.5/5 rating
-
----
-
-## 📞 Support & Resources
-
-### Documentation
-
-- [Next.js Docs](https://nextjs.org/docs)
-- [Tailwind CSS](https://tailwindcss.com/docs)
-- [shadcn/ui](https://ui.shadcn.com)
-- [TanStack Query](https://tanstack.com/query)
-- [Zustand](https://zustand-demo.pmnd.rs)
-
-### Internal Resources
-
-- API Documentation: `/swagger`
-- Design System: Figma link
-- Backend Repository: GitHub link
-- CI/CD Pipeline: GitHub Actions
-
----
-
-**Status**: 🔄 **IN PROGRESS - PHASE 0 COMPLETED**  
-**Version**: 4.0  
-**Updated**: 2025-10-17  
-**Review**: After Phase 2 completion (Week 6)
-
----
+**Wersja**: 6.0  
+**Data utworzenia**: 2025-11-29  
+**Autor**: Projekt Orbito  
+**Status**: 🆕 Nowy plan - do implementacji

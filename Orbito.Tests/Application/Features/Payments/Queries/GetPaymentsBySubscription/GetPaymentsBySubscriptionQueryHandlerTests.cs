@@ -46,7 +46,7 @@ public class GetPaymentsBySubscriptionQueryHandlerTests : BaseTestFixture
     {
         // Arrange
         var subscriptionId = Guid.NewGuid();
-        var query = new GetPaymentsBySubscriptionQuery(subscriptionId, 1, 10);
+        var query = new GetPaymentsBySubscriptionQuery(subscriptionId, TestClientId, 1, 10);
 
         var subscription = SubscriptionTestDataBuilder.Create()
             .WithId(subscriptionId)
@@ -85,11 +85,11 @@ public class GetPaymentsBySubscriptionQueryHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeTrue();
-        result.Payments.Should().HaveCount(2);
-        result.TotalCount.Should().Be(2);
-        result.PageNumber.Should().Be(1);
-        result.PageSize.Should().Be(10);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Payments.Should().HaveCount(2);
+        result.Value.TotalCount.Should().Be(2);
+        result.Value.PageNumber.Should().Be(1);
+        result.Value.PageSize.Should().Be(10);
 
         _subscriptionRepositoryMock.Verify(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Once);
         _paymentRepositoryMock.Verify(x => x.GetBySubscriptionIdAsync(subscriptionId, 1, 10, It.IsAny<CancellationToken>()), Times.Once);
@@ -101,7 +101,7 @@ public class GetPaymentsBySubscriptionQueryHandlerTests : BaseTestFixture
     {
         // Arrange
         var subscriptionId = Guid.NewGuid();
-        var query = new GetPaymentsBySubscriptionQuery(subscriptionId, 1, 10);
+        var query = new GetPaymentsBySubscriptionQuery(subscriptionId, TestClientId, 1, 10);
 
         var subscription = SubscriptionTestDataBuilder.Create()
             .WithId(subscriptionId)
@@ -121,9 +121,9 @@ public class GetPaymentsBySubscriptionQueryHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeTrue();
-        result.Payments.Should().BeEmpty();
-        result.TotalCount.Should().Be(0);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Payments.Should().BeEmpty();
+        result.Value.TotalCount.Should().Be(0);
     }
 
     [Fact]
@@ -131,7 +131,7 @@ public class GetPaymentsBySubscriptionQueryHandlerTests : BaseTestFixture
     {
         // Arrange
         var subscriptionId = Guid.NewGuid();
-        var query = new GetPaymentsBySubscriptionQuery(subscriptionId, 2, 5);
+        var query = new GetPaymentsBySubscriptionQuery(subscriptionId, TestClientId, 2, 5);
 
         var subscription = SubscriptionTestDataBuilder.Create()
             .WithId(subscriptionId)
@@ -160,11 +160,11 @@ public class GetPaymentsBySubscriptionQueryHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeTrue();
-        result.Payments.Should().HaveCount(1);
-        result.TotalCount.Should().Be(7);
-        result.PageNumber.Should().Be(2);
-        result.PageSize.Should().Be(5);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Payments.Should().HaveCount(1);
+        result.Value.TotalCount.Should().Be(7);
+        result.Value.PageNumber.Should().Be(2);
+        result.Value.PageSize.Should().Be(5);
 
         _paymentRepositoryMock.Verify(x => x.GetBySubscriptionIdAsync(subscriptionId, 2, 5, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -178,7 +178,7 @@ public class GetPaymentsBySubscriptionQueryHandlerTests : BaseTestFixture
     {
         // Arrange
         var subscriptionId = Guid.NewGuid();
-        var query = new GetPaymentsBySubscriptionQuery(subscriptionId, 1, 10);
+        var query = new GetPaymentsBySubscriptionQuery(subscriptionId, TestClientId, 1, 10);
 
         _tenantContextMock.Setup(x => x.HasTenant).Returns(false);
 
@@ -187,9 +187,8 @@ public class GetPaymentsBySubscriptionQueryHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Be("Access denied");
-        result.Payments.Should().BeEmpty();
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Message.Should().Contain("Tenant context is not available");
 
         _subscriptionRepositoryMock.Verify(x => x.GetByIdForClientAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
         _paymentRepositoryMock.Verify(x => x.GetBySubscriptionIdAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -200,7 +199,7 @@ public class GetPaymentsBySubscriptionQueryHandlerTests : BaseTestFixture
     {
         // Arrange
         var subscriptionId = Guid.NewGuid();
-        var query = new GetPaymentsBySubscriptionQuery(subscriptionId, 1, 10);
+        var query = new GetPaymentsBySubscriptionQuery(subscriptionId, TestClientId, 1, 10);
         var differentTenantId = TenantId.New();
 
         var subscription = SubscriptionTestDataBuilder.Create()
@@ -217,9 +216,8 @@ public class GetPaymentsBySubscriptionQueryHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Be("Subscription not found");
-        result.Payments.Should().BeEmpty();
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Message.Should().Contain("Subscription was not found");
 
         _subscriptionRepositoryMock.Verify(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Once);
         _paymentRepositoryMock.Verify(x => x.GetBySubscriptionIdAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -230,7 +228,7 @@ public class GetPaymentsBySubscriptionQueryHandlerTests : BaseTestFixture
     {
         // Arrange
         var subscriptionId = Guid.NewGuid();
-        var query = new GetPaymentsBySubscriptionQuery(subscriptionId, 1, 10);
+        var query = new GetPaymentsBySubscriptionQuery(subscriptionId, TestClientId, 1, 10);
 
         _subscriptionRepositoryMock.Setup(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Subscription?)null);
@@ -240,9 +238,8 @@ public class GetPaymentsBySubscriptionQueryHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Be("Subscription not found");
-        result.Payments.Should().BeEmpty();
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Message.Should().Contain("Subscription was not found");
 
         _subscriptionRepositoryMock.Verify(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -256,16 +253,15 @@ public class GetPaymentsBySubscriptionQueryHandlerTests : BaseTestFixture
     {
         // Arrange
         var subscriptionId = Guid.NewGuid();
-        var query = new GetPaymentsBySubscriptionQuery(subscriptionId, 0, 10); // Invalid page number
+        var query = new GetPaymentsBySubscriptionQuery(subscriptionId, TestClientId, 0, 10); // Invalid page number
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Be("Invalid page number");
-        result.Payments.Should().BeEmpty();
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Message.Should().Contain("Page number must be greater than zero");
 
         _subscriptionRepositoryMock.Verify(x => x.GetByIdForClientAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -275,16 +271,15 @@ public class GetPaymentsBySubscriptionQueryHandlerTests : BaseTestFixture
     {
         // Arrange
         var subscriptionId = Guid.NewGuid();
-        var query = new GetPaymentsBySubscriptionQuery(subscriptionId, 1, 0); // Invalid page size
+        var query = new GetPaymentsBySubscriptionQuery(subscriptionId, TestClientId, 1, 0); // Invalid page size
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Be("Invalid page size");
-        result.Payments.Should().BeEmpty();
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Message.Should().Contain("Page size must be between 1 and 100");
 
         _subscriptionRepositoryMock.Verify(x => x.GetByIdForClientAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -294,16 +289,15 @@ public class GetPaymentsBySubscriptionQueryHandlerTests : BaseTestFixture
     {
         // Arrange
         var subscriptionId = Guid.NewGuid();
-        var query = new GetPaymentsBySubscriptionQuery(subscriptionId, 1, 101); // Page size too large
+        var query = new GetPaymentsBySubscriptionQuery(subscriptionId, TestClientId, 1, 101); // Page size too large
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Be("Invalid page size");
-        result.Payments.Should().BeEmpty();
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Message.Should().Contain("Page size must be between 1 and 100");
 
         _subscriptionRepositoryMock.Verify(x => x.GetByIdForClientAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -317,7 +311,7 @@ public class GetPaymentsBySubscriptionQueryHandlerTests : BaseTestFixture
     {
         // Arrange
         var subscriptionId = Guid.NewGuid();
-        var query = new GetPaymentsBySubscriptionQuery(subscriptionId, 1, 10);
+        var query = new GetPaymentsBySubscriptionQuery(subscriptionId, TestClientId, 1, 10);
 
         _subscriptionRepositoryMock.Setup(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Database connection failed"));
@@ -327,9 +321,8 @@ public class GetPaymentsBySubscriptionQueryHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Be("An error occurred while retrieving payments");
-        result.Payments.Should().BeEmpty();
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Message.Should().Contain("An unexpected error occurred");
 
         _subscriptionRepositoryMock.Verify(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -339,7 +332,7 @@ public class GetPaymentsBySubscriptionQueryHandlerTests : BaseTestFixture
     {
         // Arrange
         var subscriptionId = Guid.NewGuid();
-        var query = new GetPaymentsBySubscriptionQuery(subscriptionId, 1, 10);
+        var query = new GetPaymentsBySubscriptionQuery(subscriptionId, TestClientId, 1, 10);
 
         var subscription = SubscriptionTestDataBuilder.Create()
             .WithId(subscriptionId)
@@ -357,9 +350,8 @@ public class GetPaymentsBySubscriptionQueryHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Be("An error occurred while retrieving payments");
-        result.Payments.Should().BeEmpty();
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Message.Should().Contain("An unexpected error occurred");
 
         _subscriptionRepositoryMock.Verify(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Once);
         _paymentRepositoryMock.Verify(x => x.GetBySubscriptionIdAsync(subscriptionId, 1, 10, It.IsAny<CancellationToken>()), Times.Once);
@@ -374,7 +366,7 @@ public class GetPaymentsBySubscriptionQueryHandlerTests : BaseTestFixture
     {
         // Arrange
         var subscriptionId = Guid.NewGuid();
-        var query = new GetPaymentsBySubscriptionQuery(subscriptionId, 1, 10);
+        var query = new GetPaymentsBySubscriptionQuery(subscriptionId, TestClientId, 1, 10);
 
         var subscription = SubscriptionTestDataBuilder.Create()
             .WithId(subscriptionId)
@@ -407,10 +399,10 @@ public class GetPaymentsBySubscriptionQueryHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeTrue();
-        result.Payments.Should().HaveCount(1);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Payments.Should().HaveCount(1);
 
-        var paymentDto = result.Payments!.First();
+        var paymentDto = result.Value.Payments.First();
         paymentDto.Id.Should().Be(payment.Id);
         paymentDto.TenantId.Should().Be(TestTenantId.Value);
         paymentDto.SubscriptionId.Should().Be(subscriptionId);

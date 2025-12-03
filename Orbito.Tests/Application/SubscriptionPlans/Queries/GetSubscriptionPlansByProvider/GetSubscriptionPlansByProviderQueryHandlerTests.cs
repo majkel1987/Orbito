@@ -2,8 +2,10 @@ using FluentAssertions;
 using Moq;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.SubscriptionPlans.Queries.GetSubscriptionPlansByProvider;
+using Orbito.Domain.Common;
 using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
+using Orbito.Domain.Errors;
 using Orbito.Domain.ValueObjects;
 using Xunit;
 
@@ -22,10 +24,16 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Queries.GetSubscriptionPlan
             _unitOfWorkMock = new Mock<IUnitOfWork>();
             _subscriptionPlanRepositoryMock = new Mock<ISubscriptionPlanRepository>();
             _tenantContextMock = new Mock<ITenantContext>();
-            _handler = new GetSubscriptionPlansByProviderQueryHandler(_unitOfWorkMock.Object, _tenantContextMock.Object);
             _tenantId = TenantId.New();
 
             _unitOfWorkMock.Setup(x => x.SubscriptionPlans).Returns(_subscriptionPlanRepositoryMock.Object);
+
+            var loggerMock = new Mock<Microsoft.Extensions.Logging.ILogger<GetSubscriptionPlansByProviderQueryHandler>>();
+
+            _handler = new GetSubscriptionPlansByProviderQueryHandler(
+                _unitOfWorkMock.Object,
+                _tenantContextMock.Object,
+                loggerMock.Object);
         }
 
         [Fact]
@@ -68,24 +76,25 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Queries.GetSubscriptionPlan
             var result = await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Items.Should().HaveCount(2);
-            result.TotalCount.Should().Be(2);
-            result.PageNumber.Should().Be(1);
-            result.PageSize.Should().Be(10);
-            result.TotalPages.Should().Be(1);
-            result.HasPreviousPage.Should().BeFalse();
-            result.HasNextPage.Should().BeFalse();
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Items.Should().HaveCount(2);
+            result.Value.TotalCount.Should().Be(2);
+            result.Value.PageNumber.Should().Be(1);
+            result.Value.PageSize.Should().Be(10);
+            result.Value.TotalPages.Should().Be(1);
+            result.Value.HasPreviousPage.Should().BeFalse();
+            result.Value.HasNextPage.Should().BeFalse();
 
-            result.Items[0].Name.Should().Be("Plan 1");
-            result.Items[0].Amount.Should().Be(29.99m);
-            result.Items[0].Currency.Should().Be("USD");
-            result.Items[0].BillingPeriod.Should().Be("1 Monthly");
+            result.Value.Items[0].Name.Should().Be("Plan 1");
+            result.Value.Items[0].Amount.Should().Be(29.99m);
+            result.Value.Items[0].Currency.Should().Be("USD");
+            result.Value.Items[0].BillingPeriod.Should().Be("1 Monthly");
 
-            result.Items[1].Name.Should().Be("Plan 2");
-            result.Items[1].Amount.Should().Be(99.99m);
-            result.Items[1].Currency.Should().Be("USD");
-            result.Items[1].BillingPeriod.Should().Be("1 Yearly");
+            result.Value.Items[1].Name.Should().Be("Plan 2");
+            result.Value.Items[1].Amount.Should().Be(99.99m);
+            result.Value.Items[1].Currency.Should().Be("USD");
+            result.Value.Items[1].BillingPeriod.Should().Be("1 Yearly");
 
             _subscriptionPlanRepositoryMock.Verify(x => x.GetAllAsync(
                 query.PageNumber,
@@ -144,10 +153,11 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Queries.GetSubscriptionPlan
             var result = await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Items.Should().HaveCount(1);
-            result.Items[0].Name.Should().Be("Active Plan");
-            result.Items[0].IsActive.Should().BeTrue();
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Items.Should().HaveCount(1);
+            result.Value.Items[0].Name.Should().Be("Active Plan");
+            result.Value.Items[0].IsActive.Should().BeTrue();
         }
 
         [Fact]
@@ -192,10 +202,11 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Queries.GetSubscriptionPlan
             var result = await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Items.Should().HaveCount(1);
-            result.Items[0].Name.Should().Be("Public Plan");
-            result.Items[0].IsPublic.Should().BeTrue();
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Items.Should().HaveCount(1);
+            result.Value.Items[0].Name.Should().Be("Public Plan");
+            result.Value.Items[0].IsPublic.Should().BeTrue();
         }
 
         [Fact]
@@ -237,9 +248,10 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Queries.GetSubscriptionPlan
             var result = await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Items.Should().HaveCount(1);
-            result.Items[0].Name.Should().Be("Premium Plan");
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Items.Should().HaveCount(1);
+            result.Value.Items[0].Name.Should().Be("Premium Plan");
         }
 
         [Fact]
@@ -282,14 +294,15 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Queries.GetSubscriptionPlan
             var result = await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Items.Should().HaveCount(2);
-            result.TotalCount.Should().Be(12);
-            result.PageNumber.Should().Be(2);
-            result.PageSize.Should().Be(5);
-            result.TotalPages.Should().Be(3); // Math.Ceiling(12/5) = 3
-            result.HasPreviousPage.Should().BeTrue();
-            result.HasNextPage.Should().BeTrue();
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Items.Should().HaveCount(2);
+            result.Value.TotalCount.Should().Be(12);
+            result.Value.PageNumber.Should().Be(2);
+            result.Value.PageSize.Should().Be(5);
+            result.Value.TotalPages.Should().Be(3); // Math.Ceiling(12/5) = 3
+            result.Value.HasPreviousPage.Should().BeTrue();
+            result.Value.HasNextPage.Should().BeTrue();
         }
 
         [Fact]
@@ -326,14 +339,15 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Queries.GetSubscriptionPlan
             var result = await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Items.Should().BeEmpty();
-            result.TotalCount.Should().Be(0);
-            result.PageNumber.Should().Be(1);
-            result.PageSize.Should().Be(10);
-            result.TotalPages.Should().Be(0);
-            result.HasPreviousPage.Should().BeFalse();
-            result.HasNextPage.Should().BeFalse();
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Items.Should().BeEmpty();
+            result.Value.TotalCount.Should().Be(0);
+            result.Value.PageNumber.Should().Be(1);
+            result.Value.PageSize.Should().Be(10);
+            result.Value.TotalPages.Should().Be(0);
+            result.Value.HasPreviousPage.Should().BeFalse();
+            result.Value.HasNextPage.Should().BeFalse();
         }
 
         [Fact]
@@ -373,14 +387,15 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Queries.GetSubscriptionPlan
             var result = await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Items.Should().HaveCount(1);
-            result.Items[0].ActiveSubscriptionsCount.Should().Be(0); // No subscriptions added in this test
-            result.Items[0].TotalSubscriptionsCount.Should().Be(0);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Items.Should().HaveCount(1);
+            result.Value.Items[0].ActiveSubscriptionsCount.Should().Be(0); // No subscriptions added in this test
+            result.Value.Items[0].TotalSubscriptionsCount.Should().Be(0);
         }
 
         [Fact]
-        public async Task Handle_WithoutTenantContext_ShouldThrowException()
+        public async Task Handle_WithoutTenantContext_ShouldReturnFailure()
         {
             // Arrange
             var query = new GetSubscriptionPlansByProviderQuery
@@ -394,11 +409,20 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Queries.GetSubscriptionPlan
 
             _tenantContextMock.Setup(x => x.HasTenant).Returns(false);
 
-            // Act & Assert
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-                () => _handler.Handle(query, CancellationToken.None));
+            // Act
+            var result = await _handler.Handle(query, CancellationToken.None);
 
-            exception.Message.Should().Be("Tenant context is required to get subscription plans");
+            // Assert
+            result.IsFailure.Should().BeTrue();
+            result.Error.Should().Be(DomainErrors.Tenant.NoTenantContext);
+
+            _subscriptionPlanRepositoryMock.Verify(x => x.GetAllAsync(
+                It.IsAny<int>(),
+                It.IsAny<int>(),
+                It.IsAny<string?>(),
+                It.IsAny<bool>(),
+                It.IsAny<bool>(),
+                It.IsAny<CancellationToken>()), Times.Never);
         }
     }
 }

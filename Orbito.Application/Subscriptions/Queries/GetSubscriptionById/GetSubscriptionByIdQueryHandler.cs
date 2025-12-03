@@ -1,26 +1,41 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
+using Orbito.Application.DTOs;
+using Orbito.Domain.Common;
+using Orbito.Domain.Errors;
 
 namespace Orbito.Application.Subscriptions.Queries.GetSubscriptionById
 {
-    public class GetSubscriptionByIdQueryHandler : IRequestHandler<GetSubscriptionByIdQuery, GetSubscriptionByIdResult?>
+    public class GetSubscriptionByIdQueryHandler : IRequestHandler<GetSubscriptionByIdQuery, Result<SubscriptionDto>>
     {
         private readonly ISubscriptionRepository _subscriptionRepository;
+        private readonly ITenantContext _tenantContext;
         private readonly ILogger<GetSubscriptionByIdQueryHandler> _logger;
 
         public GetSubscriptionByIdQueryHandler(
             ISubscriptionRepository subscriptionRepository,
+            ITenantContext tenantContext,
             ILogger<GetSubscriptionByIdQueryHandler> logger)
         {
             _subscriptionRepository = subscriptionRepository;
+            _tenantContext = tenantContext;
             _logger = logger;
         }
 
-        public async Task<GetSubscriptionByIdResult?> Handle(GetSubscriptionByIdQuery request, CancellationToken cancellationToken)
+        public async Task<Result<SubscriptionDto>> Handle(GetSubscriptionByIdQuery request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Getting subscription {SubscriptionId} with details: {IncludeDetails}", 
+            _logger.LogInformation("Getting subscription {SubscriptionId} with details: {IncludeDetails}",
                 request.SubscriptionId, request.IncludeDetails);
+
+            // SECURITY: Verify tenant context
+            if (!_tenantContext.HasTenant)
+            {
+                _logger.LogWarning("No tenant context for subscription query {SubscriptionId}", request.SubscriptionId);
+                return Result.Failure<SubscriptionDto>(DomainErrors.Tenant.NoTenantContext);
+            }
+
+            var tenantId = _tenantContext.CurrentTenantId!;
 
             var subscription = request.IncludeDetails
                 ? await _subscriptionRepository.GetByIdWithDetailsAsync(request.SubscriptionId, cancellationToken)
@@ -29,23 +44,34 @@ namespace Orbito.Application.Subscriptions.Queries.GetSubscriptionById
             if (subscription == null)
             {
                 _logger.LogWarning("Subscription {SubscriptionId} not found", request.SubscriptionId);
-                return null;
+                return Result.Failure<SubscriptionDto>(DomainErrors.Subscription.NotFound);
             }
 
-            var result = new GetSubscriptionByIdResult
+            // SECURITY: Verify tenant ownership
+            if (subscription.TenantId != tenantId)
+            {
+                _logger.LogWarning("Cross-tenant access attempt: Subscription {SubscriptionId} does not belong to tenant {TenantId}",
+                    request.SubscriptionId, tenantId);
+                return Result.Failure<SubscriptionDto>(DomainErrors.Tenant.CrossTenantAccess);
+            }
+
+            var dto = new SubscriptionDto
             {
                 Id = subscription.Id,
+                TenantId = subscription.TenantId.Value,
                 ClientId = subscription.ClientId,
                 PlanId = subscription.PlanId,
-                Status = subscription.Status,
-                CurrentPrice = subscription.CurrentPrice.Amount,
+                Status = subscription.Status.ToString(),
+                Amount = subscription.CurrentPrice.Amount,
                 Currency = subscription.CurrentPrice.Currency,
-                BillingPeriod = subscription.BillingPeriod.ToString(),
+                BillingPeriodValue = subscription.BillingPeriod.Value,
+                BillingPeriodType = subscription.BillingPeriod.Type.ToString(),
                 StartDate = subscription.StartDate,
                 EndDate = subscription.EndDate,
                 NextBillingDate = subscription.NextBillingDate,
                 IsInTrial = subscription.IsInTrial,
                 TrialEndDate = subscription.TrialEndDate,
+                ExternalSubscriptionId = subscription.ExternalSubscriptionId,
                 CreatedAt = subscription.CreatedAt,
                 CancelledAt = subscription.CancelledAt,
                 UpdatedAt = subscription.UpdatedAt
@@ -53,7 +79,7 @@ namespace Orbito.Application.Subscriptions.Queries.GetSubscriptionById
 
             if (request.IncludeDetails)
             {
-                result = result with
+                dto = dto with
                 {
                     ClientCompanyName = subscription.Client?.CompanyName,
                     ClientEmail = subscription.Client?.DirectEmail,
@@ -69,7 +95,7 @@ namespace Orbito.Application.Subscriptions.Queries.GetSubscriptionById
 
             _logger.LogInformation("Successfully retrieved subscription {SubscriptionId}", request.SubscriptionId);
 
-            return result;
+            return Result.Success(dto);
         }
     }
 }

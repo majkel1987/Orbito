@@ -20,28 +20,38 @@ namespace Orbito.API.Middleware
         {
             try
             {
+                _logger.LogDebug("TenantMiddleware: Sprawdzanie kontekstu tenanta dla {Path}", context.Request.Path);
+                
                 // Wyczyść poprzedni kontekst tenanta
                 tenantContext.ClearTenant();
 
                 // Sprawdź czy użytkownik jest zalogowany
                 if (context.User.Identity?.IsAuthenticated == true)
                 {
+                    _logger.LogDebug("TenantMiddleware: Użytkownik jest zalogowany: {UserId}", 
+                        context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                    
                     // Pobierz TenantId z JWT claims
                     var tenantIdClaim = context.User.FindFirst("tenant_id")?.Value;
+                    _logger.LogDebug("TenantMiddleware: TenantId claim: {TenantIdClaim}", tenantIdClaim);
                     
                     if (!string.IsNullOrEmpty(tenantIdClaim) && Guid.TryParse(tenantIdClaim, out var tenantIdGuid))
                     {
                         var tenantId = TenantId.Create(tenantIdGuid);
                         tenantContext.SetTenant(tenantId);
                         
-                        _logger.LogDebug("Tenant context ustawiony: {TenantId} dla użytkownika {UserId}", 
+                        _logger.LogInformation("Tenant context ustawiony: {TenantId} dla użytkownika {UserId}", 
                             tenantId.Value, context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
                     }
                     else
                     {
-                        _logger.LogDebug("Brak TenantId w claims dla użytkownika {UserId}", 
+                        _logger.LogWarning("Brak TenantId w claims dla użytkownika {UserId}", 
                             context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
                     }
+                }
+                else
+                {
+                    _logger.LogDebug("TenantMiddleware: Użytkownik nie jest zalogowany");
                 }
 
                 // Sprawdź czy TenantId jest w headerze (dla API calls)

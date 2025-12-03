@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Orbito.Domain.ValueObjects;
+using Orbito.Domain.Enums;
 
 namespace Orbito.Infrastructure.Data.Configurations.ValueObjects
 {
@@ -87,6 +88,21 @@ namespace Orbito.Infrastructure.Data.Configurations.ValueObjects
                     tenantId => tenantId != null ? tenantId.Value : (Guid?)null,
                     guid => guid.HasValue ? TenantId.Create(guid.Value) : null);
 
+            modelBuilder.Entity<Domain.Entities.ReconciliationReport>()
+                .Property(rr => rr.TenantId)
+                .HasConversion(
+                    tenantId => tenantId.Value,
+                    guid => TenantId.Create(guid));
+
+            modelBuilder.Entity<Domain.Entities.PaymentDiscrepancy>()
+                .Property(pd => pd.TenantId)
+                .HasConversion(
+                    tenantId => tenantId.Value,
+                    guid => TenantId.Create(guid));
+
+            // NOTE: TeamMember.TenantId configuration is in TeamMemberConfiguration.cs
+            // to avoid duplication and conflicts with EF Core value converters
+
             // IdempotencyKey Value Object Configuration
             modelBuilder.Entity<Domain.Entities.Payment>()
                 .Property(p => p.IdempotencyKey)
@@ -95,6 +111,49 @@ namespace Orbito.Infrastructure.Data.Configurations.ValueObjects
                     key => key != null ? IdempotencyKey.Create(key) : null)
                 .HasMaxLength(100)  // FIXED: Match IdempotencySettings.MaxKeyLength
                 .IsUnicode(true);   // Support international characters
+        }
+
+        /// <summary>
+        /// Configures global enum to string converters for all enum properties
+        /// This prevents InvalidCastException by properly handling type conversion
+        /// </summary>
+        /// <param name="modelBuilder">EF Core ModelBuilder</param>
+        public static void ConfigureEnumConverters(this ModelBuilder modelBuilder)
+        {
+            // SubscriptionStatus converter
+            var subscriptionStatusConverter = new EnumToStringConverter<SubscriptionStatus>();
+            modelBuilder.Entity<Domain.Entities.Subscription>()
+                .Property(s => s.Status)
+                .HasConversion(subscriptionStatusConverter)
+                .HasMaxLength(50)
+                .IsRequired();
+
+            // PaymentStatus converter
+            var paymentStatusConverter = new EnumToStringConverter<PaymentStatus>();
+            modelBuilder.Entity<Domain.Entities.Payment>()
+                .Property(p => p.Status)
+                .HasConversion(paymentStatusConverter)
+                .HasMaxLength(50)
+                .IsRequired();
+
+            // BillingPeriodType converter for Subscription
+            var billingPeriodTypeConverter = new EnumToStringConverter<BillingPeriodType>();
+            modelBuilder.Entity<Domain.Entities.Subscription>()
+                .OwnsOne(s => s.BillingPeriod)
+                .Property(bp => bp.Type)
+                .HasConversion(billingPeriodTypeConverter)
+                .HasColumnName("BillingPeriodType")
+                .HasMaxLength(20)
+                .IsRequired();
+
+            // BillingPeriodType converter for SubscriptionPlan
+            modelBuilder.Entity<Domain.Entities.SubscriptionPlan>()
+                .OwnsOne(p => p.BillingPeriod)
+                .Property(bp => bp.Type)
+                .HasConversion(billingPeriodTypeConverter)
+                .HasColumnName("BillingPeriodType")
+                .HasMaxLength(20)
+                .IsRequired();
         }
     }
 }

@@ -45,7 +45,7 @@ namespace Orbito.Infrastructure.Persistance
         }
 
         public IProviderRepository Providers => _providers ??= new ProviderRepository(_context);
-        public IClientRepository Clients => _clients ??= new ClientRepository(_context);
+        public IClientRepository Clients => _clients ??= new ClientRepository(_context, _tenantProvider);
         public ISubscriptionRepository Subscriptions => _subscriptions ??= new SubscriptionRepository(_context);
         public ISubscriptionPlanRepository SubscriptionPlans => _subscriptionPlans ??= new SubscriptionPlanRepository(_context);
         public IPaymentRepository Payments => _payments ??= new PaymentRepository(_context, _tenantContext, _loggerFactory.CreateLogger<PaymentRepository>(), _securityLimitService);
@@ -55,6 +55,14 @@ namespace Orbito.Infrastructure.Persistance
         public IEmailNotificationRepository EmailNotifications => _emailNotifications ??= new EmailNotificationRepository(_context);
 
         public bool HasActiveTransaction => _transaction != null;
+
+        /// <summary>
+        /// Create execution strategy compatible with retry logic and manual transactions
+        /// </summary>
+        public IExecutionStrategy CreateExecutionStrategy()
+        {
+            return _context.Database.CreateExecutionStrategy();
+        }
 
          public async Task<Result> BeginTransactionAsync(CancellationToken cancellationToken = default)
          {

@@ -135,7 +135,10 @@ namespace Orbito.Infrastructure.Persistance
             if (plan == null)
                 return false;
 
-            return !plan.Subscriptions.Any(s => s.Status == SubscriptionStatus.Active);
+            // IMPORTANT: When checking loaded navigation properties, we can use enum directly
+            // because data is already materialized in memory. However, for consistency and safety,
+            // we'll check the string value to avoid any potential issues.
+            return !plan.Subscriptions.Any(s => EF.Property<string>(s, "Status") == "Active");
         }
 
         public async Task<bool> IsPlanNameUniqueAsync(string name, Guid? excludePlanId = null, CancellationToken cancellationToken = default)

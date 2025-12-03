@@ -1,29 +1,43 @@
 using MediatR;
+using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
+using Orbito.Domain.Common;
 using Orbito.Domain.Entities;
+using Orbito.Domain.Errors;
 using Orbito.Domain.ValueObjects;
 
 namespace Orbito.Application.SubscriptionPlans.Commands.CloneSubscriptionPlan
 {
-    public class CloneSubscriptionPlanCommandHandler : IRequestHandler<CloneSubscriptionPlanCommand, CloneSubscriptionPlanResult>
+    public class CloneSubscriptionPlanCommandHandler : IRequestHandler<CloneSubscriptionPlanCommand, Result<CloneSubscriptionPlanResult>>
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ITenantContext _tenantContext;
+        private readonly ILogger<CloneSubscriptionPlanCommandHandler> _logger;
 
-        public CloneSubscriptionPlanCommandHandler(IUnitOfWork unitOfWork, ITenantContext tenantContext)
+        public CloneSubscriptionPlanCommandHandler(
+            IUnitOfWork unitOfWork,
+            ITenantContext tenantContext,
+            ILogger<CloneSubscriptionPlanCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
             _tenantContext = tenantContext;
+            _logger = logger;
         }
 
-        public async Task<CloneSubscriptionPlanResult> Handle(CloneSubscriptionPlanCommand request, CancellationToken cancellationToken)
+        public async Task<Result<CloneSubscriptionPlanResult>> Handle(CloneSubscriptionPlanCommand request, CancellationToken cancellationToken)
         {
             if (!_tenantContext.HasTenant)
-                throw new InvalidOperationException("Tenant context is required to clone subscription plan");
+            {
+                _logger.LogWarning("Attempted to clone subscription plan without tenant context");
+                return Result.Failure<CloneSubscriptionPlanResult>(DomainErrors.Tenant.NoTenantContext);
+            }
 
             var originalPlan = await _unitOfWork.SubscriptionPlans.GetByIdAsync(request.Id, cancellationToken);
             if (originalPlan == null)
-                throw new InvalidOperationException($"Subscription plan with ID {request.Id} not found");
+            {
+                _logger.LogWarning("Subscription plan {PlanId} not found for cloning", request.Id);
+                return Result.Failure<CloneSubscriptionPlanResult>(DomainErrors.SubscriptionPlan.NotFound);
+            }
 
             // Create new plan based on original
             var clonedPlan = SubscriptionPlan.Create(
@@ -50,7 +64,7 @@ namespace Orbito.Application.SubscriptionPlans.Commands.CloneSubscriptionPlan
             await _unitOfWork.SubscriptionPlans.AddAsync(clonedPlan, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            return new CloneSubscriptionPlanResult
+            var result = new CloneSubscriptionPlanResult
             {
                 Id = clonedPlan.Id,
                 Name = clonedPlan.Name,
@@ -65,6 +79,14 @@ namespace Orbito.Application.SubscriptionPlans.Commands.CloneSubscriptionPlan
                 CreatedAt = clonedPlan.CreatedAt,
                 OriginalPlanId = originalPlan.Id
             };
+
+            _logger.LogInformation(
+                "Cloned subscription plan {OriginalPlanId} to {NewPlanId} with name {NewPlanName}",
+                originalPlan.Id,
+                clonedPlan.Id,
+                clonedPlan.Name);
+
+            return Result.Success(result);
         }
     }
 }

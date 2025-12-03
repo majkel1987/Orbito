@@ -77,6 +77,9 @@ namespace Orbito.Application.Features.Payments.Commands.UpdatePaymentFromWebhook
         {
             try
             {
+                // Check for cancellation before starting
+                cancellationToken.ThrowIfCancellationRequested();
+
                 _logger.LogInformation("Updating payment {PaymentId} from webhook event {EventType} with EventId {EventId}",
                     request.PaymentId, request.EventType, request.EventId);
 
@@ -92,9 +95,7 @@ namespace Orbito.Application.Features.Payments.Commands.UpdatePaymentFromWebhook
                 // Get the payment
                 // NOTE: Using deprecated method because this command is not used in production code
                 // and is only for testing purposes
-#pragma warning disable CS0618 // Type or member is obsolete
-                var payment = await _unitOfWork.Payments.GetByIdAsync(request.PaymentId, cancellationToken);
-#pragma warning restore CS0618 // Type or member is obsolete
+                var payment = await _unitOfWork.Payments.GetByIdUnsafeAsync(request.PaymentId, cancellationToken);
                 if (payment == null)
                 {
                     _logger.LogWarning("Payment {PaymentId} not found", request.PaymentId);
@@ -178,10 +179,22 @@ namespace Orbito.Application.Features.Payments.Commands.UpdatePaymentFromWebhook
 
                 // Save changes
                 await _unitOfWork.Payments.UpdateAsync(payment, cancellationToken);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                if (!saveResult.IsSuccess)
+                {
+                    _logger.LogError("Failed to save payment update from webhook: {Error}", saveResult.ErrorMessage);
+                    var error = Error.Create("Payment.SaveFailed", saveResult.ErrorMessage ?? "Failed to save payment method");
+                    return Result.Failure(error);
+                }
 
                 _logger.LogInformation("Successfully updated payment {PaymentId} from webhook", request.PaymentId);
                 return Result.Success();
+            }
+            catch (OperationCanceledException)
+            {
+                // Rethrow cancellation exceptions - they should not be caught
+                throw;
             }
             catch (Exception ex)
             {

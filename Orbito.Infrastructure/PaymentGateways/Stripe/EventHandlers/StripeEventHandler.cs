@@ -86,15 +86,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
                     paymentIntent.Id, paymentIntent.Amount, paymentIntent.Currency);
 
                 // Find payment by external ID
-                // NOTE: Using deprecated method because this handler is called from webhook processing
-                // that is already verified by StripeSignatureVerificationMiddleware and runs in admin context
-#pragma warning disable CS0618 // Type or member is obsolete
-                // NOTE: Using deprecated method because this handler is called from webhook processing
-                // that is already verified by StripeSignatureVerificationMiddleware and runs in admin context
-#pragma warning disable CS0618 // Type or member is obsolete
-                var payment = await _unitOfWork.Payments.GetByExternalPaymentIdAsync(paymentIntent.Id, cancellationToken);
-#pragma warning restore CS0618 // Type or member is obsolete
-#pragma warning restore CS0618 // Type or member is obsolete
+                var payment = await _unitOfWork.Payments.GetByExternalPaymentIdUnsafeAsync(paymentIntent.Id, cancellationToken);
                 if (payment == null)
                 {
                     _logger.LogWarning("Payment not found for payment intent: {PaymentIntentId}", paymentIntent.Id);
@@ -143,15 +135,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
                     paymentIntent.Id, paymentIntent.Status);
 
                 // Find payment by external ID
-                // NOTE: Using deprecated method because this handler is called from webhook processing
-                // that is already verified by StripeSignatureVerificationMiddleware and runs in admin context
-#pragma warning disable CS0618 // Type or member is obsolete
-                // NOTE: Using deprecated method because this handler is called from webhook processing
-                // that is already verified by StripeSignatureVerificationMiddleware and runs in admin context
-#pragma warning disable CS0618 // Type or member is obsolete
-                var payment = await _unitOfWork.Payments.GetByExternalPaymentIdAsync(paymentIntent.Id, cancellationToken);
-#pragma warning restore CS0618 // Type or member is obsolete
-#pragma warning restore CS0618 // Type or member is obsolete
+                var payment = await _unitOfWork.Payments.GetByExternalPaymentIdUnsafeAsync(paymentIntent.Id, cancellationToken);
                 if (payment == null)
                 {
                     _logger.LogWarning("Payment not found for payment intent: {PaymentIntentId}", paymentIntent.Id);
@@ -193,11 +177,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
                     return Result.Failure("Failed to parse payment intent data");
                 }
 
-                // NOTE: Using deprecated method because this handler is called from webhook processing
-                // that is already verified by StripeSignatureVerificationMiddleware and runs in admin context
-#pragma warning disable CS0618 // Type or member is obsolete
-                var payment = await _unitOfWork.Payments.GetByExternalPaymentIdAsync(paymentIntent.Id, cancellationToken);
-#pragma warning restore CS0618 // Type or member is obsolete
+                var payment = await _unitOfWork.Payments.GetByExternalPaymentIdUnsafeAsync(paymentIntent.Id, cancellationToken);
                 if (payment == null)
                 {
                     _logger.LogWarning("Payment not found for payment intent: {PaymentIntentId}", paymentIntent.Id);
@@ -242,11 +222,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
                     charge.Id, charge.AmountRefunded, charge.Amount);
 
                 // Find payment by external ID
-                // NOTE: Using deprecated method because this handler is called from webhook processing
-                // that is already verified by StripeSignatureVerificationMiddleware and runs in admin context
-#pragma warning disable CS0618 // Type or member is obsolete
-                var payment = await _unitOfWork.Payments.GetByExternalPaymentIdAsync(charge.PaymentIntent, cancellationToken);
-#pragma warning restore CS0618 // Type or member is obsolete
+                var payment = await _unitOfWork.Payments.GetByExternalPaymentIdUnsafeAsync(charge.PaymentIntent, cancellationToken);
                 if (payment == null)
                 {
                     _logger.LogWarning("Payment not found for payment intent: {PaymentIntentId}", charge.PaymentIntent);
@@ -539,11 +515,7 @@ private async Task<Result> HandleInvoicePaymentSucceededAsync(StripeWebhookData 
         }
 
         // Find payment by external ID
-        // NOTE: Using deprecated method because this handler is called from webhook processing
-        // that is already verified by StripeSignatureVerificationMiddleware and runs in admin context
-#pragma warning disable CS0618 // Type or member is obsolete
-        var payment = await _unitOfWork.Payments.GetByExternalPaymentIdAsync(invoice.PaymentIntent, cancellationToken);
-#pragma warning restore CS0618 // Type or member is obsolete
+        var payment = await _unitOfWork.Payments.GetByExternalPaymentIdUnsafeAsync(invoice.PaymentIntent, cancellationToken);
         if (payment == null)
         {
             _logger.LogWarning("Payment not found for payment intent: {PaymentIntentId}", invoice.PaymentIntent);
@@ -604,11 +576,7 @@ private async Task<Result> HandleInvoicePaymentFailedAsync(StripeWebhookData web
         }
 
         // Find payment by external ID
-        // NOTE: Using deprecated method because this handler is called from webhook processing
-        // that is already verified by StripeSignatureVerificationMiddleware and runs in admin context
-#pragma warning disable CS0618 // Type or member is obsolete
-        var payment = await _unitOfWork.Payments.GetByExternalPaymentIdAsync(invoice.PaymentIntent, cancellationToken);
-#pragma warning restore CS0618 // Type or member is obsolete
+        var payment = await _unitOfWork.Payments.GetByExternalPaymentIdUnsafeAsync(invoice.PaymentIntent, cancellationToken);
         if (payment == null)
         {
             _logger.LogWarning("Payment not found for payment intent: {PaymentIntentId}", invoice.PaymentIntent);

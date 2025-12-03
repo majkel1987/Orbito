@@ -1,67 +1,56 @@
+using Orbito.Application.DTOs;
+using Orbito.Application.Common.Models;
 using MediatR;
 using Orbito.Application.Common.Interfaces;
-using Orbito.Application.Clients.Commands.CreateClient;
 
 namespace Orbito.Application.Clients.Queries.GetClientsByProvider
 {
-    public class GetClientsByProviderQueryHandler : IRequestHandler<GetClientsByProviderQuery, GetClientsByProviderResult>
+    public class GetClientsByProviderQueryHandler : IRequestHandler<GetClientsByProviderQuery, Orbito.Domain.Common.Result<PaginatedList<ClientDto>>>
     {
         private readonly IClientRepository _clientRepository;
-        private readonly ITenantContext _tenantContext;
 
         public GetClientsByProviderQueryHandler(
-            IClientRepository clientRepository,
-            ITenantContext tenantContext)
+            IClientRepository clientRepository)
         {
             _clientRepository = clientRepository;
-            _tenantContext = tenantContext;
         }
 
-        public async Task<GetClientsByProviderResult> Handle(GetClientsByProviderQuery request, CancellationToken cancellationToken)
+        public async Task<Orbito.Domain.Common.Result<PaginatedList<ClientDto>>> Handle(GetClientsByProviderQuery request, CancellationToken cancellationToken)
         {
-            try
+            // Query filters w ApplicationDbContext automatycznie obsługują filtrowanie po TenantId
+            // Jeśli nie ma TenantId, query filters zwrócą puste wyniki (bezpieczne zachowanie)
+
+            // Pobierz klientów
+            IEnumerable<Orbito.Domain.Entities.Client> clients;
+            int totalCount;
+
+            if (request.ActiveOnly)
             {
-                // Sprawdź czy mamy kontekst tenanta
-                if (!_tenantContext.HasTenant)
-                {
-                    return GetClientsByProviderResult.FailureResult("Tenant context is required");
-                }
-
-                // Pobierz klientów
-                IEnumerable<Orbito.Domain.Entities.Client> clients;
-                int totalCount;
-
-                if (request.ActiveOnly)
-                {
-                    clients = await _clientRepository.GetActiveClientsAsync(
-                        request.PageNumber,
-                        request.PageSize,
-                        request.SearchTerm,
-                        cancellationToken);
-                    totalCount = await _clientRepository.GetActiveClientsCountAsync(request.SearchTerm, cancellationToken);
-                }
-                else
-                {
-                    clients = await _clientRepository.GetAllAsync(
-                        request.PageNumber,
-                        request.PageSize,
-                        request.SearchTerm,
-                        cancellationToken);
-                    totalCount = await _clientRepository.GetTotalCountAsync(request.SearchTerm, cancellationToken);
-                }
-
-                var clientDtos = clients.Select(MapToDto).ToList();
-
-                return GetClientsByProviderResult.SuccessResult(
-                    clientDtos,
-                    totalCount,
+                clients = await _clientRepository.GetActiveClientsAsync(
                     request.PageNumber,
-                    request.PageSize);
+                    request.PageSize,
+                    request.SearchTerm,
+                    cancellationToken);
+                totalCount = await _clientRepository.GetActiveClientsCountAsync(request.SearchTerm, cancellationToken);
             }
-            catch (Exception ex)
+            else
             {
-                return GetClientsByProviderResult.FailureResult($"An error occurred while retrieving clients: {ex.Message}");
+                clients = await _clientRepository.GetAllAsync(
+                    request.PageNumber,
+                    request.PageSize,
+                    request.SearchTerm,
+                    cancellationToken);
+                totalCount = await _clientRepository.GetTotalCountAsync(request.SearchTerm, cancellationToken);
             }
+
+            var clientDtos = clients.Select(MapToDto).ToList();
+            var paginatedList = new PaginatedList<ClientDto>(
+                clientDtos,
+                totalCount,
+                request.PageNumber,
+                request.PageSize);
+
+            return Orbito.Domain.Common.Result.Success(paginatedList);
         }
 
         private static ClientDto MapToDto(Orbito.Domain.Entities.Client client)

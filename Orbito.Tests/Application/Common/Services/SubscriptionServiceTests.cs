@@ -551,22 +551,17 @@ namespace Orbito.Tests.Application.Common.Services
             // Arrange
             var daysBeforeExpiration = 7;
             var checkDate = DateTime.UtcNow;
-            var expiringSubscriptions = new List<Subscription>
-            {
-                CreateTestSubscription(),
-                CreateTestSubscription()
-            };
 
             _dateTimeMock.Setup(x => x.UtcNow).Returns(checkDate);
-            _subscriptionRepositoryMock.Setup(x => x.GetExpiringSubscriptionsByClientAsync(It.IsAny<Guid>(), checkDate, daysBeforeExpiration, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(expiringSubscriptions);
 
             // Act
             var result = await _subscriptionService.GetExpiringSubscriptionsAsync(daysBeforeExpiration);
 
             // Assert
-            result.Should().HaveCount(2);
-            _subscriptionRepositoryMock.Verify(x => x.GetExpiringSubscriptionsByClientAsync(It.IsAny<Guid>(), checkDate, daysBeforeExpiration, It.IsAny<CancellationToken>()), Times.Once);
+            // NOTE: This method returns empty list for security reasons (see SubscriptionService.cs line 187)
+            // Background jobs should use tenant-specific methods instead
+            result.Should().BeEmpty();
+            _subscriptionRepositoryMock.Verify(x => x.GetExpiringSubscriptionsByClientAsync(It.IsAny<Guid>(), checkDate, daysBeforeExpiration, It.IsAny<CancellationToken>()), Times.Never);
         }
 
         #endregion
@@ -585,20 +580,21 @@ namespace Orbito.Tests.Application.Common.Services
             };
 
             _dateTimeMock.Setup(x => x.UtcNow).Returns(checkDate);
-            _subscriptionRepositoryMock.Setup(x => x.GetExpiredSubscriptionsByClientAsync(It.IsAny<Guid>(), checkDate, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(expiredSubscriptions);
 
             // Act
             await _subscriptionService.ProcessExpiredSubscriptionsAsync();
 
             // Assert
+            // NOTE: This method does not process subscriptions for security reasons (see SubscriptionService.cs line 198)
+            // Background jobs should use tenant-specific methods instead
+            // Subscriptions should remain unchanged
             foreach (var subscription in expiredSubscriptions)
             {
-                subscription.Status.Should().Be(SubscriptionStatus.Expired);
-                subscription.EndDate.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
+                subscription.Status.Should().Be(SubscriptionStatus.Active); // Status unchanged
             }
 
-            _subscriptionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Subscription>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+            _subscriptionRepositoryMock.Verify(x => x.GetExpiredSubscriptionsByClientAsync(It.IsAny<Guid>(), checkDate, It.IsAny<CancellationToken>()), Times.Never);
+            _subscriptionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Subscription>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
         #endregion
@@ -690,14 +686,12 @@ namespace Orbito.Tests.Application.Common.Services
             var planId = Guid.NewGuid();
             var price = Money.Create(29.99m, "USD");
             var billingPeriod = BillingPeriod.Create(1, BillingPeriodType.Monthly);
-            var differentTenantId = TenantId.New();
 
-            var clientFromDifferentTenant = Client.CreateWithUser(differentTenantId, Guid.NewGuid(), "Test Company");
+            // Mock GetByIdAsync to return null (client not found in current tenant context)
+            _clientRepositoryMock.Setup(x => x.GetByIdAsync(clientId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync((Client?)null);
             var plan = SubscriptionPlan.Create(_tenantId, "Test Plan", 29.99m, "USD", BillingPeriodType.Monthly);
             plan.Activate();
-
-            _clientRepositoryMock.Setup(x => x.GetByIdAsync(clientId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(clientFromDifferentTenant);
             _subscriptionPlanRepositoryMock.Setup(x => x.GetByIdAsync(planId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(plan);
 
@@ -741,30 +735,17 @@ namespace Orbito.Tests.Application.Common.Services
             // Arrange
             var daysBeforeExpiration = 7;
             var checkDate = DateTime.UtcNow;
-            var differentTenantId = TenantId.New();
-
-            var currentTenantSubscriptions = new List<Subscription>
-            {
-                CreateTestSubscription(), // Current tenant
-                CreateTestSubscription()  // Current tenant
-            };
-
-            var differentTenantSubscriptions = new List<Subscription>
-            {
-                Subscription.Create(differentTenantId, Guid.NewGuid(), Guid.NewGuid(), 
-                    Money.Create(29.99m, "USD"), BillingPeriod.Create(1, BillingPeriodType.Monthly))
-            };
 
             _dateTimeMock.Setup(x => x.UtcNow).Returns(checkDate);
-            _subscriptionRepositoryMock.Setup(x => x.GetExpiringSubscriptionsByClientAsync(It.IsAny<Guid>(), checkDate, daysBeforeExpiration, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(currentTenantSubscriptions);
 
             // Act
             var result = await _subscriptionService.GetExpiringSubscriptionsAsync(daysBeforeExpiration);
 
             // Assert
-            result.Should().HaveCount(2);
-            result.Should().OnlyContain(s => s.TenantId == _tenantId); // Only current tenant subscriptions
+            // NOTE: This method returns empty list for security reasons (see SubscriptionService.cs line 187)
+            // Background jobs should use tenant-specific methods instead
+            result.Should().BeEmpty();
+            _subscriptionRepositoryMock.Verify(x => x.GetExpiringSubscriptionsByClientAsync(It.IsAny<Guid>(), checkDate, daysBeforeExpiration, It.IsAny<CancellationToken>()), Times.Never);
         }
 
         #endregion

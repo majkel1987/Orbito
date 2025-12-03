@@ -184,8 +184,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
             // Assert
             result.Should().NotBeNull();
             result.IsSuccess.Should().BeFalse();
-            result.Error.Message.Should().Contain("Tenant context is required");
-            result.Error.Code.Should().Be("TENANT_CONTEXT_REQUIRED");
+            result.Error.Message.Should().Contain("Tenant context is not available");
+            result.Error.Code.Should().Be("Tenant.NoTenantContext");
         }
 
         [Fact]
@@ -214,8 +214,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
             // Assert
             result.Should().NotBeNull();
             result.IsSuccess.Should().BeFalse();
-            result.Error.Message.Should().Contain("Client not found");
-            result.Error.Code.Should().Be("CLIENT_NOT_FOUND");
+            result.Error.Message.Should().Contain("Client was not found");
+            result.Error.Code.Should().Be("Client.NotFound");
         }
 
         [Fact]
@@ -247,8 +247,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
             // Assert
             result.Should().NotBeNull();
             result.IsSuccess.Should().BeFalse();
-            result.Error.Message.Should().Contain("Access denied");
-            result.Error.Code.Should().Be("ACCESS_DENIED");
+            result.Error.Message.Should().Contain("Cross-tenant access is not allowed");
+            result.Error.Code.Should().Be("Tenant.CrossTenantAccess");
         }
 
         [Fact]
@@ -294,8 +294,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
             // Assert
             result.Should().NotBeNull();
             result.IsSuccess.Should().BeFalse();
-            result.Error.Message.Should().Contain("Stripe API error");
-            result.Error.Code.Should().Be("STRIPE_API_ERROR");
+            result.Error.Message.Should().Contain("An unexpected error occurred");
+            result.Error.Code.Should().Be("General.UnexpectedError");
         }
 
         [Fact]
@@ -323,8 +323,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
             // Assert
             result.Should().NotBeNull();
             result.IsSuccess.Should().BeFalse();
-            result.Error.Message.Should().Contain("An error occurred while creating Stripe customer");
-            result.Error.Code.Should().Be("CUSTOMER_CREATION_ERROR");
+            result.Error.Message.Should().Contain("An unexpected error occurred");
+            result.Error.Code.Should().Be("General.UnexpectedError");
         }
 
         [Fact]

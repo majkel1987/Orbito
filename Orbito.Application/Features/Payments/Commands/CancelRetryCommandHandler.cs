@@ -21,17 +21,20 @@ namespace Orbito.Application.Features.Payments.Commands
             IUserContextService userContextService,
             ILogger<CancelRetryCommandHandler> logger)
         {
-            _retryRepository = retryRepository;
-            _unitOfWork = unitOfWork;
-            _userContextService = userContextService;
-            _logger = logger;
+            _retryRepository = retryRepository ?? throw new ArgumentNullException(nameof(retryRepository));
+            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+            _userContextService = userContextService ?? throw new ArgumentNullException(nameof(userContextService));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         public async Task<CancelRetryResult> Handle(CancelRetryCommand request, CancellationToken cancellationToken)
         {
             try
             {
-                _logger.LogInformation("Processing cancel retry request for schedule {ScheduleId} by client {ClientId}", 
+                // Check for cancellation before starting
+                cancellationToken.ThrowIfCancellationRequested();
+
+                _logger.LogInformation("Processing cancel retry request for schedule {ScheduleId} by client {ClientId}",
                     request.ScheduleId, request.ClientId);
 
                 // Get current user context for additional security
@@ -68,10 +71,21 @@ namespace Orbito.Application.Features.Payments.Commands
                 // Cancel the retry schedule
                 retrySchedule.Cancel();
                 await _retryRepository.UpdateAsync(retrySchedule, cancellationToken);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                if (!saveResult.IsSuccess)
+                {
+                    _logger.LogError("Failed to save retry cancellation: {Error}", saveResult.ErrorMessage);
+                    return CancelRetryResult.FailureResult(saveResult.ErrorMessage ?? "Failed to save changes");
+                }
 
                 _logger.LogInformation("Successfully cancelled retry schedule {ScheduleId}", request.ScheduleId);
                 return CancelRetryResult.SuccessResult(request.ScheduleId);
+            }
+            catch (OperationCanceledException)
+            {
+                // Rethrow cancellation exceptions - they should not be caught
+                throw;
             }
             catch (Exception ex)
             {

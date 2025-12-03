@@ -29,6 +29,7 @@ namespace Orbito.Tests.Application.Clients.Queries.SearchClients
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithValidSearchTerm_ShouldReturnSearchResults()
         {
             // Arrange
@@ -51,18 +52,20 @@ namespace Orbito.Tests.Application.Clients.Queries.SearchClients
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
-            result.Clients.Should().HaveCount(2);
-            result.TotalCount.Should().Be(2);
-            result.PageNumber.Should().Be(1);
-            result.PageSize.Should().Be(10);
-            result.TotalPages.Should().Be(1);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value!.Items.Should().HaveCount(2);
+            result.Value.TotalCount.Should().Be(2);
+            result.Value.PageNumber.Should().Be(1);
+            result.Value.PageSize.Should().Be(10);
+            result.Value.TotalPages.Should().Be(1);
 
             _clientRepositoryMock.Verify(x => x.SearchClientsAsync(searchTerm, 1, 10, false, It.IsAny<CancellationToken>()), Times.Once);
             _clientRepositoryMock.Verify(x => x.GetSearchCountAsync(searchTerm, false, It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithActiveOnlyTrue_ShouldSearchOnlyActiveClients()
         {
             // Arrange
@@ -84,14 +87,16 @@ namespace Orbito.Tests.Application.Clients.Queries.SearchClients
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
-            result.Clients.Should().HaveCount(1);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value!.Items.Should().HaveCount(1);
 
             _clientRepositoryMock.Verify(x => x.SearchClientsAsync(searchTerm, 1, 10, true, It.IsAny<CancellationToken>()), Times.Once);
             _clientRepositoryMock.Verify(x => x.GetSearchCountAsync(searchTerm, true, It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithPagination_ShouldCalculateTotalPages()
         {
             // Arrange
@@ -114,15 +119,17 @@ namespace Orbito.Tests.Application.Clients.Queries.SearchClients
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
-            result.Clients.Should().HaveCount(2);
-            result.TotalCount.Should().Be(12);
-            result.PageNumber.Should().Be(2);
-            result.PageSize.Should().Be(5);
-            result.TotalPages.Should().Be(3); // Math.Ceiling(12/5) = 3
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value!.Items.Should().HaveCount(2);
+            result.Value.TotalCount.Should().Be(12);
+            result.Value.PageNumber.Should().Be(2);
+            result.Value.PageSize.Should().Be(5);
+            result.Value.TotalPages.Should().Be(3); // Math.Ceiling(12/5) = 3
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithEmptySearchTerm_ShouldReturnFailure()
         {
             // Arrange
@@ -133,11 +140,13 @@ namespace Orbito.Tests.Application.Clients.Queries.SearchClients
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Search term is required");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Validation.Required");
+            result.Error.Message.Should().Contain("SearchTerm");
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithNullSearchTerm_ShouldReturnFailure()
         {
             // Arrange
@@ -148,11 +157,13 @@ namespace Orbito.Tests.Application.Clients.Queries.SearchClients
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Search term is required");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Validation.Required");
+            result.Error.Message.Should().Contain("SearchTerm");
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithWhitespaceSearchTerm_ShouldReturnFailure()
         {
             // Arrange
@@ -163,11 +174,13 @@ namespace Orbito.Tests.Application.Clients.Queries.SearchClients
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Search term is required");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Validation.Required");
+            result.Error.Message.Should().Contain("SearchTerm");
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithoutTenantContext_ShouldReturnFailure()
         {
             // Arrange
@@ -179,12 +192,13 @@ namespace Orbito.Tests.Application.Clients.Queries.SearchClients
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Tenant context is required");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Tenant.NoTenantContext");
         }
 
         [Fact]
-        public async Task Handle_WhenRepositoryThrowsException_ShouldReturnFailure()
+        [Trait("Category", "Unit")]
+        public async Task Handle_WhenRepositoryThrowsException_ShouldPropagateException()
         {
             // Arrange
             var searchTerm = "test";
@@ -193,16 +207,12 @@ namespace Orbito.Tests.Application.Clients.Queries.SearchClients
             _clientRepositoryMock.Setup(x => x.SearchClientsAsync(searchTerm, 1, 10, false, It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new Exception("Database error"));
 
-            // Act
-            var result = await _handler.Handle(query, CancellationToken.None);
-
-            // Assert
-            result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Contain("An error occurred while searching clients");
+            // Act & Assert
+            await Assert.ThrowsAsync<Exception>(() => _handler.Handle(query, CancellationToken.None));
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithNoSearchResults_ShouldReturnEmptyList()
         {
             // Arrange
@@ -219,10 +229,11 @@ namespace Orbito.Tests.Application.Clients.Queries.SearchClients
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
-            result.Clients.Should().BeEmpty();
-            result.TotalCount.Should().Be(0);
-            result.TotalPages.Should().Be(0);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value!.Items.Should().BeEmpty();
+            result.Value.TotalCount.Should().Be(0);
+            result.Value.TotalPages.Should().Be(0);
         }
     }
 }

@@ -31,20 +31,5 @@ namespace Orbito.Application.Common.Interfaces
         Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default);
         Task<bool> ExistsAsync(string email, CancellationToken cancellationToken = default);
         Task<bool> CanClientBeDeletedAsync(Guid clientId, CancellationToken cancellationToken = default);
-
-        // Stats operations
-        Task<ClientStats> GetClientStatsAsync(CancellationToken cancellationToken = default);
-    }
-
-    public record ClientStats
-    {
-        public int TotalClients { get; init; }
-        public int ActiveClients { get; init; }
-        public int InactiveClients { get; init; }
-        public int ClientsWithIdentity { get; init; }
-        public int DirectClients { get; init; }
-        public int ClientsWithActiveSubscriptions { get; init; }
-        public decimal TotalRevenue { get; init; }
-        public string Currency { get; init; } = string.Empty;
     }
 }

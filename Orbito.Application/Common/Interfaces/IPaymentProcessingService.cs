@@ -83,11 +83,20 @@ namespace Orbito.Application.Common.Interfaces
             CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Processes pending payments
+        /// Processes pending payments (uses TenantId from current tenant context)
         /// </summary>
         /// <param name="billingDate">Billing date</param>
         /// <param name="cancellationToken">Cancellation token</param>
         Task ProcessPendingPaymentsAsync(DateTime billingDate, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Processes pending payments for a specific tenant (for background jobs)
+        /// SECURITY: Requires explicit TenantId to prevent cross-tenant access
+        /// </summary>
+        /// <param name="tenantId">Tenant ID</param>
+        /// <param name="billingDate">Billing date</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        Task ProcessPendingPaymentsForTenantAsync(TenantId tenantId, DateTime billingDate, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Updates payment from webhook data with signature verification

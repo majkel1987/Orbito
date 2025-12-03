@@ -2,8 +2,10 @@ using FluentAssertions;
 using Moq;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.SubscriptionPlans.Queries.GetActiveSubscriptionPlans;
+using Orbito.Domain.Common;
 using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
+using Orbito.Domain.Errors;
 using Orbito.Domain.ValueObjects;
 using Xunit;
 
@@ -22,10 +24,16 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Queries.GetActiveSubscripti
             _unitOfWorkMock = new Mock<IUnitOfWork>();
             _subscriptionPlanRepositoryMock = new Mock<ISubscriptionPlanRepository>();
             _tenantContextMock = new Mock<ITenantContext>();
-            _handler = new GetActiveSubscriptionPlansQueryHandler(_unitOfWorkMock.Object, _tenantContextMock.Object);
             _tenantId = TenantId.New();
 
             _unitOfWorkMock.Setup(x => x.SubscriptionPlans).Returns(_subscriptionPlanRepositoryMock.Object);
+
+            var loggerMock = new Mock<Microsoft.Extensions.Logging.ILogger<GetActiveSubscriptionPlansQueryHandler>>();
+
+            _handler = new GetActiveSubscriptionPlansQueryHandler(
+                _unitOfWorkMock.Object,
+                _tenantContextMock.Object,
+                loggerMock.Object);
         }
 
         [Fact]
@@ -59,19 +67,20 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Queries.GetActiveSubscripti
             var result = await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Plans.Should().HaveCount(2);
-            result.TotalCount.Should().Be(2);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Plans.Should().HaveCount(2);
+            result.Value.TotalCount.Should().Be(2);
 
-            result.Plans[0].Name.Should().Be("Active Plan 1");
-            result.Plans[0].Amount.Should().Be(29.99m);
-            result.Plans[0].Currency.Should().Be("USD");
-            result.Plans[0].BillingPeriod.Should().Be("1 Monthly");
+            result.Value.Plans[0].Name.Should().Be("Active Plan 1");
+            result.Value.Plans[0].Amount.Should().Be(29.99m);
+            result.Value.Plans[0].Currency.Should().Be("USD");
+            result.Value.Plans[0].BillingPeriod.Should().Be("1 Monthly");
 
-            result.Plans[1].Name.Should().Be("Active Plan 2");
-            result.Plans[1].Amount.Should().Be(99.99m);
-            result.Plans[1].Currency.Should().Be("USD");
-            result.Plans[1].BillingPeriod.Should().Be("1 Yearly");
+            result.Value.Plans[1].Name.Should().Be("Active Plan 2");
+            result.Value.Plans[1].Amount.Should().Be(99.99m);
+            result.Value.Plans[1].Currency.Should().Be("USD");
+            result.Value.Plans[1].BillingPeriod.Should().Be("1 Yearly");
 
             _subscriptionPlanRepositoryMock.Verify(x => x.GetActivePlansAsync(
                 query.PublicOnly,
@@ -110,9 +119,10 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Queries.GetActiveSubscripti
             var result = await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Plans.Should().HaveCount(1);
-            result.Plans[0].Name.Should().Be("Public Plan");
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Plans.Should().HaveCount(1);
+            result.Value.Plans[0].Name.Should().Be("Public Plan");
         }
 
         [Fact]
@@ -146,10 +156,11 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Queries.GetActiveSubscripti
             var result = await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Plans.Should().HaveCount(2);
-            result.Plans.Should().Contain(p => p.Name == "Public Plan");
-            result.Plans.Should().Contain(p => p.Name == "Private Plan");
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Plans.Should().HaveCount(2);
+            result.Value.Plans.Should().Contain(p => p.Name == "Public Plan");
+            result.Value.Plans.Should().Contain(p => p.Name == "Private Plan");
         }
 
         [Fact]
@@ -183,9 +194,10 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Queries.GetActiveSubscripti
             var result = await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Plans.Should().HaveCount(1);
-            result.Plans[0].Name.Should().Be("Plan 1");
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Plans.Should().HaveCount(1);
+            result.Value.Plans[0].Name.Should().Be("Plan 1");
         }
 
         [Fact]
@@ -220,10 +232,11 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Queries.GetActiveSubscripti
             var result = await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Plans.Should().HaveCount(1);
-            result.Plans[0].FeaturesJson.Should().NotBeNullOrEmpty();
-            result.Plans[0].LimitationsJson.Should().NotBeNullOrEmpty();
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Plans.Should().HaveCount(1);
+            result.Value.Plans[0].FeaturesJson.Should().NotBeNullOrEmpty();
+            result.Value.Plans[0].LimitationsJson.Should().NotBeNullOrEmpty();
         }
 
         [Fact]
@@ -253,9 +266,10 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Queries.GetActiveSubscripti
             var result = await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Plans.Should().HaveCount(1);
-            result.Plans[0].ActiveSubscriptionsCount.Should().Be(0); // No subscriptions added in this test
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Plans.Should().HaveCount(1);
+            result.Value.Plans[0].ActiveSubscriptionsCount.Should().Be(0); // No subscriptions added in this test
         }
 
         [Fact]
@@ -279,9 +293,10 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Queries.GetActiveSubscripti
             var result = await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Plans.Should().BeEmpty();
-            result.TotalCount.Should().Be(0);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Plans.Should().BeEmpty();
+            result.Value.TotalCount.Should().Be(0);
         }
 
         [Fact]
@@ -323,17 +338,18 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Queries.GetActiveSubscripti
             var result = await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Plans.Should().HaveCount(4);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Plans.Should().HaveCount(4);
             
-            result.Plans.Should().Contain(p => p.BillingPeriod == "1 Daily");
-            result.Plans.Should().Contain(p => p.BillingPeriod == "1 Weekly");
-            result.Plans.Should().Contain(p => p.BillingPeriod == "1 Monthly");
-            result.Plans.Should().Contain(p => p.BillingPeriod == "1 Yearly");
+            result.Value.Plans.Should().Contain(p => p.BillingPeriod == "1 Daily");
+            result.Value.Plans.Should().Contain(p => p.BillingPeriod == "1 Weekly");
+            result.Value.Plans.Should().Contain(p => p.BillingPeriod == "1 Monthly");
+            result.Value.Plans.Should().Contain(p => p.BillingPeriod == "1 Yearly");
         }
 
         [Fact]
-        public async Task Handle_WithoutTenantContext_ShouldThrowException()
+        public async Task Handle_WithoutTenantContext_ShouldReturnFailure()
         {
             // Arrange
             var query = new GetActiveSubscriptionPlansQuery
@@ -344,11 +360,17 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Queries.GetActiveSubscripti
 
             _tenantContextMock.Setup(x => x.HasTenant).Returns(false);
 
-            // Act & Assert
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-                () => _handler.Handle(query, CancellationToken.None));
+            // Act
+            var result = await _handler.Handle(query, CancellationToken.None);
 
-            exception.Message.Should().Be("Tenant context is required to get active subscription plans");
+            // Assert
+            result.IsFailure.Should().BeTrue();
+            result.Error.Should().Be(DomainErrors.Tenant.NoTenantContext);
+
+            _subscriptionPlanRepositoryMock.Verify(x => x.GetActivePlansAsync(
+                It.IsAny<bool>(),
+                It.IsAny<int?>(),
+                It.IsAny<CancellationToken>()), Times.Never);
         }
     }
 }

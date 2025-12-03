@@ -49,12 +49,13 @@ namespace Orbito.Tests.Application.Subscriptions.Queries.GetSubscriptionsByClien
             var result = await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Subscriptions.Should().HaveCount(3);
-            result.TotalCount.Should().Be(3);
-            result.PageNumber.Should().Be(1);
-            result.PageSize.Should().Be(10);
-            result.TotalPages.Should().Be(1);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Items.Should().HaveCount(3);
+            result.Value.TotalCount.Should().Be(3);
+            result.Value.PageNumber.Should().Be(1);
+            result.Value.PageSize.Should().Be(10);
+            result.Value.TotalPages.Should().Be(1);
 
             _subscriptionRepositoryMock.Verify(x => x.GetByClientIdAsync(clientId, It.IsAny<CancellationToken>()), Times.Once);
         }
@@ -80,10 +81,11 @@ namespace Orbito.Tests.Application.Subscriptions.Queries.GetSubscriptionsByClien
             var result = await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Subscriptions.Should().HaveCount(1);
-            result.TotalCount.Should().Be(1);
-            result.Subscriptions.Should().OnlyContain(s => s.Status == SubscriptionStatus.Active);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Items.Should().HaveCount(1);
+            result.Value.TotalCount.Should().Be(1);
+            result.Value.Items.Should().OnlyContain(s => s.Status == SubscriptionStatus.Active.ToString());
 
             _subscriptionRepositoryMock.Verify(x => x.GetByClientIdAsync(clientId, It.IsAny<CancellationToken>()), Times.Once);
         }
@@ -109,12 +111,13 @@ namespace Orbito.Tests.Application.Subscriptions.Queries.GetSubscriptionsByClien
             var result = await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Subscriptions.Should().HaveCount(1); // Only 1 subscription on page 2
-            result.TotalCount.Should().Be(3);
-            result.PageNumber.Should().Be(2);
-            result.PageSize.Should().Be(2);
-            result.TotalPages.Should().Be(2);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Items.Should().HaveCount(1); // Only 1 subscription on page 2
+            result.Value.TotalCount.Should().Be(3);
+            result.Value.PageNumber.Should().Be(2);
+            result.Value.PageSize.Should().Be(2);
+            result.Value.TotalPages.Should().Be(2);
 
             _subscriptionRepositoryMock.Verify(x => x.GetByClientIdAsync(clientId, It.IsAny<CancellationToken>()), Times.Once);
         }
@@ -139,12 +142,13 @@ namespace Orbito.Tests.Application.Subscriptions.Queries.GetSubscriptionsByClien
             var result = await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Subscriptions.Should().BeEmpty();
-            result.TotalCount.Should().Be(0);
-            result.PageNumber.Should().Be(1);
-            result.PageSize.Should().Be(10);
-            result.TotalPages.Should().Be(0);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Items.Should().BeEmpty();
+            result.Value.TotalCount.Should().Be(0);
+            result.Value.PageNumber.Should().Be(1);
+            result.Value.PageSize.Should().Be(10);
+            result.Value.TotalPages.Should().Be(0);
 
             _subscriptionRepositoryMock.Verify(x => x.GetByClientIdAsync(clientId, It.IsAny<CancellationToken>()), Times.Once);
         }
@@ -173,9 +177,10 @@ namespace Orbito.Tests.Application.Subscriptions.Queries.GetSubscriptionsByClien
             var result = await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Subscriptions.Should().HaveCount(1);
-            var subscription = result.Subscriptions.First();
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Items.Should().HaveCount(1);
+            var subscription = result.Value.Items.First();
             subscription.IsInTrial.Should().BeTrue();
             subscription.TrialEndDate.Should().BeCloseTo(DateTime.UtcNow.AddDays(14), TimeSpan.FromSeconds(1));
         }
@@ -204,10 +209,11 @@ namespace Orbito.Tests.Application.Subscriptions.Queries.GetSubscriptionsByClien
             var result = await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Subscriptions.Should().HaveCount(1);
-            var subscriptionDto = result.Subscriptions.First();
-            subscriptionDto.Status.Should().Be(SubscriptionStatus.Cancelled);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Items.Should().HaveCount(1);
+            var subscriptionDto = result.Value.Items.First();
+            subscriptionDto.Status.Should().Be(SubscriptionStatus.Cancelled.ToString());
             subscriptionDto.CancelledAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
         }
 
@@ -232,12 +238,13 @@ namespace Orbito.Tests.Application.Subscriptions.Queries.GetSubscriptionsByClien
             var result = await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Subscriptions.Should().HaveCount(3);
-            result.TotalCount.Should().Be(3);
-            result.PageNumber.Should().Be(1);
-            result.PageSize.Should().Be(100);
-            result.TotalPages.Should().Be(1);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Items.Should().HaveCount(3);
+            result.Value.TotalCount.Should().Be(3);
+            result.Value.PageNumber.Should().Be(1);
+            result.Value.PageSize.Should().Be(100);
+            result.Value.TotalPages.Should().Be(1);
         }
 
         private List<Subscription> CreateTestSubscriptions(Guid clientId)

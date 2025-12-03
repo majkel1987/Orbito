@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
+using Orbito.Domain.ValueObjects;
 using Orbito.Infrastructure.Data;
 
 namespace Orbito.Infrastructure.Persistence
@@ -130,12 +131,37 @@ namespace Orbito.Infrastructure.Persistence
 
         /// <summary>
         /// Gets expired payment methods
+        /// SECURITY: Returns ALL expired payment methods across ALL tenants (admin-only operation)
+        /// This method is used by ExpiredCardNotificationJob which processes all tenants
         /// </summary>
+        [Obsolete("ADMIN-ONLY: Returns expired payment methods from ALL tenants. Use GetExpiredPaymentMethodsForTenantAsync for tenant-specific operations.")]
         public async Task<IEnumerable<PaymentMethod>> GetExpiredPaymentMethodsAsync(CancellationToken cancellationToken = default)
         {
+            // SECURITY NOTICE: This method does NOT filter by tenant
+            // It's used by background jobs that iterate through ALL tenants
+            // Each tenant's payment methods are processed separately in the job
+
             var currentDate = DateTime.UtcNow;
+
             return await _context.PaymentMethods
+                .Include(pm => pm.Client) // Need tenant info for processing
                 .Where(pm => pm.ExpiryDate.HasValue && pm.ExpiryDate.Value < currentDate)
+                .ToListAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// Gets expired payment methods for a specific tenant (for background jobs)
+        /// SECURITY: Requires explicit TenantId to prevent cross-tenant access
+        /// </summary>
+        public async Task<IEnumerable<PaymentMethod>> GetExpiredPaymentMethodsForTenantAsync(TenantId tenantId, CancellationToken cancellationToken = default)
+        {
+            var currentDate = DateTime.UtcNow;
+
+            return await _context.PaymentMethods
+                .Include(pm => pm.Client) // Need client info for notifications
+                .Where(pm => pm.ExpiryDate.HasValue && 
+                            pm.ExpiryDate.Value < currentDate &&
+                            pm.Client.TenantId == tenantId) // SECURITY: Filter by tenant
                 .ToListAsync(cancellationToken);
         }
 

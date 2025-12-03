@@ -9,6 +9,8 @@ using Orbito.Application.Common.Services;
 using Orbito.Application.Services;
 using Orbito.Application.Common.Settings;
 using Orbito.Application.Common.Configuration;
+using Orbito.Application.Common.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using System.Reflection;
 
 namespace Orbito.Application
@@ -49,6 +51,11 @@ namespace Orbito.Application
             
         // Add caching service
         services.AddScoped<ICacheService, Common.Services.MemoryCacheService>();
+
+            // Add authorization handlers
+            services.AddScoped<IAuthorizationHandler, ProviderTeamAccessHandler>();
+            services.AddScoped<IAuthorizationHandler, ProviderOwnerOnlyHandler>();
+            services.AddScoped<IAuthorizationHandler, ClientAccessHandler>();
 
             return services;
         }

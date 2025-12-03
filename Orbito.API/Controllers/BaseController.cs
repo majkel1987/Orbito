@@ -162,18 +162,25 @@ public abstract class BaseController : ControllerBase
 
     /// <summary>
     /// Handles Result<T> and converts it to appropriate ActionResult
-    /// Maps error codes to HTTP status codes
+    /// Returns full Result wrapper for frontend compatibility
     /// </summary>
     /// <typeparam name="T">Type of the value</typeparam>
     /// <param name="result">Result to handle</param>
-    /// <returns>ActionResult with appropriate status code and response</returns>
+    /// <returns>ActionResult with Result wrapper containing isSuccess, value, and error</returns>
     protected IActionResult HandleResult<T>(Orbito.Domain.Common.Result<T> result)
     {
         if (result.IsSuccess)
         {
-            return Ok(result.Value);
+            // Return full Result wrapper for frontend
+            return Ok(new
+            {
+                isSuccess = true,
+                value = result.Value,
+                error = default(string)
+            });
         }
 
+        // Return error with Result wrapper
         return HandleErrorCode(result.Error);
     }
 
@@ -194,49 +201,50 @@ public abstract class BaseController : ControllerBase
     }
 
     /// <summary>
-    /// Maps error codes to HTTP status codes and creates appropriate ErrorResponse
+    /// Maps error codes to HTTP status codes and creates Result wrapper with error
     /// </summary>
     /// <param name="error">Error to handle</param>
-    /// <returns>ActionResult with appropriate status code and error response</returns>
+    /// <returns>ActionResult with appropriate status code and Result wrapper</returns>
     private IActionResult HandleErrorCode(Orbito.Domain.Common.Error error)
     {
-        var errorResponse = new ErrorResponse
+        // Create Result wrapper for frontend
+        var resultWrapper = new
         {
-            Code = error.Code,
-            Message = error.Message,
-            CorrelationId = HttpContext.TraceIdentifier
+            isSuccess = false,
+            value = default(object),
+            error = error.Message
         };
 
         // Map error codes to HTTP status codes
         return error.Code switch
         {
             // NotFound errors (404)
-            var code when code.Contains("NotFound") => NotFound(errorResponse),
+            var code when code.Contains("NotFound") => NotFound(resultWrapper),
 
             // AlreadyExists/Conflict errors (409)
-            var code when code.Contains("AlreadyExists") => Conflict(errorResponse),
-            var code when code.Contains("Conflict") => Conflict(errorResponse),
-            var code when code.Contains("Duplicate") => Conflict(errorResponse),
+            var code when code.Contains("AlreadyExists") => Conflict(resultWrapper),
+            var code when code.Contains("Conflict") => Conflict(resultWrapper),
+            var code when code.Contains("Duplicate") => Conflict(resultWrapper),
 
             // Unauthorized errors (401)
-            var code when code.Contains("Unauthorized") => Unauthorized(errorResponse),
-            var code when code.Contains("InvalidCredentials") => Unauthorized(errorResponse),
+            var code when code.Contains("Unauthorized") => Unauthorized(resultWrapper),
+            var code when code.Contains("InvalidCredentials") => Unauthorized(resultWrapper),
 
             // Forbidden errors (403)
-            var code when code.Contains("CrossTenant") => StatusCode(StatusCodes.Status403Forbidden, errorResponse),
-            var code when code.Contains("NoTenantContext") => StatusCode(StatusCodes.Status403Forbidden, errorResponse),
+            var code when code.Contains("CrossTenant") => StatusCode(StatusCodes.Status403Forbidden, resultWrapper),
+            var code when code.Contains("NoTenantContext") => StatusCode(StatusCodes.Status403Forbidden, resultWrapper),
 
             // Validation/Bad Request errors (400)
-            var code when code.Contains("Invalid") => BadRequest(errorResponse),
-            var code when code.Contains("Validation") => BadRequest(errorResponse),
-            var code when code.Contains("Cannot") => BadRequest(errorResponse),
-            var code when code.Contains("Inactive") => BadRequest(errorResponse),
+            var code when code.Contains("Invalid") => BadRequest(resultWrapper),
+            var code when code.Contains("Validation") => BadRequest(resultWrapper),
+            var code when code.Contains("Cannot") => BadRequest(resultWrapper),
+            var code when code.Contains("Inactive") => BadRequest(resultWrapper),
 
             // Too Many Requests (429)
-            var code when code.Contains("RateLimit") => StatusCode(StatusCodes.Status429TooManyRequests, errorResponse),
+            var code when code.Contains("RateLimit") => StatusCode(StatusCodes.Status429TooManyRequests, resultWrapper),
 
             // Default to BadRequest (400) for unknown errors
-            _ => BadRequest(errorResponse)
+            _ => BadRequest(resultWrapper)
         };
     }
 }

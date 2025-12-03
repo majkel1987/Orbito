@@ -1,0 +1,127 @@
+using FluentAssertions;
+using Microsoft.Extensions.Logging;
+using Moq;
+using Orbito.Application.Common.Interfaces;
+using Orbito.Application.Providers.Queries.GetProviderById;
+using Orbito.Domain.Entities;
+using Orbito.Domain.ValueObjects;
+using Xunit;
+
+namespace Orbito.Tests.Application.Providers.Queries.GetProviderById;
+
+[Trait("Category", "Unit")]
+public class GetProviderByIdQueryHandlerTests
+{
+    private readonly Mock<IProviderRepository> _mockProviderRepository;
+    private readonly Mock<ILogger<GetProviderByIdQueryHandler>> _mockLogger;
+    private readonly GetProviderByIdQueryHandler _handler;
+
+    public GetProviderByIdQueryHandlerTests()
+    {
+        _mockProviderRepository = new Mock<IProviderRepository>();
+        _mockLogger = new Mock<ILogger<GetProviderByIdQueryHandler>>();
+
+        _handler = new GetProviderByIdQueryHandler(
+            _mockProviderRepository.Object,
+            _mockLogger.Object);
+    }
+
+    [Fact]
+    public async Task Handle_ValidId_ShouldReturnProvider()
+    {
+        // Arrange
+        var providerId = Guid.NewGuid();
+        var tenantId = TenantId.Create(Guid.NewGuid());
+        var userId = Guid.NewGuid();
+
+        var provider = Provider.Create(
+            tenantId,
+            "testprovider",
+            "Test Provider",
+            "test@provider.com").Value;
+
+        _mockProviderRepository
+            .Setup(x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(provider);
+
+        var query = new GetProviderByIdQuery(providerId);
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.Provider.Should().NotBeNull();
+        result.Provider!.SubdomainSlug.Should().Be("testprovider");
+        result.Provider.BusinessName.Should().Be("Test Provider");
+
+        _mockProviderRepository.Verify(
+            x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_NonExistentId_ShouldReturnNotFound()
+    {
+        // Arrange
+        var providerId = Guid.NewGuid();
+
+        _mockProviderRepository
+            .Setup(x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Provider?)null);
+
+        var query = new GetProviderByIdQuery(providerId);
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeFalse();
+        result.Provider.Should().BeNull();
+
+        _mockProviderRepository.Verify(
+            x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => true),
+                It.IsAny<Exception>(),
+                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_RepositoryThrowsException_ShouldReturnNotFound()
+    {
+        // Arrange
+        var providerId = Guid.NewGuid();
+
+        _mockProviderRepository
+            .Setup(x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Database error"));
+
+        var query = new GetProviderByIdQuery(providerId);
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeFalse();
+        result.Provider.Should().BeNull();
+
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => true),
+                It.IsAny<Exception>(),
+                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+}

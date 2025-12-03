@@ -74,8 +74,8 @@ namespace Orbito.Application.Providers.Commands.RegisterProvider
                         errors);
                 }
 
-                // Dodaj rolę Provider
-                await _userManager.AddToRoleAsync(user, UserRole.Provider.ToString());
+                // NOTE: Rola Provider jest dodawana w CreateProviderCommandHandler
+                // Nie dodajemy jej tutaj, aby uniknąć osobnego SaveChanges przed utworzeniem Providera
 
                 // Utwórz providera używając istniejącej komendy
                 var createProviderCommand = new CreateProviderCommand(
@@ -97,9 +97,8 @@ namespace Orbito.Application.Providers.Commands.RegisterProvider
                         new List<string> { createProviderResult.Error.Code });
                 }
 
-                // Aktualizuj TenantId użytkownika
-                user.TenantId = TenantId.Create(createProviderResult.Value.ProviderId);
-                await _userManager.UpdateAsync(user);
+                // NOTE: TenantId użytkownika jest aktualizowany w CreateProviderCommandHandler
+                // Nie aktualizujemy go tutaj, aby uniknąć dodatkowego SaveChanges
 
                 _logger.LogInformation("Provider zarejestrowany: {Email} (ID: {ProviderId})",
                     request.Email, createProviderResult.Value.ProviderId);

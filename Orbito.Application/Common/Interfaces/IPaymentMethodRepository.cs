@@ -1,5 +1,6 @@
 using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
+using Orbito.Domain.ValueObjects;
 
 namespace Orbito.Application.Common.Interfaces
 {
@@ -78,11 +79,21 @@ namespace Orbito.Application.Common.Interfaces
             CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Gets expired payment methods
+        /// Gets expired payment methods (admin-only, returns all tenants)
         /// </summary>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>List of expired payment methods</returns>
+        [Obsolete("ADMIN-ONLY: Returns expired payment methods from ALL tenants. Use GetExpiredPaymentMethodsForTenantAsync for tenant-specific operations.")]
         Task<IEnumerable<PaymentMethod>> GetExpiredPaymentMethodsAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Gets expired payment methods for a specific tenant (for background jobs)
+        /// SECURITY: Requires explicit TenantId to prevent cross-tenant access
+        /// </summary>
+        /// <param name="tenantId">Tenant ID</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>List of expired payment methods for the tenant</returns>
+        Task<IEnumerable<PaymentMethod>> GetExpiredPaymentMethodsForTenantAsync(TenantId tenantId, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Gets count of payment methods by client ID

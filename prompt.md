@@ -10,10 +10,53 @@ Wskaż krytyczne problemy i sugestie poprawy.
 
 ---
 
-Ac as IT Architect and professional Frontend (React) and Backend (.NET) Developer
-Odczytaj pliki @Frontend_Plan.md, @Frontend_Implement_Plan.md, @README_FRONTEND.md
-Wprowadź punkt 0.9 z planu implementacji
+## 📋 Oryginalne Instrukcje (dla referencji)
 
+Act as IT Architect and Professional Frontend (React) and Backend (.NET) Develolper
+Odczytaj pliki @Frontend_Plan.md, @Frontend_Implement_Plan.md, @README.md, @README_FRONTEND.md
+Dodatkowo przejżyj pliki z /READMEs
+Wprowadź punkt 1.2 z planu implementacji:
+
+#### 1.2 Auth Context & Provider
+
+Stosuj sie do wszystkich zasad z cursor rules
+Frontend ma prawidłowo komunikować się z backendem dlatego zawsze sprawdzaj jak dana funkcjonalność wygląda w backendzie
 Zaktualizuj wszystkie pliki z planem po zakończeniu tej implenentacji
 
-Stosuj się do @Orbito Backend/Frontend_Rules.md
+Stosuj się do @RULES.md
+Wszystkie nowe pliki README zapisuj w /READMEs
+Nie twórz nowych plików Readme za każdym razem tylko aktualizuj już istniejące.
+
+---
+
+Act as IT Architect and Professional Frontend (React) and Backend (.NET) Develolper
+Odczytaj pliki @Frontend_Plan.md, @Frontend_Implement_Plan.md, @README.md, @README_FRONTEND.md
+Dodatkowo przejrzyj pliki z /READMEs
+
+Nie mogę poprawnie zarejestrować Providera, w pliku @issues.md wkleiłem błędy z konsoli a tutaj wklejam wszystkie logi z zapliakcji.
+
+Zadanie:
+Zidentyfikuj błąd.
+Napraw błędy
+
+---
+
+Act as Professional Frontend (React) and Backend (.NET) Develolper
+Odczytaj pliki @Frontend_Plan.md, @Frontend_Implement_Plan.md, @README.md, @README_FRONTEND.md
+Dodatkowo przejrzyj pliki z /READMEs
+
+Problem:
+Nie mogę poprawnie zalogować Użytkownika.
+Po zalogowaniu nie jestem przenoszony do dashboardu, ręczne wywołanie strony również nie działa poprawnie.
+Rejestracja w backend i frontend działa prawidłowo.
+Logowanie w backend również działa poprawnie.
+
+Zadanie:
+Zidentyfikuj wszystkie komponenty i inne funkcje które są bezpośrednio powiązane z logowaniem i przekierowywaniem użytkownika do dashboardu.
+Usuń te pliki i stwórz funkcjonalność logowania kompletnie od nowa.
+Pamiętaj, żeby używać TypeScript.
+Niech formularz logowania będzie modalem który pojawia się na wyblurowanym ekranie strony głównej lub jak to będzie później zamodelowane strony MVP - analogicznie do formularza rejestracji.
+
+Stosuj się do wszystkich zasad z cursor rules
+Frontend ma prawidłowo komunikować się z backendem dlatego zawsze sprawdzaj jak dana funkcjonalność wygląda w backendzie
+Zaktualizuj wszystkie pliki z planem po zakończeniu tej implenentacji

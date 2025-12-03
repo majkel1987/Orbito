@@ -1,11 +1,14 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
+using Orbito.Application.Common.Models;
+using Orbito.Application.DTOs;
+using Orbito.Domain.Common;
 using Orbito.Domain.Entities;
 
 namespace Orbito.Application.Providers.Queries.GetAllProviders
 {
-    public class GetAllProvidersQueryHandler : IRequestHandler<GetAllProvidersQuery, GetAllProvidersResult>
+    public class GetAllProvidersQueryHandler : IRequestHandler<GetAllProvidersQuery, Result<PaginatedList<ProviderDto>>>
     {
         private readonly IProviderRepository _providerRepository;
         private readonly ILogger<GetAllProvidersQueryHandler> _logger;
@@ -18,54 +21,45 @@ namespace Orbito.Application.Providers.Queries.GetAllProviders
             _logger = logger;
         }
 
-        public async Task<GetAllProvidersResult> Handle(GetAllProvidersQuery request, CancellationToken cancellationToken)
+        public async Task<Result<PaginatedList<ProviderDto>>> Handle(GetAllProvidersQuery request, CancellationToken cancellationToken)
         {
-            try
+            IEnumerable<Provider> providers;
+            int totalCount;
+
+            if (request.ActiveOnly)
             {
-                // Validate pagination parameters
-                if (request.PageNumber < 1)
-                    return GetAllProvidersResult.FailureResult("Page number must be greater than 0");
-
-                if (request.PageSize < 1 || request.PageSize > 100)
-                    return GetAllProvidersResult.FailureResult("Page size must be between 1 and 100");
-
-                IEnumerable<Provider> providers;
-                int totalCount;
-
-                if (request.ActiveOnly)
-                {
-                    providers = await _providerRepository.GetActiveProvidersAsync(
-                        request.PageNumber, request.PageSize, cancellationToken);
-                    totalCount = await _providerRepository.GetActiveCountAsync(cancellationToken);
-                }
-                else
-                {
-                    providers = await _providerRepository.GetAllAsync(
-                        request.PageNumber, request.PageSize, cancellationToken);
-                    totalCount = await _providerRepository.GetTotalCountAsync(cancellationToken);
-                }
-
-                var providerDtos = providers.Select(MapToSummaryDto);
-
-                _logger.LogInformation("Retrieved {Count} providers (Page {PageNumber}/{TotalPages})",
-                    providers.Count(), request.PageNumber, (int)Math.Ceiling((double)totalCount / request.PageSize));
-
-                return GetAllProvidersResult.SuccessResult(
-                    providerDtos, totalCount, request.PageNumber, request.PageSize);
+                providers = await _providerRepository.GetActiveProvidersAsync(
+                    request.PageNumber, request.PageSize, cancellationToken);
+                totalCount = await _providerRepository.GetActiveCountAsync(cancellationToken);
             }
-            catch (Exception ex)
+            else
             {
-                _logger.LogError(ex, "Error retrieving providers");
-                return GetAllProvidersResult.FailureResult("Error retrieving providers");
+                providers = await _providerRepository.GetAllAsync(
+                    request.PageNumber, request.PageSize, cancellationToken);
+                totalCount = await _providerRepository.GetTotalCountAsync(cancellationToken);
             }
+
+            var providerDtos = providers.Select(MapToDto).ToList();
+
+            var paginatedList = new PaginatedList<ProviderDto>(
+                providerDtos,
+                totalCount,
+                request.PageNumber,
+                request.PageSize);
+
+            _logger.LogInformation("Retrieved {Count} providers (Page {PageNumber}/{TotalPages})",
+                providerDtos.Count, request.PageNumber, paginatedList.TotalPages);
+
+            return Result.Success(paginatedList);
         }
 
-        private static ProviderSummaryDto MapToSummaryDto(Provider provider)
+        private static ProviderDto MapToDto(Provider provider)
         {
-            return new ProviderSummaryDto
+            return new ProviderDto
             {
                 Id = provider.Id,
                 TenantId = provider.TenantId.Value,
+                UserId = provider.UserId,
                 BusinessName = provider.BusinessName,
                 Description = provider.Description,
                 Avatar = provider.Avatar,
@@ -79,7 +73,8 @@ namespace Orbito.Application.Providers.Queries.GetAllProviders
                 PlansCount = provider.Plans.Count,
                 SubscriptionsCount = provider.Subscriptions.Count,
                 UserEmail = provider.User?.Email,
-                UserFullName = provider.User != null ? $"{provider.User.FirstName} {provider.User.LastName}" : null
+                UserFirstName = provider.User?.FirstName,
+                UserLastName = provider.User?.LastName
             };
         }
     }

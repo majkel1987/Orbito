@@ -1,9 +1,11 @@
 using MediatR;
+using Orbito.Application.SubscriptionPlans.Queries.GetSubscriptionPlanById;
+using Orbito.Domain.Common;
 using Orbito.Domain.ValueObjects;
 
 namespace Orbito.Application.SubscriptionPlans.Commands.UpdateSubscriptionPlan
 {
-    public record UpdateSubscriptionPlanCommand : IRequest<UpdateSubscriptionPlanResult>
+    public record UpdateSubscriptionPlanCommand : IRequest<Result<SubscriptionPlanDto>>
     {
         public Guid Id { get; init; }
         public string Name { get; init; } = string.Empty;

@@ -1,33 +1,47 @@
 using MediatR;
+using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
+using Orbito.Domain.Common;
 using Orbito.Domain.Enums;
+using Orbito.Domain.Errors;
 
 namespace Orbito.Application.SubscriptionPlans.Queries.GetSubscriptionPlanById
 {
-    public class GetSubscriptionPlanByIdQueryHandler : IRequestHandler<GetSubscriptionPlanByIdQuery, SubscriptionPlanDto?>
+    public class GetSubscriptionPlanByIdQueryHandler : IRequestHandler<GetSubscriptionPlanByIdQuery, Result<SubscriptionPlanDto>>
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ITenantContext _tenantContext;
+        private readonly ILogger<GetSubscriptionPlanByIdQueryHandler> _logger;
 
-        public GetSubscriptionPlanByIdQueryHandler(IUnitOfWork unitOfWork, ITenantContext tenantContext)
+        public GetSubscriptionPlanByIdQueryHandler(
+            IUnitOfWork unitOfWork,
+            ITenantContext tenantContext,
+            ILogger<GetSubscriptionPlanByIdQueryHandler> logger)
         {
             _unitOfWork = unitOfWork;
             _tenantContext = tenantContext;
+            _logger = logger;
         }
 
-        public async Task<SubscriptionPlanDto?> Handle(GetSubscriptionPlanByIdQuery request, CancellationToken cancellationToken)
+        public async Task<Result<SubscriptionPlanDto>> Handle(GetSubscriptionPlanByIdQuery request, CancellationToken cancellationToken)
         {
             if (!_tenantContext.HasTenant)
-                throw new InvalidOperationException("Tenant context is required to get subscription plan");
+            {
+                _logger.LogWarning("Attempted to get subscription plan without tenant context");
+                return Result.Failure<SubscriptionPlanDto>(DomainErrors.Tenant.NoTenantContext);
+            }
 
             var subscriptionPlan = await _unitOfWork.SubscriptionPlans.GetByIdAsync(request.Id, cancellationToken);
             if (subscriptionPlan == null)
-                return null;
+            {
+                _logger.LogWarning("Subscription plan {PlanId} not found", request.Id);
+                return Result.Failure<SubscriptionPlanDto>(DomainErrors.SubscriptionPlan.NotFound);
+            }
 
             var activeSubscriptionsCount = subscriptionPlan.Subscriptions.Count(s => s.Status == SubscriptionStatus.Active);
             var totalSubscriptionsCount = subscriptionPlan.Subscriptions.Count;
 
-            return new SubscriptionPlanDto
+            var dto = new SubscriptionPlanDto
             {
                 Id = subscriptionPlan.Id,
                 Name = subscriptionPlan.Name,
@@ -47,6 +61,10 @@ namespace Orbito.Application.SubscriptionPlans.Queries.GetSubscriptionPlanById
                 ActiveSubscriptionsCount = activeSubscriptionsCount,
                 TotalSubscriptionsCount = totalSubscriptionsCount
             };
+
+            _logger.LogInformation("Successfully retrieved subscription plan {PlanId}", request.Id);
+
+            return Result.Success(dto);
         }
     }
 }

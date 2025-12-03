@@ -30,6 +30,7 @@ namespace Orbito.Tests.Application.Clients.Queries.GetClientById
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithExistingClient_ShouldReturnClient()
         {
             // Arrange
@@ -46,13 +47,14 @@ namespace Orbito.Tests.Application.Clients.Queries.GetClientById
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
-            result.Client.Should().NotBeNull();
-            result.Client!.Id.Should().Be(_clientId);
-            result.Client.TenantId.Should().Be(_tenantId.Value);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value!.Id.Should().Be(_clientId);
+            result.Value.TenantId.Should().Be(_tenantId.Value);
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithDirectClient_ShouldReturnClient()
         {
             // Arrange
@@ -69,16 +71,17 @@ namespace Orbito.Tests.Application.Clients.Queries.GetClientById
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
-            result.Client.Should().NotBeNull();
-            result.Client!.Id.Should().Be(_clientId);
-            result.Client.DirectEmail.Should().Be("test@example.com");
-            result.Client.DirectFirstName.Should().Be("John");
-            result.Client.DirectLastName.Should().Be("Doe");
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value!.Id.Should().Be(_clientId);
+            result.Value.DirectEmail.Should().Be("test@example.com");
+            result.Value.DirectFirstName.Should().Be("John");
+            result.Value.DirectLastName.Should().Be("Doe");
         }
 
         [Fact]
-        public async Task Handle_WithoutTenantContext_ShouldReturnNotFound()
+        [Trait("Category", "Unit")]
+        public async Task Handle_WithoutTenantContext_ShouldReturnFailure()
         {
             // Arrange
             _tenantContextMock.Setup(x => x.HasTenant).Returns(false);
@@ -89,12 +92,13 @@ namespace Orbito.Tests.Application.Clients.Queries.GetClientById
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Tenant context is required");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Tenant.NoTenantContext");
         }
 
         [Fact]
-        public async Task Handle_WithNonExistentClient_ShouldReturnNotFound()
+        [Trait("Category", "Unit")]
+        public async Task Handle_WithNonExistentClient_ShouldReturnFailure()
         {
             // Arrange
             var query = new GetClientByIdQuery(_clientId);
@@ -107,12 +111,13 @@ namespace Orbito.Tests.Application.Clients.Queries.GetClientById
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Client not found");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Client.NotFound");
         }
 
         [Fact]
-        public async Task Handle_WithDifferentTenant_ShouldReturnNotFound()
+        [Trait("Category", "Unit")]
+        public async Task Handle_WithDifferentTenant_ShouldReturnFailure()
         {
             // Arrange
             var differentTenantId = TenantId.New();
@@ -129,12 +134,13 @@ namespace Orbito.Tests.Application.Clients.Queries.GetClientById
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Access denied");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Tenant.CrossTenantAccess");
         }
 
         [Fact]
-        public async Task Handle_WhenRepositoryThrowsException_ShouldReturnNotFound()
+        [Trait("Category", "Unit")]
+        public async Task Handle_WhenRepositoryThrowsException_ShouldPropagateException()
         {
             // Arrange
             var query = new GetClientByIdQuery(_clientId);
@@ -142,13 +148,8 @@ namespace Orbito.Tests.Application.Clients.Queries.GetClientById
             _clientRepositoryMock.Setup(x => x.GetByIdAsync(_clientId, It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new Exception("Database error"));
 
-            // Act
-            var result = await _handler.Handle(query, CancellationToken.None);
-
-            // Assert
-            result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Contain("An error occurred while retrieving client");
+            // Act & Assert
+            await Assert.ThrowsAsync<Exception>(() => _handler.Handle(query, CancellationToken.None));
         }
     }
 }

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Orbito.Application.Common.Helpers;
 using Orbito.Application.Common.Interfaces;
 
 namespace Orbito.Application.BackgroundJobs;
@@ -59,12 +60,10 @@ public class ProcessRecurringPaymentsJob : BackgroundService
 
     private async Task ProcessRecurringPayments(CancellationToken cancellationToken)
     {
-        using var scope = _serviceProvider.CreateScope();
-        var subscriptionService = scope.ServiceProvider.GetService<ISubscriptionService>();
+        await using var scope = _serviceProvider.CreateAsyncScope();
         var dateTime = scope.ServiceProvider.GetService<IDateTime>();
-        var tenantContext = scope.ServiceProvider.GetService<ITenantContext>();
 
-        if (subscriptionService == null || dateTime == null || tenantContext == null)
+        if (dateTime == null)
         {
             _logger.LogError("Required services not available");
             return;
@@ -74,66 +73,50 @@ public class ProcessRecurringPaymentsJob : BackgroundService
 
         _logger.LogInformation("Processing recurring payments for date {Date}", currentDate.Date);
 
-        var recurringPaymentsSuccess = false;
-        var expiredSubscriptionsSuccess = false;
+        // Create timeout for the operation
+        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromMinutes(OperationTimeoutMinutes));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
-        try
-        {
-            // Set admin tenant context for background job
-            // This allows access to all tenants' data for admin operations
-            tenantContext.SetTenant(null); // Admin context - no tenant filtering
-
-            // Create timeout for the operation
-            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromMinutes(OperationTimeoutMinutes));
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
-
-            // Process recurring payments for today
-            try
+        // Execute for all tenants
+        var results = await TenantJobHelper.ExecuteForAllTenantsAsync(
+            _serviceProvider,
+            _logger,
+            async (tenantId, serviceProvider, ct) =>
             {
-                await subscriptionService.ProcessRecurringPaymentsAsync(currentDate, linkedCts.Token);
-                recurringPaymentsSuccess = true;
-                _logger.LogInformation("Successfully processed recurring payments for date {Date}", currentDate.Date);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to process recurring payments for date {Date}", currentDate.Date);
-            }
+                var subscriptionService = serviceProvider.GetRequiredService<ISubscriptionService>();
+                var dateTimeService = serviceProvider.GetRequiredService<IDateTime>();
+                var currentDateLocal = dateTimeService.UtcNow;
 
-            // Process expired subscriptions
-            try
-            {
-                await subscriptionService.ProcessExpiredSubscriptionsAsync(linkedCts.Token);
-                expiredSubscriptionsSuccess = true;
-                _logger.LogInformation("Successfully processed expired subscriptions");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to process expired subscriptions");
-            }
+                // Process recurring payments for today
+                try
+                {
+                    await subscriptionService.ProcessRecurringPaymentsAsync(currentDateLocal, ct);
+                    _logger.LogDebug("Successfully processed recurring payments for tenant {TenantId}", tenantId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to process recurring payments for tenant {TenantId}", tenantId);
+                    throw;
+                }
 
-            _logger.LogInformation(
-                "Completed recurring payments job. Recurring payments: {RecurringStatus}, Expired subscriptions: {ExpiredStatus}",
-                recurringPaymentsSuccess ? "Success" : "Failed",
-                expiredSubscriptionsSuccess ? "Success" : "Failed");
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            _logger.LogWarning("ProcessRecurringPayments operation was cancelled");
-        }
-        catch (OperationCanceledException)
-        {
-            _logger.LogError("ProcessRecurringPayments operation timed out after {Minutes} minutes", OperationTimeoutMinutes);
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while processing recurring payments for date {Date}", currentDate.Date);
-            throw;
-        }
-        finally
-        {
-            // Clear tenant context
-            tenantContext.ClearTenant();
-        }
+                // Process expired subscriptions
+                try
+                {
+                    await subscriptionService.ProcessExpiredSubscriptionsAsync(ct);
+                    _logger.LogDebug("Successfully processed expired subscriptions for tenant {TenantId}", tenantId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to process expired subscriptions for tenant {TenantId}", tenantId);
+                    throw;
+                }
+            },
+            linkedCts.Token);
+
+        var successCount = results.Values.Count(r => r);
+        _logger.LogInformation(
+            "Completed recurring payments job. Success: {SuccessCount}/{TotalCount}",
+            successCount,
+            results.Count);
     }
 }

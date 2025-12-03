@@ -1,10 +1,10 @@
 using MediatR;
-using Orbito.Application.Common.Interfaces;
-using Orbito.Domain.ValueObjects;
+using Orbito.Application.DTOs;
+using Orbito.Domain.Common;
 
 namespace Orbito.Application.Subscriptions.Commands.CreateSubscription
 {
-    public record CreateSubscriptionCommand : IRequest<CreateSubscriptionResult>
+    public record CreateSubscriptionCommand : IRequest<Result<SubscriptionDto>>
     {
         public Guid ClientId { get; init; }
         public Guid PlanId { get; init; }

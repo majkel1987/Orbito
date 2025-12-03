@@ -36,13 +36,14 @@ namespace Orbito.Infrastructure.Persistance
             var timeout = inProgressTimeout ?? TimeSpan.FromMinutes(30);
             var stuckThreshold = now.Subtract(timeout);
 
+            // IMPORTANT: Use EF.Property<string> for enum comparisons to avoid InvalidCastException
             return await _context.PaymentRetrySchedules
                 .Where(r => r.TenantId == tenantId &&
                            (
                                // Normal scheduled retries
-                               (r.Status == RetryStatus.Scheduled && r.NextAttemptAt <= now) ||
+                               (EF.Property<string>(r, "Status") == "Scheduled" && r.NextAttemptAt <= now) ||
                                // Stuck InProgress retries (recovery mechanism)
-                               (r.Status == RetryStatus.InProgress && r.UpdatedAt < stuckThreshold)
+                               (EF.Property<string>(r, "Status") == "InProgress" && r.UpdatedAt < stuckThreshold)
                            ))
                 .OrderBy(r => r.NextAttemptAt)
                 .ToListAsync(cancellationToken);
@@ -94,10 +95,11 @@ namespace Orbito.Infrastructure.Persistance
 
             var tenantId = _tenantProvider.GetCurrentTenantId();
 
+            // IMPORTANT: Use EF.Property<string> for enum comparisons to avoid InvalidCastException
             return await _context.PaymentRetrySchedules
                 .Where(r => r.TenantId == tenantId &&
                            r.PaymentId == paymentId &&
-                           (r.Status == RetryStatus.Scheduled || r.Status == RetryStatus.InProgress))
+                           (EF.Property<string>(r, "Status") == "Scheduled" || EF.Property<string>(r, "Status") == "InProgress"))
                 .OrderBy(r => r.NextAttemptAt)
                 .FirstOrDefaultAsync(cancellationToken);
         }
@@ -112,10 +114,11 @@ namespace Orbito.Infrastructure.Persistance
 
             var tenantId = _tenantProvider.GetCurrentTenantId();
 
+            // IMPORTANT: Use EF.Property<string> for enum comparisons to avoid InvalidCastException
             return await _context.PaymentRetrySchedules
                 .Where(r => r.TenantId == tenantId &&
                            r.PaymentId == paymentId &&
-                           (r.Status == RetryStatus.Scheduled || r.Status == RetryStatus.InProgress))
+                           (EF.Property<string>(r, "Status") == "Scheduled" || EF.Property<string>(r, "Status") == "InProgress"))
                 .ToListAsync(cancellationToken);
         }
 
@@ -145,10 +148,11 @@ namespace Orbito.Infrastructure.Persistance
 
             var tenantId = _tenantProvider.GetCurrentTenantId();
 
+            // IMPORTANT: Use EF.Property<string> for enum comparisons to avoid InvalidCastException
             return await _context.PaymentRetrySchedules
                 .Where(r => r.TenantId == tenantId &&
                            r.PaymentId == paymentId &&
-                           r.Status == RetryStatus.Scheduled)
+                           EF.Property<string>(r, "Status") == "Scheduled")
                 .OrderBy(r => r.NextAttemptAt)
                 .FirstOrDefaultAsync(cancellationToken);
         }
@@ -215,7 +219,9 @@ namespace Orbito.Infrastructure.Persistance
 
             if (!string.IsNullOrEmpty(status) && Enum.TryParse<RetryStatus>(status, out var statusEnum))
             {
-                query = query.Where(rs => rs.Status == statusEnum);
+                // IMPORTANT: Convert enum to string for EF Core ValueConverter compatibility
+                var statusString = statusEnum.ToString();
+                query = query.Where(rs => EF.Property<string>(rs, "Status") == statusString);
             }
 
             return await Task.FromResult(query);

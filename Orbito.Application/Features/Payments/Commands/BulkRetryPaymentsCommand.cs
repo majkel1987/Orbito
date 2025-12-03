@@ -1,11 +1,12 @@
 using MediatR;
+using Orbito.Domain.Common;
 
 namespace Orbito.Application.Features.Payments.Commands
 {
     /// <summary>
     /// Command to retry multiple failed payments in bulk
     /// </summary>
-    public class BulkRetryPaymentsCommand : IRequest<BulkRetryPaymentsResult>
+    public class BulkRetryPaymentsCommand : IRequest<Result<BulkRetryPaymentsResponse>>
     {
         /// <summary>
         /// List of payment IDs to retry
@@ -52,41 +53,5 @@ namespace Orbito.Application.Features.Payments.Commands
         /// Whether the bulk operation was successful
         /// </summary>
         public bool Success => FailedRetries == 0;
-    }
-
-    /// <summary>
-    /// Result for individual payment retry in bulk operation
-    /// </summary>
-    public class BulkRetryItemResult
-    {
-        /// <summary>
-        /// ID of the payment
-        /// </summary>
-        public Guid PaymentId { get; set; }
-
-        /// <summary>
-        /// Whether the retry was scheduled successfully
-        /// </summary>
-        public bool Success { get; set; }
-
-        /// <summary>
-        /// ID of the created retry schedule
-        /// </summary>
-        public Guid? RetryScheduleId { get; set; }
-
-        /// <summary>
-        /// Error message if retry failed
-        /// </summary>
-        public string? ErrorMessage { get; set; }
-
-        /// <summary>
-        /// When the next retry attempt will be made
-        /// </summary>
-        public DateTime? NextAttemptAt { get; set; }
-
-        /// <summary>
-        /// Current attempt number
-        /// </summary>
-        public int AttemptNumber { get; set; }
     }
 }

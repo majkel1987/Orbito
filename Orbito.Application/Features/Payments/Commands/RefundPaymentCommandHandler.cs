@@ -44,21 +44,16 @@ namespace Orbito.Application.Features.Payments.Commands
                 _logger.LogInformation("Processing refund for payment {PaymentId} with amount {Amount} {Currency}",
                     request.PaymentId, request.Amount, request.Currency);
 
-                // Sprawdź czy płatność istnieje
-                // NOTE: Using deprecated method because this command is only accessible by Providers and PlatformAdmins
-                // who have proper authorization to view all payments in their tenant
-#pragma warning disable CS0618 // Type or member is obsolete
-                var payment = await _unitOfWork.Payments.GetByIdAsync(request.PaymentId, cancellationToken);
-#pragma warning restore CS0618 // Type or member is obsolete
+                // Sprawdź czy płatność istnieje z weryfikacją ClientId (security best practice)
+                var payment = await _unitOfWork.Payments.GetByIdForClientAsync(request.PaymentId, request.ClientId, cancellationToken);
                 if (payment == null)
                 {
-                    _logger.LogWarning("Payment {PaymentId} not found", request.PaymentId);
+                    _logger.LogWarning("Payment {PaymentId} not found for client {ClientId}", request.PaymentId, request.ClientId);
                     return Result.Failure<RefundPaymentResult>(DomainErrors.Payment.NotFound);
                 }
 
-                // Sprawdź czy płatność należy do klienta w ramach tego samego tenanta
-                // Assuming payment has a subscription and subscription has a client
-                if (payment.Subscription?.Client?.TenantId != _tenantContext.CurrentTenantId)
+                // Sprawdź czy płatność należy do tego samego tenanta
+                if (payment.TenantId != _tenantContext.CurrentTenantId)
                 {
                     _logger.LogWarning("Payment {PaymentId} does not belong to current tenant {TenantId}",
                         request.PaymentId, _tenantContext.CurrentTenantId);

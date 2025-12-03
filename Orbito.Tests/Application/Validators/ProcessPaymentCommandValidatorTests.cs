@@ -55,7 +55,7 @@ public class ProcessPaymentCommandValidatorTests : BaseTestFixture
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.Amount)
-            .WithErrorMessage("Amount must be greater than zero");
+            .WithErrorMessage("Payment amount must be greater than zero");
     }
 
     [Fact]
@@ -75,7 +75,7 @@ public class ProcessPaymentCommandValidatorTests : BaseTestFixture
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.Amount)
-            .WithErrorMessage("Amount must be greater than zero");
+            .WithErrorMessage("Payment amount must be greater than zero");
     }
 
     [Fact]
@@ -135,7 +135,7 @@ public class ProcessPaymentCommandValidatorTests : BaseTestFixture
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.Currency)
-            .WithErrorMessage("Unsupported currency");
+            .WithErrorMessage("Currency must be a 3-character code (e.g., USD, EUR, PLN)");
     }
 
     [Fact]

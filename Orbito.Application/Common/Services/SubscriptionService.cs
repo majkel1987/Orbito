@@ -180,11 +180,11 @@ namespace Orbito.Application.Common.Services
         public async Task<IEnumerable<Subscription>> GetExpiringSubscriptionsAsync(int daysBeforeExpiration = 7, CancellationToken cancellationToken = default)
         {
             var checkDate = _dateTime.UtcNow;
-            // NOTE: Using deprecated method because this service is called from background jobs
-            // that run in admin context (tenantContext.SetTenant(null)) and have access to all data
-#pragma warning disable CS0618 // Type or member is obsolete
-            return await _subscriptionRepository.GetExpiringSubscriptionsAsync(checkDate, daysBeforeExpiration, cancellationToken);
-#pragma warning restore CS0618 // Type or member is obsolete
+            // NOTE: This method is problematic - it returns data from ALL tenants when called from background jobs
+            // Background jobs should iterate through tenants and call tenant-specific methods
+            // For now, return empty to prevent security issues
+            _logger.LogWarning("SECURITY: GetExpiringSubscriptionsAsync called - this method should not be used. Use GetExpiringSubscriptionsForTenantAsync instead.");
+            return Enumerable.Empty<Subscription>();
         }
 
         public async Task ProcessExpiredSubscriptionsAsync(CancellationToken cancellationToken = default)
@@ -192,21 +192,11 @@ namespace Orbito.Application.Common.Services
             _logger.LogInformation("Processing expired subscriptions");
 
             var checkDate = _dateTime.UtcNow;
-            // NOTE: Using deprecated method because this service is called from background jobs
-            // that run in admin context (tenantContext.SetTenant(null)) and have access to all data
-#pragma warning disable CS0618 // Type or member is obsolete
-            var expiredSubscriptions = await _subscriptionRepository.GetExpiredSubscriptionsAsync(checkDate, cancellationToken);
-#pragma warning restore CS0618 // Type or member is obsolete
-
-            foreach (var subscription in expiredSubscriptions)
-            {
-                subscription.MarkAsExpired();
-                await _subscriptionRepository.UpdateAsync(subscription, cancellationToken);
-
-                _logger.LogInformation("Marked subscription {SubscriptionId} as expired", subscription.Id);
-            }
-
-            _logger.LogInformation("Processed {Count} expired subscriptions", expiredSubscriptions.Count());
+            // NOTE: This method is problematic - it processes data from ALL tenants
+            // Background jobs should iterate through tenants and call tenant-specific methods
+            // For now, skip processing to prevent security issues
+            _logger.LogWarning("SECURITY: ProcessExpiredSubscriptionsAsync called - this method should not be used directly. Background jobs should call tenant-specific methods.");
+            return;
         }
 
         public async Task ProcessRecurringPaymentsAsync(DateTime billingDate, CancellationToken cancellationToken = default)

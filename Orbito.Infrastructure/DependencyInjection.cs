@@ -16,6 +16,9 @@ using Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers;
 using Orbito.Infrastructure.PaymentGateways.Stripe.Models;
 using Orbito.Infrastructure.Persistance;
 using Orbito.Infrastructure.Persistence;
+using Orbito.Infrastructure.Repositories;
+using Orbito.Application.Common.Authorization;
+using Orbito.Domain.Interfaces;
 using System;
 using System.Text;
 
@@ -50,8 +53,9 @@ namespace Orbito.Infrastructure
                 {
                     sqlOptions.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName);
 
-                    // RESILIENCE: Enable retry strategy with exponential backoff
-                    // Note: If using explicit transactions, ensure they are compatible with retry logic
+                    // Retry strategy - automatyczne ponowne próby przy transient failures
+                    // Refaktoryzacja: Provider handlers używają SaveChanges pattern (kompatybilne z retry)
+                    // Payment handlers używają manual transactions (z ExecutionStrategy wrapper jeśli potrzebne)
                     sqlOptions.EnableRetryOnFailure(
                         maxRetryCount: 3,
                         maxRetryDelay: TimeSpan.FromSeconds(30),
@@ -80,6 +84,10 @@ namespace Orbito.Infrastructure
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
+            // Register ApplicationDbContext as ITenantValidationBypass
+            // This allows admin setup to bypass tenant validation during initial seeding
+            services.AddScoped<ITenantValidationBypass>(provider => provider.GetRequiredService<ApplicationDbContext>());
+
             // Add JWT Authentication
             services.AddAuthentication(options =>
             {
@@ -103,6 +111,28 @@ namespace Orbito.Infrastructure
                     // Zero is too restrictive and can cause issues with clock synchronization
                     ClockSkew = TimeSpan.FromMinutes(5)
                 };
+            });
+
+            // Add Authorization with custom policies
+            services.AddAuthorization(options =>
+            {
+                // ProviderTeamAccess policy - any team member (Owner, Admin, Member) + backward compatibility
+                options.AddPolicy(PolicyNames.ProviderTeamAccess, policy =>
+                {
+                    policy.Requirements.Add(new ProviderTeamAccessRequirement());
+                });
+
+                // ProviderOwnerOnly policy - only the team owner
+                options.AddPolicy(PolicyNames.ProviderOwnerOnly, policy =>
+                {
+                    policy.Requirements.Add(new ProviderOwnerOnlyRequirement());
+                });
+
+                // ClientAccess policy - client role
+                options.AddPolicy(PolicyNames.ClientAccess, policy =>
+                {
+                    policy.Requirements.Add(new ClientAccessRequirement());
+                });
             });
 
             // NOTE: Rate Limiting, CORS, and Response Compression are configured in Program.cs
@@ -131,6 +161,7 @@ namespace Orbito.Infrastructure
             services.AddScoped<IEmailNotificationRepository, EmailNotificationRepository>();
             services.AddScoped<IPaymentRetryRepository, PaymentRetryRepository>();
             services.AddScoped<IReconciliationRepository, ReconciliationRepository>();
+            services.AddScoped<ITeamMemberRepository, TeamMemberRepository>();
             services.AddScoped<IEmailSender, Services.EmailSender>();
             services.AddScoped<IUserContextService, Services.UserContextService>();
             services.AddScoped<IPaymentReconciliationService, Services.PaymentReconciliationService>();

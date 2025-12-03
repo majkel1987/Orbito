@@ -1,10 +1,12 @@
+using Orbito.Application.DTOs;
 using MediatR;
 using Orbito.Application.Common.Interfaces;
-using Orbito.Application.Clients.Commands.CreateClient;
+using Orbito.Domain.Common;
+using Orbito.Domain.Errors;
 
 namespace Orbito.Application.Clients.Queries.GetClientById
 {
-    public class GetClientByIdQueryHandler : IRequestHandler<GetClientByIdQuery, GetClientByIdResult>
+    public class GetClientByIdQueryHandler : IRequestHandler<GetClientByIdQuery, Result<ClientDto>>
     {
         private readonly IClientRepository _clientRepository;
         private readonly ITenantContext _tenantContext;
@@ -17,36 +19,30 @@ namespace Orbito.Application.Clients.Queries.GetClientById
             _tenantContext = tenantContext;
         }
 
-        public async Task<GetClientByIdResult> Handle(GetClientByIdQuery request, CancellationToken cancellationToken)
+        public async Task<Result<ClientDto>> Handle(GetClientByIdQuery request, CancellationToken cancellationToken)
         {
-            try
+            // Sprawdź czy mamy kontekst tenanta
+            if (!_tenantContext.HasTenant)
             {
-                // Sprawdź czy mamy kontekst tenanta
-                if (!_tenantContext.HasTenant)
-                {
-                    return GetClientByIdResult.NotFoundResult("Tenant context is required");
-                }
-
-                // Pobierz klienta
-                var client = await _clientRepository.GetByIdAsync(request.Id, cancellationToken);
-                if (client == null)
-                {
-                    return GetClientByIdResult.NotFoundResult("Client not found");
-                }
-
-                // Sprawdź czy klient należy do tego samego tenanta
-                if (client.TenantId != _tenantContext.CurrentTenantId)
-                {
-                    return GetClientByIdResult.NotFoundResult("Access denied");
-                }
-
-                var clientDto = MapToDto(client);
-                return GetClientByIdResult.SuccessResult(clientDto);
+                return Result.Failure<ClientDto>(DomainErrors.Tenant.NoTenantContext);
             }
-            catch (Exception ex)
+
+            // Pobierz klienta (repository already filters by TenantId)
+            var client = await _clientRepository.GetByIdAsync(request.Id, cancellationToken);
+            if (client == null)
             {
-                return GetClientByIdResult.NotFoundResult($"An error occurred while retrieving client: {ex.Message}");
+                return Result.Failure<ClientDto>(DomainErrors.Client.NotFound);
             }
+
+            // Additional security check: verify tenant ownership
+            // Note: Repository already filters by TenantId, but this provides defense in depth
+            if (client.TenantId != _tenantContext.CurrentTenantId)
+            {
+                return Result.Failure<ClientDto>(DomainErrors.Tenant.CrossTenantAccess);
+            }
+
+            var clientDto = MapToDto(client);
+            return Result.Success(clientDto);
         }
 
         private static ClientDto MapToDto(Orbito.Domain.Entities.Client client)

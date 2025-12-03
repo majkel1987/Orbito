@@ -1,15 +1,17 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
+using Orbito.Domain.Common;
 using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
+using Orbito.Domain.Errors;
 
 namespace Orbito.Application.Features.Payments.Commands
 {
     /// <summary>
     /// Handler for retry failed payment command
     /// </summary>
-    public class RetryFailedPaymentCommandHandler : IRequestHandler<RetryFailedPaymentCommand, RetryFailedPaymentResult>
+    public class RetryFailedPaymentCommandHandler : IRequestHandler<RetryFailedPaymentCommand, Result<RetryFailedPaymentResponse>>
     {
         private readonly IPaymentRetryService _retryService;
         private readonly IUnitOfWork _unitOfWork;
@@ -28,7 +30,7 @@ namespace Orbito.Application.Features.Payments.Commands
             _logger = logger;
         }
 
-        public async Task<RetryFailedPaymentResult> Handle(RetryFailedPaymentCommand request, CancellationToken cancellationToken)
+        public async Task<Result<RetryFailedPaymentResponse>> Handle(RetryFailedPaymentCommand request, CancellationToken cancellationToken)
         {
             try
             {
@@ -41,11 +43,7 @@ namespace Orbito.Application.Features.Payments.Commands
                 {
                     _logger.LogWarning("Client {ClientId} attempted to retry payment {PaymentId} belonging to different client", 
                         currentClientId, request.PaymentId);
-                    return new RetryFailedPaymentResult
-                    {
-                        Success = false,
-                        ErrorMessage = "You can only retry your own payments"
-                    };
+                    return Result.Failure<RetryFailedPaymentResponse>(DomainErrors.General.Unauthorized);
                 }
 
                 // Rate limiting: Check if client has exceeded payment retry limits
@@ -54,11 +52,7 @@ namespace Orbito.Application.Features.Payments.Commands
                 {
                     _logger.LogWarning("Client {ClientId} rate limited for payment retries. Retry after {Minutes} minutes",
                         request.ClientId, rateLimitDelay.Value.TotalMinutes);
-                    return new RetryFailedPaymentResult
-                    {
-                        Success = false,
-                        ErrorMessage = $"Rate limit exceeded. Please try again in {Math.Ceiling(rateLimitDelay.Value.TotalMinutes)} minutes"
-                    };
+                    return Result.Failure<RetryFailedPaymentResponse>(DomainErrors.Payment.RateLimitExceeded);
                 }
 
                 // SECURITY: Get the payment with client verification
@@ -66,11 +60,7 @@ namespace Orbito.Application.Features.Payments.Commands
                 if (payment == null)
                 {
                     _logger.LogWarning("Payment {PaymentId} not found or does not belong to client {ClientId}", request.PaymentId, request.ClientId);
-                    return new RetryFailedPaymentResult
-                    {
-                        Success = false,
-                        ErrorMessage = "Payment not found"
-                    };
+                    return Result.Failure<RetryFailedPaymentResponse>(DomainErrors.Payment.NotFound);
                 }
 
                 // Check if payment is in failed status
@@ -78,11 +68,7 @@ namespace Orbito.Application.Features.Payments.Commands
                 {
                     _logger.LogWarning("Payment {PaymentId} is not in failed status, current status: {Status}", 
                         request.PaymentId, payment.Status);
-                    return new RetryFailedPaymentResult
-                    {
-                        Success = false,
-                        ErrorMessage = "Only failed payments can be retried"
-                    };
+                    return Result.Failure<RetryFailedPaymentResponse>(DomainErrors.PaymentRetry.NotFailedStatus);
                 }
 
                 // Check if there's already an active retry
@@ -90,11 +76,7 @@ namespace Orbito.Application.Features.Payments.Commands
                 if (hasActiveRetry)
                 {
                     _logger.LogWarning("Payment {PaymentId} already has an active retry schedule", request.PaymentId);
-                    return new RetryFailedPaymentResult
-                    {
-                        Success = false,
-                        ErrorMessage = "Payment already has an active retry schedule"
-                    };
+                    return Result.Failure<RetryFailedPaymentResponse>(DomainErrors.PaymentRetry.AlreadyActive);
                 }
 
                 // TRANSACTION: Ensure atomicity of retry scheduling and rate limit recording
@@ -102,11 +84,7 @@ namespace Orbito.Application.Features.Payments.Commands
                 if (!transactionResult.IsSuccess)
                 {
                     _logger.LogError("Failed to begin transaction for payment retry: {Error}", transactionResult.ErrorMessage);
-                    return new RetryFailedPaymentResult
-                    {
-                        Success = false,
-                        ErrorMessage = "Failed to begin transaction"
-                    };
+                    return Result.Failure<RetryFailedPaymentResponse>(DomainErrors.General.UnexpectedError);
                 }
 
                 try
@@ -131,24 +109,21 @@ namespace Orbito.Application.Features.Payments.Commands
                     {
                         _logger.LogError("Failed to commit transaction for payment retry: {Error}", commitResult.ErrorMessage);
                         await _unitOfWork.RollbackAsync(cancellationToken);
-                        return new RetryFailedPaymentResult
-                        {
-                            Success = false,
-                            ErrorMessage = "Failed to commit transaction"
-                        };
+                        return Result.Failure<RetryFailedPaymentResponse>(DomainErrors.General.UnexpectedError);
                     }
 
                     _logger.LogInformation("Successfully scheduled retry {RetryId} for payment {PaymentId}",
                         createdSchedule.Id, request.PaymentId);
 
-                    return new RetryFailedPaymentResult
+                    var response = new RetryFailedPaymentResponse
                     {
-                        Success = true,
                         RetryScheduleId = createdSchedule.Id,
                         NextAttemptAt = createdSchedule.NextAttemptAt,
                         AttemptNumber = createdSchedule.AttemptNumber,
                         MaxAttempts = createdSchedule.MaxAttempts
                     };
+
+                    return Result.Success(response);
                 }
                 catch
                 {
@@ -159,11 +134,7 @@ namespace Orbito.Application.Features.Payments.Commands
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing retry request for payment {PaymentId}", request.PaymentId);
-                return new RetryFailedPaymentResult
-                {
-                    Success = false,
-                    ErrorMessage = "An error occurred while processing the retry request"
-                };
+                return Result.Failure<RetryFailedPaymentResponse>(DomainErrors.General.UnexpectedError);
             }
         }
     }

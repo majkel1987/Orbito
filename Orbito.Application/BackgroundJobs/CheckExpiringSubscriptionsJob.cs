@@ -60,13 +60,13 @@ public class CheckExpiringSubscriptionsJob : BackgroundService
 
     private async Task CheckExpiringSubscriptions(CancellationToken cancellationToken)
     {
-        using var scope = _serviceProvider.CreateScope();
-        var subscriptionService = scope.ServiceProvider.GetService<ISubscriptionService>();
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var subscriptionRepository = scope.ServiceProvider.GetService<ISubscriptionRepository>();
+        var providerRepository = scope.ServiceProvider.GetService<IProviderRepository>();
         var notificationService = scope.ServiceProvider.GetService<IPaymentNotificationService>();
         var dateTime = scope.ServiceProvider.GetService<IDateTime>();
-        var tenantContext = scope.ServiceProvider.GetService<ITenantContext>();
 
-        if (subscriptionService == null || notificationService == null || dateTime == null || tenantContext == null)
+        if (subscriptionRepository == null || providerRepository == null || notificationService == null || dateTime == null)
         {
             _logger.LogError("Required services not available");
             return;
@@ -76,50 +76,70 @@ public class CheckExpiringSubscriptionsJob : BackgroundService
 
         try
         {
-            // Set admin tenant context for background job
-            // This allows access to all tenants' data for admin operations
-            tenantContext.SetTenant(null); // Admin context - no tenant filtering
-
             // Create timeout for the operation
             using var timeoutCts = new CancellationTokenSource(TimeSpan.FromMinutes(OperationTimeoutMinutes));
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
-            // Get subscriptions expiring in the next 7 days
-            var expiringSubscriptions = await subscriptionService.GetExpiringSubscriptionsAsync(DaysBeforeExpiry, linkedCts.Token);
+            // Get all active providers to iterate through tenants
+            var providers = await providerRepository.GetActiveProvidersAsync(1, int.MaxValue, linkedCts.Token);
+            var tenantIds = providers.Select(p => p.TenantId).Distinct().ToList();
 
-            _logger.LogInformation("Found {Count} subscriptions expiring within {Days} days",
-                expiringSubscriptions.Count(), DaysBeforeExpiry);
+            _logger.LogDebug("Found {Count} active tenants to check", tenantIds.Count);
 
-            var successCount = 0;
-            var failureCount = 0;
+            var totalSuccessCount = 0;
+            var totalFailureCount = 0;
 
-            foreach (var subscription in expiringSubscriptions)
+            // Process each tenant separately with explicit TenantId
+            foreach (var tenantId in tenantIds)
             {
                 try
                 {
-                    _logger.LogDebug("Subscription {SubscriptionId} for client {ClientId} is expiring on {ExpirationDate}",
-                        subscription.Id, subscription.ClientId, subscription.NextBillingDate);
+                    var checkDate = dateTime.UtcNow;
 
-                    // Send expiration notification
-                    await SendExpirationNotification(subscription, notificationService, dateTime, linkedCts.Token);
+                    // SECURE: Explicitly pass TenantId to prevent cross-tenant access
+                    var expiringSubscriptions = await subscriptionRepository.GetExpiringSubscriptionsForTenantAsync(
+                        tenantId,
+                        checkDate,
+                        DaysBeforeExpiry,
+                        linkedCts.Token);
 
-                    successCount++;
+                    _logger.LogDebug("Tenant {TenantId}: Found {Count} expiring subscriptions",
+                        tenantId.Value, expiringSubscriptions.Count());
+
+                    foreach (var subscription in expiringSubscriptions)
+                    {
+                        try
+                        {
+                            _logger.LogDebug("Subscription {SubscriptionId} for client {ClientId} is expiring on {ExpirationDate}",
+                                subscription.Id, subscription.ClientId, subscription.NextBillingDate);
+
+                            // Send expiration notification
+                            await SendExpirationNotification(subscription, notificationService, dateTime, linkedCts.Token);
+
+                            totalSuccessCount++;
+                        }
+                        catch (Exception ex)
+                        {
+                            totalFailureCount++;
+                            _logger.LogError(ex,
+                                "Failed to send expiration notification for subscription {SubscriptionId}",
+                                subscription.Id);
+                        }
+
+                        // Small delay to avoid overwhelming the notification service
+                        await Task.Delay(TimeSpan.FromMilliseconds(100), linkedCts.Token);
+                    }
                 }
                 catch (Exception ex)
                 {
-                    failureCount++;
-                    _logger.LogError(ex,
-                        "Failed to send expiration notification for subscription {SubscriptionId}",
-                        subscription.Id);
+                    _logger.LogError(ex, "Error processing tenant {TenantId}", tenantId.Value);
+                    // Continue with next tenant
                 }
-
-                // Small delay to avoid overwhelming the notification service
-                await Task.Delay(TimeSpan.FromMilliseconds(100), linkedCts.Token);
             }
 
             _logger.LogInformation(
                 "Completed expiring subscription check. Success: {SuccessCount}, Failed: {FailureCount}",
-                successCount, failureCount);
+                totalSuccessCount, totalFailureCount);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -134,11 +154,6 @@ public class CheckExpiringSubscriptionsJob : BackgroundService
         {
             _logger.LogError(ex, "Error while checking expiring subscriptions");
             throw;
-        }
-        finally
-        {
-            // Clear tenant context
-            tenantContext.ClearTenant();
         }
     }
 

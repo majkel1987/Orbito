@@ -1,1064 +1,517 @@
-# Orbito Frontend - Szczegółowa Lista Zadań Implementacyjnych
+# Frontend Implementation Plan v6.0 - Szczegółowa Lista Zadań
+
+**Wersja**: 6.0 (Fresh Start)  
+**Data**: 2025-11-29  
+**Łączna liczba zadań**: ~95 zadań  
+**Szacowany czas**: 10-12 tygodni (MVP)
+
+---
 
 ## 📋 Instrukcja Użycia
 
 - Każde zadanie oznacz jako ✅ po ukończeniu
-- Zadania z 🔴 są krytyczne i blokują dalsze kroki
-- Zadania z 🟡 są ważne ale nie blokujące
+- Zadania z 🔴 są **krytyczne** i blokują dalsze kroki
+- Zadania z 🟡 są **ważne** ale nie blokujące
 - Zadania z 🟢 można pominąć w MVP
-- Używaj Claude Code 2 do implementacji każdego kroku
+- Każde zadanie to potencjalny osobny prompt dla agenta AI
+- Zadania są pogrupowane w logiczne bloki do wykonania w jednej sesji
 
 ---
 
-## FAZA 0: Setup & Foundation (Tydzień 1-2)
+## 📊 Status Postępu
 
-### Dzień 1-2: Inicjalizacja Projektu
-
-#### 0.1 Setup Next.js 🔴
-
-- [x] ✅ Utwórz nowy projekt Next.js 14 z App Router (bez TypeScript)
-- [x] ✅ Wybierz: Tailwind CSS - Yes, ESLint - Yes, App Router - Yes
-- [x] ✅ Usuń niepotrzebne pliki startowe (przykładowy content)
-- [x] ✅ Sprawdź czy projekt się uruchamia na localhost:3000
-
-#### 0.2 Struktura Katalogów 🔴
-
-- [x] ✅ Utwórz strukturę folderów zgodną z planem:
-  - [x] ✅ `src/app/` - dla Next.js App Router
-  - [x] ✅ `src/features/` - dla modułów funkcjonalnych
-  - [x] ✅ `src/core/` - dla logiki biznesowej
-  - [x] ✅ `src/shared/` - dla współdzielonych zasobów
-- [x] ✅ Utwórz `jsconfig.json` z path aliases (@/features, @/core, @/shared)
-
-#### 0.3 Instalacja Podstawowych Zależności 🔴
-
-- [x] ✅ Zainstaluj core dependencies:
-  - [x] ✅ `zustand` - state management
-  - [x] ✅ `@tanstack/react-query` - server state
-  - [x] ✅ `axios` - HTTP client
-  - [x] ✅ `next-auth` - autentykacja
-- [x] ✅ Zainstaluj UI dependencies:
-  - [x] ✅ `lucide-react` - ikony
-  - [x] ✅ `clsx` - conditional classes
-  - [x] ✅ `tailwind-merge` - merge Tailwind classes
-
-### Dzień 3-4: Konfiguracja Narzędzi
-
-#### 0.4 Tailwind CSS Setup 🔴
-
-- [x] ✅ Skonfiguruj `tailwind.config.js`:
-  - [x] ✅ Dodaj custom colors pasujące do brandingu (Orbito brand colors)
-  - [x] ✅ Skonfiguruj spacing i typography
-  - [x] ✅ Dodaj dark mode support (class-based)
-- [x] ✅ Utwórz `globals.css` z custom utility classes
-
-#### 0.5 shadcn/ui Installation 🔴
-
-- [x] ✅ Wykonaj `npx shadcn@latest init`
-- [x] ✅ Wybierz style: New York (Recommended)
-- [x] ✅ Wybierz base color: Neutral
-- [x] ✅ Sprawdź czy folder `components/ui` został utworzony
-
-#### 0.6 ESLint & Prettier Setup 🟡
-
-- [x] ✅ Skonfiguruj `.eslintrc.json` dla Next.js
-- [x] ✅ Dodaj `.prettierrc` z regułami formatowania
-- [x] ✅ Dodaj skrypty w `package.json`:
-  - [x] ✅ `"lint": "next lint"`
-  - [x] ✅ `"format": "prettier --write ."`
-
-### Dzień 5-6: Environment & API Client
-
-#### 0.7 Environment Variables 🔴
-
-- [x] ✅ Utwórz `.env.local` z podstawowymi zmiennymi:
-  - [x] ✅ `NEXT_PUBLIC_API_URL` - URL backendu
-  - [x] ✅ `NEXTAUTH_URL` - URL aplikacji
-  - [x] ✅ `NEXTAUTH_SECRET` - secret dla NextAuth
-  - [x] ✅ `NEXT_PUBLIC_STRIPE_KEY` - publiczny klucz Stripe
-- [x] ✅ Utwórz `.env.example` jako template
-
-#### 0.8 Axios Client Setup 🔴
-
-- [x] ✅ Utwórz `src/core/api/client.js`:
-  - [x] ✅ Skonfiguruj base URL z env
-  - [x] ✅ Ustaw default headers
-  - [x] ✅ Dodaj timeout (30s)
-- [x] ✅ Utwórz `src/core/api/interceptors.js`:
-  - [x] ✅ Request interceptor (będzie dodawać token później)
-  - [x] ✅ Response interceptor z error handling
-
-#### 0.9 React Query Setup 🔴
-
-- [x] ✅ **UKOŃCZONE** - Utwórz `src/core/lib/react-query.js`:
-  - [x] ✅ Skonfiguruj QueryClient z default options
-  - [x] ✅ Ustaw staleTime i cacheTime
-  - [x] ✅ Skonfiguruj retry logic
-- [x] ✅ **UKOŃCZONE** - Dodaj QueryClientProvider do `app/layout.js`
-
-### Dzień 7-8: Podstawowe Komponenty UI
-
-#### 0.10 shadcn Components Import 🔴
-
-- [x] ✅ **UKOŃCZONE** - Zaimportuj podstawowe komponenty:
-  - [x] ✅ `npx shadcn-ui@latest add button`
-  - [x] ✅ `npx shadcn-ui@latest add card`
-  - [x] ✅ `npx shadcn-ui@latest add input`
-  - [x] ✅ `npx shadcn-ui@latest add label`
-  - [x] ✅ `npx shadcn-ui@latest add toast`
-  - [x] ✅ `npx shadcn-ui@latest add dialog`
-  - [x] ✅ `npx shadcn-ui@latest add dropdown-menu`
-  - [x] ✅ `npx shadcn-ui@latest add skeleton`
-  - [x] ✅ `npx shadcn-ui@latest add alert`
-  - [x] ✅ `npx shadcn-ui@latest add badge`
-
-#### 0.11 Custom Components 🟡
-
-- [x] ✅ **UKOŃCZONE** - Utwórz `src/shared/components/layouts/PageHeader.jsx`:
-  - [x] ✅ Props: title, subtitle, actions
-  - [x] ✅ Responsive design
-- [x] ✅ **UKOŃCZONE** - Utwórz `src/shared/components/ui/LoadingSpinner.jsx`:
-  - [x] ✅ Props: size, fullScreen
-  - [x] ✅ Z użyciem lucide-react icons
-- [x] ✅ **UKOŃCZONE** - Utwórz `src/shared/components/ui/ErrorMessage.jsx`:
-  - [x] ✅ Props: error, onRetry
-  - [x] ✅ Friendly error display
-
-#### 0.12 Layout Components 🔴
-
-- [x] ✅ **UKOŃCZONE** - Utwórz `src/shared/components/layouts/MainLayout.jsx`:
-  - [x] ✅ Placeholder dla header i sidebar
-  - [x] ✅ Main content area z paddingiem
-- [x] ✅ **UKOŃCZONE** - Zaktualizuj `app/layout.js`:
-  - [x] ✅ Dodaj Toaster provider (w providers.js)
-  - [x] ✅ Dodaj podstawowe meta tags
-  - [x] ✅ Dodaj globals.css z cyberpunk theme
+| Faza                      | Status      | Zadania | Ukończone     |
+| ------------------------- | ----------- | ------- | ------------- |
+| **FAZA 0: Setup**         | ⏳ Oczekuje | 12      | 0/12          |
+| **FAZA 1: Auth + Tenant** | ⏳ Oczekuje | 14      | 0/14          |
+| **FAZA 2: Layout**        | ⏳ Oczekuje | 10      | 0/10          |
+| **FAZA 3: Team**          | ⏳ Oczekuje | 9       | 0/9           |
+| **FAZA 4A: Clients**      | ⏳ Oczekuje | 14      | 0/14          |
+| **FAZA 4B: Plans**        | ⏳ Oczekuje | 12      | 0/12          |
+| **FAZA 5: Subscriptions** | ⏳ Oczekuje | 10      | 0/10          |
+| **FAZA 6: Payments**      | ⏳ Oczekuje | 8       | 0/8           |
+| **FAZA 7: Analytics**     | ⏳ Oczekuje | 6       | 0/6           |
+| **ŁĄCZNIE**               |             | **95**  | **0/95 (0%)** |
 
 ---
 
-## FAZA 1: Authentication & Security (Tydzień 3-4)
+## 🔵 FAZA 0: Setup & Configuration (Tydzień 1)
 
-### Dzień 9-10: NextAuth Setup
+### 0.1 Inicjalizacja Projektu
 
-#### 1.1 NextAuth Configuration 🔴
+| #     | Zadanie                              | Priorytet | Status | Opis                                                                |
+| ----- | ------------------------------------ | --------- | ------ | ------------------------------------------------------------------- |
+| 0.1.1 | 🔴 Utworzenie projektu Next.js 15    | Krytyczne | ⬜     | `create-next-app` z TypeScript, Tailwind, App Router, src directory |
+| 0.1.2 | 🔴 Konfiguracja tsconfig.json strict | Krytyczne | ⬜     | strict: true, allowJs: false, wszystkie strict\* opcje              |
+| 0.1.3 | 🔴 Struktura katalogów               | Krytyczne | ⬜     | Utworzenie features/, shared/, core/ zgodnie z planem               |
 
-- [ ] Utwórz `src/app/api/auth/[...nextauth]/route.js`:
-  - [ ] Skonfiguruj Credentials Provider
-  - [ ] Dodaj authorize function z API call do backendu
-  - [ ] Skonfiguruj JWT callbacks
-  - [ ] Dodaj session callback z user info
-- [ ] Utwórz `src/core/lib/auth.js`:
-  - [ ] Export authOptions dla reużywalności
-  - [ ] Helper functions dla auth
-
-#### 1.2 Auth Context & Provider 🔴
-
-- [ ] Utwórz `src/features/auth/providers/AuthProvider.jsx`:
-  - [ ] Wrap SessionProvider z next-auth
-  - [ ] Dodaj do root layout
-- [ ] Utwórz `src/features/auth/hooks/useAuth.js`:
-  - [ ] Hook używający useSession
-  - [ ] Helper methods (isAuthenticated, hasRole, etc.)
-
-#### 1.3 Login Page 🔴
-
-- [ ] Utwórz `src/app/(auth)/login/page.js`:
-  - [ ] Formularz logowania (email, password)
-  - [ ] Używaj React Hook Form
-  - [ ] Walidacja po stronie klienta
-  - [ ] Error handling z toast
-  - [ ] Redirect po sukcesie
-- [ ] Dodaj loading state podczas logowania
-- [ ] Dodaj link do rejestracji
-
-### Dzień 11-12: Registration & Protected Routes
-
-#### 1.4 Registration Page 🔴
-
-- [ ] Utwórz `src/app/(auth)/register/page.js`:
-  - [ ] Formularz rejestracji dla Provider
-  - [ ] Pola: firstName, lastName, email, password, confirmPassword, companyName
-  - [ ] Password strength indicator
-  - [ ] Terms acceptance checkbox
-- [ ] Utwórz `src/features/auth/api/authApi.js`:
-  - [ ] registerProvider function z API call
-  - [ ] Error handling
-
-#### 1.5 Middleware for Protected Routes 🔴
-
-- [ ] Utwórz `src/middleware.js`:
-  - [ ] Używaj withAuth z next-auth/middleware
-  - [ ] Zdefiniuj public routes
-  - [ ] Zdefiniuj role-based routes
-  - [ ] Redirect logic dla unauthorized
-- [ ] Skonfiguruj matcher dla middleware
-
-#### 1.6 Setup Admin Page 🟡
-
-- [ ] Utwórz `src/app/(auth)/setup/page.js`:
-  - [ ] Formularz pierwszego admina
-  - [ ] Check czy admin już istnieje
-  - [ ] One-time setup flow
-- [ ] Utwórz API call dla admin setup check
-
-### Dzień 13-14: Auth Components & Guards
-
-#### 1.7 Auth Store (Zustand) 🔴
-
-- [ ] Utwórz `src/features/auth/stores/authStore.js`:
-  - [ ] Stan: user, isLoading, error
-  - [ ] Actions: setUser, clearUser, setError
-  - [ ] Computed: isAuthenticated, hasRole
-- [ ] Synchronizuj z NextAuth session
-
-#### 1.8 Protected Components 🔴
-
-- [ ] Utwórz `src/features/auth/components/ProtectedRoute.jsx`:
-  - [ ] Props: children, requiredRoles
-  - [ ] Check authentication i role
-  - [ ] Loading state
-  - [ ] Redirect jeśli unauthorized
-- [ ] Utwórz `src/features/auth/components/RoleGuard.jsx`:
-  - [ ] Component-level authorization
-  - [ ] Fallback UI dla unauthorized
-
-#### 1.9 Auth UI Components 🟡
-
-- [ ] Utwórz `src/features/auth/components/UserMenu.jsx`:
-  - [ ] Dropdown z user info
-  - [ ] Logout button
-  - [ ] Link do profilu
-- [ ] Utwórz `src/features/auth/components/LoginForm.jsx`:
-  - [ ] Wydzielony komponent formularza
-  - [ ] Reużywalny w różnych miejscach
-
-#### 1.10 Logout Functionality 🔴
-
-- [ ] Dodaj logout handler:
-  - [ ] Call signOut z next-auth
-  - [ ] Clear local state
-  - [ ] Redirect do login
-- [ ] Dodaj logout button do UserMenu
+**Blok 0.1 - Wymagania wejściowe**: Brak  
+**Blok 0.1 - Rezultat**: Działający projekt Next.js z TypeScript strict
 
 ---
 
-## FAZA 2: Layout & Navigation (Tydzień 5-6)
+### 0.2 Stylowanie i UI Kit
 
-### Dzień 15-16: Main Layout Components
+| #     | Zadanie                        | Priorytet | Status | Opis                                                                      |
+| ----- | ------------------------------ | --------- | ------ | ------------------------------------------------------------------------- |
+| 0.2.1 | 🔴 Konfiguracja Tailwind CSS   | Krytyczne | ⬜     | tailwind.config.ts z custom colors, fonts                                 |
+| 0.2.2 | 🔴 Inicjalizacja shadcn/ui     | Krytyczne | ⬜     | `npx shadcn@latest init`, konfiguracja components.json                    |
+| 0.2.3 | 🔴 Import bazowych komponentów | Krytyczne | ⬜     | Button, Input, Card, Dialog, DropdownMenu, Select, Badge, Skeleton, Toast |
+| 0.2.4 | 🟡 Utility functions           | Ważne     | ⬜     | cn() helper, formatters (currency, date)                                  |
 
-#### 2.1 Header Component 🔴
-
-- [ ] Utwórz `src/shared/components/layouts/Header.jsx`:
-  - [ ] Logo i nazwa aplikacji
-  - [ ] UserMenu po prawej
-  - [ ] Notification icon (placeholder)
-  - [ ] Mobile menu toggle
-  - [ ] Sticky positioning
-
-#### 2.2 Sidebar Navigation 🔴
-
-- [ ] Utwórz `src/shared/components/layouts/Sidebar.jsx`:
-  - [ ] Navigation items z lucide icons
-  - [ ] Active route highlighting
-  - [ ] Role-based menu filtering
-  - [ ] Collapsible na mobile
-- [ ] Utwórz `src/core/config/navigation.js`:
-  - [ ] Menu items configuration
-  - [ ] Role permissions per item
-
-#### 2.3 Dashboard Layout 🔴
-
-- [ ] Utwórz `src/app/(dashboard)/layout.js`:
-  - [ ] Integruj Header i Sidebar
-  - [ ] Protected route wrapper
-  - [ ] Responsive grid layout
-- [ ] Dodaj transition animations
-
-### Dzień 17-18: Dashboard Pages
-
-#### 2.4 Main Dashboard 🔴
-
-- [ ] Utwórz `src/app/(dashboard)/page.js`:
-  - [ ] Welcome message z user name
-  - [ ] Quick stats cards (placeholder)
-  - [ ] Recent activity (placeholder)
-  - [ ] Quick actions buttons
-- [ ] Responsive grid layout
-
-#### 2.5 Provider Dashboard 🟡
-
-- [ ] Utwórz `src/app/(dashboard)/provider/dashboard/page.js`:
-  - [ ] Provider-specific metrics
-  - [ ] Client overview card
-  - [ ] Revenue summary card
-  - [ ] Active subscriptions count
-- [ ] Role guard dla Provider only
-
-#### 2.6 Admin Dashboard 🟢
-
-- [ ] Utwórz `src/app/(dashboard)/admin/dashboard/page.js`:
-  - [ ] Platform-wide statistics
-  - [ ] Provider list summary
-  - [ ] System health status
-- [ ] Role guard dla PlatformAdmin only
-
-### Dzień 19-20: Navigation Features
-
-#### 2.7 Breadcrumbs System 🟡
-
-- [ ] Utwórz `src/shared/components/navigation/Breadcrumbs.jsx`:
-  - [ ] Auto-generate z route path
-  - [ ] Clickable links
-  - [ ] Home icon dla root
-- [ ] Integruj w dashboard layout
-
-#### 2.8 Loading States 🔴
-
-- [ ] Utwórz loading.js dla każdej route group:
-  - [ ] `app/(dashboard)/loading.js`
-  - [ ] `app/(auth)/loading.js`
-- [ ] Używaj Skeleton components
-
-#### 2.9 Error Pages 🔴
-
-- [ ] Utwórz `src/app/not-found.js`:
-  - [ ] 404 page z friendly message
-  - [ ] Link do dashboard
-- [ ] Utwórz `src/app/error.js`:
-  - [ ] Global error boundary
-  - [ ] Retry button
-
-#### 2.10 Mobile Navigation 🟡
-
-- [ ] Dodaj mobile drawer do Sidebar:
-  - [ ] Hamburger menu toggle
-  - [ ] Overlay backdrop
-  - [ ] Swipe gestures support
-- [ ] Test responsive breakpoints
+**Blok 0.2 - Wymagania wejściowe**: Blok 0.1  
+**Blok 0.2 - Rezultat**: Gotowy UI kit z shadcn/ui
 
 ---
 
-## FAZA 3: Client Management (Tydzień 7-10)
+### 0.3 API Layer Setup
 
-### Dzień 21-23: Client API Integration
+| #     | Zadanie                         | Priorytet | Status | Opis                                                        |
+| ----- | ------------------------------- | --------- | ------ | ----------------------------------------------------------- |
+| 0.3.1 | 🔴 Instalacja orval             | Krytyczne | ⬜     | `npm install -D orval`                                      |
+| 0.3.2 | 🔴 Konfiguracja orval.config.ts | Krytyczne | ⬜     | Input: swagger.json, output: generated/, react-query client |
+| 0.3.3 | 🔴 Axios client setup           | Krytyczne | ⬜     | src/core/api/client.ts - bazowa instancja z baseURL         |
+| 0.3.4 | 🔴 Result<T> interceptor        | Krytyczne | ⬜     | Rozpakowywanie Result<T>, mapowanie błędów                  |
+| 0.3.5 | 🔴 Pierwsze generowanie API     | Krytyczne | ⬜     | `npm run api:generate` - weryfikacja że działa              |
 
-#### 3.1 Client API Service 🔴
-
-- [ ] Utwórz `src/features/clients/api/clientsApi.js`:
-  - [ ] CRUD operations (create, read, update, delete)
-  - [ ] Search endpoint
-  - [ ] Stats endpoint
-  - [ ] Activate/deactivate endpoints
-- [ ] Error handling dla każdej metody
-
-#### 3.2 Client React Query Hooks 🔴
-
-- [ ] Utwórz `src/features/clients/hooks/useClients.js`:
-  - [ ] useClients - lista z paginacją
-  - [ ] useClient - pojedynczy klient
-  - [ ] useCreateClient - tworzenie
-  - [ ] useUpdateClient - aktualizacja
-  - [ ] useDeleteClient - usuwanie
-- [ ] Optimistic updates gdzie możliwe
-
-#### 3.3 Client Store (Zustand) 🟡
-
-- [ ] Utwórz `src/features/clients/stores/clientStore.js`:
-  - [ ] Selected clients dla bulk operations
-  - [ ] Filter i sort preferences
-  - [ ] Search term
-- [ ] Persist filters w localStorage
-
-### Dzień 24-26: Client List Page
-
-#### 3.4 Client List Page 🔴
-
-- [ ] Utwórz `src/app/(dashboard)/clients/page.js`:
-  - [ ] Tabela klientów
-  - [ ] Pagination controls
-  - [ ] Search bar z debounce
-  - [ ] Filter dropdown (active/inactive)
-  - [ ] Sort options
-- [ ] Loading i error states
-
-#### 3.5 Client Table Component 🔴
-
-- [ ] Utwórz `src/features/clients/components/ClientTable.jsx`:
-  - [ ] Kolumny: Name, Email, Status, Created, Actions
-  - [ ] Sortable headers
-  - [ ] Row selection checkboxes
-  - [ ] Action buttons (View, Edit, Delete)
-- [ ] Responsive - cards na mobile
-
-#### 3.6 Client Search & Filters 🔴
-
-- [ ] Utwórz `src/features/clients/components/ClientFilters.jsx`:
-  - [ ] Search input z debounce (500ms)
-  - [ ] Status filter dropdown
-  - [ ] Date range picker (optional)
-  - [ ] Clear filters button
-- [ ] Synchronizuj z URL params
-
-### Dzień 27-29: Client Details & Forms
-
-#### 3.7 Client Detail Page 🔴
-
-- [ ] Utwórz `src/app/(dashboard)/clients/[id]/page.js`:
-  - [ ] Client info cards
-  - [ ] Subscriptions list
-  - [ ] Payment history
-  - [ ] Activity timeline
-  - [ ] Action buttons (Edit, Deactivate)
-- [ ] Loading state z skeletons
-
-#### 3.8 Client Form Component 🔴
-
-- [ ] Utwórz `src/features/clients/components/ClientForm.jsx`:
-  - [ ] Pola: companyName, email, taxId, billingAddress, contactPerson
-  - [ ] React Hook Form integration
-  - [ ] Walidacja z Zod
-  - [ ] Submit i Cancel buttons
-- [ ] Reużywalny dla Create i Edit
-
-#### 3.9 Create Client Page 🔴
-
-- [ ] Utwórz `src/app/(dashboard)/clients/new/page.js`:
-  - [ ] Używaj ClientForm
-  - [ ] Success redirect do detail page
-  - [ ] Error handling z toast
-- [ ] Breadcrumbs navigation
-
-#### 3.10 Edit Client Page 🔴
-
-- [ ] Utwórz `src/app/(dashboard)/clients/[id]/edit/page.js`:
-  - [ ] Pre-populate form z client data
-  - [ ] Loading state podczas fetch
-  - [ ] Success redirect do detail
-  - [ ] Cancel wraca do detail
-- [ ] Optimistic update
-
-### Dzień 30-32: Client Advanced Features
-
-#### 3.11 Bulk Operations 🟡
-
-- [ ] Dodaj bulk actions toolbar:
-  - [ ] Show gdy selected > 0
-  - [ ] Bulk activate/deactivate
-  - [ ] Bulk delete z confirmation
-- [ ] Progress indicator dla operacji
-
-#### 3.12 Client Statistics 🟡
-
-- [ ] Utwórz `src/features/clients/components/ClientStats.jsx`:
-  - [ ] Total clients count
-  - [ ] Active vs Inactive
-  - [ ] Growth trend
-  - [ ] Top clients by revenue
-- [ ] Użyj w dashboard
-
-#### 3.13 Export Functionality 🟢
-
-- [ ] Dodaj export button do list page:
-  - [ ] Export do CSV
-  - [ ] Export do Excel
-  - [ ] Respektuj current filters
-- [ ] Progress indicator
-
-#### 3.14 Client Activity Log 🟢
-
-- [ ] Utwórz `src/features/clients/components/ActivityTimeline.jsx`:
-  - [ ] Show recent activities
-  - [ ] Icons per activity type
-  - [ ] Relative timestamps
-- [ ] Lazy load starsze wpisy
+**Blok 0.3 - Wymagania wejściowe**: Blok 0.1, działający backend ze Swagger  
+**Blok 0.3 - Rezultat**: Wygenerowane typy i hooki z backendu
 
 ---
 
-## FAZA 4: Plans & Subscriptions (Tydzień 11-14)
+## 🔵 FAZA 1: Auth + Tenant Context (Tydzień 2-3)
 
-### Dzień 33-35: Plans Management
+### 1.1 NextAuth Configuration
 
-#### 4.1 Plans API Service 🔴
+| #     | Zadanie                         | Priorytet | Status | Opis                                                 |
+| ----- | ------------------------------- | --------- | ------ | ---------------------------------------------------- |
+| 1.1.1 | 🔴 Instalacja NextAuth v5       | Krytyczne | ⬜     | `npm install next-auth@beta`                         |
+| 1.1.2 | 🔴 auth.config.ts               | Krytyczne | ⬜     | Credentials provider, JWT callback, session callback |
+| 1.1.3 | 🔴 API route [...nextauth]      | Krytyczne | ⬜     | src/app/api/auth/[...nextauth]/route.ts              |
+| 1.1.4 | 🔴 Rozszerzenie typów next-auth | Krytyczne | ⬜     | next-auth.d.ts z tenantId, teamRole, teamMemberId    |
+| 1.1.5 | 🔴 AuthProvider wrapper         | Krytyczne | ⬜     | SessionProvider w root layout                        |
 
-- [ ] Utwórz `src/features/plans/api/plansApi.js`:
-  - [ ] CRUD operations
-  - [ ] Get active plans
-  - [ ] Activate/deactivate
-- [ ] Handle pricing w różnych walutach
-
-#### 4.2 Plans Hooks 🔴
-
-- [ ] Utwórz `src/features/plans/hooks/usePlans.js`:
-  - [ ] usePlans - lista planów
-  - [ ] useActivePlans - tylko aktywne
-  - [ ] useCreatePlan, useUpdatePlan, useDeletePlan
-- [ ] Cache active plans longer (10 min)
-
-#### 4.3 Plan List Page 🔴
-
-- [ ] Utwórz `src/app/(dashboard)/plans/page.js`:
-  - [ ] Grid view z plan cards
-  - [ ] Toggle list/grid view
-  - [ ] Filter active/inactive
-  - [ ] Create new button
-- [ ] Pricing display z currency
-
-### Dzień 36-38: Plan Details & Forms
-
-#### 4.4 Plan Detail Page 🔴
-
-- [ ] Utwórz `src/app/(dashboard)/plans/[id]/page.js`:
-  - [ ] Plan information
-  - [ ] Features list
-  - [ ] Active subscriptions count
-  - [ ] Edit/Delete actions
-- [ ] Pricing history (optional)
-
-#### 4.5 Plan Form Component 🔴
-
-- [ ] Utwórz `src/features/plans/components/PlanForm.jsx`:
-  - [ ] Name, description, price fields
-  - [ ] Currency selector
-  - [ ] Billing interval selector
-  - [ ] Dynamic features list (add/remove)
-  - [ ] Active toggle
-- [ ] Price preview
-
-#### 4.6 Create/Edit Plan Pages 🔴
-
-- [ ] Utwórz `src/app/(dashboard)/plans/new/page.js`
-- [ ] Utwórz `src/app/(dashboard)/plans/[id]/edit/page.js`
-- [ ] Form validation
-- [ ] Success handling
-
-### Dzień 39-42: Subscriptions
-
-#### 4.7 Subscriptions API Service 🔴
-
-- [ ] Utwórz `src/features/subscriptions/api/subscriptionsApi.js`:
-  - [ ] Create subscription
-  - [ ] List subscriptions
-  - [ ] Update subscription
-  - [ ] Pause/Resume/Cancel operations
-- [ ] Filter by status
-
-#### 4.8 Subscription Hooks 🔴
-
-- [ ] Utwórz `src/features/subscriptions/hooks/useSubscriptions.js`:
-  - [ ] useSubscriptions z filters
-  - [ ] useSubscription by ID
-  - [ ] useCreateSubscription
-  - [ ] Lifecycle operation hooks
-- [ ] Real-time status updates
-
-#### 4.9 Subscription List Page 🔴
-
-- [ ] Utwórz `src/app/(dashboard)/subscriptions/page.js`:
-  - [ ] Table view
-  - [ ] Status badges
-  - [ ] Filter by status/client/plan
-  - [ ] Search functionality
-- [ ] Bulk operations
-
-### Dzień 43-45: Subscription Wizard
-
-#### 4.10 Subscription Wizard Component 🔴
-
-- [ ] Utwórz `src/features/subscriptions/components/SubscriptionWizard.jsx`:
-  - [ ] Step 1: Select Client
-  - [ ] Step 2: Choose Plan
-  - [ ] Step 3: Payment Method
-  - [ ] Step 4: Review & Confirm
-- [ ] Progress indicator
-- [ ] Back/Next navigation
-- [ ] Validation per step
-
-#### 4.11 Create Subscription Page 🔴
-
-- [ ] Utwórz `src/app/(dashboard)/subscriptions/new/page.js`:
-  - [ ] Używaj SubscriptionWizard
-  - [ ] Handle wizard completion
-  - [ ] Success redirect
-- [ ] Cancel handling
-
-#### 4.12 Subscription Detail Page 🔴
-
-- [ ] Utwórz `src/app/(dashboard)/subscriptions/[id]/page.js`:
-  - [ ] Subscription info cards
-  - [ ] Payment history
-  - [ ] Status timeline
-  - [ ] Action buttons (Pause/Resume/Cancel)
-- [ ] Next billing date display
-
-#### 4.13 Subscription Actions 🔴
-
-- [ ] Implementuj lifecycle actions:
-  - [ ] Pause subscription z datą
-  - [ ] Resume subscription
-  - [ ] Cancel z reason
-  - [ ] Change plan flow
-- [ ] Confirmation modals
-
-#### 4.14 Subscription Metrics 🟢
-
-- [ ] Utwórz dashboard widgets:
-  - [ ] Active subscriptions count
-  - [ ] MRR calculation
-  - [ ] Churn rate
-  - [ ] Growth trend
-- [ ] Real-time updates
+**Blok 1.1 - Wymagania wejściowe**: Faza 0  
+**Blok 1.1 - Rezultat**: Działająca konfiguracja NextAuth
 
 ---
 
-## FAZA 5: Payment System (Tydzień 15-18)
+### 1.2 Tenant Context
 
-### Dzień 46-48: Payment Integration Setup
+| #     | Zadanie                  | Priorytet | Status | Opis                                              |
+| ----- | ------------------------ | --------- | ------ | ------------------------------------------------- |
+| 1.2.1 | 🔴 TenantProvider        | Krytyczne | ⬜     | Context z tenantId, teamRole, hasAccess()         |
+| 1.2.2 | 🔴 useTenant hook        | Krytyczne | ⬜     | Custom hook do pobierania kontekstu               |
+| 1.2.3 | 🔴 TenantGuard component | Krytyczne | ⬜     | Wrapper sprawdzający uprawnienia                  |
+| 1.2.4 | 🟡 TenantSwitcher        | Ważne     | ⬜     | UI do przełączania tenantów (jeśli user ma wiele) |
 
-#### 5.1 Stripe Setup 🔴
-
-- [ ] Zainstaluj `@stripe/stripe-js` i `@stripe/react-stripe-js`
-- [ ] Utwórz `src/core/lib/stripe.js`:
-  - [ ] Initialize Stripe z public key
-  - [ ] Export dla reużycia
-- [ ] Test połączenie z Stripe
-
-#### 5.2 Payment API Service 🔴
-
-- [ ] Utwórz `src/features/payments/api/paymentsApi.js`:
-  - [ ] Process payment
-  - [ ] Get payment history
-  - [ ] Refund payment
-  - [ ] Retry payment
-- [ ] Handle Stripe webhooks
-
-#### 5.3 Payment Hooks 🔴
-
-- [ ] Utwórz `src/features/payments/hooks/usePayments.js`:
-  - [ ] usePayments - lista
-  - [ ] useProcessPayment
-  - [ ] useRefundPayment
-  - [ ] useRetryPayment
-- [ ] Error handling
-
-### Dzień 49-51: Payment Forms
-
-#### 5.4 Stripe Payment Form 🔴
-
-- [ ] Utwórz `src/features/payments/components/StripePaymentForm.jsx`:
-  - [ ] Card element z Stripe
-  - [ ] Billing address fields
-  - [ ] Save payment method checkbox
-  - [ ] 3D Secure handling
-- [ ] Loading states
-
-#### 5.5 Payment Methods Management 🔴
-
-- [ ] Utwórz `src/features/payments/components/PaymentMethodsList.jsx`:
-  - [ ] List saved cards
-  - [ ] Default indicator
-  - [ ] Remove button
-  - [ ] Add new button
-- [ ] Card brand icons
-
-#### 5.6 Add Payment Method Modal 🔴
-
-- [ ] Utwórz `src/features/payments/components/AddPaymentMethodModal.jsx`:
-  - [ ] Stripe card element
-  - [ ] Set as default checkbox
-  - [ ] Save functionality
-- [ ] Success feedback
-
-### Dzień 52-54: Payment History & Processing
-
-#### 5.7 Payment List Page 🔴
-
-- [ ] Utwórz `src/app/(dashboard)/payments/page.js`:
-  - [ ] Payment history table
-  - [ ] Status badges
-  - [ ] Amount formatting
-  - [ ] Filter by status/date
-  - [ ] Export functionality
-- [ ] Pagination
-
-#### 5.8 Payment Detail Page 🔴
-
-- [ ] Utwórz `src/app/(dashboard)/payments/[id]/page.js`:
-  - [ ] Payment info
-  - [ ] Transaction timeline
-  - [ ] Related subscription
-  - [ ] Refund button
-- [ ] Receipt download
-
-#### 5.9 Process Payment Flow 🔴
-
-- [ ] Utwórz payment processing flow:
-  - [ ] Select payment method
-  - [ ] Confirm amount
-  - [ ] Process with Stripe
-  - [ ] Handle success/failure
-  - [ ] Update UI optimistically
-- [ ] Retry logic
-
-### Dzień 55-57: Refunds & Advanced Features
-
-#### 5.10 Refund Modal 🔴
-
-- [ ] Utwórz `src/features/payments/components/RefundModal.jsx`:
-  - [ ] Amount input (max = original)
-  - [ ] Reason textarea
-  - [ ] Partial/Full refund toggle
-  - [ ] Confirmation step
-- [ ] Success handling
-
-#### 5.11 Failed Payments Page 🟡
-
-- [ ] Utwórz `src/app/(dashboard)/payments/failed/page.js`:
-  - [ ] List failed payments
-  - [ ] Retry buttons
-  - [ ] Bulk retry
-  - [ ] Schedule retry
-- [ ] Error reasons display
-
-#### 5.12 Payment Notifications 🟡
-
-- [ ] Implementuj payment notifications:
-  - [ ] Success toast
-  - [ ] Failure alert
-  - [ ] Email notification trigger
-  - [ ] In-app notifications
-- [ ] Notification preferences
-
-#### 5.13 Invoice Generation 🟢
-
-- [ ] Utwórz invoice components:
-  - [ ] Invoice preview
-  - [ ] PDF generation
-  - [ ] Email invoice
-  - [ ] Download button
-- [ ] Invoice template
-
-#### 5.14 Payment Analytics Widget 🟢
-
-- [ ] Utwórz payment widgets:
-  - [ ] Today's revenue
-  - [ ] Success rate
-  - [ ] Average transaction
-  - [ ] Payment methods breakdown
-- [ ] Real-time updates
+**Blok 1.2 - Wymagania wejściowe**: Blok 1.1  
+**Blok 1.2 - Rezultat**: Działający kontekst tenanta
 
 ---
 
-## FAZA 6: Analytics & Reports (Tydzień 19-21)
+### 1.3 Auth Store i Middleware
 
-### Dzień 58-60: Analytics Setup
+| #     | Zadanie                | Priorytet | Status | Opis                                                   |
+| ----- | ---------------------- | --------- | ------ | ------------------------------------------------------ |
+| 1.3.1 | 🔴 authStore (Zustand) | Krytyczne | ⬜     | Store z user, isAuthenticated, login/logout actions    |
+| 1.3.2 | 🔴 middleware.ts       | Krytyczne | ⬜     | Protected routes, redirect to login, tenant validation |
+| 1.3.3 | 🟡 Auth sync           | Ważne     | ⬜     | Synchronizacja NextAuth session z Zustand store        |
 
-#### 6.1 Analytics API Service 🔴
-
-- [ ] Utwórz `src/features/analytics/api/analyticsApi.js`:
-  - [ ] Get payment statistics
-  - [ ] Get revenue reports
-  - [ ] Get payment trends
-  - [ ] Get failure reasons
-- [ ] Date range parameters
-
-#### 6.2 Chart Components Setup 🔴
-
-- [ ] Zainstaluj `recharts`
-- [ ] Utwórz `src/features/analytics/components/charts/`:
-  - [ ] LineChart wrapper
-  - [ ] BarChart wrapper
-  - [ ] PieChart wrapper
-  - [ ] AreaChart wrapper
-- [ ] Responsive containers
-
-#### 6.3 Analytics Hooks 🔴
-
-- [ ] Utwórz `src/features/analytics/hooks/useAnalytics.js`:
-  - [ ] usePaymentStats
-  - [ ] useRevenueReport
-  - [ ] usePaymentTrends
-- [ ] Cache strategy (5 min)
-
-### Dzień 61-63: Dashboard & Reports
-
-#### 6.4 Analytics Dashboard 🔴
-
-- [ ] Utwórz `src/app/(dashboard)/analytics/page.js`:
-  - [ ] KPI cards grid
-  - [ ] Revenue chart
-  - [ ] Payment status breakdown
-  - [ ] Date range picker
-- [ ] Export functionality
-
-#### 6.5 Revenue Report Page 🔴
-
-- [ ] Utwórz `src/app/(dashboard)/analytics/revenue/page.js`:
-  - [ ] MRR/ARR metrics
-  - [ ] Growth trends
-  - [ ] Currency breakdown
-  - [ ] Comparison periods
-- [ ] Drill-down capability
-
-#### 6.6 Payment Statistics Page 🔴
-
-- [ ] Utwórz `src/app/(dashboard)/analytics/payments/page.js`:
-  - [ ] Success/failure rates
-  - [ ] Processing times
-  - [ ] Payment methods usage
-  - [ ] Failure reasons chart
-- [ ] Time period selector
-
-#### 6.7 Custom Reports Builder 🟢
-
-- [ ] Utwórz report builder:
-  - [ ] Metric selector
-  - [ ] Grouping options
-  - [ ] Filter builder
-  - [ ] Chart type selector
-  - [ ] Save report template
-- [ ] Schedule reports
-
-#### 6.8 Export & Sharing 🟡
-
-- [ ] Implementuj export options:
-  - [ ] Export to PDF
-  - [ ] Export to Excel
-  - [ ] Email report
-  - [ ] Share link generation
-- [ ] Schedule automated reports
+**Blok 1.3 - Wymagania wejściowe**: Blok 1.1, 1.2  
+**Blok 1.3 - Rezultat**: Ochrona tras i stan autentykacji
 
 ---
 
-## FAZA 7: Testing & Optimization (Tydzień 22-24)
+### 1.4 Auth UI Pages
 
-### Dzień 64-66: Unit Testing
+| #     | Zadanie                   | Priorytet | Status | Opis                                           |
+| ----- | ------------------------- | --------- | ------ | ---------------------------------------------- |
+| 1.4.1 | 🔴 Login page             | Krytyczne | ⬜     | /login - formularz z walidacją Zod             |
+| 1.4.2 | 🔴 LoginForm component    | Krytyczne | ⬜     | React Hook Form, error handling, loading state |
+| 1.4.3 | 🔴 Register page          | Krytyczne | ⬜     | /register - rejestracja providera              |
+| 1.4.4 | 🔴 RegisterForm component | Krytyczne | ⬜     | Formularz z walidacją, role selection          |
+| 1.4.5 | 🟡 Auth error page        | Ważne     | ⬜     | /auth/error - obsługa błędów auth              |
 
-#### 7.1 Testing Setup 🔴
-
-- [ ] Skonfiguruj Jest
-- [ ] Skonfiguruj React Testing Library
-- [ ] Setup MSW dla API mocking
-- [ ] Coverage reporter config
-
-#### 7.2 Component Tests 🔴
-
-- [ ] Napisz testy dla:
-  - [ ] Auth components (Login, Register)
-  - [ ] Client components (Table, Form)
-  - [ ] Payment components (Form, List)
-  - [ ] Shared UI components
-- [ ] Min 70% coverage
-
-#### 7.3 Hook Tests 🔴
-
-- [ ] Napisz testy dla custom hooks:
-  - [ ] useAuth
-  - [ ] useClients
-  - [ ] usePayments
-  - [ ] useAnalytics
-- [ ] Mock API responses
-
-### Dzień 67-69: Integration & E2E Testing
-
-#### 7.4 Integration Tests 🔴
-
-- [ ] Test critical user flows:
-  - [ ] Login → Dashboard
-  - [ ] Create Client → View Client
-  - [ ] Create Subscription flow
-  - [ ] Payment processing flow
-- [ ] API integration tests
-
-#### 7.5 E2E Testing Setup 🟡
-
-- [ ] Skonfiguruj Playwright
-- [ ] Napisz E2E testy dla:
-  - [ ] Authentication flow
-  - [ ] Client CRUD operations
-  - [ ] Payment flow
-  - [ ] Critical user journeys
-- [ ] Cross-browser testing
-
-#### 7.6 Performance Testing 🟡
-
-- [ ] Lighthouse audits:
-  - [ ] Performance score > 90
-  - [ ] Accessibility score > 95
-  - [ ] Best practices > 95
-  - [ ] SEO score > 90
-- [ ] Bundle size analysis
-
-### Dzień 70-72: Optimization
-
-#### 7.7 Performance Optimization 🔴
-
-- [ ] Implementuj code splitting:
-  - [ ] Lazy load routes
-  - [ ] Dynamic imports dla heavy components
-  - [ ] Optimize images (next/image)
-- [ ] Implement React.memo gdzie potrzebne
-
-#### 7.8 SEO Optimization 🟡
-
-- [ ] Dodaj metadata dla każdej strony
-- [ ] Implementuj structured data
-- [ ] Sitemap generation
-- [ ] Robots.txt
-- [ ] Open Graph tags
-
-#### 7.9 Accessibility Improvements 🔴
-
-- [ ] ARIA labels dla wszystkich interaktywnych elementów
-- [ ] Keyboard navigation testing
-- [ ] Screen reader testing
-- [ ] Color contrast verification
-- [ ] Focus management
-
-#### 7.10 Security Audit 🔴
-
-- [ ] Sprawdź dependencies (npm audit)
-- [ ] Content Security Policy headers
-- [ ] XSS protection verification
-- [ ] CSRF token implementation check
-- [ ] Rate limiting testing
-
-#### 7.11 Error Handling Enhancement 🟡
-
-- [ ] Global error boundary improvements
-- [ ] Sentry integration setup
-- [ ] Error logging strategy
-- [ ] User-friendly error messages
-- [ ] Retry mechanisms
-
-#### 7.12 Documentation 🟢
-
-- [ ] README.md z setup instructions
-- [ ] API documentation
-- [ ] Component storybook (optional)
-- [ ] Deployment guide
-- [ ] Contributing guidelines
+**Blok 1.4 - Wymagania wejściowe**: Blok 1.1, 1.3  
+**Blok 1.4 - Rezultat**: Działające strony logowania i rejestracji
 
 ---
 
-## FAZA 8: Deployment & Monitoring (Bonus)
+## 🔵 FAZA 2: Layout & Global UI (Tydzień 3-4)
 
-### Production Preparation
+### 2.1 Layout Components
 
-#### 8.1 Environment Setup 🔴
+| #     | Zadanie               | Priorytet  | Status | Opis                                               |
+| ----- | --------------------- | ---------- | ------ | -------------------------------------------------- |
+| 2.1.1 | 🔴 Dashboard layout   | Krytyczne  | ⬜     | (dashboard)/layout.tsx z Sidebar + Header          |
+| 2.1.2 | 🔴 Sidebar component  | Krytyczne  | ⬜     | Nawigacja z ikonami, active state, role-based menu |
+| 2.1.3 | 🔴 Header component   | Krytyczne  | ⬜     | Logo, UserMenu, notifications placeholder          |
+| 2.1.4 | 🔴 UserMenu component | Krytyczne  | ⬜     | Dropdown z avatar, role badge, logout              |
+| 2.1.5 | 🟢 Footer component   | Opcjonalne | ⬜     | Copyright, links                                   |
 
-- [ ] Production environment variables
-- [ ] API URLs configuration
-- [ ] Feature flags setup
-- [ ] Error tracking (Sentry)
-
-#### 8.2 Build Optimization 🔴
-
-- [ ] Production build testing
-- [ ] Bundle analysis
-- [ ] Asset optimization
-- [ ] CDN configuration
-
-#### 8.3 CI/CD Pipeline 🟡
-
-- [ ] GitHub Actions setup
-- [ ] Automated testing
-- [ ] Build verification
-- [ ] Deployment automation
-
-#### 8.4 Monitoring Setup 🟡
-
-- [ ] Google Analytics
-- [ ] Performance monitoring
-- [ ] Error tracking
-- [ ] Uptime monitoring
-
-#### 8.5 Deployment 🔴
-
-- [ ] Vercel/Netlify setup
-- [ ] Domain configuration
-- [ ] SSL certificates
-- [ ] Production deployment
+**Blok 2.1 - Wymagania wejściowe**: Faza 1  
+**Blok 2.1 - Rezultat**: Podstawowy layout dashboard
 
 ---
 
-## 📋 Post-MVP Features (Backlog)
+### 2.2 Global State & Feedback
 
-### Nice to Have
+| #     | Zadanie                    | Priorytet | Status | Opis                                      |
+| ----- | -------------------------- | --------- | ------ | ----------------------------------------- |
+| 2.2.1 | 🔴 QueryProvider           | Krytyczne | ⬜     | TanStack Query provider w root layout     |
+| 2.2.2 | 🔴 Global ErrorBoundary    | Krytyczne | ⬜     | Przechwytywanie błędów z user-friendly UI |
+| 2.2.3 | 🔴 Suspense boundaries     | Krytyczne | ⬜     | Suspense z fallback loading w layout      |
+| 2.2.4 | 🔴 Toast provider          | Krytyczne | ⬜     | Sonner setup dla notyfikacji              |
+| 2.2.5 | 🟡 Loading skeleton system | Ważne     | ⬜     | Reusable skeletons dla list, cards, forms |
 
-- [ ] Dark mode implementation
-- [ ] Multi-language support (i18n)
-- [ ] Advanced search with filters
-- [ ] Bulk import/export
-- [ ] Email templates editor
-- [ ] Webhook management UI
-- [ ] API keys management
-- [ ] Two-factor authentication
-- [ ] Activity audit logs viewer
-- [ ] Real-time notifications (WebSocket)
-- [ ] Custom dashboard widgets
-- [ ] White-label configuration
-- [ ] Mobile app (React Native)
-- [ ] Advanced permission system
-- [ ] Workflow automation
+**Blok 2.2 - Wymagania wejściowe**: Blok 2.1  
+**Blok 2.2 - Rezultat**: Globalna obsługa stanów i błędów
 
 ---
 
-## ✅ Definition of Done - Checklist per Feature
+## 🔵 FAZA 3: Team Management (Tydzień 4-5)
 
-Każda funkcjonalność powinna spełniać:
+### 3.1 Team List & CRUD
 
-- [ ] Kod działa lokalnie bez błędów
-- [ ] Responsive design (mobile, tablet, desktop)
-- [ ] Loading states zaimplementowane
-- [ ] Error handling z user-friendly messages
-- [ ] Form validation działa poprawnie
-- [ ] Success feedback (toast/redirect)
-- [ ] Testy napisane (unit lub integration)
-- [ ] Accessibility sprawdzone (keyboard nav)
-- [ ] Cross-browser testing (Chrome, Firefox, Safari)
-- [ ] Code review przeprowadzony
-- [ ] Dokumentacja zaktualizowana
-- [ ] Deployed na staging
+| #     | Zadanie                 | Priorytet | Status | Opis                                                 |
+| ----- | ----------------------- | --------- | ------ | ---------------------------------------------------- |
+| 3.1.1 | 🔴 Team members page    | Krytyczne | ⬜     | /team - lista członków zespołu                       |
+| 3.1.2 | 🔴 MemberCard component | Krytyczne | ⬜     | Karta członka z avatar, role, actions                |
+| 3.1.3 | 🔴 MemberList component | Krytyczne | ⬜     | Grid/list view z sortowaniem                         |
+| 3.1.4 | 🔴 Team hooks           | Krytyczne | ⬜     | useTeamMembers, useUpdateMemberRole, useRemoveMember |
+
+**Blok 3.1 - Wymagania wejściowe**: Faza 2  
+**Blok 3.1 - Rezultat**: Wyświetlanie i zarządzanie członkami
 
 ---
 
-## 🔥 Quick Start Commands
+### 3.2 Invitations
 
-```bash
-# Inicjalizacja projektu
-npx create-next-app@14 orbito-frontend --js --tailwind --app --no-typescript
-cd orbito-frontend
+| #     | Zadanie                     | Priorytet | Status | Opis                                            |
+| ----- | --------------------------- | --------- | ------ | ----------------------------------------------- |
+| 3.2.1 | 🔴 InviteMemberDialog       | Krytyczne | ⬜     | Dialog z formularzem zaproszenia                |
+| 3.2.2 | 🔴 useInviteMember hook     | Krytyczne | ⬜     | Mutation do wysyłania zaproszeń                 |
+| 3.2.3 | 🔴 Accept invitation page   | Krytyczne | ⬜     | /team/accept?token=xxx - akceptacja zaproszenia |
+| 3.2.4 | 🟡 Pending invitations list | Ważne     | ⬜     | Lista oczekujących zaproszeń z akcjami          |
+| 3.2.5 | 🟡 Resend/Cancel invitation | Ważne     | ⬜     | Akcje na zaproszeniach                          |
 
-# Instalacja podstawowych dependencies
-npm install zustand @tanstack/react-query axios next-auth lucide-react clsx tailwind-merge
+**Blok 3.2 - Wymagania wejściowe**: Blok 3.1  
+**Blok 3.2 - Rezultat**: Pełny system zaproszeń
 
-# shadcn/ui setup
-npx shadcn-ui@latest init
+---
 
-# Importowanie komponentów
-npx shadcn-ui@latest add button card input label toast dialog dropdown-menu skeleton alert badge
+## 🔵 FAZA 4A: Clients Management (Tydzień 5-6)
 
-# Development
-npm run dev
+### 4A.1 Clients List
 
-# Testing
-npm test
-npm run test:coverage
+| #      | Zadanie                     | Priorytet | Status | Opis                                            |
+| ------ | --------------------------- | --------- | ------ | ----------------------------------------------- |
+| 4A.1.1 | 🔴 Clients page             | Krytyczne | ⬜     | /clients - główna strona z listą                |
+| 4A.1.2 | 🔴 ClientTable component    | Krytyczne | ⬜     | Tabela z sortowaniem, paginacją                 |
+| 4A.1.3 | 🔴 ClientCard component     | Krytyczne | ⬜     | Karta klienta dla grid view                     |
+| 4A.1.4 | 🔴 View toggle (table/grid) | Krytyczne | ⬜     | Przełączanie widoku                             |
+| 4A.1.5 | 🔴 Clients hooks            | Krytyczne | ⬜     | useClients, useClient - z wygenerowanych hooków |
 
-# Build
-npm run build
-npm run start
+**Blok 4A.1 - Wymagania wejściowe**: Faza 3  
+**Blok 4A.1 - Rezultat**: Lista klientów z różnymi widokami
 
-# Linting & Formatting
-npm run lint
-npm run format
+---
+
+### 4A.2 Clients Search & Filters
+
+| #      | Zadanie                    | Priorytet | Status | Opis                             |
+| ------ | -------------------------- | --------- | ------ | -------------------------------- |
+| 4A.2.1 | 🔴 ClientSearch component  | Krytyczne | ⬜     | Search input z debounce          |
+| 4A.2.2 | 🔴 ClientFilters component | Krytyczne | ⬜     | Filtry: status, type, date range |
+| 4A.2.3 | 🟡 useDebounce hook        | Ważne     | ⬜     | Reusable debounce hook           |
+| 4A.2.4 | 🟡 Filter persistence      | Ważne     | ⬜     | Zapisywanie filtrów w URL params |
+
+**Blok 4A.2 - Wymagania wejściowe**: Blok 4A.1  
+**Blok 4A.2 - Rezultat**: Wyszukiwanie i filtrowanie klientów
+
+---
+
+### 4A.3 Client CRUD
+
+| #      | Zadanie                  | Priorytet | Status | Opis                                              |
+| ------ | ------------------------ | --------- | ------ | ------------------------------------------------- |
+| 4A.3.1 | 🔴 ClientForm component  | Krytyczne | ⬜     | Formularz create/edit z Zod validation            |
+| 4A.3.2 | 🔴 Create client page    | Krytyczne | ⬜     | /clients/new                                      |
+| 4A.3.3 | 🔴 Client detail page    | Krytyczne | ⬜     | /clients/[id] - szczegóły klienta                 |
+| 4A.3.4 | 🔴 Edit client page      | Krytyczne | ⬜     | /clients/[id]/edit                                |
+| 4A.3.5 | 🔴 Delete confirmation   | Krytyczne | ⬜     | AlertDialog z potwierdzeniem usunięcia            |
+| 4A.3.6 | 🟡 Client mutation hooks | Ważne     | ⬜     | useCreateClient, useUpdateClient, useDeleteClient |
+
+**Blok 4A.3 - Wymagania wejściowe**: Blok 4A.1  
+**Blok 4A.3 - Rezultat**: Pełne CRUD operacje na klientach
+
+---
+
+## 🔵 FAZA 4B: Plans Management (Tydzień 6-7)
+
+### 4B.1 Plans List
+
+| #      | Zadanie               | Priorytet | Status | Opis                                  |
+| ------ | --------------------- | --------- | ------ | ------------------------------------- |
+| 4B.1.1 | 🔴 Plans page         | Krytyczne | ⬜     | /plans - lista planów subskrypcyjnych |
+| 4B.1.2 | 🔴 PlanCard component | Krytyczne | ⬜     | Karta planu z ceną, features, status  |
+| 4B.1.3 | 🔴 PlanGrid component | Krytyczne | ⬜     | Grid view planów                      |
+| 4B.1.4 | 🔴 Popular badge      | Krytyczne | ⬜     | Badge dla popularnych planów          |
+| 4B.1.5 | 🔴 Plans hooks        | Krytyczne | ⬜     | usePlans, usePlan                     |
+
+**Blok 4B.1 - Wymagania wejściowe**: Faza 3  
+**Blok 4B.1 - Rezultat**: Lista planów subskrypcyjnych
+
+---
+
+### 4B.2 Plan CRUD
+
+| #      | Zadanie                       | Priorytet  | Status | Opis                                            |
+| ------ | ----------------------------- | ---------- | ------ | ----------------------------------------------- |
+| 4B.2.1 | 🔴 PlanForm component         | Krytyczne  | ⬜     | Formularz z pricing, billing interval, features |
+| 4B.2.2 | 🔴 Create plan page           | Krytyczne  | ⬜     | /plans/new                                      |
+| 4B.2.3 | 🔴 Plan detail page           | Krytyczne  | ⬜     | /plans/[id]                                     |
+| 4B.2.4 | 🔴 Edit plan page             | Krytyczne  | ⬜     | /plans/[id]/edit                                |
+| 4B.2.5 | 🔴 Activate/Deactivate toggle | Krytyczne  | ⬜     | Zmiana statusu planu                            |
+| 4B.2.6 | 🟡 Plan mutation hooks        | Ważne      | ⬜     | useCreatePlan, useUpdatePlan, useActivatePlan   |
+| 4B.2.7 | 🟢 Plan preview               | Opcjonalne | ⬜     | Podgląd jak plan będzie wyglądał dla klienta    |
+
+**Blok 4B.2 - Wymagania wejściowe**: Blok 4B.1  
+**Blok 4B.2 - Rezultat**: Pełne zarządzanie planami
+
+---
+
+## 🔵 FAZA 5: Subscriptions (Tydzień 7-8)
+
+### 5.1 Subscriptions List
+
+| #     | Zadanie                        | Priorytet | Status | Opis                                          |
+| ----- | ------------------------------ | --------- | ------ | --------------------------------------------- |
+| 5.1.1 | 🔴 Subscriptions page          | Krytyczne | ⬜     | /subscriptions - lista wszystkich subskrypcji |
+| 5.1.2 | 🔴 SubscriptionTable component | Krytyczne | ⬜     | Tabela z client, plan, status, actions        |
+| 5.1.3 | 🔴 SubscriptionStatusBadge     | Krytyczne | ⬜     | Badge z kolorami dla statusów                 |
+| 5.1.4 | 🔴 Subscription filters        | Krytyczne | ⬜     | Filtrowanie po status, plan, date             |
+| 5.1.5 | 🔴 Subscriptions hooks         | Krytyczne | ⬜     | useSubscriptions, useSubscription             |
+
+**Blok 5.1 - Wymagania wejściowe**: Faza 4A, 4B  
+**Blok 5.1 - Rezultat**: Lista subskrypcji
+
+---
+
+### 5.2 Subscription Actions
+
+| #     | Zadanie                      | Priorytet | Status | Opis                                     |
+| ----- | ---------------------------- | --------- | ------ | ---------------------------------------- |
+| 5.2.1 | 🔴 Create subscription flow  | Krytyczne | ⬜     | Wizard: wybór client → plan → confirm    |
+| 5.2.2 | 🔴 Subscription detail page  | Krytyczne | ⬜     | /subscriptions/[id]                      |
+| 5.2.3 | 🔴 Cancel subscription       | Krytyczne | ⬜     | Dialog z reason, immediate/end-of-period |
+| 5.2.4 | 🟡 Pause/Resume subscription | Ważne     | ⬜     | Zawieszanie subskrypcji                  |
+| 5.2.5 | 🟡 Change plan               | Ważne     | ⬜     | Upgrade/downgrade planu                  |
+
+**Blok 5.2 - Wymagania wejściowe**: Blok 5.1  
+**Blok 5.2 - Rezultat**: Pełne zarządzanie subskrypcjami
+
+---
+
+## 🔵 FAZA 6: Payments (Tydzień 8-9)
+
+### 6.1 Payment History
+
+| #     | Zadanie                   | Priorytet | Status | Opis                                        |
+| ----- | ------------------------- | --------- | ------ | ------------------------------------------- |
+| 6.1.1 | 🔴 Payments page          | Krytyczne | ⬜     | /payments - historia płatności              |
+| 6.1.2 | 🔴 PaymentTable component | Krytyczne | ⬜     | Tabela z amount, status, date, client       |
+| 6.1.3 | 🔴 PaymentStatusBadge     | Krytyczne | ⬜     | Badge: Completed, Pending, Failed, Refunded |
+| 6.1.4 | 🔴 Payment detail dialog  | Krytyczne | ⬜     | Szczegóły płatności w dialogu               |
+
+**Blok 6.1 - Wymagania wejściowe**: Faza 5  
+**Blok 6.1 - Rezultat**: Historia płatności
+
+---
+
+### 6.2 Payment Methods & Manual Payments
+
+| #     | Zadanie                     | Priorytet | Status | Opis                                      |
+| ----- | --------------------------- | --------- | ------ | ----------------------------------------- |
+| 6.2.1 | 🔴 PaymentMethodForm        | Krytyczne | ⬜     | Formularz dodawania metody płatności      |
+| 6.2.2 | 🔴 PaymentMethodList        | Krytyczne | ⬜     | Lista metod płatności klienta             |
+| 6.2.3 | 🟡 Manual payment recording | Ważne     | ⬜     | Dialog do ręcznego wprowadzania płatności |
+| 6.2.4 | 🟡 Refund dialog            | Ważne     | ⬜     | Dialog zwrotu z reason                    |
+
+**Blok 6.2 - Wymagania wejściowe**: Blok 6.1  
+**Blok 6.2 - Rezultat**: Zarządzanie metodami płatności
+
+---
+
+## 🔵 FAZA 7: Analytics & Dashboard (Tydzień 9-10)
+
+### 7.1 Analytics Dashboard
+
+| #     | Zadanie                   | Priorytet  | Status | Opis                              |
+| ----- | ------------------------- | ---------- | ------ | --------------------------------- |
+| 7.1.1 | 🔴 Analytics page         | Krytyczne  | ⬜     | /analytics - główny dashboard     |
+| 7.1.2 | 🔴 RevenueChart component | Krytyczne  | ⬜     | Wykres przychodów (recharts)      |
+| 7.1.3 | 🔴 StatCards component    | Krytyczne  | ⬜     | MRR, ARR, Churn Rate, Active Subs |
+| 7.1.4 | 🟡 DateRangePicker        | Ważne      | ⬜     | Wybór zakresu dat dla raportów    |
+| 7.1.5 | 🟡 ClientGrowthChart      | Ważne      | ⬜     | Wykres wzrostu klientów           |
+| 7.1.6 | 🟢 Export reports         | Opcjonalne | ⬜     | Export do CSV/Excel               |
+
+**Blok 7.1 - Wymagania wejściowe**: Faza 6  
+**Blok 7.1 - Rezultat**: Dashboard analityczny
+
+---
+
+## 🔵 FAZA 8: Testing & Polish (Tydzień 10-11)
+
+### 8.1 Testing
+
+| #     | Zadanie             | Priorytet | Status | Opis                             |
+| ----- | ------------------- | --------- | ------ | -------------------------------- |
+| 8.1.1 | 🔴 Vitest setup     | Krytyczne | ⬜     | Konfiguracja unit tests          |
+| 8.1.2 | 🔴 Component tests  | Krytyczne | ⬜     | Testy dla kluczowych komponentów |
+| 8.1.3 | 🟡 Playwright setup | Ważne     | ⬜     | Konfiguracja E2E tests           |
+| 8.1.4 | 🟡 E2E auth flow    | Ważne     | ⬜     | Test login/register flow         |
+| 8.1.5 | 🟡 E2E client CRUD  | Ważne     | ⬜     | Test tworzenia/edycji klienta    |
+
+**Blok 8.1 - Wymagania wejściowe**: Wszystkie poprzednie fazy  
+**Blok 8.1 - Rezultat**: Testy automatyczne
+
+---
+
+### 8.2 Polish & Optimization
+
+| #     | Zadanie                | Priorytet  | Status | Opis                                    |
+| ----- | ---------------------- | ---------- | ------ | --------------------------------------- |
+| 8.2.1 | 🔴 TypeScript audit    | Krytyczne  | ⬜     | Weryfikacja brak any, pełne typy        |
+| 8.2.2 | 🔴 Accessibility audit | Krytyczne  | ⬜     | Keyboard nav, aria labels, focus states |
+| 8.2.3 | 🟡 Performance audit   | Ważne      | ⬜     | Lighthouse, bundle analysis             |
+| 8.2.4 | 🟡 Mobile responsive   | Ważne      | ⬜     | Testowanie na różnych rozdzielczościach |
+| 8.2.5 | 🟢 Documentation       | Opcjonalne | ⬜     | README, component docs                  |
+
+**Blok 8.2 - Wymagania wejściowe**: Blok 8.1  
+**Blok 8.2 - Rezultat**: Production-ready aplikacja
+
+### 9.1 Client Portal Foundation
+
+| #     | Zadanie             | Priorytet | Status | Opis                                       |
+| ----- | ------------------- | --------- | ------ | ------------------------------------------ |
+| 9.1.1 | 🔴 Portal Layout    | Krytyczne | ⬜     | Osobny layout dla /portal (bez sidebara)   |
+| 9.1.2 | 🔴 Portal Guard     | Krytyczne | ⬜     | Ochrona tras tylko dla roli 'Client'       |
+| 9.1.3 | 🔴 Portal Dashboard | Krytyczne | ⬜     | /portal - podsumowanie subskrypcji         |
+| 9.1.4 | 🟡 Invoices list    | Ważne     | ⬜     | Lista faktur do pobrania (PDF)             |
+| 9.1.5 | 🟡 Billing Settings | Ważne     | ⬜     | Zarządzanie kartą i anulowanie subskrypcji |
+
+**Blok 9.1 - Wymagania wejściowe**: Faza 1 (Auth), Faza 5 (Subskrypcje)
+**Blok 9.1 - Rezultat**: Działający portal samoobsługowy dla końcowego klienta
+
+---
+
+## 📝 Szablony Zadań dla Agentów
+
+### Format opisu zadania (do promptu)
+
+```markdown
+## Zadanie: [Numer] [Nazwa]
+
+### Kontekst
+
+- Projekt: Orbito Frontend (Next.js 15, TypeScript strict)
+- Faza: [X]
+- Zależności: [poprzednie zadania]
+
+### Cel
+
+[Krótki opis co ma być osiągnięte]
+
+### Wymagania
+
+1. [Wymaganie 1]
+2. [Wymaganie 2]
+3. ...
+
+### Pliki do utworzenia/modyfikacji
+
+- [ ] src/features/[feature]/components/[Component].tsx
+- [ ] ...
+
+### Akceptacja
+
+- [ ] TypeScript bez błędów (tsc --noEmit)
+- [ ] Komponenty używają wygenerowanych typów z @/core/api/generated
+- [ ] Loading state zaimplementowany
+- [ ] Error handling zaimplementowany
 ```
 
 ---
 
-**Status**: 📋 **READY FOR IMPLEMENTATION**  
-**Total Tasks**: ~280  
-**Estimated Time**: 24 weeks  
-**MVP Timeline**: 10 weeks (do końca Fazy 3)
+## 🔗 Zależności Między Zadaniami
+
+```
+FAZA 0 (Setup)
+    ↓
+FAZA 1 (Auth + Tenant)
+    ↓
+FAZA 2 (Layout)
+    ↓
+FAZA 3 (Team)
+    ↓
+    ├─→ FAZA 4A (Clients) ──┐
+    │                        │
+    └─→ FAZA 4B (Plans) ────┤
+                             ↓
+                    FAZA 5 (Subscriptions)
+                             ↓
+                    FAZA 6 (Payments)
+                             ↓
+                    FAZA 7 (Analytics)
+                             ↓
+                    FAZA 8 (Testing)
+```
 
 ---
+
+## ⚡ Quick Reference - Komendy
+
+```bash
+# Generowanie API z Swaggera (po zmianach w backendzie)
+npm run api:generate
+
+# Sprawdzenie typów TypeScript
+npm run type-check
+
+# Development
+npm run dev
+
+# Build
+npm run build
+
+# Testy
+npm run test
+npm run test:e2e
+
+# Linting
+npm run lint
+npm run lint:fix
+```
+
+---
+
+## 📊 Metryki Sukcesu MVP
+
+| Metryka             | Target                                         |
+| ------------------- | ---------------------------------------------- |
+| TypeScript coverage | 100% (strict)                                  |
+| Wygenerowane typy   | 100% z orval                                   |
+| ESLint errors       | 0                                              |
+| Core features       | 100% (Clients, Plans, Subscriptions, Payments) |
+| Auth + Tenant       | 100%                                           |
+| Basic Analytics     | 80%+                                           |
+| Mobile responsive   | 90%+                                           |
+
+---
+
+**Wersja**: 6.0  
+**Data utworzenia**: 2025-11-29  
+**Łączne zadania**: ~95  
+**Status**: 🆕 Do implementacji

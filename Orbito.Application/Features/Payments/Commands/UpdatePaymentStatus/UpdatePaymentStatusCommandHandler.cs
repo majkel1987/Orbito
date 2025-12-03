@@ -1,56 +1,64 @@
 using MediatR;
+using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.DTOs;
+using Orbito.Domain.Common;
+using Orbito.Domain.Errors;
 using Orbito.Domain.Enums;
 
 namespace Orbito.Application.Features.Payments.Commands.UpdatePaymentStatus
 {
-    public class UpdatePaymentStatusCommandHandler : IRequestHandler<UpdatePaymentStatusCommand, UpdatePaymentStatusResult>
+    public class UpdatePaymentStatusCommandHandler : IRequestHandler<UpdatePaymentStatusCommand, Result<PaymentDto>>
     {
         private readonly IPaymentRepository _paymentRepository;
         private readonly ITenantContext _tenantContext;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<UpdatePaymentStatusCommandHandler> _logger;
 
         public UpdatePaymentStatusCommandHandler(
             IPaymentRepository paymentRepository,
             ITenantContext tenantContext,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            ILogger<UpdatePaymentStatusCommandHandler> logger)
         {
-            _paymentRepository = paymentRepository;
-            _tenantContext = tenantContext;
-            _unitOfWork = unitOfWork;
+            _paymentRepository = paymentRepository ?? throw new ArgumentNullException(nameof(paymentRepository));
+            _tenantContext = tenantContext ?? throw new ArgumentNullException(nameof(tenantContext));
+            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task<UpdatePaymentStatusResult> Handle(UpdatePaymentStatusCommand request, CancellationToken cancellationToken)
+        public async Task<Result<PaymentDto>> Handle(UpdatePaymentStatusCommand request, CancellationToken cancellationToken)
         {
+            // Check for cancellation before starting
+            cancellationToken.ThrowIfCancellationRequested();
+
             // Sprawdź czy mamy kontekst tenanta
             if (!_tenantContext.HasTenant)
             {
-                return UpdatePaymentStatusResult.FailureResult("Tenant context is required");
+                _logger.LogWarning("UpdatePaymentStatus attempted without tenant context");
+                return Result.Failure<PaymentDto>(DomainErrors.Tenant.NoTenantContext);
             }
 
-            // Pobierz płatność
-            // NOTE: Using deprecated method because this command is only accessible by Providers and PlatformAdmins
-            // who have proper authorization to view all payments in their tenant
-#pragma warning disable CS0618 // Type or member is obsolete
-            var payment = await _paymentRepository.GetByIdAsync(request.PaymentId, cancellationToken);
-#pragma warning restore CS0618 // Type or member is obsolete
+            // Pobierz płatność z weryfikacją ClientId (security best practice)
+            var payment = await _paymentRepository.GetByIdForClientAsync(request.PaymentId, request.ClientId, cancellationToken);
             if (payment == null)
             {
-                return UpdatePaymentStatusResult.FailureResult($"Payment with ID {request.PaymentId} not found");
+                _logger.LogWarning("Payment {PaymentId} not found for client {ClientId}", request.PaymentId, request.ClientId);
+                return Result.Failure<PaymentDto>(DomainErrors.Payment.NotFound);
             }
 
             // Sprawdź czy płatność należy do tego samego tenanta
             if (payment.TenantId != _tenantContext.CurrentTenantId)
             {
-                return UpdatePaymentStatusResult.FailureResult("Payment does not belong to current tenant");
+                _logger.LogWarning("Cross-tenant access attempt: Payment {PaymentId} belongs to different tenant", request.PaymentId);
+                return Result.Failure<PaymentDto>(DomainErrors.Tenant.CrossTenantAccess);
             }
 
             // Walidacja przejścia między statusami i wymaganych pól
             var validationError = ValidateStatusTransition(request, payment.Status);
             if (validationError != null)
             {
-                return UpdatePaymentStatusResult.FailureResult(validationError);
+                return Result.Failure<PaymentDto>(validationError);
             }
 
             // Aktualizuj status płatności
@@ -76,34 +84,42 @@ namespace Orbito.Application.Features.Payments.Commands.UpdatePaymentStatus
                     payment.MarkAsPartiallyRefunded(request.RefundReason ?? "No refund reason provided", refundedAmount);
                     break;
                 default:
-                    return UpdatePaymentStatusResult.FailureResult($"Unsupported payment status: {request.Status}");
+                    _logger.LogWarning("Unsupported payment status: {Status}", request.Status);
+                    return Result.Failure<PaymentDto>(DomainErrors.Payment.UnsupportedStatus);
             }
 
             // Zapisz zmiany
             await _paymentRepository.UpdateAsync(payment, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            if (!saveResult.IsSuccess)
+            {
+                _logger.LogError("Failed to save payment status update: {Error}", saveResult.ErrorMessage);
+                var error = Error.Create("Payment.SaveFailed", saveResult.ErrorMessage ?? "Failed to save payment changes");
+                return Result.Failure<PaymentDto>(error);
+            }
 
             // Użyj już zaktualizowanego obiektu zamiast ponownego odczytu z bazy
             var paymentDto = MapToDto(payment);
-            return UpdatePaymentStatusResult.SuccessResult(paymentDto);
+            return Result.Success(paymentDto);
         }
 
-        private static string? ValidateStatusTransition(UpdatePaymentStatusCommand request, PaymentStatus currentStatus)
+        private static Error? ValidateStatusTransition(UpdatePaymentStatusCommand request, PaymentStatus currentStatus)
         {
             if (!IsValidStatusTransition(currentStatus, request.Status))
             {
-                return $"Invalid status transition from {currentStatus} to {request.Status}";
+                return DomainErrors.Payment.InvalidStatusTransition;
             }
 
             if (request.Status == PaymentStatus.Failed && string.IsNullOrWhiteSpace(request.FailureReason))
             {
-                return "FailureReason is required when marking payment as Failed";
+                return DomainErrors.Payment.FailureReasonRequired;
             }
 
             if ((request.Status == PaymentStatus.Refunded || request.Status == PaymentStatus.PartiallyRefunded)
                 && string.IsNullOrWhiteSpace(request.RefundReason))
             {
-                return $"RefundReason is required when marking payment as {request.Status}";
+                return DomainErrors.Payment.RefundReasonRequired;
             }
 
             return null;

@@ -14,19 +14,27 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.UpgradeSubscription
     {
         private readonly Mock<ISubscriptionService> _subscriptionServiceMock;
         private readonly Mock<ISubscriptionRepository> _subscriptionRepositoryMock;
+        private readonly Mock<ITenantContext> _tenantContextMock;
         private readonly Mock<ILogger<UpgradeSubscriptionCommandHandler>> _loggerMock;
         private readonly UpgradeSubscriptionCommandHandler _handler;
         private readonly TenantId _tenantId = TenantId.New();
+        private readonly Guid _clientId = Guid.NewGuid();
 
         public UpgradeSubscriptionCommandHandlerTests()
         {
             _subscriptionServiceMock = new Mock<ISubscriptionService>();
             _subscriptionRepositoryMock = new Mock<ISubscriptionRepository>();
+            _tenantContextMock = new Mock<ITenantContext>();
             _loggerMock = new Mock<ILogger<UpgradeSubscriptionCommandHandler>>();
+
+            // Setup tenant context
+            _tenantContextMock.Setup(x => x.HasTenant).Returns(true);
+            _tenantContextMock.Setup(x => x.CurrentTenantId).Returns(_tenantId);
 
             _handler = new UpgradeSubscriptionCommandHandler(
                 _subscriptionServiceMock.Object,
                 _subscriptionRepositoryMock.Object,
+                _tenantContextMock.Object,
                 _loggerMock.Object);
         }
 
@@ -39,6 +47,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.UpgradeSubscription
             var command = new UpgradeSubscriptionCommand
             {
                 SubscriptionId = subscriptionId,
+                ClientId = _clientId,
                 NewPlanId = newPlanId,
                 NewAmount = 49.99m,
                 Currency = "USD"
@@ -64,12 +73,13 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.UpgradeSubscription
             var result = await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
-            result.SubscriptionId.Should().Be(subscriptionId);
-            result.NewPlanId.Should().Be(newPlanId);
-            result.Status.Should().Be(updatedSubscription.Status.ToString());
-            result.Message.Should().Be("Subscription upgraded successfully");
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Id.Should().Be(updatedSubscription.Id);
+            result.Value.PlanId.Should().Be(newPlanId);
+            result.Value.Status.Should().Be(updatedSubscription.Status.ToString());
+            result.Value.Amount.Should().Be(49.99m);
+            result.Value.Currency.Should().Be("USD");
 
             _subscriptionServiceMock.Verify(x => x.CanUpgradeAsync(subscription, newPlanId, It.IsAny<CancellationToken>()), Times.Once);
             _subscriptionServiceMock.Verify(x => x.ProcessSubscriptionChangeAsync(
@@ -85,6 +95,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.UpgradeSubscription
             var command = new UpgradeSubscriptionCommand
             {
                 SubscriptionId = subscriptionId,
+                ClientId = _clientId,
                 NewPlanId = newPlanId,
                 NewAmount = 49.99m,
                 Currency = "USD"
@@ -97,10 +108,8 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.UpgradeSubscription
             var result = await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.SubscriptionId.Should().Be(subscriptionId);
-            result.Message.Should().Be("Subscription not found");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Subscription.NotFound");
 
             _subscriptionServiceMock.Verify(x => x.CanUpgradeAsync(It.IsAny<Subscription>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
             _subscriptionServiceMock.Verify(x => x.ProcessSubscriptionChangeAsync(
@@ -116,6 +125,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.UpgradeSubscription
             var command = new UpgradeSubscriptionCommand
             {
                 SubscriptionId = subscriptionId,
+                ClientId = _clientId,
                 NewPlanId = newPlanId,
                 NewAmount = 49.99m,
                 Currency = "USD"
@@ -134,10 +144,8 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.UpgradeSubscription
             var result = await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.SubscriptionId.Should().Be(subscriptionId);
-            result.Message.Should().Be("Subscription cannot be upgraded to the specified plan");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Subscription.CannotUpgrade");
 
             _subscriptionServiceMock.Verify(x => x.CanUpgradeAsync(subscription, newPlanId, It.IsAny<CancellationToken>()), Times.Once);
             _subscriptionServiceMock.Verify(x => x.ProcessSubscriptionChangeAsync(
@@ -153,6 +161,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.UpgradeSubscription
             var command = new UpgradeSubscriptionCommand
             {
                 SubscriptionId = subscriptionId,
+                ClientId = _clientId,
                 NewPlanId = newPlanId,
                 NewAmount = 49.99m,
                 Currency = "USD"
@@ -171,10 +180,8 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.UpgradeSubscription
             var result = await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.SubscriptionId.Should().Be(subscriptionId);
-            result.Message.Should().Be("Subscription cannot be upgraded to the specified plan");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Subscription.CannotUpgrade");
 
             _subscriptionServiceMock.Verify(x => x.CanUpgradeAsync(subscription, newPlanId, It.IsAny<CancellationToken>()), Times.Once);
             _subscriptionServiceMock.Verify(x => x.ProcessSubscriptionChangeAsync(
@@ -190,6 +197,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.UpgradeSubscription
             var command = new UpgradeSubscriptionCommand
             {
                 SubscriptionId = subscriptionId,
+                ClientId = _clientId,
                 NewPlanId = newPlanId,
                 NewAmount = 49.99m,
                 Currency = "USD"
@@ -207,10 +215,8 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.UpgradeSubscription
             var result = await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.SubscriptionId.Should().Be(subscriptionId);
-            result.Message.Should().Be("Subscription cannot be upgraded to the specified plan");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Subscription.CannotUpgrade");
 
             _subscriptionServiceMock.Verify(x => x.CanUpgradeAsync(subscription, newPlanId, It.IsAny<CancellationToken>()), Times.Once);
             _subscriptionServiceMock.Verify(x => x.ProcessSubscriptionChangeAsync(
@@ -226,6 +232,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.UpgradeSubscription
             var command = new UpgradeSubscriptionCommand
             {
                 SubscriptionId = subscriptionId,
+                ClientId = _clientId,
                 NewPlanId = newPlanId,
                 NewAmount = 99.99m,
                 Currency = "EUR"
@@ -237,6 +244,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.UpgradeSubscription
 
             var updatedSubscription = CreateTestSubscription();
             updatedSubscription.PlanId = newPlanId;
+            updatedSubscription.CurrentPrice = Money.Create(99.99m, "EUR");
 
             _subscriptionRepositoryMock.Setup(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(subscription);
@@ -250,8 +258,10 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.UpgradeSubscription
             var result = await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Amount.Should().Be(99.99m);
+            result.Value.Currency.Should().Be("EUR");
 
             _subscriptionServiceMock.Verify(x => x.ProcessSubscriptionChangeAsync(
                 subscription, newPlanId, It.Is<Money>(m => m.Amount == 99.99m && m.Currency == "EUR"), It.IsAny<CancellationToken>()), Times.Once);

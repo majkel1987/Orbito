@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Orbito.Application.Common.Authorization;
 using Orbito.Application.Subscriptions.Commands.ActivateSubscription;
 using Orbito.Application.Subscriptions.Commands.CancelSubscription;
 using Orbito.Application.Subscriptions.Commands.CreateSubscription;
@@ -30,14 +31,20 @@ namespace Orbito.API.Controllers
         /// <param name="command">Subscription creation details</param>
         /// <returns>Created subscription details</returns>
         [HttpPost]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<CreateSubscriptionResult>> CreateSubscription(CreateSubscriptionCommand command)
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        public async Task<IActionResult> CreateSubscription(CreateSubscriptionCommand command)
         {
-            Logger.LogInformation("Creating subscription for client {ClientId} with plan {PlanId}", 
+            Logger.LogInformation("Creating subscription for client {ClientId} with plan {PlanId}",
                 command.ClientId, command.PlanId);
 
             var result = await Mediator.Send(command);
-            return CreatedAtAction(nameof(GetSubscriptionById), new { id = result.SubscriptionId }, result);
+
+            if (result.IsFailure)
+            {
+                return HandleResult(result);
+            }
+
+            return CreatedAtAction(nameof(GetSubscriptionById), new { id = result.Value.Id }, result.Value);
         }
 
         /// <summary>
@@ -48,13 +55,13 @@ namespace Orbito.API.Controllers
         /// <param name="searchTerm">Search term for filtering</param>
         /// <returns>List of active subscriptions</returns>
         [HttpGet]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<GetActiveSubscriptionsResult>> GetSubscriptions(
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        public async Task<IActionResult> GetSubscriptions(
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10,
             [FromQuery] string? searchTerm = null)
         {
-            Logger.LogInformation("Getting subscriptions with pagination {PageNumber}/{PageSize}", 
+            Logger.LogInformation("Getting subscriptions with pagination {PageNumber}/{PageSize}",
                 pageNumber, pageSize);
 
             var query = new GetActiveSubscriptionsQuery
@@ -65,7 +72,7 @@ namespace Orbito.API.Controllers
             };
 
             var result = await Mediator.Send(query);
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>
@@ -75,12 +82,12 @@ namespace Orbito.API.Controllers
         /// <param name="includeDetails">Include detailed information (default: false)</param>
         /// <returns>Subscription details</returns>
         [HttpGet("{id}")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<GetSubscriptionByIdResult>> GetSubscriptionById(
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        public async Task<IActionResult> GetSubscriptionById(
             Guid id,
             [FromQuery] bool includeDetails = false)
         {
-            Logger.LogInformation("Getting subscription {SubscriptionId} with details: {IncludeDetails}", 
+            Logger.LogInformation("Getting subscription {SubscriptionId} with details: {IncludeDetails}",
                 id, includeDetails);
 
             var query = new GetSubscriptionByIdQuery
@@ -90,12 +97,7 @@ namespace Orbito.API.Controllers
             };
 
             var result = await Mediator.Send(query);
-            if (result == null)
-            {
-                return NotFound($"Subscription with ID {id} not found");
-            }
-
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>
@@ -107,8 +109,8 @@ namespace Orbito.API.Controllers
         /// <param name="activeOnly">Show only active subscriptions (default: false)</param>
         /// <returns>List of client subscriptions</returns>
         [HttpGet("client/{clientId}")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<GetSubscriptionsByClientResult>> GetSubscriptionsByClient(
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        public async Task<IActionResult> GetSubscriptionsByClient(
             Guid clientId,
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10,
@@ -125,7 +127,7 @@ namespace Orbito.API.Controllers
             };
 
             var result = await Mediator.Send(query);
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>
@@ -136,8 +138,8 @@ namespace Orbito.API.Controllers
         /// <param name="pageSize">Page size (default: 10)</param>
         /// <returns>List of expiring subscriptions</returns>
         [HttpGet("expiring")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<GetExpiringSubscriptionsResult>> GetExpiringSubscriptions(
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        public async Task<IActionResult> GetExpiringSubscriptions(
             [FromQuery] int daysBeforeExpiration = 7,
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10)
@@ -152,115 +154,106 @@ namespace Orbito.API.Controllers
             };
 
             var result = await Mediator.Send(query);
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>
         /// Activates a subscription
         /// </summary>
         /// <param name="id">Subscription ID</param>
+        /// <param name="request">Activation request with client ID</param>
         /// <returns>Activation result</returns>
         [HttpPost("{id}/activate")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<ActivateSubscriptionResult>> ActivateSubscription(Guid id)
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        public async Task<IActionResult> ActivateSubscription(
+            Guid id,
+            [FromBody] ActivateSubscriptionRequest request)
         {
-            Logger.LogInformation("Activating subscription {SubscriptionId}", id);
+            Logger.LogInformation("Activating subscription {SubscriptionId} for client {ClientId}",
+                id, request.ClientId);
 
             var command = new ActivateSubscriptionCommand
             {
-                SubscriptionId = id
+                SubscriptionId = id,
+                ClientId = request.ClientId
             };
 
             var result = await Mediator.Send(command);
-            if (!result.Success)
-            {
-                return BadRequest(result);
-            }
-
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>
         /// Cancels a subscription
         /// </summary>
         /// <param name="id">Subscription ID</param>
-        /// <param name="reason">Cancellation reason</param>
+        /// <param name="request">Cancellation request with reason and client ID</param>
         /// <returns>Cancellation result</returns>
         [HttpPost("{id}/cancel")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<CancelSubscriptionResult>> CancelSubscription(
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        public async Task<IActionResult> CancelSubscription(
             Guid id,
-            [FromBody] CancelSubscriptionRequest request)
+            [FromBody] CancelSubscriptionRequestDto request)
         {
             Logger.LogInformation("Cancelling subscription {SubscriptionId}", id);
 
             var command = new CancelSubscriptionCommand
             {
                 SubscriptionId = id,
+                ClientId = request.ClientId,
                 Reason = request.Reason
             };
 
             var result = await Mediator.Send(command);
-            if (!result.Success)
-            {
-                return BadRequest(result);
-            }
-
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>
         /// Suspends a subscription
         /// </summary>
         /// <param name="id">Subscription ID</param>
-        /// <param name="reason">Suspension reason</param>
+        /// <param name="request">Suspension request with client ID and reason</param>
         /// <returns>Suspension result</returns>
         [HttpPost("{id}/suspend")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<SuspendSubscriptionResult>> SuspendSubscription(
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        public async Task<IActionResult> SuspendSubscription(
             Guid id,
-            [FromBody] SuspendSubscriptionRequest request)
+            [FromBody] SuspendSubscriptionRequestDto request)
         {
             Logger.LogInformation("Suspending subscription {SubscriptionId}", id);
 
             var command = new SuspendSubscriptionCommand
             {
                 SubscriptionId = id,
+                ClientId = request.ClientId,
                 Reason = request.Reason
             };
 
             var result = await Mediator.Send(command);
-            if (!result.Success)
-            {
-                return BadRequest(result);
-            }
-
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>
         /// Resumes a suspended subscription
         /// </summary>
         /// <param name="id">Subscription ID</param>
+        /// <param name="request">Resume request with client ID</param>
         /// <returns>Resume result</returns>
         [HttpPost("{id}/resume")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<ResumeSubscriptionResult>> ResumeSubscription(Guid id)
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        public async Task<IActionResult> ResumeSubscription(
+            Guid id,
+            [FromBody] ResumeSubscriptionRequestDto request)
         {
             Logger.LogInformation("Resuming subscription {SubscriptionId}", id);
 
             var command = new ResumeSubscriptionCommand
             {
-                SubscriptionId = id
+                SubscriptionId = id,
+                ClientId = request.ClientId
             };
 
             var result = await Mediator.Send(command);
-            if (!result.Success)
-            {
-                return BadRequest(result);
-            }
-
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>
@@ -270,29 +263,25 @@ namespace Orbito.API.Controllers
         /// <param name="request">Upgrade details</param>
         /// <returns>Upgrade result</returns>
         [HttpPost("{id}/upgrade")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<UpgradeSubscriptionResult>> UpgradeSubscription(
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        public async Task<IActionResult> UpgradeSubscription(
             Guid id,
             [FromBody] UpgradeSubscriptionRequest request)
         {
-            Logger.LogInformation("Upgrading subscription {SubscriptionId} to plan {NewPlanId}", 
+            Logger.LogInformation("Upgrading subscription {SubscriptionId} to plan {NewPlanId}",
                 id, request.NewPlanId);
 
             var command = new UpgradeSubscriptionCommand
             {
                 SubscriptionId = id,
+                ClientId = request.ClientId,
                 NewPlanId = request.NewPlanId,
                 NewAmount = request.NewAmount,
                 Currency = request.Currency
             };
 
             var result = await Mediator.Send(command);
-            if (!result.Success)
-            {
-                return BadRequest(result);
-            }
-
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>
@@ -302,29 +291,25 @@ namespace Orbito.API.Controllers
         /// <param name="request">Downgrade details</param>
         /// <returns>Downgrade result</returns>
         [HttpPost("{id}/downgrade")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<DowngradeSubscriptionResult>> DowngradeSubscription(
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        public async Task<IActionResult> DowngradeSubscription(
             Guid id,
             [FromBody] DowngradeSubscriptionRequest request)
         {
-            Logger.LogInformation("Downgrading subscription {SubscriptionId} to plan {NewPlanId}", 
+            Logger.LogInformation("Downgrading subscription {SubscriptionId} to plan {NewPlanId}",
                 id, request.NewPlanId);
 
             var command = new DowngradeSubscriptionCommand
             {
                 SubscriptionId = id,
+                ClientId = request.ClientId,
                 NewPlanId = request.NewPlanId,
                 NewAmount = request.NewAmount,
                 Currency = request.Currency
             };
 
             var result = await Mediator.Send(command);
-            if (!result.Success)
-            {
-                return BadRequest(result);
-            }
-
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>
@@ -334,35 +319,36 @@ namespace Orbito.API.Controllers
         /// <param name="request">Renewal details</param>
         /// <returns>Renewal result</returns>
         [HttpPost("{id}/renew")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<RenewSubscriptionResult>> RenewSubscription(
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        public async Task<IActionResult> RenewSubscription(
             Guid id,
             [FromBody] RenewSubscriptionRequest request)
         {
-            Logger.LogInformation("Renewing subscription {SubscriptionId}", id);
+            Logger.LogInformation("Renewing subscription {SubscriptionId} for client {ClientId}",
+                id, request.ClientId);
 
             var command = new RenewSubscriptionCommand
             {
                 SubscriptionId = id,
+                ClientId = request.ClientId,
                 Amount = request.Amount,
                 Currency = request.Currency,
                 ExternalPaymentId = request.ExternalPaymentId
             };
 
             var result = await Mediator.Send(command);
-            if (!result.Success)
-            {
-                return BadRequest(result);
-            }
-
-            return Ok(result);
+            return HandleResult(result);
         }
     }
 
     // Request DTOs
+    public record ActivateSubscriptionRequest(Guid ClientId);
     public record CancelSubscriptionRequest(string? Reason);
+    public record CancelSubscriptionRequestDto(Guid ClientId, string? Reason);
     public record SuspendSubscriptionRequest(string? Reason);
-    public record UpgradeSubscriptionRequest(Guid NewPlanId, decimal NewAmount, string Currency);
-    public record DowngradeSubscriptionRequest(Guid NewPlanId, decimal NewAmount, string Currency);
-    public record RenewSubscriptionRequest(decimal Amount, string Currency, string? ExternalPaymentId = null);
+    public record SuspendSubscriptionRequestDto(Guid ClientId, string? Reason);
+    public record ResumeSubscriptionRequestDto(Guid ClientId);
+    public record UpgradeSubscriptionRequest(Guid ClientId, Guid NewPlanId, decimal NewAmount, string Currency);
+    public record DowngradeSubscriptionRequest(Guid ClientId, Guid NewPlanId, decimal NewAmount, string Currency);
+    public record RenewSubscriptionRequest(Guid ClientId, decimal Amount, string Currency, string? ExternalPaymentId = null);
 }

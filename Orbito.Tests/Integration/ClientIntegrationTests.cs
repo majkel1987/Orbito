@@ -11,11 +11,10 @@ using Orbito.Application.Clients.Commands.DeactivateClient;
 using Orbito.Application.Clients.Queries.GetClientById;
 using Orbito.Application.Clients.Queries.GetClientsByProvider;
 using Orbito.Application.Clients.Queries.SearchClients;
-using Orbito.Application.Clients.Queries.GetClientStats;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Domain.Entities;
-using Orbito.Domain.ValueObjects;
 using Orbito.Domain.Identity;
+using Orbito.Domain.ValueObjects;
 using Xunit;
 
 namespace Orbito.Tests.Integration
@@ -27,6 +26,7 @@ namespace Orbito.Tests.Integration
         private readonly Mock<ITenantContext> _tenantContextMock;
         private readonly Mock<IUnitOfWork> _unitOfWorkMock;
         private readonly Mock<IClientRepository> _clientRepositoryMock;
+        private readonly Mock<IProviderRepository> _providerRepositoryMock;
         private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
         private readonly Mock<ILogger<CreateClientCommandHandler>> _createLoggerMock;
         private readonly Mock<ILogger<UpdateClientCommandHandler>> _updateLoggerMock;
@@ -36,7 +36,6 @@ namespace Orbito.Tests.Integration
         private readonly Mock<ILogger<GetClientByIdQueryHandler>> _getByIdLoggerMock;
         private readonly Mock<ILogger<GetClientsByProviderQueryHandler>> _getByProviderLoggerMock;
         private readonly Mock<ILogger<SearchClientsQueryHandler>> _searchLoggerMock;
-        private readonly Mock<ILogger<GetClientStatsQueryHandler>> _statsLoggerMock;
         private readonly TenantId _tenantId = TenantId.New();
 
         public ClientIntegrationTests()
@@ -47,6 +46,7 @@ namespace Orbito.Tests.Integration
             _tenantContextMock = new Mock<ITenantContext>();
             _unitOfWorkMock = new Mock<IUnitOfWork>();
             _clientRepositoryMock = new Mock<IClientRepository>();
+            _providerRepositoryMock = new Mock<IProviderRepository>();
             
             // Fix nullable reference warnings by using null! or proper mock setup
             _userManagerMock = new Mock<UserManager<ApplicationUser>>(
@@ -61,11 +61,16 @@ namespace Orbito.Tests.Integration
             _getByIdLoggerMock = new Mock<ILogger<GetClientByIdQueryHandler>>();
             _getByProviderLoggerMock = new Mock<ILogger<GetClientsByProviderQueryHandler>>();
             _searchLoggerMock = new Mock<ILogger<SearchClientsQueryHandler>>();
-            _statsLoggerMock = new Mock<ILogger<GetClientStatsQueryHandler>>();
 
             // Setup tenant context
             _tenantContextMock.Setup(x => x.HasTenant).Returns(true);
             _tenantContextMock.Setup(x => x.CurrentTenantId).Returns(_tenantId);
+
+            // Setup Provider repository - Provider.Id == TenantId.Client
+            var testProvider = Provider.Create(Guid.NewGuid(), "Test Provider", "test-provider");
+            testProvider.Id = _tenantId.Value; // Provider.Id must equal TenantId.Client
+            _providerRepositoryMock.Setup(x => x.GetByIdAsync(_tenantId.Value, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(testProvider);
 
             // Setup UserManager mock
             _userManagerMock.Setup(x => x.FindByIdAsync(It.IsAny<string>()))
@@ -82,6 +87,7 @@ namespace Orbito.Tests.Integration
             services.AddSingleton(_tenantContextMock.Object);
             services.AddSingleton(_unitOfWorkMock.Object);
             services.AddSingleton(_clientRepositoryMock.Object);
+            services.AddSingleton(_providerRepositoryMock.Object);
             services.AddSingleton(_userManagerMock.Object);
             services.AddSingleton(_createLoggerMock.Object);
             services.AddSingleton(_updateLoggerMock.Object);
@@ -91,7 +97,6 @@ namespace Orbito.Tests.Integration
             services.AddSingleton(_getByIdLoggerMock.Object);
             services.AddSingleton(_getByProviderLoggerMock.Object);
             services.AddSingleton(_searchLoggerMock.Object);
-            services.AddSingleton(_statsLoggerMock.Object);
 
             _serviceProvider = services.BuildServiceProvider();
         }
@@ -121,6 +126,7 @@ namespace Orbito.Tests.Integration
 
             var handler = new CreateClientCommandHandler(
                 _clientRepositoryMock.Object,
+                _providerRepositoryMock.Object,
                 _tenantContextMock.Object,
                 _unitOfWorkMock.Object);
 
@@ -129,16 +135,16 @@ namespace Orbito.Tests.Integration
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
-            result.Client.Should().NotBeNull();
-            result.Client!.UserId.Should().Be(userId);
-            result.Client.CompanyName.Should().Be(companyName);
-            result.Client.Phone.Should().Be(phone);
-            result.Client.IsActive.Should().BeTrue();
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value!.UserId.Should().Be(userId);
+            result.Value.CompanyName.Should().Be(companyName);
+            result.Value.Phone.Should().Be(phone);
+            result.Value.IsActive.Should().BeTrue();
 
             _clientRepositoryMock.Verify(x => x.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
             _clientRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Client>(), It.IsAny<CancellationToken>()), Times.Once);
-            _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+            // Note: AddAsync calls SaveChangesAsync internally, so we don't verify UnitOfWork.SaveChangesAsync
         }
 
         [Fact]
@@ -166,6 +172,7 @@ namespace Orbito.Tests.Integration
 
             var handler = new CreateClientCommandHandler(
                 _clientRepositoryMock.Object,
+                _providerRepositoryMock.Object,
                 _tenantContextMock.Object,
                 _unitOfWorkMock.Object);
 
@@ -174,18 +181,18 @@ namespace Orbito.Tests.Integration
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
-            result.Client.Should().NotBeNull();
-            result.Client!.DirectEmail.Should().Be(directEmail);
-            result.Client.DirectFirstName.Should().Be(directFirstName);
-            result.Client.DirectLastName.Should().Be(directLastName);
-            result.Client.CompanyName.Should().Be(companyName);
-            result.Client.Phone.Should().Be(phone);
-            result.Client.IsActive.Should().BeTrue();
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value!.DirectEmail.Should().Be(directEmail);
+            result.Value.DirectFirstName.Should().Be(directFirstName);
+            result.Value.DirectLastName.Should().Be(directLastName);
+            result.Value.CompanyName.Should().Be(companyName);
+            result.Value.Phone.Should().Be(phone);
+            result.Value.IsActive.Should().BeTrue();
 
             _clientRepositoryMock.Verify(x => x.GetByEmailAsync(directEmail, It.IsAny<CancellationToken>()), Times.Once);
             _clientRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Client>(), It.IsAny<CancellationToken>()), Times.Once);
-            _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+            // Note: AddAsync calls SaveChangesAsync internally, so we don't verify UnitOfWork.SaveChangesAsync
         }
 
         [Fact]
@@ -205,6 +212,7 @@ namespace Orbito.Tests.Integration
 
             var handler = new CreateClientCommandHandler(
                 _clientRepositoryMock.Object,
+                _providerRepositoryMock.Object,
                 _tenantContextMock.Object,
                 _unitOfWorkMock.Object);
 
@@ -213,9 +221,9 @@ namespace Orbito.Tests.Integration
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Client with this user already exists");
-            result.Client.Should().BeNull();
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Code.Should().Be("Client.UserAlreadyExists");
+            result.Value.Should().BeNull();
 
             _clientRepositoryMock.Verify(x => x.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
             _clientRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Client>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -241,6 +249,7 @@ namespace Orbito.Tests.Integration
 
             var handler = new CreateClientCommandHandler(
                 _clientRepositoryMock.Object,
+                _providerRepositoryMock.Object,
                 _tenantContextMock.Object,
                 _unitOfWorkMock.Object);
 
@@ -249,9 +258,9 @@ namespace Orbito.Tests.Integration
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Client with this email already exists");
-            result.Client.Should().BeNull();
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Code.Should().Be("Client.EmailAlreadyExists");
+            result.Value.Should().BeNull();
 
             _clientRepositoryMock.Verify(x => x.GetByEmailAsync(directEmail, It.IsAny<CancellationToken>()), Times.Once);
             _clientRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Client>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -272,6 +281,7 @@ namespace Orbito.Tests.Integration
 
             var handler = new CreateClientCommandHandler(
                 _clientRepositoryMock.Object,
+                _providerRepositoryMock.Object,
                 _tenantContextMock.Object,
                 _unitOfWorkMock.Object);
 
@@ -280,9 +290,9 @@ namespace Orbito.Tests.Integration
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Tenant context is required");
-            result.Client.Should().BeNull();
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Code.Should().Be("Tenant.NoTenantContext");
+            result.Value.Should().BeNull();
 
             _clientRepositoryMock.Verify(x => x.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
             _clientRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Client>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -298,6 +308,7 @@ namespace Orbito.Tests.Integration
 
             var handler = new CreateClientCommandHandler(
                 _clientRepositoryMock.Object,
+                _providerRepositoryMock.Object,
                 _tenantContextMock.Object,
                 _unitOfWorkMock.Object);
 
@@ -306,9 +317,8 @@ namespace Orbito.Tests.Integration
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Either UserId or DirectEmail must be provided");
-            result.Client.Should().BeNull();
+            result.IsSuccess.Should().BeFalse();
+            result.Value.Should().BeNull();
 
             _clientRepositoryMock.Verify(x => x.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
             _clientRepositoryMock.Verify(x => x.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -352,14 +362,14 @@ namespace Orbito.Tests.Integration
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
-            result.Client.Should().NotBeNull();
-            result.Client!.Id.Should().Be(clientId);
-            result.Client.CompanyName.Should().Be(companyName);
-            result.Client.Phone.Should().Be(phone);
-            result.Client.DirectEmail.Should().Be(directEmail);
-            result.Client.DirectFirstName.Should().Be(directFirstName);
-            result.Client.DirectLastName.Should().Be(directLastName);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Id.Should().Be(clientId);
+            result.Value.CompanyName.Should().Be(companyName);
+            result.Value.Phone.Should().Be(phone);
+            result.Value.DirectEmail.Should().Be(directEmail);
+            result.Value.DirectFirstName.Should().Be(directFirstName);
+            result.Value.DirectLastName.Should().Be(directLastName);
 
             _clientRepositoryMock.Verify(x => x.GetByIdAsync(clientId, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
             _clientRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Client>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -389,9 +399,8 @@ namespace Orbito.Tests.Integration
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Client not found");
-            result.Client.Should().BeNull();
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Client.NotFound");
 
             _clientRepositoryMock.Verify(x => x.GetByIdAsync(clientId, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
             _clientRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Client>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -425,13 +434,13 @@ namespace Orbito.Tests.Integration
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
-            result.Client.Should().NotBeNull();
-            result.Client!.Id.Should().Be(clientId);
-            result.Client.DirectEmail.Should().Be("test@example.com");
-            result.Client.DirectFirstName.Should().Be("Test");
-            result.Client.DirectLastName.Should().Be("User");
-            result.Client.CompanyName.Should().Be("Test Company");
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Id.Should().Be(clientId);
+            result.Value.DirectEmail.Should().Be("test@example.com");
+            result.Value.DirectFirstName.Should().Be("Test");
+            result.Value.DirectLastName.Should().Be("User");
+            result.Value.CompanyName.Should().Be("Test Company");
 
             _clientRepositoryMock.Verify(x => x.GetByIdAsync(clientId, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
         }
@@ -456,9 +465,8 @@ namespace Orbito.Tests.Integration
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Client not found");
-            result.Client.Should().BeNull();
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Client.NotFound");
 
             _clientRepositoryMock.Verify(x => x.GetByIdAsync(clientId, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
         }
@@ -487,9 +495,8 @@ namespace Orbito.Tests.Integration
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Access denied");
-            result.Client.Should().BeNull();
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Tenant.CrossTenantAccess");
 
             _clientRepositoryMock.Verify(x => x.GetByIdAsync(clientId, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
         }
@@ -525,10 +532,10 @@ namespace Orbito.Tests.Integration
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
-            result.Client.Should().NotBeNull();
-            result.Client!.Id.Should().Be(clientId);
-            result.Client.IsActive.Should().BeTrue();
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Id.Should().Be(clientId);
+            result.Value.IsActive.Should().BeTrue();
 
             _clientRepositoryMock.Verify(x => x.GetByIdAsync(clientId, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
             _clientRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Client>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -562,10 +569,10 @@ namespace Orbito.Tests.Integration
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
-            result.Client.Should().NotBeNull();
-            result.Client!.Id.Should().Be(clientId);
-            result.Client.IsActive.Should().BeFalse();
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Id.Should().Be(clientId);
+            result.Value.IsActive.Should().BeFalse();
 
             _clientRepositoryMock.Verify(x => x.GetByIdAsync(clientId, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
             _clientRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Client>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -604,7 +611,7 @@ namespace Orbito.Tests.Integration
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
+            result.IsSuccess.Should().BeTrue();
 
             _clientRepositoryMock.Verify(x => x.GetByIdAsync(clientId, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
             _clientRepositoryMock.Verify(x => x.CanClientBeDeletedAsync(clientId, It.IsAny<CancellationToken>()), Times.Once);
@@ -638,8 +645,8 @@ namespace Orbito.Tests.Integration
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Client cannot be deleted because it has active subscriptions or payments");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Client.CannotDeleteWithActiveSubscriptions");
 
             _clientRepositoryMock.Verify(x => x.GetByIdAsync(clientId, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
             _clientRepositoryMock.Verify(x => x.CanClientBeDeletedAsync(clientId, It.IsAny<CancellationToken>()), Times.Once);
@@ -677,6 +684,7 @@ namespace Orbito.Tests.Integration
 
             var createHandler = new CreateClientCommandHandler(
                 _clientRepositoryMock.Object,
+                _providerRepositoryMock.Object,
                 _tenantContextMock.Object,
                 _unitOfWorkMock.Object);
 
@@ -685,11 +693,11 @@ namespace Orbito.Tests.Integration
 
             // Assert
             createResult.Should().NotBeNull();
-            createResult.Success.Should().BeTrue();
-            createResult.Client.Should().NotBeNull();
-            createResult.Client!.DirectEmail.Should().Be(directEmail);
-            createResult.Client.CompanyName.Should().Be(companyName);
-            createResult.Client.Phone.Should().Be(phone);
+            createResult.IsSuccess.Should().BeTrue();
+            createResult.Value.Should().NotBeNull();
+            createResult.Value!.DirectEmail.Should().Be(directEmail);
+            createResult.Value.CompanyName.Should().Be(companyName);
+            createResult.Value.Phone.Should().Be(phone);
 
             // Test 2: Update Client
             var updateCommand = new UpdateClientCommand(
@@ -715,11 +723,11 @@ namespace Orbito.Tests.Integration
 
             // Assert
             updateResult.Should().NotBeNull();
-            updateResult.Success.Should().BeTrue();
-            updateResult.Client.Should().NotBeNull();
-            updateResult.Client!.Id.Should().Be(createdClient.Id);
-            updateResult.Client.CompanyName.Should().Be("Updated Complex Company");
-            updateResult.Client.Phone.Should().Be("+48987654321");
+            updateResult.IsSuccess.Should().BeTrue();
+            updateResult.Value.Should().NotBeNull();
+            updateResult.Value.Id.Should().Be(createdClient.Id);
+            updateResult.Value.CompanyName.Should().Be("Updated Complex Company");
+            updateResult.Value.Phone.Should().Be("+48987654321");
         }
 
         [Fact]
@@ -740,6 +748,7 @@ namespace Orbito.Tests.Integration
 
             var handler = new CreateClientCommandHandler(
                 _clientRepositoryMock.Object,
+                _providerRepositoryMock.Object,
                 _tenantContextMock.Object,
                 _unitOfWorkMock.Object);
 
@@ -748,9 +757,9 @@ namespace Orbito.Tests.Integration
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Contain("An error occurred while creating client");
-            result.Client.Should().BeNull();
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Should().NotBe(default);
+            result.Value.Should().BeNull();
 
             _clientRepositoryMock.Verify(x => x.GetByEmailAsync(directEmail, It.IsAny<CancellationToken>()), Times.Once);
             _clientRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Client>(), It.IsAny<CancellationToken>()), Times.Never);

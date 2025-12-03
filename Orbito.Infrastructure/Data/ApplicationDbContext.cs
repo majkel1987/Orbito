@@ -17,7 +17,7 @@ namespace Orbito.Infrastructure.Data
     /// <summary>
     /// Application database context with multi-tenancy support, audit trails, and security validations
     /// </summary>
-    public class ApplicationDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, Guid>
+    public class ApplicationDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, Guid>, ITenantValidationBypass
     {
         private readonly ITenantProvider _tenantProvider;
         private readonly IHttpContextAccessor _httpContextAccessor;
@@ -29,6 +29,10 @@ namespace Orbito.Infrastructure.Data
         // Performance cache - cleared automatically between requests (DbContext is scoped)
         // Thread-safe cache using Lazy<T> to prevent race conditions
         private readonly Lazy<Guid?> _cachedTenantId;
+
+        // Flag to skip tenant validation for admin setup operations
+        // Used during initial admin seeding when no tenant context exists yet
+        private bool _skipTenantValidation = false;
 
         public ApplicationDbContext(
             DbContextOptions<ApplicationDbContext> options,
@@ -44,6 +48,26 @@ namespace Orbito.Infrastructure.Data
             _cachedTenantId = new Lazy<Guid?>(() => GetCurrentTenantIdSafe());
         }
 
+        /// <summary>
+        /// Temporarily disables tenant validation for admin setup operations
+        /// Should only be used during initial admin seeding when no tenant context exists
+        /// </summary>
+        public void SkipTenantValidation()
+        {
+            _skipTenantValidation = true;
+            _logger.LogWarning("Tenant validation disabled for admin setup operation");
+        }
+
+        /// <summary>
+        /// Re-enables tenant validation after admin setup operations
+        /// Should be called after admin setup is complete to restore security checks
+        /// </summary>
+        public void ResetTenantValidation()
+        {
+            _skipTenantValidation = false;
+            _logger.LogDebug("Tenant validation re-enabled after admin setup operation");
+        }
+
         // Domain entities DbSets
         public DbSet<Provider> Providers { get; set; } = null!;
         public DbSet<Client> Clients { get; set; } = null!;
@@ -57,6 +81,7 @@ namespace Orbito.Infrastructure.Data
         public DbSet<PaymentRetrySchedule> PaymentRetrySchedules { get; set; } = null!;
         public DbSet<ReconciliationReport> ReconciliationReports { get; set; } = null!;
         public DbSet<PaymentDiscrepancy> PaymentDiscrepancies { get; set; } = null!;
+        public DbSet<TeamMember> TeamMembers { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -70,6 +95,9 @@ namespace Orbito.Infrastructure.Data
 
             // Configure Value Objects
             builder.ConfigureValueObjects();
+
+            // Configure Enum Converters (must be called AFTER ApplyConfigurationsFromAssembly)
+            builder.ConfigureEnumConverters();
 
             // Configure multi-tenancy with query filters
             ConfigureMultiTenancy(builder);
@@ -89,56 +117,72 @@ namespace Orbito.Infrastructure.Data
 
         /// <summary>
         /// Configures tenant filtering for ASP.NET Identity entities
-        /// Allows global roles (TenantId = null) and admin bypass (Guid.Empty)
+        /// IMPORTANT: Identity entities (ApplicationUser, ApplicationRole) should NOT have query filters
+        /// UserManager and RoleManager already handle security and tenant isolation
+        /// Query filters cause EF Core translation issues with nullable TenantId value objects
         /// </summary>
         private void ConfigureIdentityTenantFiltering(ModelBuilder builder)
         {
-            // ApplicationRole - allow global roles (TenantId = null) and tenant-specific roles
-            builder.Entity<ApplicationRole>()
-                .HasQueryFilter(r =>
-                    GetCurrentTenantIdForQueryFilter() == AdminTenantId ||
-                    r.TenantId == null ||
-                    r.TenantId == GetCurrentTenantIdForQueryFilter());
+            // NO QUERY FILTERS FOR IDENTITY ENTITIES
+            // Reasons:
+            // 1. UserManager/RoleManager already provide security layer
+            // 2. EF.Property<Guid?> with value converters cannot be translated to SQL
+            // 3. Identity operations need to work during registration (no tenant context)
+            // 4. Manual tenant filtering in repositories is more explicit and maintainable
 
-            // ApplicationUser - filter by tenant, admin bypass enabled
-            builder.Entity<ApplicationUser>()
-                .HasQueryFilter(u =>
-                    GetCurrentTenantIdForQueryFilter() == AdminTenantId ||
-                    u.TenantId == GetCurrentTenantIdForQueryFilter());
+            // Security is handled by:
+            // - TenantMiddleware sets tenant context from JWT token
+            // - Controllers validate user's tenant matches requested resources
+            // - SaveChanges validates tenant context for write operations
         }
 
         /// <summary>
         /// Configures tenant filtering for all domain entities
-        /// All domain entities must implement IMustHaveTenant interface
+        /// IMPORTANT: Query filters are NOT used due to EF Core translation issues with TenantId value converters
         /// </summary>
         private void ConfigureDomainTenantFiltering(ModelBuilder builder)
         {
-            // Explicit configuration for type safety and performance
-            // Reflection is avoided for production code
-            SetTenantQueryFilterGeneric<Provider>(builder);
-            SetTenantQueryFilterGeneric<Client>(builder);
-            SetTenantQueryFilterGeneric<SubscriptionPlan>(builder);
-            SetTenantQueryFilterGeneric<Subscription>(builder);
-            SetTenantQueryFilterGeneric<Payment>(builder);
-            SetTenantQueryFilterGeneric<PaymentMethod>(builder);
-            SetTenantQueryFilterGeneric<PaymentHistory>(builder);
-            SetTenantQueryFilterGeneric<PaymentWebhookLog>(builder);
-            SetTenantQueryFilterGeneric<EmailNotification>(builder);
-            SetTenantQueryFilterGeneric<PaymentRetrySchedule>(builder);
-            SetTenantQueryFilterGeneric<ReconciliationReport>(builder);
-            SetTenantQueryFilterGeneric<PaymentDiscrepancy>(builder);
+            // NO QUERY FILTERS FOR DOMAIN ENTITIES
+            //
+            // Reasons:
+            // 1. TenantId is a value object with ValueConverter (TenantId.Create())
+            // 2. EF.Property<Guid>(entity, "TenantId") with value converters causes InvalidCastException
+            // 3. EF Core cannot properly translate value converter expressions to SQL
+            // 4. Manual tenant filtering in repositories is more explicit, testable, and maintainable
+            //
+            // Security is handled by:
+            // - Each repository manually filters by TenantId (explicit WHERE clause)
+            // - TenantMiddleware validates tenant context from JWT
+            // - SaveChanges validates TenantId for all write operations
+            // - RBAC at controller level
+            //
+            // Affected entities (ALL have manual filtering in repositories):
+            // - Provider: IS a tenant, no filtering needed
+            // - Client: Manual filtering in ClientRepository
+            // - SubscriptionPlan: Manual filtering in SubscriptionPlanRepository
+            // - Subscription: Manual filtering in SubscriptionRepository
+            // - Payment: Manual filtering in PaymentRepository
+            // - PaymentMethod: Manual filtering in PaymentMethodRepository
+            // - PaymentHistory: Manual filtering in PaymentHistoryRepository
+            // - PaymentWebhookLog: Manual filtering in PaymentWebhookLogRepository
+            // - EmailNotification: Manual filtering in EmailNotificationRepository
+            // - PaymentRetrySchedule: Manual filtering in PaymentRetryScheduleRepository
+            // - ReconciliationReport: Manual filtering in ReconciliationReportRepository
+            // - PaymentDiscrepancy: Manual filtering in PaymentDiscrepancyRepository
+            // - TeamMember: Manual filtering in TeamMemberRepository
         }
 
         /// <summary>
-        /// Sets tenant query filter for a specific entity type
+        /// DEPRECATED: SetTenantQueryFilterGeneric is no longer used
+        /// Query filters with EF.Property and value converters cause InvalidCastException
+        /// All tenant filtering is now done manually in repositories
         /// </summary>
-        /// <typeparam name="T">Entity type that implements IMustHaveTenant</typeparam>
+        [Obsolete("Query filters are disabled. Use manual filtering in repositories.", error: true)]
         private void SetTenantQueryFilterGeneric<T>(ModelBuilder builder) where T : class, IMustHaveTenant
         {
-            builder.Entity<T>()
-                .HasQueryFilter(e =>
-                    GetCurrentTenantIdForQueryFilter() == AdminTenantId ||
-                    e.TenantId.Value == GetCurrentTenantIdForQueryFilter());
+            throw new NotSupportedException(
+                "Query filters are not supported due to EF Core translation issues with value converters. " +
+                "Use manual TenantId filtering in repositories instead.");
         }
 
         /// <summary>
@@ -272,7 +316,89 @@ namespace Orbito.Infrastructure.Data
         /// <exception cref="UnauthorizedAccessException">Thrown when tenant validation fails</exception>
         private void ValidateTenantContext()
         {
-            var currentTenantId = GetCurrentTenantIdStrict();
+            // Skip validation if explicitly disabled (for admin setup operations)
+            if (_skipTenantValidation)
+            {
+                _logger.LogDebug("Skipping tenant validation - explicitly disabled for admin setup");
+                return;
+            }
+
+            var entries = ChangeTracker.Entries()
+                .Where(e => e.State == EntityState.Added || e.State == EntityState.Modified || e.State == EntityState.Deleted)
+                .ToList();
+
+            // Nothing to validate - empty changeset
+            if (!entries.Any())
+            {
+                _logger.LogDebug("Skipping tenant validation - no changes to save");
+                return;
+            }
+
+            // Check if we're creating a Provider (Provider creates its own tenant)
+            var creatingProvider = entries.Any(e => e.Entity is Provider && e.State == EntityState.Added);
+
+            // Skip tenant validation when creating a Provider (Provider IS a tenant)
+            if (creatingProvider)
+            {
+                _logger.LogDebug("Skipping tenant validation - creating Provider entity");
+                return;
+            }
+
+            // Check if we're managing Identity entities during registration flow
+            var hasIdentityEntities = entries.Any(e => e.Entity is ApplicationUser ||
+                                                       e.Entity is ApplicationRole ||
+                                                       e.Entity.GetType().Namespace == "Microsoft.AspNetCore.Identity.EntityFrameworkCore");
+
+            // Check if we're in a registration flow (Provider + Identity entities)
+            var hasProvider = entries.Any(e => e.Entity is Provider);
+            var allEntitiesAreRegistrationRelated = entries.All(e =>
+                e.Entity is Provider ||
+                e.Entity is ApplicationUser ||
+                e.Entity is ApplicationRole ||
+                e.Entity.GetType().Namespace == "Microsoft.AspNetCore.Identity.EntityFrameworkCore");
+
+            // Skip tenant validation during registration/rollback flow
+            if (allEntitiesAreRegistrationRelated && (hasProvider || hasIdentityEntities))
+            {
+                _logger.LogDebug("Skipping tenant validation - registration flow detected (Provider + Identity operations)");
+                return;
+            }
+
+            // CRITICAL FIX: Allow ALL Identity operations regardless of tenant context
+            // This includes user registration, role assignment, login, profile updates, etc.
+            // Identity operations are self-contained and don't need tenant validation
+            // even if the User entity has a TenantId assigned
+            if (hasIdentityEntities && !hasProvider)
+            {
+                // Check if ALL entities are Identity-related
+                // IMPORTANT: IdentityUserRole<T> and other Identity join tables are also Identity entities
+                var onlyIdentityEntities = entries.All(e =>
+                    e.Entity is ApplicationUser ||
+                    e.Entity is ApplicationRole ||
+                    e.Entity.GetType().Namespace == "Microsoft.AspNetCore.Identity.EntityFrameworkCore" ||
+                    e.Entity.GetType().Name.StartsWith("Identity", StringComparison.OrdinalIgnoreCase));
+
+                if (onlyIdentityEntities)
+                {
+                    _logger.LogDebug("Skipping tenant validation - pure Identity operations (User: {UserCount}, Role: {RoleCount}, Other: {OtherCount})",
+                        entries.Count(e => e.Entity is ApplicationUser),
+                        entries.Count(e => e.Entity is ApplicationRole),
+                        entries.Count(e => e.Entity.GetType().Namespace == "Microsoft.AspNetCore.Identity.EntityFrameworkCore" || 
+                                          e.Entity.GetType().Name.StartsWith("Identity", StringComparison.OrdinalIgnoreCase)));
+                    return;
+                }
+            }
+
+            // Try to get tenant ID safely first
+            var tenantId = GetCurrentTenantIdSafe();
+            if (!tenantId.HasValue)
+            {
+                // No tenant context and we have non-Identity entities - this is an error
+                _logger.LogError("Tenant context required for non-Identity operations");
+                throw new UnauthorizedAccessException("Tenant context required for data modification");
+            }
+
+            var currentTenantId = tenantId.Value;
 
             // Skip validation for admin context
             if (currentTenantId == AdminTenantId)
@@ -280,10 +406,6 @@ namespace Orbito.Infrastructure.Data
                 _logger.LogDebug("Skipping tenant validation for admin context");
                 return;
             }
-
-            var entries = ChangeTracker.Entries()
-                .Where(e => e.State == EntityState.Added || e.State == EntityState.Modified)
-                .ToList();
 
             foreach (var entry in entries)
             {

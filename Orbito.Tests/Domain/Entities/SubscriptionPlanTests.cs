@@ -46,7 +46,7 @@ namespace Orbito.Tests.Domain.Entities
             subscriptionPlan.Name.Should().Be(name);
             subscriptionPlan.Description.Should().Be(description);
             subscriptionPlan.Price.Amount.Should().Be(amount);
-            subscriptionPlan.Price.Currency.Should().Be(currency);
+            subscriptionPlan.Price.Currency.Code.Should().Be(currency);
             subscriptionPlan.BillingPeriod.Type.Should().Be(billingPeriodType);
             subscriptionPlan.TrialDays.Should().Be(trialDays);
             subscriptionPlan.TrialPeriodDays.Should().Be(trialPeriodDays);
@@ -81,7 +81,7 @@ namespace Orbito.Tests.Domain.Entities
             subscriptionPlan.Name.Should().Be(name);
             subscriptionPlan.Description.Should().BeNull();
             subscriptionPlan.Price.Amount.Should().Be(amount);
-            subscriptionPlan.Price.Currency.Should().Be(currency);
+            subscriptionPlan.Price.Currency.Code.Should().Be(currency);
             subscriptionPlan.BillingPeriod.Type.Should().Be(billingPeriodType);
             subscriptionPlan.TrialDays.Should().Be(0);
             subscriptionPlan.TrialPeriodDays.Should().Be(0);

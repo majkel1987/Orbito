@@ -13,17 +13,25 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.ActivateSubscription
     public class ActivateSubscriptionCommandHandlerTests
     {
         private readonly Mock<ISubscriptionRepository> _subscriptionRepositoryMock;
+        private readonly Mock<ITenantContext> _tenantContextMock;
         private readonly Mock<ILogger<ActivateSubscriptionCommandHandler>> _loggerMock;
         private readonly ActivateSubscriptionCommandHandler _handler;
         private readonly TenantId _tenantId = TenantId.New();
+        private readonly Guid _clientId = Guid.NewGuid();
 
         public ActivateSubscriptionCommandHandlerTests()
         {
             _subscriptionRepositoryMock = new Mock<ISubscriptionRepository>();
+            _tenantContextMock = new Mock<ITenantContext>();
             _loggerMock = new Mock<ILogger<ActivateSubscriptionCommandHandler>>();
+
+            // Setup tenant context
+            _tenantContextMock.Setup(x => x.HasTenant).Returns(true);
+            _tenantContextMock.Setup(x => x.CurrentTenantId).Returns(_tenantId);
 
             _handler = new ActivateSubscriptionCommandHandler(
                 _subscriptionRepositoryMock.Object,
+                _tenantContextMock.Object,
                 _loggerMock.Object);
         }
 
@@ -32,7 +40,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.ActivateSubscription
         {
             // Arrange
             var subscriptionId = Guid.NewGuid();
-            var command = new ActivateSubscriptionCommand { SubscriptionId = subscriptionId };
+            var command = new ActivateSubscriptionCommand { SubscriptionId = subscriptionId, ClientId = _clientId };
 
             var subscription = CreateTestSubscription();
             subscription.Status = SubscriptionStatus.Suspended;
@@ -45,10 +53,10 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.ActivateSubscription
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
-            result.SubscriptionId.Should().Be(subscriptionId);
-            result.Status.Should().Be(SubscriptionStatus.Active.ToString());
-            result.Message.Should().Be("Subscription activated successfully");
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value!.Id.Should().Be(subscription.Id);
+            result.Value.Status.Should().Be(SubscriptionStatus.Active.ToString());
 
             subscription.Status.Should().Be(SubscriptionStatus.Active);
             _subscriptionRepositoryMock.Verify(x => x.UpdateAsync(subscription, It.IsAny<CancellationToken>()), Times.Once);
@@ -59,7 +67,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.ActivateSubscription
         {
             // Arrange
             var subscriptionId = Guid.NewGuid();
-            var command = new ActivateSubscriptionCommand { SubscriptionId = subscriptionId };
+            var command = new ActivateSubscriptionCommand { SubscriptionId = subscriptionId, ClientId = _clientId };
 
             var subscription = CreateTestSubscription();
             subscription.Status = SubscriptionStatus.Suspended; // Use Suspended instead of Pending
@@ -72,9 +80,9 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.ActivateSubscription
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
-            result.SubscriptionId.Should().Be(subscriptionId);
-            result.Status.Should().Be(SubscriptionStatus.Active.ToString());
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value!.Status.Should().Be(SubscriptionStatus.Active.ToString());
 
             subscription.Status.Should().Be(SubscriptionStatus.Active);
             _subscriptionRepositoryMock.Verify(x => x.UpdateAsync(subscription, It.IsAny<CancellationToken>()), Times.Once);
@@ -85,7 +93,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.ActivateSubscription
         {
             // Arrange
             var subscriptionId = Guid.NewGuid();
-            var command = new ActivateSubscriptionCommand { SubscriptionId = subscriptionId };
+            var command = new ActivateSubscriptionCommand { SubscriptionId = subscriptionId, ClientId = _clientId };
 
             _subscriptionRepositoryMock.Setup(x => x.GetByIdForClientAsync(subscriptionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((Subscription?)null);
@@ -95,9 +103,9 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.ActivateSubscription
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.SubscriptionId.Should().Be(subscriptionId);
-            result.Message.Should().Be("Subscription not found");
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Should().NotBeNull();
+            result.Error.Code.Should().Be("Subscription.NotFound");
 
             _subscriptionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Subscription>(), It.IsAny<CancellationToken>()), Times.Never);
         }
@@ -107,7 +115,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.ActivateSubscription
         {
             // Arrange
             var subscriptionId = Guid.NewGuid();
-            var command = new ActivateSubscriptionCommand { SubscriptionId = subscriptionId };
+            var command = new ActivateSubscriptionCommand { SubscriptionId = subscriptionId, ClientId = _clientId };
 
             var subscription = CreateTestSubscription();
             subscription.Status = SubscriptionStatus.Active;
@@ -120,9 +128,9 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.ActivateSubscription
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.SubscriptionId.Should().Be(subscriptionId);
-            result.Message.Should().Be($"Subscription cannot be activated. Current status: {SubscriptionStatus.Active}");
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Should().NotBeNull();
+            result.Error.Code.Should().Be("Subscription.AlreadyActive");
 
             _subscriptionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Subscription>(), It.IsAny<CancellationToken>()), Times.Never);
         }
@@ -132,7 +140,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.ActivateSubscription
         {
             // Arrange
             var subscriptionId = Guid.NewGuid();
-            var command = new ActivateSubscriptionCommand { SubscriptionId = subscriptionId };
+            var command = new ActivateSubscriptionCommand { SubscriptionId = subscriptionId, ClientId = _clientId };
 
             var subscription = CreateTestSubscription();
             subscription.Status = SubscriptionStatus.Cancelled;
@@ -145,9 +153,9 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.ActivateSubscription
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.SubscriptionId.Should().Be(subscriptionId);
-            result.Message.Should().Be($"Subscription cannot be activated. Current status: {SubscriptionStatus.Cancelled}");
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Should().NotBeNull();
+            result.Error.Code.Should().Be("Subscription.AlreadyActive");
 
             _subscriptionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Subscription>(), It.IsAny<CancellationToken>()), Times.Never);
         }
@@ -157,7 +165,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.ActivateSubscription
         {
             // Arrange
             var subscriptionId = Guid.NewGuid();
-            var command = new ActivateSubscriptionCommand { SubscriptionId = subscriptionId };
+            var command = new ActivateSubscriptionCommand { SubscriptionId = subscriptionId, ClientId = _clientId };
 
             var subscription = CreateTestSubscription();
             subscription.Status = SubscriptionStatus.Expired;
@@ -170,9 +178,9 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.ActivateSubscription
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.SubscriptionId.Should().Be(subscriptionId);
-            result.Message.Should().Be($"Subscription cannot be activated. Current status: {SubscriptionStatus.Expired}");
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Should().NotBeNull();
+            result.Error.Code.Should().Be("Subscription.AlreadyActive");
 
             _subscriptionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Subscription>(), It.IsAny<CancellationToken>()), Times.Never);
         }
@@ -182,7 +190,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.ActivateSubscription
         {
             // Arrange
             var subscriptionId = Guid.NewGuid();
-            var command = new ActivateSubscriptionCommand { SubscriptionId = subscriptionId };
+            var command = new ActivateSubscriptionCommand { SubscriptionId = subscriptionId, ClientId = _clientId };
 
             var subscription = CreateTestSubscription();
             subscription.Status = SubscriptionStatus.PastDue;
@@ -195,9 +203,9 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.ActivateSubscription
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.SubscriptionId.Should().Be(subscriptionId);
-            result.Message.Should().Be($"Subscription cannot be activated. Current status: {SubscriptionStatus.PastDue}");
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Should().NotBeNull();
+            result.Error.Code.Should().Be("Subscription.AlreadyActive");
 
             _subscriptionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Subscription>(), It.IsAny<CancellationToken>()), Times.Never);
         }

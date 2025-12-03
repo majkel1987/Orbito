@@ -2,10 +2,12 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.DTOs;
+using Orbito.Domain.Common;
+using Orbito.Domain.Errors;
 
 namespace Orbito.Application.Features.Payments.Queries.GetPaymentById
 {
-    public class GetPaymentByIdQueryHandler : IRequestHandler<GetPaymentByIdQuery, GetPaymentByIdResult>
+    public class GetPaymentByIdQueryHandler : IRequestHandler<GetPaymentByIdQuery, Result<PaymentDto>>
     {
         private readonly IPaymentRepository _paymentRepository;
         private readonly ITenantContext _tenantContext;
@@ -21,38 +23,37 @@ namespace Orbito.Application.Features.Payments.Queries.GetPaymentById
             _logger = logger;
         }
 
-        public async Task<GetPaymentByIdResult> Handle(GetPaymentByIdQuery request, CancellationToken cancellationToken)
+        public async Task<Result<PaymentDto>> Handle(GetPaymentByIdQuery request, CancellationToken cancellationToken)
         {
             try
             {
                 // Sprawdź czy mamy kontekst tenanta
                 if (!_tenantContext.HasTenant)
                 {
-                    return GetPaymentByIdResult.FailureResult("Tenant context is required");
+                    _logger.LogWarning("GetPaymentById attempted without tenant context");
+                    return Result.Failure<PaymentDto>(DomainErrors.Tenant.NoTenantContext);
                 }
 
-                // Pobierz płatność
-                // NOTE: Using deprecated method because this query is only accessible by Providers and PlatformAdmins
-                // who have proper authorization to view all payments in their tenant
-#pragma warning disable CS0618 // Type or member is obsolete
-                var payment = await _paymentRepository.GetByIdAsync(request.PaymentId, cancellationToken);
-#pragma warning restore CS0618 // Type or member is obsolete
+                // Pobierz płatność z weryfikacją ClientId (security best practice)
+                var payment = await _paymentRepository.GetByIdForClientAsync(request.PaymentId, request.ClientId, cancellationToken);
 
                 // Bezpieczeństwo: ten sam komunikat dla obu przypadków
                 if (payment == null || payment.TenantId != _tenantContext.CurrentTenantId)
                 {
-                    return GetPaymentByIdResult.FailureResult("Payment not found");
+                    _logger.LogWarning("Payment {PaymentId} not found for client {ClientId} or cross-tenant access attempt",
+                        request.PaymentId, request.ClientId);
+                    return Result.Failure<PaymentDto>(DomainErrors.Payment.NotFound);
                 }
 
                 var paymentDto = MapToDto(payment);
-                return GetPaymentByIdResult.SuccessResult(paymentDto);
+                return Result.Success(paymentDto);
             }
             catch (Exception ex)
             {
                 // Zaloguj szczegóły
                 _logger.LogError(ex, "Error retrieving payment {PaymentId}", request.PaymentId);
                 // Zwróć ogólny komunikat
-                return GetPaymentByIdResult.FailureResult("An error occurred while retrieving payment");
+                return Result.Failure<PaymentDto>(DomainErrors.General.UnexpectedError);
             }
         }
 

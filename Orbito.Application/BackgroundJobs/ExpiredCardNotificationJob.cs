@@ -1,7 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Orbito.Application.Common.Helpers;
 using Orbito.Application.Common.Interfaces;
+using Orbito.Domain.ValueObjects;
 
 namespace Orbito.Application.BackgroundJobs;
 
@@ -64,86 +66,69 @@ public class ExpiredCardNotificationJob : BackgroundService
     /// </summary>
     private async Task ProcessExpiredCardsAsync(CancellationToken cancellationToken)
     {
-        using var scope = _serviceProvider.CreateScope();
-
-        var unitOfWork = scope.ServiceProvider.GetService<IUnitOfWork>();
-        var notificationService = scope.ServiceProvider.GetService<IPaymentNotificationService>();
-        var tenantContext = scope.ServiceProvider.GetService<ITenantContext>();
-
-        if (unitOfWork == null || notificationService == null || tenantContext == null)
-        {
-            _logger.LogError("Required services not available");
-            return;
-        }
-
         _logger.LogInformation("Processing expired payment cards");
 
-        try
-        {
-            // Set admin tenant context for background job
-            // This allows access to all tenants' data for admin operations
-            tenantContext.SetTenant(null); // Admin context - no tenant filtering
+        // Create timeout for the operation
+        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromMinutes(OperationTimeoutMinutes));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
-            // Create timeout for the operation
-            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromMinutes(OperationTimeoutMinutes));
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
-
-            // Get all expired payment methods
-            var expiredPaymentMethods = await unitOfWork.PaymentMethods.GetExpiredPaymentMethodsAsync(linkedCts.Token);
-
-            _logger.LogInformation("Found {Count} expired payment methods", expiredPaymentMethods.Count());
-
-            var successCount = 0;
-            var failureCount = 0;
-
-            foreach (var paymentMethod in expiredPaymentMethods)
+        // Execute for all tenants
+        var results = await TenantJobHelper.ExecuteForAllTenantsAsync(
+            _serviceProvider,
+            _logger,
+            async (tenantId, serviceProvider, ct) =>
             {
-                try
+                var unitOfWork = serviceProvider.GetRequiredService<IUnitOfWork>();
+                var notificationService = serviceProvider.GetRequiredService<IPaymentNotificationService>();
+                var tenantIdValueObject = TenantId.Create(tenantId);
+
+                // Get expired payment methods for this tenant
+                var expiredPaymentMethods = await unitOfWork.PaymentMethods
+                    .GetExpiredPaymentMethodsForTenantAsync(tenantIdValueObject, ct);
+
+                var expiredMethodsList = expiredPaymentMethods.ToList();
+                _logger.LogDebug("Found {Count} expired payment methods for tenant {TenantId}",
+                    expiredMethodsList.Count, tenantId);
+
+                var successCount = 0;
+                var failureCount = 0;
+
+                foreach (var paymentMethod in expiredMethodsList)
                 {
-                    // Send expired card notification
-                    await notificationService.SendExpiredCardNotificationAsync(
-                        paymentMethod.Id,
-                        linkedCts.Token);
+                    try
+                    {
+                        // Send expired card notification
+                        await notificationService.SendExpiredCardNotificationAsync(
+                            paymentMethod.Id,
+                            ct);
 
-                    successCount++;
-                    _logger.LogDebug("Sent expired card notification for payment method {PaymentMethodId}",
-                        paymentMethod.Id);
+                        successCount++;
+                        _logger.LogDebug("Sent expired card notification for payment method {PaymentMethodId}",
+                            paymentMethod.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        failureCount++;
+                        _logger.LogError(ex,
+                            "Failed to send expired card notification for payment method {PaymentMethodId}",
+                            paymentMethod.Id);
+                    }
+
+                    // Small delay to avoid overwhelming the email service
+                    await Task.Delay(TimeSpan.FromMilliseconds(100), ct);
                 }
-                catch (Exception ex)
-                {
-                    failureCount++;
-                    _logger.LogError(ex,
-                        "Failed to send expired card notification for payment method {PaymentMethodId}",
-                        paymentMethod.Id);
-                }
 
-                // Small delay to avoid overwhelming the email service
-                await Task.Delay(TimeSpan.FromMilliseconds(100), linkedCts.Token);
-            }
+                _logger.LogDebug(
+                    "Completed expired card notifications for tenant {TenantId}. Success: {SuccessCount}, Failed: {FailureCount}",
+                    tenantId, successCount, failureCount);
+            },
+            linkedCts.Token);
 
-            _logger.LogInformation(
-                "Completed expired card notification processing. Success: {SuccessCount}, Failed: {FailureCount}",
-                successCount, failureCount);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            _logger.LogWarning("ProcessExpiredCards operation was cancelled");
-        }
-        catch (OperationCanceledException)
-        {
-            _logger.LogError("ProcessExpiredCards operation timed out after {Minutes} minutes", OperationTimeoutMinutes);
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing expired payment cards");
-            throw;
-        }
-        finally
-        {
-            // Clear tenant context
-            tenantContext.ClearTenant();
-        }
+        var successCount = results.Values.Count(r => r);
+        _logger.LogInformation(
+            "Completed expired card notification processing. Success: {SuccessCount}/{TotalCount}",
+            successCount,
+            results.Count);
     }
 
     /// <summary>
@@ -151,117 +136,102 @@ public class ExpiredCardNotificationJob : BackgroundService
     /// </summary>
     private async Task ProcessExpiringCardsAsync(CancellationToken cancellationToken)
     {
-        using var scope = _serviceProvider.CreateScope();
-
-        var unitOfWork = scope.ServiceProvider.GetService<IUnitOfWork>();
-        var notificationService = scope.ServiceProvider.GetService<IPaymentNotificationService>();
-        var dateTime = scope.ServiceProvider.GetService<IDateTime>();
-        var tenantContext = scope.ServiceProvider.GetService<ITenantContext>();
-
-        if (unitOfWork == null || notificationService == null || dateTime == null || tenantContext == null)
-        {
-            _logger.LogError("Required services not available");
-            return;
-        }
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var dateTime = scope.ServiceProvider.GetRequiredService<IDateTime>();
 
         var currentDate = dateTime.UtcNow;
         var expiryThresholdDate = currentDate.AddDays(DaysBeforeExpiryToNotify);
 
         _logger.LogInformation("Processing payment cards expiring before {ThresholdDate}", expiryThresholdDate.Date);
 
-        try
-        {
-            // Set admin tenant context for background job
-            // This allows access to all tenants' data for admin operations
-            tenantContext.SetTenant(null); // Admin context - no tenant filtering
+        // Create timeout for the operation
+        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromMinutes(OperationTimeoutMinutes));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
-            // Create timeout for the operation
-            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromMinutes(OperationTimeoutMinutes));
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
-
-            var successCount = 0;
-            var failureCount = 0;
-            var pageNumber = 1;
-            const int pageSize = 100; // Process in batches of 100
-            var hasMore = true;
-
-            // Process all cards in batches to avoid memory issues with large datasets
-            while (hasMore)
+        // Execute for all tenants
+        var results = await TenantJobHelper.ExecuteForAllTenantsAsync(
+            _serviceProvider,
+            _logger,
+            async (tenantId, serviceProvider, ct) =>
             {
-                var paymentMethods = await unitOfWork.PaymentMethods.GetByTypeAsync(
-                    Domain.Enums.PaymentMethodType.Card,
-                    pageNumber: pageNumber,
-                    pageSize: pageSize,
-                    cancellationToken: linkedCts.Token);
+                var unitOfWork = serviceProvider.GetRequiredService<IUnitOfWork>();
+                var notificationService = serviceProvider.GetRequiredService<IPaymentNotificationService>();
+                var dateTimeService = serviceProvider.GetRequiredService<IDateTime>();
+                var currentDateLocal = dateTimeService.UtcNow;
+                var expiryThresholdDateLocal = currentDateLocal.AddDays(DaysBeforeExpiryToNotify);
 
-                var paymentMethodsList = paymentMethods.ToList();
-                hasMore = paymentMethodsList.Count == pageSize;
+                var successCount = 0;
+                var failureCount = 0;
+                var pageNumber = 1;
+                const int pageSize = 100; // Process in batches of 100
+                var hasMore = true;
 
-                // Filter for cards expiring within the threshold
-                var expiringPaymentMethods = paymentMethodsList
-                    .Where(pm => pm.ExpiryDate.HasValue &&
-                                 !pm.IsExpired() &&
-                                 pm.ExpiryDate.Value.Date <= expiryThresholdDate.Date)
-                    .ToList();
-
-                _logger.LogDebug("Processing page {Page}: found {Count} expiring cards out of {Total} cards in batch",
-                    pageNumber, expiringPaymentMethods.Count, paymentMethodsList.Count);
-
-                foreach (var paymentMethod in expiringPaymentMethods)
+                // Process all cards in batches to avoid memory issues with large datasets
+                while (hasMore)
                 {
-                    try
+                    var paymentMethods = await unitOfWork.PaymentMethods.GetByTypeAsync(
+                        Domain.Enums.PaymentMethodType.Card,
+                        pageNumber: pageNumber,
+                        pageSize: pageSize,
+                        cancellationToken: ct);
+
+                    var paymentMethodsList = paymentMethods.ToList();
+                    hasMore = paymentMethodsList.Count == pageSize;
+
+                    // Filter for cards expiring within the threshold AND belonging to this tenant
+                    var expiringPaymentMethods = paymentMethodsList
+                        .Where(pm => pm.ExpiryDate.HasValue &&
+                                     !pm.IsExpired() &&
+                                     pm.ExpiryDate.Value.Date <= expiryThresholdDateLocal.Date &&
+                                     pm.Client.TenantId.Value == tenantId) // SECURITY: Filter by tenant
+                        .ToList();
+
+                    _logger.LogDebug("Processing page {Page} for tenant {TenantId}: found {Count} expiring cards out of {Total} cards in batch",
+                        pageNumber, tenantId, expiringPaymentMethods.Count, paymentMethodsList.Count);
+
+                    foreach (var paymentMethod in expiringPaymentMethods)
                     {
-                        // Calculate days until expiry
-                        var daysUntilExpiry = (int)(paymentMethod.ExpiryDate!.Value.Date - currentDate.Date).TotalDays;
+                        try
+                        {
+                            // Calculate days until expiry
+                            var daysUntilExpiry = (int)(paymentMethod.ExpiryDate!.Value.Date - currentDateLocal.Date).TotalDays;
 
-                        // Send card expiring soon notification
-                        await notificationService.SendCardExpiringSoonNotificationAsync(
-                            paymentMethod.Id,
-                            daysUntilExpiry,
-                            linkedCts.Token);
+                            // Send card expiring soon notification
+                            await notificationService.SendCardExpiringSoonNotificationAsync(
+                                paymentMethod.Id,
+                                daysUntilExpiry,
+                                ct);
 
-                        successCount++;
-                        _logger.LogDebug(
-                            "Sent expiring card notification for payment method {PaymentMethodId} (expires in {Days} days)",
-                            paymentMethod.Id, daysUntilExpiry);
+                            successCount++;
+                            _logger.LogDebug(
+                                "Sent expiring card notification for payment method {PaymentMethodId} (expires in {Days} days)",
+                                paymentMethod.Id, daysUntilExpiry);
+                        }
+                        catch (Exception ex)
+                        {
+                            failureCount++;
+                            _logger.LogError(ex,
+                                "Failed to send expiring card notification for payment method {PaymentMethodId}",
+                                paymentMethod.Id);
+                        }
+
+                        // Small delay to avoid overwhelming the email service
+                        await Task.Delay(TimeSpan.FromMilliseconds(100), ct);
                     }
-                    catch (Exception ex)
-                    {
-                        failureCount++;
-                        _logger.LogError(ex,
-                            "Failed to send expiring card notification for payment method {PaymentMethodId}",
-                            paymentMethod.Id);
-                    }
 
-                    // Small delay to avoid overwhelming the email service
-                    await Task.Delay(TimeSpan.FromMilliseconds(100), linkedCts.Token);
+                    pageNumber++;
                 }
 
-                pageNumber++;
-            }
+                _logger.LogDebug(
+                    "Completed expiring card notifications for tenant {TenantId}. Pages processed: {Pages}, Success: {SuccessCount}, Failed: {FailureCount}",
+                    tenantId, pageNumber - 1, successCount, failureCount);
+            },
+            linkedCts.Token);
 
-            _logger.LogInformation(
-                "Completed expiring card notification processing. Pages processed: {Pages}, Success: {SuccessCount}, Failed: {FailureCount}",
-                pageNumber - 1, successCount, failureCount);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            _logger.LogWarning("ProcessExpiringCards operation was cancelled");
-        }
-        catch (OperationCanceledException)
-        {
-            _logger.LogError("ProcessExpiringCards operation timed out after {Minutes} minutes", OperationTimeoutMinutes);
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing expiring payment cards");
-            throw;
-        }
-        finally
-        {
-            // Clear tenant context
-            tenantContext.ClearTenant();
-        }
+        var successCount = results.Values.Count(r => r);
+        _logger.LogInformation(
+            "Completed expiring card notification processing. Success: {SuccessCount}/{TotalCount}",
+            successCount,
+            results.Count);
     }
 }

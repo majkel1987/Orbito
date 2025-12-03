@@ -92,6 +92,48 @@ namespace Orbito.Application.Common.Interfaces
 
         // Metrics operations - SECURE (tenant + provider filtering)
         Task<IQueryable<Payment>> GetPaymentsForMetricsAsync(TenantId tenantId, DateTime startDate, DateTime endDate, Guid? providerId, CancellationToken cancellationToken = default);
+
+        // BACKGROUND JOB METHODS: Explicit TenantId for multi-tenant operations
+        /// <summary>
+        /// Gets pending payments for a specific tenant (for background jobs)
+        /// SECURITY: Requires explicit TenantId to prevent cross-tenant access
+        /// </summary>
+        Task<IEnumerable<Payment>> GetPendingPaymentsForTenantAsync(TenantId tenantId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Gets failed payments for a specific tenant (for background jobs)
+        /// SECURITY: Requires explicit TenantId to prevent cross-tenant access
+        /// </summary>
+        Task<IEnumerable<Payment>> GetFailedPaymentsForTenantAsync(TenantId tenantId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Gets processing payments for a specific tenant (for background jobs)
+        /// SECURITY: Requires explicit TenantId to prevent cross-tenant access
+        /// </summary>
+        Task<IEnumerable<Payment>> GetProcessingPaymentsForTenantAsync(TenantId tenantId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Gets payments with external IDs for a specific tenant (for background jobs)
+        /// SECURITY: Requires explicit TenantId to prevent cross-tenant access
+        /// </summary>
+        Task<IEnumerable<Payment>> GetPaymentsWithExternalIdForTenantAsync(TenantId tenantId, CancellationToken cancellationToken = default);
+
+        // WEBHOOK HANDLER METHODS: Bypass tenant validation for verified external requests
+        /// <summary>
+        /// Gets payment by ID without tenant validation (WEBHOOK/ADMIN ONLY)
+        /// WARNING: This method bypasses tenant validation. Only use in webhook handlers
+        /// that have been verified by signature middleware or admin operations.
+        /// CALLER MUST verify tenant after retrieving the payment.
+        /// </summary>
+        Task<Payment?> GetByIdUnsafeAsync(Guid id, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Gets payment by external payment ID without tenant validation (WEBHOOK/ADMIN ONLY)
+        /// WARNING: This method bypasses tenant validation. Only use in webhook handlers
+        /// that have been verified by signature middleware (e.g., Stripe webhooks).
+        /// CALLER MUST verify tenant after retrieving the payment.
+        /// </summary>
+        Task<Payment?> GetByExternalPaymentIdUnsafeAsync(string externalPaymentId, CancellationToken cancellationToken = default);
     }
 
     public record PaymentStats

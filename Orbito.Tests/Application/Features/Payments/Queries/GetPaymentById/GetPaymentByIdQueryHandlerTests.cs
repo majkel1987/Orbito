@@ -44,7 +44,7 @@ public class GetPaymentByIdQueryHandlerTests : BaseTestFixture
     {
         // Arrange
         var paymentId = Guid.NewGuid();
-        var query = new GetPaymentByIdQuery(paymentId);
+        var query = new GetPaymentByIdQuery(paymentId, TestClientId);
 
         var payment = PaymentTestDataBuilder.Create()
             .WithId(paymentId)
@@ -63,15 +63,15 @@ public class GetPaymentByIdQueryHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeTrue();
-        result.Payment.Should().NotBeNull();
-        result.Payment!.Id.Should().Be(paymentId);
-        result.Payment.TenantId.Should().Be(TestTenantId.Value);
-        result.Payment.ClientId.Should().Be(TestClientId);
-        result.Payment.Amount.Should().Be(100.00m);
-        result.Payment.Currency.Should().Be("USD");
-        result.Payment.Status.Should().Be(PaymentStatus.Completed.ToString());
-        result.Payment.ExternalTransactionId.Should().Be("ch_test_123");
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+        result.Value.Id.Should().Be(paymentId);
+        result.Value.TenantId.Should().Be(TestTenantId.Value);
+        result.Value.ClientId.Should().Be(TestClientId);
+        result.Value.Amount.Should().Be(100.00m);
+        result.Value.Currency.Should().Be("USD");
+        result.Value.Status.Should().Be(PaymentStatus.Completed.ToString());
+        result.Value.ExternalTransactionId.Should().Be("ch_test_123");
 
         _paymentRepositoryMock.Verify(x => x.GetByIdForClientAsync(paymentId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -81,7 +81,7 @@ public class GetPaymentByIdQueryHandlerTests : BaseTestFixture
     {
         // Arrange
         var paymentId = Guid.NewGuid();
-        var query = new GetPaymentByIdQuery(paymentId);
+        var query = new GetPaymentByIdQuery(paymentId, TestClientId);
 
         var payment = PaymentTestDataBuilder.Create()
             .WithId(paymentId)
@@ -98,9 +98,9 @@ public class GetPaymentByIdQueryHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeTrue();
-        result.Payment.Should().NotBeNull();
-        result.Payment!.Status.Should().Be(PaymentStatus.Pending.ToString());
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+        result.Value.Status.Should().Be(PaymentStatus.Pending.ToString());
     }
 
     [Fact]
@@ -108,7 +108,7 @@ public class GetPaymentByIdQueryHandlerTests : BaseTestFixture
     {
         // Arrange
         var paymentId = Guid.NewGuid();
-        var query = new GetPaymentByIdQuery(paymentId);
+        var query = new GetPaymentByIdQuery(paymentId, TestClientId);
 
         var payment = PaymentTestDataBuilder.Create()
             .WithId(paymentId)
@@ -126,10 +126,10 @@ public class GetPaymentByIdQueryHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeTrue();
-        result.Payment.Should().NotBeNull();
-        result.Payment!.Status.Should().Be(PaymentStatus.Failed.ToString());
-        result.Payment.FailureReason.Should().Be("Card declined");
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+        result.Value.Status.Should().Be(PaymentStatus.Failed.ToString());
+        result.Value.FailureReason.Should().Be("Card declined");
     }
 
     #endregion
@@ -141,7 +141,7 @@ public class GetPaymentByIdQueryHandlerTests : BaseTestFixture
     {
         // Arrange
         var paymentId = Guid.NewGuid();
-        var query = new GetPaymentByIdQuery(paymentId);
+        var query = new GetPaymentByIdQuery(paymentId, TestClientId);
 
         _tenantContextMock.Setup(x => x.HasTenant).Returns(false);
 
@@ -150,9 +150,8 @@ public class GetPaymentByIdQueryHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Be("Tenant context is required");
-        result.Payment.Should().BeNull();
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Message.Should().Contain("Tenant context is not available");
 
         _paymentRepositoryMock.Verify(x => x.GetByIdForClientAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -162,7 +161,7 @@ public class GetPaymentByIdQueryHandlerTests : BaseTestFixture
     {
         // Arrange
         var paymentId = Guid.NewGuid();
-        var query = new GetPaymentByIdQuery(paymentId);
+        var query = new GetPaymentByIdQuery(paymentId, TestClientId);
         var differentTenantId = TenantId.New();
 
         var payment = PaymentTestDataBuilder.Create()
@@ -179,9 +178,8 @@ public class GetPaymentByIdQueryHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Be("Payment not found");
-        result.Payment.Should().BeNull();
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Message.Should().Contain("Payment was not found");
 
         _paymentRepositoryMock.Verify(x => x.GetByIdForClientAsync(paymentId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -191,7 +189,7 @@ public class GetPaymentByIdQueryHandlerTests : BaseTestFixture
     {
         // Arrange
         var paymentId = Guid.NewGuid();
-        var query = new GetPaymentByIdQuery(paymentId);
+        var query = new GetPaymentByIdQuery(paymentId, TestClientId);
 
         _paymentRepositoryMock.Setup(x => x.GetByIdForClientAsync(paymentId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Payment?)null);
@@ -201,9 +199,8 @@ public class GetPaymentByIdQueryHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Be("Payment not found");
-        result.Payment.Should().BeNull();
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Message.Should().Contain("Payment was not found");
 
         _paymentRepositoryMock.Verify(x => x.GetByIdForClientAsync(paymentId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -217,7 +214,7 @@ public class GetPaymentByIdQueryHandlerTests : BaseTestFixture
     {
         // Arrange
         var paymentId = Guid.NewGuid();
-        var query = new GetPaymentByIdQuery(paymentId);
+        var query = new GetPaymentByIdQuery(paymentId, TestClientId);
 
         _paymentRepositoryMock.Setup(x => x.GetByIdForClientAsync(paymentId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Database connection failed"));
@@ -227,9 +224,8 @@ public class GetPaymentByIdQueryHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Be("An error occurred while retrieving payment");
-        result.Payment.Should().BeNull();
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Message.Should().Contain("An unexpected error occurred");
 
         _paymentRepositoryMock.Verify(x => x.GetByIdForClientAsync(paymentId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -239,7 +235,7 @@ public class GetPaymentByIdQueryHandlerTests : BaseTestFixture
     {
         // Arrange
         var paymentId = Guid.NewGuid();
-        var query = new GetPaymentByIdQuery(paymentId);
+        var query = new GetPaymentByIdQuery(paymentId, TestClientId);
 
         _paymentRepositoryMock.Setup(x => x.GetByIdForClientAsync(paymentId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new TimeoutException("Request timeout"));
@@ -249,9 +245,8 @@ public class GetPaymentByIdQueryHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.Message.Should().Be("An error occurred while retrieving payment");
-        result.Payment.Should().BeNull();
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Message.Should().Contain("An unexpected error occurred");
     }
 
     #endregion
@@ -264,7 +259,7 @@ public class GetPaymentByIdQueryHandlerTests : BaseTestFixture
         // Arrange
         var paymentId = Guid.NewGuid();
         var subscriptionId = Guid.NewGuid();
-        var query = new GetPaymentByIdQuery(paymentId);
+        var query = new GetPaymentByIdQuery(paymentId, TestClientId);
 
         var payment = PaymentTestDataBuilder.Create()
             .WithId(paymentId)
@@ -288,10 +283,10 @@ public class GetPaymentByIdQueryHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeTrue();
-        result.Payment.Should().NotBeNull();
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
 
-        var paymentDto = result.Payment!;
+        var paymentDto = result.Value;
         paymentDto.Id.Should().Be(paymentId);
         paymentDto.TenantId.Should().Be(TestTenantId.Value);
         paymentDto.SubscriptionId.Should().Be(subscriptionId);

@@ -1,9 +1,11 @@
 using MediatR;
+using Orbito.Application.SubscriptionPlans.Queries.GetSubscriptionPlanById;
+using Orbito.Domain.Common;
 using Orbito.Domain.ValueObjects;
 
 namespace Orbito.Application.SubscriptionPlans.Commands.CreateSubscriptionPlan
 {
-    public record CreateSubscriptionPlanCommand : IRequest<CreateSubscriptionPlanResult>
+    public record CreateSubscriptionPlanCommand : IRequest<Result<SubscriptionPlanDto>>
     {
         public string Name { get; init; } = string.Empty;
         public string? Description { get; init; }

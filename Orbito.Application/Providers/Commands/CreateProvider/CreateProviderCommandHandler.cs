@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
@@ -32,37 +33,36 @@ public class CreateProviderCommandHandler : IRequestHandler<CreateProviderComman
     {
         try
         {
-            await _unitOfWork.BeginTransactionAsync(cancellationToken);
-
-            // Sprawdź czy użytkownik istnieje
+            // Wykonaj walidacje
             var user = await _userManager.FindByIdAsync(request.UserId.ToString());
             if (user == null)
             {
-                await _unitOfWork.RollbackAsync(cancellationToken);
                 return Result.Failure<CreateProviderResult>(DomainErrors.User.NotFound);
             }
 
-            // Sprawdź czy użytkownik już ma providera
             if (user.Provider != null)
             {
-                await _unitOfWork.RollbackAsync(cancellationToken);
                 return Result.Failure<CreateProviderResult>(DomainErrors.Provider.UserAlreadyHasProvider);
             }
 
-            // Sprawdź czy subdomain jest dostępny
-            var existingProvider = await _providerRepository.GetBySubdomainSlugAsync(request.SubdomainSlug, cancellationToken);
+            // Sanitize subdomain slug - remove any non-alphanumeric characters except hyphens
+            var sanitizedSubdomain = SanitizeSubdomain(request.SubdomainSlug);
 
+            var existingProvider = await _providerRepository.GetBySubdomainSlugAsync(sanitizedSubdomain, cancellationToken);
             if (existingProvider != null)
             {
-                await _unitOfWork.RollbackAsync(cancellationToken);
                 return Result.Failure<CreateProviderResult>(DomainErrors.Provider.SubdomainAlreadyExists);
             }
+
+            // Sprawdź czy użytkownik już ma rolę Provider
+            var userRoles = await _userManager.GetRolesAsync(user);
+            var needsProviderRole = !userRoles.Contains("Provider");
 
             // Utwórz nowego providera
             var provider = Provider.Create(
                 request.UserId,
                 request.BusinessName,
-                request.SubdomainSlug);
+                sanitizedSubdomain);
 
             // Ustaw dodatkowe właściwości
             if (!string.IsNullOrEmpty(request.Description))
@@ -74,16 +74,26 @@ public class CreateProviderCommandHandler : IRequestHandler<CreateProviderComman
             if (!string.IsNullOrEmpty(request.CustomDomain))
                 provider.CustomDomain = request.CustomDomain;
 
-            // Zapisz providera
+            // Dodaj providera do kontekstu
             await _providerRepository.AddAsync(provider, cancellationToken);
 
-            // Zaktualizuj użytkownika - przypisz TenantId i rolę Provider
+            // Zaktualizuj użytkownika - przypisz TenantId
             user.TenantId = provider.TenantId;
-            await _userManager.AddToRoleAsync(user, "Provider");
 
-            // Zapisz zmiany
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-            await _unitOfWork.CommitAsync(cancellationToken);
+            // Dodaj rolę Provider tylko jeśli użytkownik jeszcze jej nie ma
+            if (needsProviderRole)
+            {
+                await _userManager.AddToRoleAsync(user, "Provider");
+            }
+
+            // SaveChanges - EF Core automatycznie utworzy transakcję i zastosuje retry strategy
+            var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            if (!saveResult.IsSuccess)
+            {
+                _logger.LogError("Błąd podczas zapisywania providera");
+                return Result.Failure<CreateProviderResult>(DomainErrors.General.UnexpectedError);
+            }
 
             _logger.LogInformation("Provider utworzony: {BusinessName} (TenantId: {TenantId})",
                 provider.BusinessName, provider.TenantId.Value);
@@ -99,9 +109,36 @@ public class CreateProviderCommandHandler : IRequestHandler<CreateProviderComman
         }
         catch (Exception ex)
         {
-            await _unitOfWork.RollbackAsync(cancellationToken);
             _logger.LogError(ex, "Błąd podczas tworzenia providera dla użytkownika {UserId}", request.UserId);
             return Result.Failure<CreateProviderResult>(DomainErrors.General.UnexpectedError);
         }
+    }
+
+    private static string SanitizeSubdomain(string subdomain)
+    {
+        if (string.IsNullOrWhiteSpace(subdomain))
+            return string.Empty;
+
+        // Remove any HTML/script tags and their content (including script tags)
+        var sanitized = Regex.Replace(subdomain, @"<script[^>]*>.*?</script>", string.Empty, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        sanitized = Regex.Replace(sanitized, @"<[^>]+>", string.Empty, RegexOptions.IgnoreCase);
+        
+        // Remove common XSS keywords and dangerous words
+        var dangerousWords = new[] { "alert", "script", "javascript", "onerror", "onload", "onclick", "eval", "expression" };
+        foreach (var word in dangerousWords)
+        {
+            sanitized = Regex.Replace(sanitized, word, string.Empty, RegexOptions.IgnoreCase);
+        }
+        
+        // Keep only lowercase letters, numbers, and hyphens
+        sanitized = Regex.Replace(sanitized, @"[^a-z0-9-]", string.Empty, RegexOptions.IgnoreCase);
+        
+        // Remove consecutive hyphens
+        sanitized = Regex.Replace(sanitized, @"-+", "-");
+        
+        // Remove leading and trailing hyphens
+        sanitized = sanitized.Trim('-');
+        
+        return sanitized.ToLowerInvariant();
     }
 }

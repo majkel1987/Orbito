@@ -4,536 +4,187 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # Zasady Pracy dla Orbito Platform
 
-## 🏗️ Architektura i Wzorce
+## 🌐 Zasady Ogólne i Komunikacja
 
-### Clean Architecture
+- **Język**: Zawsze odpowiadaj po polsku. Kod, komentarze w kodzie i commit messages pisz po angielsku.
+- **Podejście**: Human-in-the-loop. Jeśli zadanie jest niejasne, zadawaj pytania.
+- **Jakość**: Nie zostawiaj `TODO`, placeholderów ani zakomentowanego kodu w finalnej implementacji.
+
+## 🏗️ Architektura Systemu
+
+### Backend (.NET 9) - Clean Architecture
 
 - **Warstwy**: API → Application → Domain ← Infrastructure
-- **Zależności**: Tylko w kierunku Domain (centrum)
-- **Izolacja**: Domain nie zna Infrastructure ani API
+- **Pattern**: CQRS + MediatR (Commands/Queries)
+- **Security**: Strict Multi-tenancy (`ITenantContext`)
 
-### Domain-Driven Design (DDD)
+### Frontend (Next.js 15) - Vertical Slices
 
-- **Encje**: Rich domain models z business logic
-- **Value Objects**: Immutable types (`TenantId`, `Money`, `Email`)
-- **Domain Services**: Złożona logika biznesowa
-- **Aggregates**: Consistency boundaries
-
-### CQRS + MediatR
-
-- **Commands**: Modyfikacja stanu (Create, Update, Delete)
-- **Queries**: Odczyt danych (Get, Search, List)
-- **Handlers**: Jedna odpowiedzialność per handler
-- **Pipeline Behaviors**: Logging, Validation, Performance
-
-## 🛠️ Standardy Kodowania
-
-### C# 13 / .NET 9
-
-- **Nullable Reference Types**: Zawsze włączone
-- **File Scoped Namespaces**: `namespace Orbito.Application.Features;`
-- **Primary Constructors**: Dla prostych klas
-- **Records**: Dla immutable data transfer objects
-
-### Konwencje Nazewnictwa
-
-- **Klasy**: PascalCase (`UserService`, `CreateProviderCommand`)
-- **Metody**: PascalCase (`CreateAsync`, `GetByIdAsync`)
-- **Właściwości**: PascalCase (`TenantId`, `Email`)
-- **Pola**: camelCase z underscore (`_repository`, `_logger`)
-- **Zmienne lokalne**: camelCase (`clientId`, `isActive`)
-
-### Struktura Plików
-
-```
-Orbito.Application/
-├── Features/
-│   ├── Providers/
-│   │   ├── Commands/
-│   │   │   ├── CreateProviderCommand.cs
-│   │   │   └── CreateProviderCommandHandler.cs
-│   │   ├── Queries/
-│   │   │   ├── GetProviderByIdQuery.cs
-│   │   │   └── GetProviderByIdQueryHandler.cs
-│   │   └── Validators/
-│   │       └── CreateProviderCommandValidator.cs
-│   └── Clients/
-└── Services/
-```
-
-## 🔒 Multi-Tenancy & Security
-
-### Tenant Context
-
-- **TenantId**: Wymagany w każdej operacji
-- **Automatyczne filtrowanie**: Query filters w EF Core
-- **Izolacja**: Każdy tenant widzi tylko swoje dane
-- **JWT Claims**: `tenant_id` w tokenach
-
-### KRYTYCZNE: Repository Security Pattern
-
-**ZAWSZE używaj metod z weryfikacją klienta/tenanta:**
-
-```csharp
-// ✅ DOBRE - metody z weryfikacją clientId
-var payment = await _paymentRepository.GetByIdForClientAsync(paymentId, clientId, cancellationToken);
-var subscription = await _subscriptionRepository.GetByIdForClientAsync(subscriptionId, clientId, cancellationToken);
-var paymentMethod = await _paymentMethodRepository.GetByIdAsync(methodId, clientId, cancellationToken);
-
-// ❌ ZŁE - metody bez weryfikacji (deprecated, tylko dla adminów)
-var payment = await _paymentRepository.GetByIdAsync(paymentId, cancellationToken); // SECURITY RISK!
-var subscriptions = await _subscriptionRepository.GetActiveSubscriptionsAsync(); // SECURITY RISK!
-```
-
-**Repository Pattern Rules:**
-1. Repozytoria dla Payment, Subscription, PaymentMethod **MUSZĄ** mieć `ITenantContext`
-2. Wszystkie query methods **MUSZĄ** filtrować po `TenantId` + `ClientId`
-3. Metody bez weryfikacji klienta oznaczaj jako `[Obsolete("SECURITY RISK: ...")]`
-4. Provider i Client NIE potrzebują ITenantContext (sami są tenantami)
-5. **NIGDY** nie ignoruj ostrzeżeń kompilatora o `[Obsolete]` - oznaczają krytyczne luki bezpieczeństwa
-
-**Deprecated Methods Migration:**
-```csharp
-// STARE (usuń):
-var subs = await _repo.GetActiveSubscriptionsAsync(); // Zwraca WSZYSTKIE subskrypcje
-var payment = await _repo.GetByIdAsync(id); // Brak weryfikacji właściciela
-
-// NOWE (użyj):
-var subs = await _repo.GetActiveSubscriptionsByClientAsync(clientId); // Bezpieczne
-var payment = await _repo.GetByIdForClientAsync(id, clientId); // Z weryfikacją
-```
-
-### Implementacja
-
-```csharp
-// Repository z ITenantContext
-public class PaymentRepository : IPaymentRepository
-{
-    private readonly ApplicationDbContext _context;
-    private readonly ITenantContext _tenantContext;
-
-    public PaymentRepository(ApplicationDbContext context, ITenantContext tenantContext)
-    {
-        _context = context;
-        _tenantContext = tenantContext;
-    }
-
-    // Bezpieczna metoda z weryfikacją
-    public async Task<Payment?> GetByIdForClientAsync(Guid id, Guid clientId, CancellationToken cancellationToken)
-    {
-        if (!_tenantContext.HasTenant) return null;
-
-        var tenantId = _tenantContext.CurrentTenantId;
-        return await _context.Payments
-            .Where(p => p.TenantId == tenantId && p.Id == id && p.ClientId == clientId)
-            .FirstOrDefaultAsync(cancellationToken);
-    }
-}
-
-// Query filters w DbContext
-builder.Entity<Provider>()
-    .HasQueryFilter(p => p.TenantId.Value == currentTenantId);
-```
-
-## 🧪 Testowanie
-
-### Pokrycie Testami
-
-- **Testy jednostkowe**: Minimum 95% coverage
-- **Testy integracyjne**: Kluczowe scenariusze end-to-end
-- **xUnit + FluentAssertions + Moq**: Standard stack
-
-### Konwencje Testów
-
-```csharp
-[Trait("Category", "Unit")]
-public class CreateProviderCommandHandlerTests
-{
-    [Fact]
-    public async Task Handle_ValidCommand_ShouldCreateProvider()
-    {
-        // Arrange
-        var command = new CreateProviderCommand { /* ... */ };
-
-        // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
-
-        // Assert
-        result.Should().NotBeNull();
-        result.IsSuccess.Should().BeTrue();
-    }
-}
-```
-
-### Uruchomienie Testów
-
-```bash
-# Wszystkie testy
-dotnet test
-
-# Tylko testy jednostkowe
-dotnet test --filter "Category=Unit"
-
-# Tylko testy integracyjne
-dotnet test --filter "Category=Integration"
-
-# Z pokryciem kodu
-dotnet test --collect:"XPlat Code Coverage"
-```
-
-## 🔐 Bezpieczeństwo
-
-### Uwierzytelnianie
-
-- **JWT Bearer**: Tokeny z claims
-- **ASP.NET Core Identity**: Zarządzanie użytkownikami
-- **Role-based**: PlatformAdmin, Provider, Client
-
-### Autoryzacja
-
-- **Controller level**: `[Authorize(Roles = "Provider")]`
-- **Business logic**: Sprawdzanie TenantId
-- **Data access**: Query filters
-
-### Walidacja
-
-- **FluentValidation**: Wszystkie commands/queries
-- **Domain validation**: Rich domain models
-- **Input sanitization**: Zawsze waliduj input
-
-### Rate Limiting & Security Limits
-
-**ISecurityLimitService** - centralne zarządzanie limitami:
-
-```csharp
-public interface ISecurityLimitService
-{
-    int MaxPaymentMethodsPerClient { get; } // 10
-    int MaxPageSize { get; } // 100
-    TimeSpan RateLimitWindow { get; } // 15 minut
-    int MaxPaymentAttemptsPerWindow { get; } // 5
-}
-```
-
-**Implementacja rate limiting:**
-```csharp
-// Sprawdź rate limit przed operacją
-var delay = await _paymentRepository.GetRateLimitDelayAsync(clientId);
-if (delay.HasValue)
-    return Result.Failure($"Rate limit exceeded. Try again in {delay.Value.TotalMinutes} minutes");
-
-// Zarejestruj próbę płatności
-await _paymentRepository.RecordPaymentAttemptAsync(clientId, cancellationToken);
-```
-
-**Limity zasobów:**
-- **Payment Methods**: Max 10 na klienta (`CanAddPaymentMethodAsync`)
-- **Pagination**: Max 100 rekordów na stronę
-- **Payment Attempts**: Max 5 prób w ciągu 15 minut
-- **Refunds**: Walidacja czy kwota nie przekracza oryginału
-
-## 📊 Logowanie i Monitorowanie
-
-### Serilog
-
-- **Structured logging**: JSON format
-- **File sinks**: `logs/app-.log`
-- **Performance logging**: Pipeline behaviors
-
-### Health Checks
-
-- **Database**: EF Core health check
-- **External services**: Custom health checks
-- **UI**: `/healthchecks-ui`
-
-### Performance
-
-- **Pipeline behaviors**: Automatyczne logowanie > 3s
-- **Database queries**: Monitoring N+1 problems
-- **Caching**: Redis dla often-used data
-
-## 💾 Baza Danych
-
-### Entity Framework Core 9
-
-- **Code First**: Migrations
-- **Query filters**: Multi-tenancy
-- **Value converters**: Domain objects → DB
-
-### Migracje
-
-```bash
-# Dodanie migracji
-dotnet ef migrations add MigrationName --project Orbito.Infrastructure --startup-project Orbito.API
-
-# Aktualizacja bazy
-dotnet ef database update --project Orbito.Infrastructure --startup-project Orbito.API
-```
-
-### Konwencje
-
-- **Table names**: PascalCase (`Providers`, `Clients`)
-- **Column names**: snake_case (`tenant_id`, `created_at`)
-- **Foreign keys**: `{Entity}Id` (`ProviderId`, `ClientId`)
-
-## 🚀 Deployment
-
-### Konfiguracja
-
-- **appsettings.json**: Base configuration
-- **appsettings.Development.json**: Development overrides
-- **Environment variables**: Production secrets
-
-### Connection Strings
-
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost\\SQLEXPRESS;Database=Orbito_dev;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=true"
-  }
-}
-```
-
-### Build & Run
-
-```bash
-# Build solution
-dotnet build
-
-# Run API
-dotnet run --project Orbito.API
-
-# Watch mode (development)
-dotnet watch --project Orbito.API
-```
-
-## 📈 Error Handling
-
-### Result Pattern
-
-```csharp
-public class Result<T>
-{
-    public bool IsSuccess { get; }
-    public T Value { get; }
-    public string Error { get; }
-
-    public static Result<T> Success(T value) => new(true, value, null);
-    public static Result<T> Failure(string error) => new(false, default, error);
-}
-```
-
-### Exception Handling
-
-- **Global exception handler**: Middleware
-- **Domain exceptions**: Custom exception types
-- **Validation errors**: FluentValidation integration
-
-## 💳 Payment Integration
-
-### Stripe Integration
-
-- **Payment Gateway**: Stripe API
-- **Webhook Processing**: Automatic event handling
-- **Payment Methods**: Credit cards, ACH (future)
-- **Webhook Security**: Signature verification middleware
-
-### Payment Processing Pattern
-
-```csharp
-// 1. Create payment intent
-var payment = await _paymentService.CreatePaymentAsync(new CreatePaymentCommand
-{
-    ClientId = clientId,
-    SubscriptionId = subscriptionId,
-    Amount = amount,
-    Currency = "USD"
-});
-
-// 2. Process payment with Stripe
-var stripePaymentIntent = await _stripeService.CreatePaymentIntentAsync(payment);
-
-// 3. Handle webhook events
-// WebhookController automatycznie przetwarza eventy:
-// - payment_intent.succeeded
-// - payment_intent.payment_failed
-// - payment_method.attached
-```
-
-### Webhook Endpoints
-
-- `POST /api/webhook/stripe` - Stripe webhook handler
-- Wymaga header `Stripe-Signature` dla weryfikacji
-- Automatyczne retry failed webhooks w background job
-
-**Middleware Security:**
-```csharp
-// StripeSignatureVerificationMiddleware automatycznie weryfikuje wszystkie webhooks
-// Blokuje requesty bez poprawnego podpisu
-app.UseStripeSignatureVerification();
-```
-
-**Webhook Event Handlers:**
-- `PaymentIntentSucceededHandler` - sukces płatności
-- `PaymentIntentPaymentFailedHandler` - błąd płatności
-- `PaymentMethodAttachedHandler` - dodanie metody płatności
-
-**Logging webhooks:**
-Wszystkie eventy są logowane w tabeli `PaymentWebhookLogs`:
-- WebhookId, EventType, Status (Received/Processing/Completed/Failed)
-- RequestPayload, ResponsePayload, ErrorMessage
-- ProcessingTime, Retry tracking
-
-### Security Limits
-
-```csharp
-public interface ISecurityLimitService
-{
-    int MaxPaymentMethodsPerClient { get; } // 10
-    int MaxPageSize { get; } // 100
-    TimeSpan RateLimitWindow { get; } // 1 minute
-    int MaxPaymentAttemptsPerWindow { get; } // 5
-}
-```
-
-## 🔄 Background Jobs
-
-### Hangfire (Future)
-
-- **Recurring jobs**: Subscription checks
-- **Payment processing**: Retry logic
-- **Email notifications**: Async processing
-- **Webhook retry**: Failed webhook processing
-
-## 📝 Dokumentacja
-
-### XML Comments
-
-```csharp
-/// <summary>
-/// Creates a new provider with the specified details.
-/// </summary>
-/// <param name="command">The command containing provider details.</param>
-/// <param name="cancellationToken">Cancellation token.</param>
-/// <returns>The created provider result.</returns>
-public async Task<Result<ProviderDto>> Handle(CreateProviderCommand command, CancellationToken cancellationToken)
-```
-
-### Swagger/OpenAPI
-
-- **Automatic generation**: From controllers
-- **Authentication**: JWT bearer setup
-- **Examples**: Request/response samples
-
-## 🎯 Najlepsze Praktyki
-
-### SOLID Principles
-
-- **Single Responsibility**: Jedna klasa = jedna odpowiedzialność
-- **Open/Closed**: Rozszerzalność bez modyfikacji
-- **Liskov Substitution**: Podklasy zastępowalne
-- **Interface Segregation**: Małe, skupione interfejsy
-- **Dependency Inversion**: Zależności od abstrakcji
-
-### Clean Code
-
-- **Meaningful names**: Opisowe nazwy zmiennych/metod
-- **Small functions**: Max 20-30 linii
-- **No deep nesting**: Early returns, guard clauses
-- **No magic numbers**: Named constants
-
-### Repository Pattern
-
-```csharp
-public interface IProviderRepository : IRepository<Provider>
-{
-    Task<Provider?> GetBySubdomainAsync(string subdomain, CancellationToken cancellationToken);
-    Task<bool> IsSubdomainTakenAsync(string subdomain, CancellationToken cancellationToken);
-}
-```
-
-## 🚨 Do Unikania
-
-### Anti-Patterns
-
-- **God objects**: Klasy robiące za dużo
-- **Anemic domain model**: Bez business logic
-- **Primitive obsession**: String wszędzie zamiast Value Objects
-- **Feature envy**: Klasa używa więcej metod z innej klasy
-
-### Performance Anti-Patterns
-
-- **N+1 queries**: Include related data
-- **Large result sets**: Pagination
-- **Blocking calls**: Async/await everywhere
-- **Memory leaks**: Dispose resources
-
-### Security Anti-Patterns
-
-- **SQL injection**: Always use parameters
-- **Hardcoded secrets**: Use configuration
-- **Missing authorization**: Check permissions
-- **Information disclosure**: Sanitize error messages
-- **Cross-tenant data access**: ZAWSZE używaj metod `ForClient` w repozytoriach
-- **Missing TenantId filtering**: Wszystkie queries MUSZĄ filtrować po TenantId
-- **Deprecated methods usage**: Sprawdzaj compilation warnings dla [Obsolete]
-
-## 📋 Code Review Checklist
-
-### Funkcjonalność
-
-- [ ] Kod kompiluje się bez ostrzeżeń
-- [ ] Wszystkie testy przechodzą
-- [ ] Business logic jest poprawna
-- [ ] Error handling jest kompletny
-
-### Jakość
-
-- [ ] Kod jest czytelny i zrozumiały
-- [ ] Nazwy są opisowe
-- [ ] Brak duplikacji kodu
-- [ ] Zastosowano właściwe wzorce
-
-### Bezpieczeństwo
-
-- [ ] Input jest walidowany
-- [ ] Authorization jest sprawdzana (TenantId + ClientId)
-- [ ] Secrets nie są hardcoded
-- [ ] SQL injection prevented
-- [ ] Repozytoria używają metod `ForClient` zamiast deprecated
-- [ ] Wszystkie queries filtrują po TenantId
-- [ ] Brak cross-tenant data access vulnerabilities
-
-### Performance
-
-- [ ] Zapytania są optymalne
-- [ ] Nie ma N+1 problems
-- [ ] Memory usage jest rozsądny
-- [ ] Caching gdzie potrzebny
-
-## 🌐 Komunikacja i Język
-
-### Język Odpowiedzi
-
-- **Zawsze odpowiadaj po polsku** - to jest podstawowa zasada
-- Kod i komentarze w kodzie **zawsze po angielsku**
-- Commit messages po angielsku (conventional commits)
-
-### Zasady Współpracy
-
-- **Human-in-the-loop**: Pair programming approach
-- **Limit prób**: Po 2 nieudanych próbach - poproś o pomoc
-- **Transparentność**: Jeśli czegoś nie umiesz - powiedz wprost
-- **Kompletność**: NIGDY nie zostawiaj TODO podczas wykonywania zadania
+- **Warstwy**: App (Routing) → Features (Domain) → Core/Shared
+- **Pattern**: API-First (Generated Hooks via Orval)
+- **Security**: TenantGuard (Provider) + PortalGuard (Client)
 
 ---
 
-**Wersja**: 2.1
-**Ostatnia aktualizacja**: 2025-10-01
-**Autor**: IT Architect Team
+## 🖥️ Frontend Guidelines (Next.js 15)
 
-## 📚 Dodatkowe Zasoby
+### Tech Stack
 
-- **SECURITY_FIXES_SUMMARY.md** - szczegółowy raport wprowadzonych poprawek bezpieczeństwa
-- **context.md** - kontekst projektu i dokumentacja techniczna
-- **README.md** - instrukcje instalacji i konfiguracji
+- **Framework**: Next.js 15 (App Router)
+- **Language**: TypeScript (**Strict Mode**: `noImplicitAny`, `strictNullChecks`, `no-explicit-any`)
+- **State**: TanStack Query v5 (Server State) + Zustand v5 (Client State)
+- **Styling**: Tailwind CSS + shadcn/ui
+- **Validation**: Zod + React Hook Form
+
+### Struktura Katalogów (Vertical Slices)
+
+Organizujemy kod według domen biznesowych (features), a nie typów plików.
+
+```
+
+src/
+├── app/                  \# Routing, Layouts, Route Groups
+│   ├── (auth)/           \# Login, Register
+│   ├── (dashboard)/      \# Provider Area (wymaga TenantGuard)
+│   └── (portal)/         \# Client Area (wymaga PortalGuard)
+├── core/                 \# Infrastruktura Aplikacji
+│   ├── api/generated/    \# 🤖 AUTO-GENERATED Orval Hooks (Source of Truth)
+│   ├── auth/             \# NextAuth Config
+│   └── providers/        \# Global Providers
+├── shared/               \# Reużywalne, bezstanowe UI (shadcn) i Utils
+└── features/             \# Domeny biznesowe (Lustro backendu)
+├── auth/
+├── tenant/
+├── clients/
+├── team/
+├── subscriptions/
+└── payments/
+\# Wewnątrz feature: components/, hooks/, schemas.ts
+
+```
+
+### 🔌 Data Fetching & API (Orval)
+
+**KRYTYCZNE:** Nie pisz ręcznie klientów API, axiosa ani `fetch`.
+
+1. **Generator**: Używamy **Orval** do generowania typów i hooków z OpenAPI.
+2. **Importy**: Importuj gotowe hooki z `@/core/api/generated` (np. `useGetClients`, `useCreateInvoice`).
+3. **Typy**: Używaj wygenerowanych DTO (np. `ClientDto`, `CreatePaymentCommand`).
+4. **Interceptor**: Globalny interceptor w `src/core/api/client.ts` automatycznie obsługuje backendowy `Result<T>` – frontend otrzymuje od razu `value` lub rzuca wyjątek domenowy.
+
+### Next.js 15 Specifics
+
+- **Async Params**: Pamiętaj, że `params` i `searchParams` w `page.tsx` są **Promise'ami**.
+  - ✅ DOBRZE: `const { id } = await params;`
+  - ❌ ŹLE: `const id = params.id;`
+- **Server vs Client**: Domyślnie używaj Server Components. Dodawaj `"use client"` tylko gdy potrzebujesz interaktywności (hooki, event listenery).
+
+---
+
+## ⚙️ Backend Guidelines (.NET 9)
+
+### Standardy Kodowania
+
+- **C# 13**: Nullable Reference Types włączone.
+- **Namespaces**: File-scoped (`namespace Orbito.Application;`).
+- **Records**: Używaj `record` dla DTOs i Commands/Queries.
+- **Result Pattern**: Wszystkie handlery zwracają `Result<T>`.
+
+### 🔒 KRYTYCZNE: Repository Security Pattern
+
+**Zasada Zero Trust**: Wszystkie operacje na danych wrażliwych muszą być izolowane per Tenant.
+
+1. **ITenantContext**: Repozytoria muszą wstrzykiwać ten serwis.
+2. **Explicit Filtering**:
+
+   ```csharp
+   // ✅ DOBRE - Query Handlers
+   var tenantId = _tenantContext.CurrentTenantId;
+   var payment = await _paymentRepository.GetByIdForClientAsync(paymentId, clientId, ct);
+   var subs = await _repo.GetActiveSubscriptionsForTenantAsync(tenantId, ct);
+
+   // ❌ ZŁE (ZABRONIONE)
+   var payment = await _repo.GetByIdAsync(id); // Security Risk!
+   ```
+
+````
+
+3.  **Background Jobs**: Iteruj po `TenantId` i używaj metod `ForTenant`.
+4.  **Webhooks**: Używaj `UnsafeAsync` TYLKO po weryfikacji sygnatury Stripe, a następnie ręcznie sprawdź `TenantId` w encji.
+
+### CQRS Implementation
+
+```csharp
+// Command
+public record CreateProviderCommand(string Name, string Email) : IRequest<Result<Guid>>;
+
+// Query
+public record GetProviderQuery(Guid Id) : IRequest<Result<ProviderDto>>;
+
+// Validator
+public class CreateProviderValidator : AbstractValidator<CreateProviderCommand> { ... }
+```
+
+### Rate Limiting & Limits
+
+Używaj `ISecurityLimitService` do sprawdzania limitów biznesowych (np. max payment methods per client) przed wykonaniem akcji.
+
+-----
+
+## 🧪 Testowanie
+
+### Backend
+
+  - **Framework**: xUnit + FluentAssertions + Moq.
+  - **Coverage**: \> 95% dla Domain/Application.
+  - **Kategorie**: `[Trait("Category", "Unit")]`, `[Trait("Category", "Integration")]`.
+
+### Frontend
+
+  - **Unit**: Vitest + React Testing Library (dla komponentów i utility functions).
+  - **E2E**: Playwright (dla krytycznych ścieżek: Login, Checkout, CRUD).
+  - **Mocking**: W testach unitowych mockuj hooki Orvala, nie API sieciowe.
+
+-----
+
+# shadcn/ui Component Builder Assistant
+
+*Stosuj te zasady, gdy jesteś proszony o tworzenie lub modyfikację generycznych komponentów UI.*
+
+## Core Responsibilities
+
+  - **Tech Stack**: React, TypeScript, Tailwind CSS, Radix UI, shadcn/ui.
+  - **Architecture**:
+      - Używaj `forwardRef` dla interaktywnych komponentów.
+      - Używaj **CVA** (Class Variance Authority) do wariantów stylów.
+      - Używaj `cn()` utility do łączenia klas.
+  - **Accessibility**: Strict WCAG 2.1 AA compliance (ARIA labels, keyboard nav, focus states).
+
+## Implementation Rules
+
+1.  **Extend, Don't Rebuild**: Rozszerzaj istniejące komponenty `shadcn/ui` zamiast pisać od zera.
+2.  **No Business Logic**: Komponenty w `shared/ui` muszą być "głupie" (prezentacyjne). Logika biznesowa trafia do `features/`.
+3.  **Props Interface**: Zawsze definiuj pełne interfejsy TypeScript rozszerzające natywne atrybuty HTML.
+
+<!-- end list -->
+
+```typescript
+// Example Pattern
+import { cva, type VariantProps } from "class-variance-authority"
+import { cn } from "@/shared/lib/utils"
+
+const badgeVariants = cva("inline-flex items-center...", {
+  variants: { variant: { default: "...", destructive: "..." } }
+})
+
+export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement>,
+  VariantProps<typeof badgeVariants> {}
+
+function Badge({ className, variant, ...props }: BadgeProps) {
+  return <div className={cn(badgeVariants({ variant }), className)} {...props} />
+}
+```
+
+```
+```
+````

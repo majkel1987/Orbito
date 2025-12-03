@@ -32,5 +32,15 @@
         public override bool Equals(object? obj) => obj is TenantId other && Equals(other);
         public override int GetHashCode() => Value.GetHashCode();
         public override string ToString() => Value.ToString();
+
+        // Equality operators for proper value comparison
+        public static bool operator ==(TenantId? left, TenantId? right)
+        {
+            if (ReferenceEquals(left, right)) return true;
+            if (left is null || right is null) return false;
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(TenantId? left, TenantId? right) => !(left == right);
     }
 }

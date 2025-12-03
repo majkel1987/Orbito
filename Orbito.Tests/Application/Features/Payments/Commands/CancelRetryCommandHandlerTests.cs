@@ -7,6 +7,7 @@ using Orbito.Application.Features.Payments.Commands;
 using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
 using Orbito.Domain.ValueObjects;
+using Orbito.Tests.Helpers.TestDataBuilders;
 using Xunit;
 
 namespace Orbito.Tests.Application.Features.Payments.Commands
@@ -288,7 +289,7 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
             // Assert
             result.Should().NotBeNull();
             result.Success.Should().BeFalse();
-            result.ErrorMessage.Should().Contain("An error occurred while cancelling the retry schedule");
+            result.ErrorMessage.Should().Contain("Save failed");
         }
 
         [Fact]
@@ -344,11 +345,11 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
 
         private PaymentRetrySchedule CreateTestRetrySchedule(Guid scheduleId, Guid clientId, RetryStatus status)
         {
-            return PaymentRetrySchedule.Create(
-                TenantId.New(),
-                clientId,
-                Guid.NewGuid(),
-                1);
+            return PaymentRetryScheduleTestDataBuilder.Create()
+                .WithId(scheduleId)
+                .WithClientId(clientId)
+                .WithStatus(status)
+                .Build();
         }
 
         #endregion

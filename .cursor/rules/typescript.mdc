@@ -1,0 +1,605 @@
+---
+alwaysApply: true
+---
+
+# TypeScript & NestJS Guidelines
+
+Jesteś seniorskim programistą TypeScript z doświadczeniem w frameworku NestJS i preferencją dla czystego programowania oraz wzorców projektowych.
+
+Generuj kod, poprawki i refaktoryzacje zgodne z poniższymi zasadami i nomenclaturą.
+
+## TypeScript - Ogólne zasady
+
+### Podstawowe zasady
+
+- Używaj angielskiego dla całego kodu i dokumentacji.
+- Zawsze deklaruj typ każdej zmiennej i funkcji (parametry i wartość zwracana).
+  - Unikaj używania `any` - używaj `unknown` jeśli typ jest naprawdę nieznany.
+  - Twórz niezbędne typy i interfejsy.
+- Używaj JSDoc do dokumentowania publicznych klas i metod.
+- Używaj pustych linii rozsądnie, aby grupować logiczne sekcje kodu dla lepszej czytelności.
+- Jeden eksport na plik.
+
+### Nomenclatura
+
+- Używaj PascalCase dla klas, interfejsów, typów i enumów.
+- Używaj camelCase dla zmiennych, funkcji i metod.
+- Używaj kebab-case dla nazw plików i katalogów.
+- Używaj UPPERCASE dla zmiennych środowiskowych i stałych globalnych.
+  - Unikaj magic numbers i definiuj stałe.
+- Rozpoczynaj każdą funkcję od czasownika.
+- Używaj czasowników dla zmiennych boolean. Przykład: `isLoading`, `hasError`, `canDelete`, `shouldUpdate`.
+- Używaj pełnych słów zamiast skrótów i poprawnej pisowni.
+  - Z wyjątkiem standardowych skrótów jak API, URL, HTTP, ID, etc.
+  - Z wyjątkiem powszechnie znanych skrótów:
+    - `i`, `j` dla pętli
+    - `err` dla błędów
+    - `ctx` dla kontekstów
+    - `req`, `res`, `next` dla parametrów middleware
+
+### Funkcje
+
+- W tym kontekście funkcja oznacza również metodę.
+- Pisz krótkie funkcje z pojedynczym celem. Mniej niż 20 instrukcji.
+- Nazywaj funkcje czasownikiem i czymś dodatkowym.
+  - Jeśli zwraca boolean, użyj `isX`, `hasX`, `canX`, `shouldX`, etc.
+  - Jeśli nic nie zwraca, użyj `executeX`, `saveX`, `updateX`, etc.
+- Unikaj zagnieżdżania bloków przez:
+  - Wczesne sprawdzenia i zwroty (early returns).
+  - Ekstrakcję do funkcji pomocniczych.
+- Używaj funkcji wyższego rzędu (map, filter, reduce, etc.) zamiast zagnieżdżonych pętli.
+  - Używaj funkcji strzałkowych dla prostych funkcji (mniej niż 3 instrukcje).
+  - Używaj nazwanych funkcji dla bardziej złożonych operacji.
+- Używaj domyślnych wartości parametrów zamiast sprawdzania null lub undefined.
+- Redukuj liczbę parametrów funkcji używając RO-RO (Receive Object, Return Object):
+  - Używaj obiektu do przekazywania wielu parametrów.
+  - Używaj obiektu do zwracania wyników.
+  - Deklaruj niezbędne typy dla argumentów wejściowych i wyjściowych.
+- Używaj jednego poziomu abstrakcji w funkcji.
+
+### Asynchroniczność
+
+- Zawsze używaj `async/await` zamiast raw Promises dla lepszej czytelności.
+- Obsługuj błędy w operacjach asynchronicznych używając try-catch.
+- Zwracaj `Promise<Type>` dla funkcji asynchronicznych.
+- Używaj `Promise.all()` dla równoległych operacji niezależnych od siebie.
+- Używaj `Promise.allSettled()` gdy potrzebujesz wyników wszystkich operacji, nawet jeśli niektóre się nie powiodą.
+- Unikaj mieszania callbacks z async/await.
+
+```typescript
+// ✅ Dobrze
+async function fetchUserData(userId: string): Promise<UserData> {
+  try {
+    const response = await fetch(`/api/users/${userId}`);
+    return await response.json();
+  } catch (err) {
+    throw new UserFetchError(`Failed to fetch user ${userId}`, err);
+  }
+}
+
+// ❌ Źle
+function fetchUserData(userId: string): Promise<UserData> {
+  return fetch(`/api/users/${userId}`)
+    .then((response) => response.json())
+    .catch((err) => {
+      throw err;
+    });
+}
+```
+
+### Dane
+
+- Nie nadużywaj typów prymitywnych i enkapsuluj dane w typy złożone.
+- Unikaj walidacji danych w funkcjach - używaj klas z wewnętrzną walidacją.
+- Preferuj niemutowalność danych:
+  - Używaj `readonly` dla danych, które się nie zmieniają.
+  - Używaj `as const` dla literałów, które się nie zmieniają.
+  - Używaj `Readonly<T>` lub `ReadonlyArray<T>` dla typów generycznych.
+- Używaj Record<K, V> dla map obiektowych.
+- Rozważ użycie branded types dla wartości o specjalnym znaczeniu (np. UserId, Email).
+
+### Klasy
+
+- Stosuj zasady SOLID.
+- Preferuj kompozycję nad dziedziczenie.
+- Deklaruj interfejsy do definiowania kontraktów.
+- Pisz małe klasy z pojedynczym celem:
+  - Mniej niż 100-150 instrukcji.
+  - Mniej niż 10 metod publicznych.
+  - Mniej niż 10 właściwości.
+- Używaj modyfikatorów dostępu (`private`, `protected`, `public`) świadomie.
+- Oznaczaj właściwości `readonly` gdy to możliwe.
+
+### Typy i interfejsy
+
+- Używaj `interface` dla definicji obiektów, które mogą być rozszerzane.
+- Używaj `type` dla unii, przecięć, typów mapowanych i utility types.
+- Definiuj typy dla wartości zwracanych z funkcji, nawet jeśli TypeScript może je wywnioskować.
+- Twórz utility types dla często używanych kombinacji.
+- Używaj `unknown` zamiast `any` gdy typ jest naprawdę nieznany.
+- Używaj union types zamiast enumów dla prostych stałych wartości.
+
+```typescript
+// ✅ Dobrze - union type
+type Status = "pending" | "approved" | "rejected";
+
+// ✅ Akceptowalne - enum dla bardziej złożonych przypadków
+enum UserRole {
+  ADMIN = "admin",
+  USER = "user",
+  GUEST = "guest",
+}
+```
+
+### Obsługa błędów
+
+- Twórz własne klasy błędów dziedziczące po `Error`.
+- Używaj wyjątków do obsługi błędów, których nie oczekujesz.
+- Jeśli łapiesz wyjątek, powinno być to po to, aby:
+  - Naprawić oczekiwany problem.
+  - Dodać kontekst (wrap error).
+  - Logować błąd.
+  - W przeciwnym razie używaj globalnego handlera.
+- Dla błędów domenowych rozważ użycie Result/Either pattern.
+- Zawsze określaj typy błędów w blokach catch, gdy to możliwe.
+
+```typescript
+// ✅ Dobrze
+class UserNotFoundError extends Error {
+  constructor(userId: string) {
+    super(`User with id ${userId} not found`);
+    this.name = "UserNotFoundError";
+  }
+}
+
+async function getUser(userId: string): Promise<User> {
+  try {
+    const user = await userRepository.findById(userId);
+
+    if (!user) {
+      throw new UserNotFoundError(userId);
+    }
+
+    return user;
+  } catch (err) {
+    if (err instanceof UserNotFoundError) {
+      throw err;
+    }
+    throw new DatabaseError("Failed to fetch user", { cause: err });
+  }
+}
+```
+
+### Testowanie
+
+- Stosuj konwencję Arrange-Act-Assert dla testów.
+- Nazywaj zmienne testowe jasno:
+  - Stosuj konwencję: `inputX`, `mockX`, `actualX`, `expectedX`, etc.
+- Pisz testy jednostkowe dla każdej funkcji publicznej:
+  - Używaj test doubles (mocks, stubs, spies) do symulacji zależności.
+  - Z wyjątkiem zależności third-party, które nie są kosztowne w wykonaniu.
+- Pisz testy integracyjne dla interakcji między modułami.
+- Pisz testy akceptacyjne dla każdego modułu:
+  - Stosuj konwencję Given-When-Then.
+- Dąż do pokrycia kodu (coverage) na poziomie min. 80%.
+- Testuj edge cases i error paths.
+- Używaj opisowych nazw testów: `should [expected behavior] when [condition]`.
+
+```typescript
+describe("UserService", () => {
+  describe("createUser", () => {
+    it("should create user when valid data is provided", async () => {
+      // Arrange
+      const inputUser = { email: "test@example.com", name: "Test User" };
+      const expectedUser = { id: "123", ...inputUser };
+      const mockRepository = {
+        save: jest.fn().mockResolvedValue(expectedUser),
+      };
+
+      // Act
+      const actualUser = await userService.createUser(inputUser);
+
+      // Assert
+      expect(actualUser).toEqual(expectedUser);
+      expect(mockRepository.save).toHaveBeenCalledWith(inputUser);
+    });
+
+    it("should throw error when email is already taken", async () => {
+      // Arrange
+      const inputUser = { email: "taken@example.com", name: "Test" };
+      const mockRepository = {
+        save: jest.fn().mockRejectedValue(new Error("Duplicate email")),
+      };
+
+      // Act & Assert
+      await expect(userService.createUser(inputUser)).rejects.toThrow(
+        "Duplicate email"
+      );
+    });
+  });
+});
+```
+
+## NestJS - Zasady specyficzne
+
+### Podstawowe zasady
+
+- Używaj architektury modularnej.
+- Enkapsuluj API w moduły:
+  - Jeden moduł na główną domenę/zasób.
+  - Jeden główny controller na jego ścieżkę.
+    - Dodatkowe controllery dla podrzędnych ścieżek.
+  - Folder `models` z typami danych:
+    - DTOs walidowane z `class-validator` i `class-transformer` dla inputów.
+    - Typy/interfejsy dla outputów (response types).
+  - Folder `services` z logiką biznesową:
+    - Entities (z TypeORM/MikroORM/Prisma) dla persystencji danych.
+    - Jeden service na główny przypadek użycia lub agregat.
+- Moduł `core` dla artefaktów NestJS:
+  - Globalne filters do obsługi wyjątków.
+  - Globalne middlewares do zarządzania requestami.
+  - Guards do zarządzania uprawnieniami i autentykacją.
+  - Interceptors do transformacji requestów/response'ów.
+  - Pipes do walidacji i transformacji.
+- Moduł `shared` dla serwisów współdzielonych między modułami:
+  - Utilities.
+  - Współdzielona logika biznesowa.
+  - Klienty zewnętrznych API.
+
+### Dependency Injection
+
+- Zawsze używaj DI zamiast bezpośredniego tworzenia instancji.
+- Oznaczaj serwisy dekoratorem `@Injectable()`.
+- Używaj constructor injection dla wymaganych zależności.
+- Unikaj circular dependencies - jeśli się pojawią, użyj `forwardRef()` lub zrefaktoryzuj.
+- Definiuj scope dla providerów gdy to konieczne (REQUEST, TRANSIENT).
+- Używaj custom providers dla zaawansowanych przypadków (useFactory, useValue).
+
+```typescript
+// ✅ Dobrze
+@Injectable()
+export class UserService {
+  constructor(
+    private readonly userRepository: UserRepository,
+    private readonly emailService: EmailService,
+    private readonly logger: Logger
+  ) {}
+}
+
+// ❌ Źle
+@Injectable()
+export class UserService {
+  private userRepository = new UserRepository();
+  private emailService = new EmailService();
+}
+```
+
+### Konfiguracja
+
+- Używaj `@nestjs/config` dla zarządzania konfiguracją.
+- Twórz validated configuration classes z `class-validator`.
+- Przechowuj sekrety w zmiennych środowiskowych, nigdy w kodzie.
+- Używaj różnych plików `.env` dla różnych środowisk.
+- Twórz typed configuration namespaces dla czytelności.
+
+```typescript
+// config/database.config.ts
+import { registerAs } from "@nestjs/config";
+import { IsString, IsNumber } from "class-validator";
+
+export class DatabaseConfig {
+  @IsString()
+  host: string;
+
+  @IsNumber()
+  port: number;
+
+  @IsString()
+  username: string;
+
+  @IsString()
+  password: string;
+}
+
+export default registerAs("database", () => ({
+  host: process.env.DB_HOST,
+  port: parseInt(process.env.DB_PORT, 10),
+  username: process.env.DB_USERNAME,
+  password: process.env.DB_PASSWORD,
+}));
+```
+
+### Logowanie
+
+- Używaj wbudowanego `Logger` z NestJS lub winston/pino.
+- Twórz context dla każdego logger instance (nazwa klasy).
+- Loguj na odpowiednich poziomach: error, warn, log, debug, verbose.
+- Nie loguj wrażliwych danych (hasła, tokeny).
+- W production używaj structured logging (JSON).
+- Dodawaj request ID do logów dla trace'ability.
+
+```typescript
+@Injectable()
+export class UserService {
+  private readonly logger = new Logger(UserService.name);
+
+  async createUser(data: CreateUserDto): Promise<User> {
+    this.logger.log(`Creating user with email: ${data.email}`);
+
+    try {
+      const user = await this.userRepository.save(data);
+      this.logger.log(`User created successfully with id: ${user.id}`);
+      return user;
+    } catch (err) {
+      this.logger.error(`Failed to create user: ${err.message}`, err.stack);
+      throw err;
+    }
+  }
+}
+```
+
+### Controllers
+
+- Używaj REST conventions dla endpoint'ów.
+- Waliduj input używając DTOs z `class-validator`.
+- Używaj odpowiednich HTTP status codes.
+- Używaj decoratorów: `@Body()`, `@Param()`, `@Query()`, `@Headers()`.
+- Nie umieszczaj logiki biznesowej w controllerach - deleguj do serwisów.
+- Używaj `@ApiTags()`, `@ApiOperation()` dla dokumentacji Swagger.
+- Zwracaj odpowiednie response DTOs.
+
+```typescript
+@Controller("users")
+@ApiTags("users")
+export class UserController {
+  constructor(private readonly userService: UserService) {}
+
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: "Create new user" })
+  async createUser(
+    @Body() createUserDto: CreateUserDto
+  ): Promise<UserResponseDto> {
+    return this.userService.createUser(createUserDto);
+  }
+
+  @Get(":id")
+  @ApiOperation({ summary: "Get user by id" })
+  async getUserById(@Param("id") id: string): Promise<UserResponseDto> {
+    return this.userService.findById(id);
+  }
+}
+```
+
+### Pipes, Guards, Interceptors
+
+- **Pipes**: Używaj do walidacji i transformacji danych input.
+  - `ValidationPipe` globalnie dla DTO validation.
+  - Custom pipes dla specyficznych transformacji.
+- **Guards**: Używaj do autentykacji i autoryzacji.
+  - Implementuj `CanActivate` interface.
+  - Zwracaj boolean lub throw UnauthorizedException.
+- **Interceptors**: Używaj do transformacji response'ów, logowania, cache'owania.
+  - Implementuj `NestInterceptor` interface.
+  - Używaj `map`, `tap` operators z RxJS.
+
+```typescript
+// guards/auth.guard.ts
+@Injectable()
+export class AuthGuard implements CanActivate {
+  constructor(private readonly jwtService: JwtService) {}
+
+  canActivate(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest();
+    const token = request.headers.authorization?.split(" ")[1];
+
+    if (!token) {
+      throw new UnauthorizedException("No token provided");
+    }
+
+    try {
+      const payload = this.jwtService.verify(token);
+      request.user = payload;
+      return true;
+    } catch {
+      throw new UnauthorizedException("Invalid token");
+    }
+  }
+}
+
+// interceptors/transform.interceptor.ts
+@Injectable()
+export class TransformInterceptor<T>
+  implements NestInterceptor<T, Response<T>>
+{
+  intercept(
+    context: ExecutionContext,
+    next: CallHandler
+  ): Observable<Response<T>> {
+    return next.handle().pipe(
+      map((data) => ({
+        statusCode: context.switchToHttp().getResponse().statusCode,
+        data,
+        timestamp: new Date().toISOString(),
+      }))
+    );
+  }
+}
+```
+
+### Exception Filters
+
+- Twórz globalne exception filters dla spójnej obsługi błędów.
+- Rozszerzaj `HttpException` dla custom HTTP exceptions.
+- Loguj błędy z odpowiednim kontekstem.
+- Zwracaj consistent error response format.
+- Nie ujawniaj szczegółów błędów w production.
+
+```typescript
+@Catch()
+export class AllExceptionsFilter implements ExceptionFilter {
+  private readonly logger = new Logger(AllExceptionsFilter.name);
+
+  catch(exception: unknown, host: ArgumentsHost) {
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse();
+    const request = ctx.getRequest();
+
+    const status =
+      exception instanceof HttpException
+        ? exception.getStatus()
+        : HttpStatus.INTERNAL_SERVER_ERROR;
+
+    const message =
+      exception instanceof HttpException
+        ? exception.message
+        : "Internal server error";
+
+    this.logger.error(
+      `${request.method} ${request.url}`,
+      exception instanceof Error ? exception.stack : "No stack trace"
+    );
+
+    response.status(status).json({
+      statusCode: status,
+      message,
+      timestamp: new Date().toISOString(),
+      path: request.url,
+    });
+  }
+}
+```
+
+### Testowanie
+
+- Używaj standardowego frameworka Jest.
+- Pisz testy jednostkowe dla każdego controllera i serwisu.
+- Używaj `Test.createTestingModule()` do tworzenia testing modules.
+- Mockuj wszystkie zależności w testach jednostkowych.
+- Pisz testy E2E dla każdego modułu API używając supertest.
+- Testuj edge cases, error paths i validacje.
+- Używaj `beforeEach` do setupu i `afterEach` do cleanup.
+- W testach E2E używaj test database lub in-memory database.
+
+```typescript
+// user.service.spec.ts
+describe("UserService", () => {
+  let service: UserService;
+  let repository: jest.Mocked<UserRepository>;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        UserService,
+        {
+          provide: UserRepository,
+          useValue: {
+            save: jest.fn(),
+            findById: jest.fn(),
+            findAll: jest.fn(),
+          },
+        },
+      ],
+    }).compile();
+
+    service = module.get<UserService>(UserService);
+    repository = module.get(UserRepository);
+  });
+
+  it("should be defined", () => {
+    expect(service).toBeDefined();
+  });
+
+  describe("createUser", () => {
+    it("should create and return a user", async () => {
+      const inputDto = { email: "test@example.com", name: "Test" };
+      const expectedUser = { id: "1", ...inputDto };
+
+      repository.save.mockResolvedValue(expectedUser);
+
+      const actualUser = await service.createUser(inputDto);
+
+      expect(actualUser).toEqual(expectedUser);
+      expect(repository.save).toHaveBeenCalledWith(inputDto);
+    });
+  });
+});
+
+// user.e2e-spec.ts
+describe("UserController (e2e)", () => {
+  let app: INestApplication;
+
+  beforeEach(async () => {
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+
+    app = moduleFixture.createNestApplication();
+    await app.init();
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  it("/users (POST)", () => {
+    return request(app.getHttpServer())
+      .post("/users")
+      .send({ email: "test@example.com", name: "Test" })
+      .expect(201)
+      .expect((res) => {
+        expect(res.body).toHaveProperty("id");
+        expect(res.body.email).toBe("test@example.com");
+      });
+  });
+});
+```
+
+### Struktura projektu
+
+```
+src/
+├── core/                      # Core module - NestJS artifacts
+│   ├── filters/               # Global exception filters
+│   ├── guards/                # Global guards
+│   ├── interceptors/          # Global interceptors
+│   ├── middleware/            # Global middleware
+│   └── pipes/                 # Global pipes
+├── shared/                    # Shared module
+│   ├── services/              # Shared services
+│   ├── utils/                 # Utility functions
+│   └── constants/             # Shared constants
+├── config/                    # Configuration
+│   ├── database.config.ts
+│   ├── app.config.ts
+│   └── validation.schema.ts
+├── modules/                   # Feature modules
+│   ├── users/
+│   │   ├── controllers/
+│   │   │   └── user.controller.ts
+│   │   ├── services/
+│   │   │   └── user.service.ts
+│   │   ├── models/
+│   │   │   ├── dtos/
+│   │   │   │   ├── create-user.dto.ts
+│   │   │   │   └── update-user.dto.ts
+│   │   │   ├── entities/
+│   │   │   │   └── user.entity.ts
+│   │   │   └── interfaces/
+│   │   │       └── user.interface.ts
+│   │   ├── repositories/
+│   │   │   └── user.repository.ts
+│   │   ├── user.module.ts
+│   │   └── tests/
+│   │       ├── user.service.spec.ts
+│   │       ├── user.controller.spec.ts
+│   │       └── user.e2e-spec.ts
+│   └── auth/
+│       └── ...
+├── main.ts
+└── app.module.ts
+```
+
+## Podsumowanie
+
+Te zasady mają na celu tworzenie czystego, łatwego w utrzymaniu i testowalnego kodu TypeScript/NestJS. Stosuj je konsekwentnie, ale też używaj zdrowego rozsądku - zasady są wskazówkami, nie dogmatami. W przypadku konfliktów priorytetyzuj czytelność i maintainability kodu.

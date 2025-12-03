@@ -93,6 +93,9 @@ namespace Orbito.Application.Features.Payments.Commands.SavePaymentMethod
         {
             try
             {
+                // Check for cancellation before starting
+                cancellationToken.ThrowIfCancellationRequested();
+
                 _logger.LogInformation("Saving payment method for client {ClientId}", request.ClientId);
 
                 // Security: Check tenant context
@@ -161,14 +164,21 @@ namespace Orbito.Application.Features.Payments.Commands.SavePaymentMethod
 
                     // Save the payment method
                     await _unitOfWork.PaymentMethods.AddAsync(paymentMethod, cancellationToken);
-                    await _unitOfWork.SaveChangesAsync(cancellationToken);
+                    var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                    if (!saveResult.IsSuccess)
+                    {
+                        _logger.LogError("Failed to save payment method: {Error}", saveResult.ErrorMessage);
+                        await _unitOfWork.RollbackAsync(cancellationToken);
+                        return Result<SavePaymentMethodResult>.Failure(saveResult.ErrorMessage ?? "Failed to save changes");
+                    }
 
                     // Commit transaction
                     var commitResult = await _unitOfWork.CommitAsync(cancellationToken);
                     if (!commitResult.IsSuccess)
                     {
                         _logger.LogError("Failed to commit transaction: {Error}", commitResult.ErrorMessage);
-                        return Result<SavePaymentMethodResult>.Failure("Failed to save payment method");
+                        return Result<SavePaymentMethodResult>.Failure(commitResult.ErrorMessage ?? "Failed to save payment method");
                     }
 
                     _logger.LogInformation("Successfully saved payment method {PaymentMethodId} for client {ClientId}",
@@ -192,6 +202,11 @@ namespace Orbito.Application.Features.Payments.Commands.SavePaymentMethod
                     }
                     throw;
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                // Rethrow cancellation exceptions - they should not be caught
+                throw;
             }
             catch (Exception ex)
             {

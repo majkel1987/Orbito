@@ -29,33 +29,26 @@ namespace Orbito.API.Controllers
             [FromQuery] int pageSize = 10,
             [FromQuery] bool activeOnly = false)
         {
-            try
-            {
-                var query = new GetAllProvidersQuery(pageNumber, pageSize, activeOnly);
-                var result = await Mediator.Send(query);
+            var query = new GetAllProvidersQuery(pageNumber, pageSize, activeOnly);
+            var result = await Mediator.Send(query);
 
-                if (!result.Success)
+            if (result.IsFailure)
+            {
+                return HandleResult(result);
+            }
+
+            // Custom response format for frontend compatibility
+            return Ok(new
+            {
+                providers = result.Value.Items,
+                pagination = new
                 {
-                    return BadRequest(new { message = result.Message });
+                    pageNumber = result.Value.PageNumber,
+                    pageSize = result.Value.PageSize,
+                    totalCount = result.Value.TotalCount,
+                    totalPages = result.Value.TotalPages
                 }
-
-                return Ok(new
-                {
-                    providers = result.Providers,
-                    pagination = new
-                    {
-                        pageNumber = result.PageNumber,
-                        pageSize = result.PageSize,
-                        totalCount = result.TotalCount,
-                        totalPages = result.TotalPages
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "Błąd podczas pobierania providerów");
-                return StatusCode(500, new { message = "Wystąpił błąd podczas pobierania providerów" });
-            }
+            });
         }
 
         /// <summary>
@@ -65,23 +58,9 @@ namespace Orbito.API.Controllers
         [Authorize]
         public async Task<IActionResult> GetProviderById(Guid id)
         {
-            try
-            {
-                var query = new GetProviderByIdQuery(id);
-                var result = await Mediator.Send(query);
-
-                if (!result.Success)
-                {
-                    return NotFound(new { message = result.Message });
-                }
-
-                return Ok(new { provider = result.Provider });
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "Błąd podczas pobierania providera: {ProviderId}", id);
-                return StatusCode(500, new { message = "Wystąpił błąd podczas pobierania providera" });
-            }
+            var query = new GetProviderByIdQuery(id);
+            var result = await Mediator.Send(query);
+            return HandleResult(result);
         }
 
         /// <summary>
@@ -91,23 +70,9 @@ namespace Orbito.API.Controllers
         [Authorize]
         public async Task<IActionResult> GetProviderByUserId(Guid userId)
         {
-            try
-            {
-                var query = new GetProviderByUserIdQuery(userId);
-                var result = await Mediator.Send(query);
-
-                if (!result.Success)
-                {
-                    return NotFound(new { message = result.Message });
-                }
-
-                return Ok(new { provider = result.Provider });
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "Błąd podczas pobierania providera dla użytkownika: {UserId}", userId);
-                return StatusCode(500, new { message = "Wystąpił błąd podczas pobierania providera" });
-            }
+            var query = new GetProviderByUserIdQuery(userId);
+            var result = await Mediator.Send(query);
+            return HandleResult(result);
         }
 
         /// <summary>
@@ -147,79 +112,38 @@ namespace Orbito.API.Controllers
         /// </summary>
         [HttpPut("{id}")]
         [Authorize]
+        [ProducesResponseType(typeof(Orbito.Application.DTOs.ProviderDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdateProvider(Guid id, [FromBody] UpdateProviderRequest request)
         {
-            try
-            {
-                var command = new UpdateProviderCommand(
-                    id,
-                    request.BusinessName,
-                    request.Description,
-                    request.Avatar,
-                    request.SubdomainSlug,
-                    request.CustomDomain);
+            var command = new UpdateProviderCommand(
+                id,
+                request.BusinessName,
+                request.Description,
+                request.Avatar,
+                request.SubdomainSlug,
+                request.CustomDomain);
 
-                var result = await Mediator.Send(command);
-
-                if (!result.Success)
-                {
-                    return BadRequest(new
-                    {
-                        message = result.Message,
-                        errors = result.Errors
-                    });
-                }
-
-                Logger.LogInformation("Provider zaktualizowany: {ProviderId}", id);
-
-                return Ok(new
-                {
-                    message = result.Message,
-                    provider = result.Provider
-                });
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "Błąd podczas aktualizacji providera: {ProviderId}", id);
-                return StatusCode(500, new { message = "Wystąpił błąd podczas aktualizacji providera" });
-            }
+            var result = await Mediator.Send(command);
+            return HandleResult(result);
         }
 
         /// <summary>
-        /// Usuwa providera (soft delete - deaktywacja)
+        /// Usuwa providera (soft delete - deaktywacja lub hard delete)
         /// </summary>
         [HttpDelete("{id}")]
         [Authorize(Roles = "PlatformAdmin")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteProvider(Guid id, [FromQuery] bool hardDelete = false)
         {
-            try
-            {
-                var command = new DeleteProviderCommand(id, hardDelete);
-                var result = await Mediator.Send(command);
-
-                if (!result.Success)
-                {
-                    return BadRequest(new
-                    {
-                        message = result.Message,
-                        errors = result.Errors
-                    });
-                }
-
-                Logger.LogInformation("Provider usunięty: {ProviderId}, HardDelete: {HardDelete}", 
-                    id, result.WasHardDelete);
-
-                return Ok(new
-                {
-                    message = result.Message,
-                    wasHardDelete = result.WasHardDelete
-                });
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "Błąd podczas usuwania providera: {ProviderId}", id);
-                return StatusCode(500, new { message = "Wystąpił błąd podczas usuwania providera" });
-            }
+            var command = new DeleteProviderCommand(id, hardDelete);
+            var result = await Mediator.Send(command);
+            return HandleResult(result);
         }
     }
 

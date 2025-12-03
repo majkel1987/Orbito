@@ -49,9 +49,10 @@ namespace Orbito.Infrastructure.Persistence
             var tenantId = _tenantContext.CurrentTenantId;
 
             // Query PaymentWebhookLog and join with Payments to find matching records
+            // IMPORTANT: Use EF.Property<string> for enum comparisons to avoid InvalidCastException
             var webhookLog = await _context.PaymentWebhookLogs
                 .Where(w => w.TenantId == tenantId && w.EventType == eventType)
-                .Where(w => w.Status == WebhookStatus.Processed)
+                .Where(w => EF.Property<string>(w, "Status") == "Processed")
                 .OrderByDescending(w => w.ProcessedAt)
                 .FirstOrDefaultAsync(cancellationToken);
 
@@ -117,8 +118,9 @@ namespace Orbito.Infrastructure.Persistence
             }
 
             var tenantId = _tenantContext.CurrentTenantId;
+            // IMPORTANT: Use EF.Property<string> for enum comparisons to avoid InvalidCastException
             return await _context.PaymentWebhookLogs
-                .Where(w => w.TenantId == tenantId && w.Status == WebhookStatus.Failed && w.Attempts < maxAttempts)
+                .Where(w => w.TenantId == tenantId && EF.Property<string>(w, "Status") == "Failed" && w.Attempts < maxAttempts)
                 .OrderBy(w => w.ReceivedAt)
                 .ToListAsync(cancellationToken);
         }

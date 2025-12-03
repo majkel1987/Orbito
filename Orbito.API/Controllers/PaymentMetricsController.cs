@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Orbito.Application.Common.Authorization;
 using Orbito.Application.Common.Constants;
 using Orbito.Application.Common.Models;
 using Orbito.Application.Features.Payments.Queries.GetFailureReasons;
@@ -15,7 +16,7 @@ namespace Orbito.API.Controllers;
 /// Controller for payment metrics and statistics endpoints
 /// </summary>
 [Route("api/[controller]")]
-[Authorize(Roles = "Provider,PlatformAdmin")]
+[Authorize(Policy = PolicyNames.ProviderTeamAccess)]
 public class PaymentMetricsController : BaseController
 {
     public PaymentMetricsController(IMediator mediator, ILogger<PaymentMetricsController> logger) 

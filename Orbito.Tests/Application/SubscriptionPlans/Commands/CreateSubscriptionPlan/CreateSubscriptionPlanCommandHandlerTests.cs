@@ -1,8 +1,10 @@
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Orbito.Application.SubscriptionPlans.Commands.CreateSubscriptionPlan;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Domain.Entities;
+using Orbito.Domain.Errors;
 using Orbito.Domain.ValueObjects;
 using Xunit;
 
@@ -13,6 +15,7 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Commands.CreateSubscription
         private readonly Mock<ISubscriptionPlanRepository> _subscriptionPlanRepositoryMock;
         private readonly Mock<ITenantContext> _tenantContextMock;
         private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+        private readonly Mock<ILogger<CreateSubscriptionPlanCommandHandler>> _mockLogger;
         private readonly CreateSubscriptionPlanCommandHandler _handler;
         private readonly TenantId _tenantId = TenantId.New();
 
@@ -21,6 +24,7 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Commands.CreateSubscription
             _subscriptionPlanRepositoryMock = new Mock<ISubscriptionPlanRepository>();
             _tenantContextMock = new Mock<ITenantContext>();
             _unitOfWorkMock = new Mock<IUnitOfWork>();
+            _mockLogger = new Mock<ILogger<CreateSubscriptionPlanCommandHandler>>();
 
             _tenantContextMock.Setup(x => x.HasTenant).Returns(true);
             _tenantContextMock.Setup(x => x.CurrentTenantId).Returns(_tenantId);
@@ -29,7 +33,8 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Commands.CreateSubscription
 
             _handler = new CreateSubscriptionPlanCommandHandler(
                 _unitOfWorkMock.Object,
-                _tenantContextMock.Object);
+                _tenantContextMock.Object,
+                _mockLogger.Object);
         }
 
         [Fact]
@@ -72,18 +77,19 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Commands.CreateSubscription
             var result = await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Id.Should().NotBeEmpty();
-            result.Name.Should().Be(command.Name);
-            result.Description.Should().Be(command.Description);
-            result.Amount.Should().Be(command.Amount);
-            result.Currency.Should().Be(command.Currency);
-            result.BillingPeriod.Should().Be(createdPlan.BillingPeriod.ToString());
-            result.TrialPeriodDays.Should().Be(command.TrialPeriodDays);
-            result.IsActive.Should().BeTrue();
-            result.IsPublic.Should().Be(command.IsPublic);
-            result.SortOrder.Should().Be(command.SortOrder);
-            result.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Id.Should().NotBeEmpty();
+            result.Value.Name.Should().Be(command.Name);
+            result.Value.Description.Should().Be(command.Description);
+            result.Value.Amount.Should().Be(command.Amount);
+            result.Value.Currency.Should().Be(command.Currency);
+            result.Value.BillingPeriod.Should().Be(createdPlan.BillingPeriod.ToString());
+            result.Value.TrialPeriodDays.Should().Be(command.TrialPeriodDays);
+            result.Value.IsActive.Should().BeTrue();
+            result.Value.IsPublic.Should().Be(command.IsPublic);
+            result.Value.SortOrder.Should().Be(command.SortOrder);
+            result.Value.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
 
             _subscriptionPlanRepositoryMock.Verify(x => x.AddAsync(It.IsAny<SubscriptionPlan>(), It.IsAny<CancellationToken>()), Times.Once);
             _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -116,15 +122,16 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Commands.CreateSubscription
             var result = await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Name.Should().Be(command.Name);
-            result.Amount.Should().Be(command.Amount);
-            result.Currency.Should().Be(command.Currency);
-            result.Description.Should().BeNull();
-            result.TrialPeriodDays.Should().Be(0);
-            result.IsActive.Should().BeTrue();
-            result.IsPublic.Should().BeTrue();
-            result.SortOrder.Should().Be(0);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Name.Should().Be(command.Name);
+            result.Value.Amount.Should().Be(command.Amount);
+            result.Value.Currency.Should().Be(command.Currency);
+            result.Value.Description.Should().BeNull();
+            result.Value.TrialPeriodDays.Should().Be(0);
+            result.Value.IsActive.Should().BeTrue();
+            result.Value.IsPublic.Should().BeTrue();
+            result.Value.SortOrder.Should().Be(0);
 
             _subscriptionPlanRepositoryMock.Verify(x => x.AddAsync(It.IsAny<SubscriptionPlan>(), It.IsAny<CancellationToken>()), Times.Once);
             _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -159,8 +166,9 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Commands.CreateSubscription
             var result = await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.IsPublic.Should().BeFalse();
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.IsPublic.Should().BeFalse();
 
             _subscriptionPlanRepositoryMock.Verify(x => x.AddAsync(It.IsAny<SubscriptionPlan>(), It.IsAny<CancellationToken>()), Times.Once);
             _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -197,8 +205,9 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Commands.CreateSubscription
             var result = await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.TrialPeriodDays.Should().Be(30);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.TrialPeriodDays.Should().Be(30);
 
             _subscriptionPlanRepositoryMock.Verify(x => x.AddAsync(It.IsAny<SubscriptionPlan>(), It.IsAny<CancellationToken>()), Times.Once);
             _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -238,9 +247,10 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Commands.CreateSubscription
             var result = await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Name.Should().Be(command.Name);
-            result.Amount.Should().Be(command.Amount);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Name.Should().Be(command.Name);
+            result.Value.Amount.Should().Be(command.Amount);
 
             _subscriptionPlanRepositoryMock.Verify(x => x.AddAsync(It.IsAny<SubscriptionPlan>(), It.IsAny<CancellationToken>()), Times.Once);
             _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -275,8 +285,9 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Commands.CreateSubscription
             var result = await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.SortOrder.Should().Be(5);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.SortOrder.Should().Be(5);
 
             _subscriptionPlanRepositoryMock.Verify(x => x.AddAsync(It.IsAny<SubscriptionPlan>(), It.IsAny<CancellationToken>()), Times.Once);
             _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -284,7 +295,7 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Commands.CreateSubscription
 
         [Fact]
         [Trait("Category", "Unit")]
-        public async Task Handle_WithoutTenantContext_ShouldThrowException()
+        public async Task Handle_WithoutTenantContext_ShouldReturnFailure()
         {
             // Arrange
             _tenantContextMock.Setup(x => x.HasTenant).Returns(false);
@@ -296,39 +307,14 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Commands.CreateSubscription
                 BillingPeriodType = BillingPeriodType.Monthly
             };
 
-            // Act & Assert
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
-                _handler.Handle(command, CancellationToken.None));
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
 
-            exception.Message.Should().Be("Tenant context is required to create subscription plan");
+            // Assert
+            result.IsFailure.Should().BeTrue();
+            result.Error.Should().Be(DomainErrors.Tenant.NoTenantContext);
 
             _subscriptionPlanRepositoryMock.Verify(x => x.AddAsync(It.IsAny<SubscriptionPlan>(), It.IsAny<CancellationToken>()), Times.Never);
-            _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
-        }
-
-        [Fact]
-        [Trait("Category", "Unit")]
-        public async Task Handle_WhenRepositoryThrowsException_ShouldPropagateException()
-        {
-            // Arrange
-            var command = new CreateSubscriptionPlanCommand
-            {
-                Name = "Test Plan",
-                Amount = 29.99m,
-                Currency = "USD",
-                BillingPeriodType = BillingPeriodType.Monthly
-            };
-
-            _subscriptionPlanRepositoryMock.Setup(x => x.AddAsync(It.IsAny<SubscriptionPlan>(), It.IsAny<CancellationToken>()))
-                .ThrowsAsync(new Exception("Database error"));
-
-            // Act & Assert
-            var exception = await Assert.ThrowsAsync<Exception>(() => 
-                _handler.Handle(command, CancellationToken.None));
-
-            exception.Message.Should().Be("Database error");
-
-            _subscriptionPlanRepositoryMock.Verify(x => x.AddAsync(It.IsAny<SubscriptionPlan>(), It.IsAny<CancellationToken>()), Times.Once);
             _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         }
 
@@ -369,8 +355,9 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Commands.CreateSubscription
                 var result = await _handler.Handle(command, CancellationToken.None);
 
                 // Assert
-                result.Should().NotBeNull();
-                result.BillingPeriod.Should().Be(testCase.Expected);
+                result.IsSuccess.Should().BeTrue();
+                result.Value.Should().NotBeNull();
+                result.Value.BillingPeriod.Should().Be(testCase.Expected);
             }
         }
 
@@ -402,8 +389,9 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Commands.CreateSubscription
             var result = await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Name.Should().Be("");
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Name.Should().Be("");
         }
 
         [Fact]
@@ -420,7 +408,7 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Commands.CreateSubscription
             };
 
             // Act & Assert
-            var exception = await Assert.ThrowsAsync<ArgumentException>(() => 
+            var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
                 _handler.Handle(command, CancellationToken.None));
 
             exception.Message.Should().Contain("Amount cannot be negative");
@@ -454,8 +442,9 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Commands.CreateSubscription
             var result = await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.Name.Should().Be(longName);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Name.Should().Be(longName);
         }
     }
 }

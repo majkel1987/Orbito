@@ -13,16 +13,19 @@ namespace Orbito.Infrastructure.BackgroundJobs
     /// </summary>
     public class CheckPendingPaymentsJob : BackgroundService
     {
-        private readonly IServiceProvider _serviceProvider;
+        private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly ILogger<CheckPendingPaymentsJob> _logger;
+        private readonly TimeSpan _initialDelay;
         private readonly TimeSpan _period = TimeSpan.FromMinutes(15);
 
         public CheckPendingPaymentsJob(
-            IServiceProvider serviceProvider,
-            ILogger<CheckPendingPaymentsJob> logger)
+            IServiceScopeFactory serviceScopeFactory,
+            ILogger<CheckPendingPaymentsJob> logger,
+            TimeSpan? initialDelay = null)
         {
-            _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+            _serviceScopeFactory = serviceScopeFactory ?? throw new ArgumentNullException(nameof(serviceScopeFactory));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _initialDelay = initialDelay ?? TimeSpan.FromMinutes(10);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -30,7 +33,7 @@ namespace Orbito.Infrastructure.BackgroundJobs
             _logger.LogInformation("CheckPendingPaymentsJob started");
 
             // Initial delay to offset between jobs
-            await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);
+            await Task.Delay(_initialDelay, stoppingToken);
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -51,7 +54,7 @@ namespace Orbito.Infrastructure.BackgroundJobs
 
         private async Task CheckAllTenantsAsync(CancellationToken stoppingToken)
         {
-            using var scope = _serviceProvider.CreateScope();
+            using var scope = _serviceScopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var paymentService = scope.ServiceProvider.GetRequiredService<IPaymentProcessingService>();
             var tenantProvider = scope.ServiceProvider.GetRequiredService<ITenantProvider>();

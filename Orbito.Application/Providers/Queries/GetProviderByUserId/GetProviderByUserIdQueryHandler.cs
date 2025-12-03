@@ -1,11 +1,14 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
+using Orbito.Application.DTOs;
+using Orbito.Domain.Common;
 using Orbito.Domain.Entities;
+using Orbito.Domain.Errors;
 
 namespace Orbito.Application.Providers.Queries.GetProviderByUserId
 {
-    public class GetProviderByUserIdQueryHandler : IRequestHandler<GetProviderByUserIdQuery, GetProviderByUserIdResult>
+    public class GetProviderByUserIdQueryHandler : IRequestHandler<GetProviderByUserIdQuery, Result<ProviderDto>>
     {
         private readonly IProviderRepository _providerRepository;
         private readonly ILogger<GetProviderByUserIdQueryHandler> _logger;
@@ -18,29 +21,21 @@ namespace Orbito.Application.Providers.Queries.GetProviderByUserId
             _logger = logger;
         }
 
-        public async Task<GetProviderByUserIdResult> Handle(GetProviderByUserIdQuery request, CancellationToken cancellationToken)
+        public async Task<Result<ProviderDto>> Handle(GetProviderByUserIdQuery request, CancellationToken cancellationToken)
         {
-            try
+            var provider = await _providerRepository.GetByUserIdAsync(request.UserId, cancellationToken);
+
+            if (provider == null)
             {
-                var provider = await _providerRepository.GetByUserIdAsync(request.UserId, cancellationToken);
-
-                if (provider == null)
-                {
-                    _logger.LogWarning("Provider not found for user: {UserId}", request.UserId);
-                    return GetProviderByUserIdResult.NotFoundResult();
-                }
-
-                var providerDto = MapToDto(provider);
-
-                _logger.LogInformation("Provider retrieved for user: {UserId}", request.UserId);
-
-                return GetProviderByUserIdResult.SuccessResult(providerDto);
+                _logger.LogWarning("Provider not found for user: {UserId}", request.UserId);
+                return Result.Failure<ProviderDto>(DomainErrors.Provider.NotFound);
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving provider for user: {UserId}", request.UserId);
-                return GetProviderByUserIdResult.NotFoundResult("Error retrieving provider");
-            }
+
+            var providerDto = MapToDto(provider);
+
+            _logger.LogInformation("Provider retrieved for user: {UserId}", request.UserId);
+
+            return Result.Success(providerDto);
         }
 
         private static ProviderDto MapToDto(Provider provider)

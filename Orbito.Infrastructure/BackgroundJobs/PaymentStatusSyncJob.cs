@@ -16,13 +16,16 @@ namespace Orbito.Infrastructure.BackgroundJobs
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<PaymentStatusSyncJob> _logger;
         private readonly TimeSpan _period = TimeSpan.FromMinutes(30); // Run every 30 minutes
+        private readonly TimeSpan _initialDelay;
 
         public PaymentStatusSyncJob(
             IServiceProvider serviceProvider,
-            ILogger<PaymentStatusSyncJob> logger)
+            ILogger<PaymentStatusSyncJob> logger,
+            TimeSpan? initialDelay = null)
         {
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _initialDelay = initialDelay ?? TimeSpan.FromMinutes(15);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -30,7 +33,7 @@ namespace Orbito.Infrastructure.BackgroundJobs
             _logger.LogInformation("PaymentStatusSyncJob started");
 
             // Initial delay to offset between jobs
-            await Task.Delay(TimeSpan.FromMinutes(15), stoppingToken);
+            await Task.Delay(_initialDelay, stoppingToken);
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -54,7 +57,7 @@ namespace Orbito.Infrastructure.BackgroundJobs
         /// </summary>
         private async Task SyncAllTenantsAsync(CancellationToken stoppingToken)
         {
-            using var scope = _serviceProvider.CreateScope();
+            await using var scope = _serviceProvider.CreateAsyncScope();
             var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var paymentService = scope.ServiceProvider.GetRequiredService<IPaymentProcessingService>();
             var tenantProvider = scope.ServiceProvider.GetRequiredService<ITenantProvider>();

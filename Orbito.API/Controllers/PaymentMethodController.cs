@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Orbito.Application.Common.Authorization;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.Features.PaymentMethods.Commands;
 using Orbito.Application.Features.PaymentMethods.Queries;
@@ -33,7 +34,7 @@ public class PaymentMethodController : ControllerBase
     /// <param name="activeOnly">Include only active payment methods (default true)</param>
     /// <returns>List of payment methods</returns>
     [HttpGet("my-payment-methods")]
-    [Authorize(Roles = "Client")]
+    [Authorize(Policy = PolicyNames.ClientAccess)]
     public async Task<IActionResult> GetMyPaymentMethods(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 10,
@@ -77,7 +78,7 @@ public class PaymentMethodController : ControllerBase
     /// <param name="activeOnly">Include only active payment methods (default true)</param>
     /// <returns>List of payment methods</returns>
     [HttpGet("client/{clientId}")]
-    [Authorize(Roles = "Provider,PlatformAdmin")]
+    [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
     public async Task<IActionResult> GetPaymentMethodsByClient(
         Guid clientId,
         [FromQuery] int pageNumber = 1,
@@ -111,7 +112,7 @@ public class PaymentMethodController : ControllerBase
     /// </summary>
     /// <returns>Default payment method</returns>
     [HttpGet("my-default")]
-    [Authorize(Roles = "Client")]
+    [Authorize(Policy = PolicyNames.ClientAccess)]
     public async Task<IActionResult> GetMyDefaultPaymentMethod()
     {
         // SECURITY: Get client ID from authenticated user context
@@ -147,7 +148,7 @@ public class PaymentMethodController : ControllerBase
     /// <param name="clientId">Client ID</param>
     /// <returns>Default payment method</returns>
     [HttpGet("client/{clientId}/default")]
-    [Authorize(Roles = "Provider,PlatformAdmin")]
+    [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
     public async Task<IActionResult> GetDefaultPaymentMethod(Guid clientId)
     {
         var query = new GetDefaultPaymentMethodQuery
@@ -176,7 +177,7 @@ public class PaymentMethodController : ControllerBase
     /// <param name="id">Payment method ID</param>
     /// <returns>Payment method details</returns>
     [HttpGet("{id}")]
-    [Authorize(Roles = "Client")]
+    [Authorize(Policy = PolicyNames.ClientAccess)]
     public async Task<IActionResult> GetPaymentMethodById(Guid id)
     {
         // SECURITY: Get client ID from authenticated user context
@@ -209,7 +210,7 @@ public class PaymentMethodController : ControllerBase
     /// <param name="clientId">Client ID</param>
     /// <returns>Payment method details</returns>
     [HttpGet("{id}/client/{clientId}")]
-    [Authorize(Roles = "Provider,PlatformAdmin")]
+    [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
     public async Task<IActionResult> GetPaymentMethodByIdForClient(Guid id, Guid clientId)
     {
         var query = new GetPaymentMethodByIdQuery
@@ -234,7 +235,7 @@ public class PaymentMethodController : ControllerBase
     /// <param name="command">Add payment method command</param>
     /// <returns>Created payment method</returns>
     [HttpPost]
-    [Authorize(Roles = "Client")]
+    [Authorize(Policy = PolicyNames.ClientAccess)]
     public async Task<IActionResult> AddPaymentMethod([FromBody] AddPaymentMethodCommand command)
     {
         // SECURITY: Get client ID from authenticated user context and set it in command
@@ -266,7 +267,7 @@ public class PaymentMethodController : ControllerBase
     /// <param name="id">Payment method ID</param>
     /// <returns>Updated payment method</returns>
     [HttpPut("{id}/set-default")]
-    [Authorize(Roles = "Client")]
+    [Authorize(Policy = PolicyNames.ClientAccess)]
     public async Task<IActionResult> SetDefaultPaymentMethod(Guid id)
     {
         // SECURITY: Get client ID from authenticated user context
@@ -299,7 +300,7 @@ public class PaymentMethodController : ControllerBase
     /// <param name="clientId">Client ID</param>
     /// <returns>Updated payment method</returns>
     [HttpPut("{id}/set-default/client/{clientId}")]
-    [Authorize(Roles = "Provider,PlatformAdmin")]
+    [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
     public async Task<IActionResult> SetDefaultPaymentMethodForClient(Guid id, Guid clientId)
     {
         var command = new SetDefaultPaymentMethodCommand
@@ -324,7 +325,7 @@ public class PaymentMethodController : ControllerBase
     /// <param name="id">Payment method ID</param>
     /// <returns>Result of removal</returns>
     [HttpDelete("{id}")]
-    [Authorize(Roles = "Client")]
+    [Authorize(Policy = PolicyNames.ClientAccess)]
     public async Task<IActionResult> RemovePaymentMethod(Guid id)
     {
         // SECURITY: Get client ID from authenticated user context
@@ -357,7 +358,7 @@ public class PaymentMethodController : ControllerBase
     /// <param name="clientId">Client ID</param>
     /// <returns>Result of removal</returns>
     [HttpDelete("{id}/client/{clientId}")]
-    [Authorize(Roles = "Provider,PlatformAdmin")]
+    [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
     public async Task<IActionResult> RemovePaymentMethodForClient(Guid id, Guid clientId)
     {
         var command = new RemovePaymentMethodCommand

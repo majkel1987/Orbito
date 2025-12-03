@@ -1,4 +1,6 @@
 using MediatR;
+using Orbito.Application.DTOs;
+using Orbito.Domain.Common;
 
 namespace Orbito.Application.Clients.Commands.UpdateClient
 {
@@ -9,5 +11,5 @@ namespace Orbito.Application.Clients.Commands.UpdateClient
         string? DirectEmail,
         string? DirectFirstName,
         string? DirectLastName
-    ) : IRequest<UpdateClientResult>;
+    ) : IRequest<Result<ClientDto>>;
 }

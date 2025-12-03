@@ -4,6 +4,7 @@ using Orbito.Application.Clients.Commands.ActivateClient;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Domain.Entities;
 using Orbito.Domain.ValueObjects;
+using Xunit;
 
 namespace Orbito.Tests.Application.Clients.Commands.ActivateClient
 {
@@ -52,15 +53,16 @@ namespace Orbito.Tests.Application.Clients.Commands.ActivateClient
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
-            result.Client.Should().NotBeNull();
-            result.Client!.IsActive.Should().BeTrue();
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.IsActive.Should().BeTrue();
 
             _clientRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Client>(), It.IsAny<CancellationToken>()), Times.Once);
             _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithoutTenantContext_ShouldReturnFailure()
         {
             // Arrange
@@ -72,11 +74,12 @@ namespace Orbito.Tests.Application.Clients.Commands.ActivateClient
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Tenant context is required");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Tenant.NoTenantContext");
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithNonExistentClient_ShouldReturnFailure()
         {
             // Arrange
@@ -90,11 +93,12 @@ namespace Orbito.Tests.Application.Clients.Commands.ActivateClient
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Client not found");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Client.NotFound");
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithDifferentTenant_ShouldReturnFailure()
         {
             // Arrange
@@ -113,11 +117,12 @@ namespace Orbito.Tests.Application.Clients.Commands.ActivateClient
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Access denied");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Tenant.CrossTenantAccess");
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithAlreadyActiveClient_ShouldReturnFailure()
         {
             // Arrange
@@ -135,12 +140,13 @@ namespace Orbito.Tests.Application.Clients.Commands.ActivateClient
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Client is already active");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Client.AlreadyActive");
         }
 
         [Fact]
-        public async Task Handle_WhenRepositoryThrowsException_ShouldReturnFailure()
+        [Trait("Category", "Unit")]
+        public async Task Handle_WhenRepositoryThrowsException_ShouldPropagateException()
         {
             // Arrange
             var client = Client.CreateWithUser(_tenantId, Guid.NewGuid(), "Test Company");
@@ -154,13 +160,8 @@ namespace Orbito.Tests.Application.Clients.Commands.ActivateClient
             _clientRepositoryMock.Setup(x => x.UpdateAsync(It.IsAny<Client>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new Exception("Database error"));
 
-            // Act
-            var result = await _handler.Handle(command, CancellationToken.None);
-
-            // Assert
-            result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Contain("An error occurred while activating client");
+            // Act & Assert
+            await Assert.ThrowsAsync<Exception>(() => _handler.Handle(command, CancellationToken.None));
         }
     }
 }

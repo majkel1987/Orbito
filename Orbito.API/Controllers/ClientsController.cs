@@ -1,15 +1,16 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Orbito.Application.Common.Authorization;
 using Orbito.Application.Clients.Commands.ActivateClient;
 using Orbito.Application.Clients.Commands.CreateClient;
 using Orbito.Application.Clients.Commands.DeactivateClient;
 using Orbito.Application.Clients.Commands.DeleteClient;
 using Orbito.Application.Clients.Commands.UpdateClient;
 using Orbito.Application.Clients.Queries.GetClientById;
-using Orbito.Application.Clients.Queries.GetClientStats;
 using Orbito.Application.Clients.Queries.GetClientsByProvider;
 using Orbito.Application.Clients.Queries.SearchClients;
+using Orbito.Application.DTOs;
 
 namespace Orbito.API.Controllers
 {
@@ -24,20 +25,49 @@ namespace Orbito.API.Controllers
         /// <summary>
         /// Tworzy nowego klienta
         /// </summary>
-        /// <param name="command">Dane klienta do utworzenia</param>
+        /// <remarks>
+        /// **WAŻNE: UserId i DirectEmail są wzajemnie wykluczające się (XOR)**
+        /// 
+        /// **Scenariusz A - Klient z istniejącym kontem User:**
+        /// ```json
+        /// {
+        ///   "userId": "5fa7c148-7bd9-4ba9-8ac0-211db8c04d46",
+        ///   "companyName": "Acme Corporation",
+        ///   "phone": "+48123456789"
+        /// }
+        /// ```
+        /// 
+        /// **Scenariusz B - Klient bezpośredni (bez konta):**
+        /// ```json
+        /// {
+        ///   "directEmail": "coyote@acme.com",
+        ///   "directFirstName": "Willy",
+        ///   "directLastName": "Coyote",
+        ///   "companyName": "Acme Corporation",
+        ///   "phone": "+48123456789"
+        /// }
+        /// ```
+        /// </remarks>
+        /// <param name="command">Dane klienta do utworzenia. Musi zawierać UserId LUB DirectEmail (nie oba jednocześnie).</param>
         /// <returns>Utworzony klient</returns>
+        /// <response code="201">Klient został utworzony pomyślnie</response>
+        /// <response code="400">Błąd walidacji - sprawdź czy podano UserId LUB DirectEmail (nie oba)</response>
+        /// <response code="401">Brak autoryzacji</response>
         [HttpPost]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<CreateClientResult>> CreateClient([FromBody] CreateClientCommand command)
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        [ProducesResponseType(typeof(Orbito.Application.DTOs.ClientDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> CreateClient([FromBody] CreateClientCommand command)
         {
             var result = await Mediator.Send(command);
 
-            if (!result.Success)
+            if (!result.IsSuccess)
             {
-                return BadRequest(result);
+                return HandleResult(result);
             }
 
-            return CreatedAtAction(nameof(GetClientById), new { id = result.Client!.Id }, result);
+            return CreatedAtAction(nameof(GetClientById), new { id = result.Value.Id }, result.Value);
         }
 
         /// <summary>
@@ -49,8 +79,8 @@ namespace Orbito.API.Controllers
         /// <param name="searchTerm">Termin wyszukiwania</param>
         /// <returns>Lista klientów</returns>
         [HttpGet]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<GetClientsByProviderResult>> GetClients(
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        public async Task<IActionResult> GetClients(
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10,
             [FromQuery] bool activeOnly = false,
@@ -59,12 +89,34 @@ namespace Orbito.API.Controllers
             var query = new GetClientsByProviderQuery(pageNumber, pageSize, activeOnly, searchTerm);
             var result = await Mediator.Send(query);
 
-            if (!result.Success)
+            // Convert Result<PaginatedList<ClientDto>> to standard Result wrapper format for frontend
+            if (!result.IsSuccess)
             {
-                return BadRequest(result);
+                return BadRequest(new
+                {
+                    isSuccess = false,
+                    value = default(object),
+                    error = result.Error.Code
+                });
             }
 
-            return Ok(result);
+            // Return Result wrapper with ClientListResponse structure
+            // Frontend expects: ApiResult<ClientListResponse> where ClientListResponse = { success, message?, clients, ... }
+            return Ok(new
+            {
+                isSuccess = true,
+                value = new
+                {
+                    success = true,
+                    clients = result.Value.Items,
+                    totalCount = result.Value.TotalCount,
+                    pageNumber = result.Value.PageNumber,
+                    pageSize = result.Value.PageSize,
+                    totalPages = result.Value.TotalPages,
+                    message = default(string)
+                },
+                error = default(string)
+            });
         }
 
         /// <summary>
@@ -73,18 +125,15 @@ namespace Orbito.API.Controllers
         /// <param name="id">ID klienta</param>
         /// <returns>Szczegóły klienta</returns>
         [HttpGet("{id}")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<GetClientByIdResult>> GetClientById(Guid id)
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        [ProducesResponseType(typeof(Orbito.Application.DTOs.ClientDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetClientById(Guid id)
         {
             var query = new GetClientByIdQuery(id);
             var result = await Mediator.Send(query);
-
-            if (!result.Success)
-            {
-                return NotFound(result);
-            }
-
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>
@@ -94,8 +143,12 @@ namespace Orbito.API.Controllers
         /// <param name="command">Dane do aktualizacji</param>
         /// <returns>Zaktualizowany klient</returns>
         [HttpPut("{id}")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<UpdateClientResult>> UpdateClient(Guid id, [FromBody] UpdateClientCommand command)
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        [ProducesResponseType(typeof(Orbito.Application.DTOs.ClientDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateClient(Guid id, [FromBody] UpdateClientCommand command)
         {
             if (id != command.Id)
             {
@@ -103,13 +156,7 @@ namespace Orbito.API.Controllers
             }
 
             var result = await Mediator.Send(command);
-
-            if (!result.Success)
-            {
-                return BadRequest(result);
-            }
-
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>
@@ -119,18 +166,22 @@ namespace Orbito.API.Controllers
         /// <param name="hardDelete">Czy wykonać hard delete</param>
         /// <returns>Wynik operacji</returns>
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<DeleteClientResult>> DeleteClient(Guid id, [FromQuery] bool hardDelete = false)
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> DeleteClient(Guid id, [FromQuery] bool hardDelete = false)
         {
             var command = new DeleteClientCommand(id, hardDelete);
             var result = await Mediator.Send(command);
 
-            if (!result.Success)
+            if (!result.IsSuccess)
             {
-                return BadRequest(result);
+                return HandleResult(result);
             }
 
-            return Ok(result);
+            return NoContent();
         }
 
         /// <summary>
@@ -139,18 +190,16 @@ namespace Orbito.API.Controllers
         /// <param name="id">ID klienta</param>
         /// <returns>Zaktualizowany klient</returns>
         [HttpPost("{id}/activate")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<ActivateClientResult>> ActivateClient(Guid id)
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        [ProducesResponseType(typeof(Orbito.Application.DTOs.ClientDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> ActivateClient(Guid id)
         {
             var command = new ActivateClientCommand(id);
             var result = await Mediator.Send(command);
-
-            if (!result.Success)
-            {
-                return BadRequest(result);
-            }
-
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>
@@ -159,18 +208,16 @@ namespace Orbito.API.Controllers
         /// <param name="id">ID klienta</param>
         /// <returns>Zaktualizowany klient</returns>
         [HttpPost("{id}/deactivate")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<DeactivateClientResult>> DeactivateClient(Guid id)
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        [ProducesResponseType(typeof(Orbito.Application.DTOs.ClientDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> DeactivateClient(Guid id)
         {
             var command = new DeactivateClientCommand(id);
             var result = await Mediator.Send(command);
-
-            if (!result.Success)
-            {
-                return BadRequest(result);
-            }
-
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>
@@ -182,8 +229,11 @@ namespace Orbito.API.Controllers
         /// <param name="activeOnly">Czy pokazać tylko aktywnych klientów</param>
         /// <returns>Wyniki wyszukiwania</returns>
         [HttpGet("search")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<SearchClientsResult>> SearchClients(
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        [ProducesResponseType(typeof(Orbito.Application.Common.Models.PaginatedList<Orbito.Application.DTOs.ClientDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> SearchClients(
             [FromQuery] string searchTerm,
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10,
@@ -196,32 +246,8 @@ namespace Orbito.API.Controllers
 
             var query = new SearchClientsQuery(searchTerm, pageNumber, pageSize, activeOnly);
             var result = await Mediator.Send(query);
-
-            if (!result.Success)
-            {
-                return BadRequest(result);
-            }
-
-            return Ok(result);
+            return HandleResult(result);
         }
 
-        /// <summary>
-        /// Pobiera statystyki klientów
-        /// </summary>
-        /// <returns>Statystyki klientów</returns>
-        [HttpGet("stats")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<GetClientStatsResult>> GetClientStats()
-        {
-            var query = new GetClientStatsQuery();
-            var result = await Mediator.Send(query);
-
-            if (!result.Success)
-            {
-                return BadRequest(result);
-            }
-
-            return Ok(result);
-        }
     }
 }

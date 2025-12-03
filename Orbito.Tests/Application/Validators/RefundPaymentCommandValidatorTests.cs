@@ -75,7 +75,7 @@ public class RefundPaymentCommandValidatorTests : BaseTestFixture
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.Amount)
-            .WithErrorMessage("Amount must be greater than zero");
+            .WithErrorMessage("Refund amount must be greater than zero");
     }
 
     [Fact]
@@ -96,7 +96,7 @@ public class RefundPaymentCommandValidatorTests : BaseTestFixture
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.Amount)
-            .WithErrorMessage("Amount must be greater than zero");
+            .WithErrorMessage("Refund amount must be greater than zero");
     }
 
     [Fact]
@@ -159,7 +159,7 @@ public class RefundPaymentCommandValidatorTests : BaseTestFixture
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.Currency)
-            .WithErrorMessage("Unsupported currency");
+            .WithErrorMessage("Currency must be a 3-letter code");
     }
 
     [Fact]

@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Orbito.Application.Common.Authorization;
 using Orbito.Application.Features.Payments.Commands.ProcessPayment;
 using Orbito.Application.Features.Payments.Commands.UpdatePaymentStatus;
 using Orbito.Application.Features.Payments.Commands;
@@ -26,7 +27,7 @@ namespace Orbito.API.Controllers
         /// <param name="command">Dane płatności do przetworzenia</param>
         /// <returns>Wynik przetwarzania płatności</returns>
         [HttpPost("process")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
         public async Task<IActionResult> ProcessPayment([FromBody] ProcessPaymentCommand command)
         {
             var result = await Mediator.Send(command);
@@ -36,92 +37,84 @@ namespace Orbito.API.Controllers
                 return HandleResult(result);
             }
 
-            return CreatedAtAction(nameof(GetPaymentById), new { id = result.Value.Id }, result.Value);
+            return CreatedAtAction(nameof(GetPaymentById), new { id = result.Value.Id, clientId = result.Value.ClientId }, result.Value);
         }
 
         /// <summary>
         /// Pobiera płatność po ID
         /// </summary>
         /// <param name="id">ID płatności</param>
+        /// <param name="clientId">ID klienta (security: client verification)</param>
         /// <returns>Szczegóły płatności</returns>
         [HttpGet("{id}")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<GetPaymentByIdResult>> GetPaymentById(Guid id)
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        public async Task<IActionResult> GetPaymentById(Guid id, [FromQuery] Guid clientId)
         {
-            var query = new GetPaymentByIdQuery(id);
+            var query = new GetPaymentByIdQuery(id, clientId);
             var result = await Mediator.Send(query);
 
-            if (!result.Success)
-            {
-                return NotFound(result);
-            }
-
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>
         /// Pobiera płatności dla subskrypcji
         /// </summary>
         /// <param name="subscriptionId">ID subskrypcji</param>
+        /// <param name="clientId">ID klienta (security: client verification)</param>
         /// <param name="pageNumber">Numer strony (domyślnie 1)</param>
         /// <param name="pageSize">Rozmiar strony (domyślnie 10)</param>
         /// <returns>Lista płatności dla subskrypcji</returns>
         [HttpGet("subscription/{subscriptionId}")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<GetPaymentsBySubscriptionResult>> GetPaymentsBySubscription(
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        public async Task<IActionResult> GetPaymentsBySubscription(
             Guid subscriptionId,
+            [FromQuery] Guid clientId,
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10)
         {
-            var query = new GetPaymentsBySubscriptionQuery(subscriptionId, pageNumber, pageSize);
+            var query = new GetPaymentsBySubscriptionQuery(subscriptionId, clientId, pageNumber, pageSize);
             var result = await Mediator.Send(query);
 
-            if (!result.Success)
-            {
-                return BadRequest(result);
-            }
-
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>
         /// Aktualizuje status płatności
         /// </summary>
         /// <param name="id">ID płatności</param>
+        /// <param name="clientId">ID klienta (security: client verification)</param>
         /// <param name="command">Dane do aktualizacji statusu</param>
         /// <returns>Zaktualizowana płatność</returns>
         [HttpPut("{id}/status")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<UpdatePaymentStatusResult>> UpdatePaymentStatus(
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        public async Task<IActionResult> UpdatePaymentStatus(
             Guid id,
+            [FromQuery] Guid clientId,
             [FromBody] UpdatePaymentStatusCommand command)
         {
             // Upewnij się, że ID w command jest takie samo jak w URL
-            var commandWithId = command with { PaymentId = id };
+            var commandWithId = command with { PaymentId = id, ClientId = clientId };
             var result = await Mediator.Send(commandWithId);
 
-            if (!result.Success)
-            {
-                return BadRequest(result);
-            }
-
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>
         /// Zwraca płatność
         /// </summary>
         /// <param name="id">ID płatności</param>
+        /// <param name="clientId">ID klienta (security: client verification)</param>
         /// <param name="command">Dane zwrotu</param>
         /// <returns>Wynik zwrotu płatności</returns>
         [HttpPost("{id}/refund")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
         public async Task<ActionResult<RefundPaymentResult>> RefundPayment(
             Guid id,
+            [FromQuery] Guid clientId,
             [FromBody] RefundPaymentCommand command)
         {
             // Upewnij się, że ID w command jest takie samo jak w URL
-            var commandWithId = command with { PaymentId = id };
+            var commandWithId = command with { PaymentId = id, ClientId = clientId };
             var result = await Mediator.Send(commandWithId);
 
             if (!result.IsSuccess)
@@ -138,7 +131,7 @@ namespace Orbito.API.Controllers
         /// <param name="command">Dane klienta</param>
         /// <returns>Wynik tworzenia klienta Stripe</returns>
         [HttpPost("create-customer")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
         public async Task<ActionResult<CreateStripeCustomerResult>> CreateStripeCustomer(
             [FromBody] CreateStripeCustomerCommand command)
         {
@@ -158,7 +151,7 @@ namespace Orbito.API.Controllers
         /// <param name="command">Dane metody płatności</param>
         /// <returns>Wynik zapisywania metody płatności</returns>
         [HttpPost("payment-methods")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
         public async Task<ActionResult<SavePaymentMethodResult>> SavePaymentMethod(
             [FromBody] SavePaymentMethodCommand command)
         {
@@ -182,7 +175,7 @@ namespace Orbito.API.Controllers
         /// <param name="activeOnly">Tylko aktywne metody</param>
         /// <returns>Lista metod płatności</returns>
         [HttpGet("payment-methods/client/{clientId}")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
         public async Task<ActionResult<GetPaymentMethodsByClientResult>> GetPaymentMethodsByClient(
             Guid clientId,
             [FromQuery] int pageNumber = 1,

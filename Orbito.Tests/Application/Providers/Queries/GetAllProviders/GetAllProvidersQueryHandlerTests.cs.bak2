@@ -1,0 +1,260 @@
+using FluentAssertions;
+using Microsoft.Extensions.Logging;
+using Moq;
+using Orbito.Application.Common.Interfaces;
+using Orbito.Application.Providers.Queries.GetAllProviders;
+using Orbito.Domain.Entities;
+using Orbito.Domain.ValueObjects;
+using Xunit;
+
+namespace Orbito.Tests.Application.Providers.Queries.GetAllProviders;
+
+[Trait("Category", "Unit")]
+public class GetAllProvidersQueryHandlerTests
+{
+    private readonly Mock<IProviderRepository> _mockProviderRepository;
+    private readonly Mock<ILogger<GetAllProvidersQueryHandler>> _mockLogger;
+    private readonly GetAllProvidersQueryHandler _handler;
+
+    public GetAllProvidersQueryHandlerTests()
+    {
+        _mockProviderRepository = new Mock<IProviderRepository>();
+        _mockLogger = new Mock<ILogger<GetAllProvidersQueryHandler>>();
+
+        _handler = new GetAllProvidersQueryHandler(
+            _mockProviderRepository.Object,
+            _mockLogger.Object);
+    }
+
+    [Fact]
+    public async Task Handle_ValidRequest_ShouldReturnAllProviders()
+    {
+        // Arrange
+        var providers = new List<Provider>
+        {
+            Provider.Create(TenantId.Create(Guid.NewGuid()), "provider1", "Provider 1", "provider1@test.com").Value,
+            Provider.Create(TenantId.Create(Guid.NewGuid()), "provider2", "Provider 2", "provider2@test.com").Value
+        };
+
+        _mockProviderRepository
+            .Setup(x => x.GetAllAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(providers);
+
+        _mockProviderRepository
+            .Setup(x => x.GetTotalCountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(2);
+
+        var query = new GetAllProvidersQuery
+        {
+            PageNumber = 1,
+            PageSize = 10,
+            ActiveOnly = false
+        };
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.Providers.Should().HaveCount(2);
+        result.TotalCount.Should().Be(2);
+        result.PageNumber.Should().Be(1);
+        result.PageSize.Should().Be(10);
+
+        _mockProviderRepository.Verify(
+            x => x.GetAllAsync(1, 10, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _mockProviderRepository.Verify(
+            x => x.GetTotalCountAsync(It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_EmptyDatabase_ShouldReturnEmptyList()
+    {
+        // Arrange
+        _mockProviderRepository
+            .Setup(x => x.GetAllAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Provider>());
+
+        _mockProviderRepository
+            .Setup(x => x.GetTotalCountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
+
+        var query = new GetAllProvidersQuery
+        {
+            PageNumber = 1,
+            PageSize = 10,
+            ActiveOnly = false
+        };
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.Providers.Should().BeEmpty();
+        result.TotalCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Handle_WithPagination_ShouldReturnPagedResults()
+    {
+        // Arrange
+        var providers = new List<Provider>
+        {
+            Provider.Create(TenantId.Create(Guid.NewGuid()), "provider1", "Provider 1", "provider1@test.com").Value
+        };
+
+        _mockProviderRepository
+            .Setup(x => x.GetAllAsync(2, 1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(providers);
+
+        _mockProviderRepository
+            .Setup(x => x.GetTotalCountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(10);
+
+        var query = new GetAllProvidersQuery
+        {
+            PageNumber = 2,
+            PageSize = 1,
+            ActiveOnly = false
+        };
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.Providers.Should().HaveCount(1);
+        result.TotalCount.Should().Be(10);
+        result.PageNumber.Should().Be(2);
+        result.PageSize.Should().Be(1);
+
+        _mockProviderRepository.Verify(
+            x => x.GetAllAsync(2, 1, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_ActiveOnlyTrue_ShouldReturnOnlyActiveProviders()
+    {
+        // Arrange
+        var activeProviders = new List<Provider>
+        {
+            Provider.Create(TenantId.Create(Guid.NewGuid()), "provider1", "Provider 1", "provider1@test.com").Value
+        };
+
+        _mockProviderRepository
+            .Setup(x => x.GetActiveProvidersAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(activeProviders);
+
+        _mockProviderRepository
+            .Setup(x => x.GetActiveCountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
+        var query = new GetAllProvidersQuery
+        {
+            PageNumber = 1,
+            PageSize = 10,
+            ActiveOnly = true
+        };
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.Providers.Should().HaveCount(1);
+        result.TotalCount.Should().Be(1);
+
+        _mockProviderRepository.Verify(
+            x => x.GetActiveProvidersAsync(1, 10, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _mockProviderRepository.Verify(
+            x => x.GetActiveCountAsync(It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _mockProviderRepository.Verify(
+            x => x.GetAllAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_InvalidPageNumber_ShouldReturnFailure()
+    {
+        // Arrange
+        var query = new GetAllProvidersQuery
+        {
+            PageNumber = 0,
+            PageSize = 10,
+            ActiveOnly = false
+        };
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeFalse();
+        result.Message.Should().Contain("greater than 0");
+    }
+
+    [Fact]
+    public async Task Handle_InvalidPageSize_ShouldReturnFailure()
+    {
+        // Arrange
+        var query = new GetAllProvidersQuery
+        {
+            PageNumber = 1,
+            PageSize = 101,
+            ActiveOnly = false
+        };
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeFalse();
+        result.Message.Should().Contain("between 1 and 100");
+    }
+
+    [Fact]
+    public async Task Handle_RepositoryThrowsException_ShouldReturnFailure()
+    {
+        // Arrange
+        _mockProviderRepository
+            .Setup(x => x.GetAllAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Database error"));
+
+        var query = new GetAllProvidersQuery
+        {
+            PageNumber = 1,
+            PageSize = 10,
+            ActiveOnly = false
+        };
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeFalse();
+
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => true),
+                It.IsAny<Exception>(),
+                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+}

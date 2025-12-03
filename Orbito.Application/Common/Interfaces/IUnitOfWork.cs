@@ -11,6 +11,12 @@ namespace Orbito.Application.Common.Interfaces
         bool HasActiveTransaction { get; }
 
         /// <summary>
+        /// Create execution strategy compatible with retry logic and manual transactions
+        /// </summary>
+        /// <returns>Execution strategy</returns>
+        Microsoft.EntityFrameworkCore.Storage.IExecutionStrategy CreateExecutionStrategy();
+
+        /// <summary>
         /// Begin a new transaction with default isolation level
         /// </summary>
         /// <param name="cancellationToken">Cancellation token</param>

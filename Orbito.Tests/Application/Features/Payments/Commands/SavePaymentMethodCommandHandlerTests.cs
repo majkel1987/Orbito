@@ -114,11 +114,14 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
             _unitOfWorkMock.Setup(x => x.BeginTransactionAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Result.Success());
 
-            _unitOfWorkMock.Setup(x => x.PaymentMethods.GetByClientIdAsync(clientId, 1, 10, null, true, It.IsAny<CancellationToken>()))
+            _unitOfWorkMock.Setup(x => x.PaymentMethods.GetDefaultPaymentMethodsByClientAsync(clientId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<PaymentMethod>());
 
             _unitOfWorkMock.Setup(x => x.PaymentMethods.AddAsync(It.IsAny<PaymentMethod>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new PaymentMethod());
+                .ReturnsAsync((PaymentMethod pm, CancellationToken ct) => pm);
+
+            _unitOfWorkMock.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Result<int>.Success(1));
 
             _unitOfWorkMock.Setup(x => x.CommitAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Result.Success());
@@ -245,7 +248,7 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
             // Assert
             result.Should().NotBeNull();
             result.IsSuccess.Should().BeFalse();
-            result.ErrorMessage.Should().Contain("Transaction failed");
+            result.ErrorMessage.Should().Contain("Failed to begin transaction");
         }
 
         [Fact]
@@ -277,6 +280,9 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
 
             _unitOfWorkMock.Setup(x => x.PaymentMethods.AddAsync(It.IsAny<PaymentMethod>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new PaymentMethod());
+
+            _unitOfWorkMock.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Result<int>.Success(1));
 
             _unitOfWorkMock.Setup(x => x.CommitAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Result.Failure("Commit failed"));

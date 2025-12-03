@@ -17,8 +17,8 @@ public class ProcessEmailNotificationsJob
         IServiceProvider serviceProvider,
         ILogger<ProcessEmailNotificationsJob> logger)
     {
-        _serviceProvider = serviceProvider;
-        _logger = logger;
+        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>
@@ -30,7 +30,7 @@ public class ProcessEmailNotificationsJob
         {
             _logger.LogInformation("Starting email notification processing");
 
-            using var scope = _serviceProvider.CreateScope();
+            await using var scope = _serviceProvider.CreateAsyncScope();
             var unitOfWork = scope.ServiceProvider.GetService<IUnitOfWork>();
             var emailSender = scope.ServiceProvider.GetService<IEmailSender>();
 
@@ -113,7 +113,7 @@ public class ProcessEmailNotificationsJob
         {
             _logger.LogInformation("Starting cleanup of failed email notifications");
 
-            using var scope = _serviceProvider.CreateScope();
+            await using var scope = _serviceProvider.CreateAsyncScope();
             var unitOfWork = scope.ServiceProvider.GetService<IUnitOfWork>();
 
             if (unitOfWork == null)

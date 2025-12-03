@@ -103,6 +103,10 @@ public static class DomainErrors
             "Client.EmailAlreadyExists",
             "A client with this email already exists");
 
+        public static Error UserAlreadyExists => Error.Create(
+            "Client.UserAlreadyExists",
+            "A client with this user already exists");
+
         public static Error InvalidEmail => Error.Create(
             "Client.InvalidEmail",
             "Invalid email address format");
@@ -168,6 +172,18 @@ public static class DomainErrors
         public static Error CannotUpgrade => Error.Create(
             "Subscription.CannotUpgrade",
             "Cannot upgrade to this plan");
+
+        public static Error CannotSuspend => Error.Create(
+            "Subscription.CannotSuspend",
+            "Subscription cannot be suspended in current state");
+
+        public static Error CannotResume => Error.Create(
+            "Subscription.CannotResume",
+            "Subscription cannot be resumed in current state");
+
+        public static Error CannotRenew => Error.Create(
+            "Subscription.CannotRenew",
+            "Subscription cannot be renewed in current state");
 
         public static Error PlanNotFound => Error.Create(
             "Subscription.PlanNotFound",
@@ -276,6 +292,22 @@ public static class DomainErrors
         public static Error InvalidStatus => Error.Create(
             "Payment.InvalidStatus",
             "Invalid payment status");
+
+        public static Error InvalidStatusTransition => Error.Create(
+            "Payment.InvalidStatusTransition",
+            "Invalid status transition for payment");
+
+        public static Error FailureReasonRequired => Error.Create(
+            "Payment.FailureReasonRequired",
+            "Failure reason is required when marking payment as failed");
+
+        public static Error RefundReasonRequired => Error.Create(
+            "Payment.RefundReasonRequired",
+            "Refund reason is required when refunding payment");
+
+        public static Error UnsupportedStatus => Error.Create(
+            "Payment.UnsupportedStatus",
+            "Unsupported payment status");
     }
 
     /// <summary>
@@ -336,6 +368,14 @@ public static class DomainErrors
         public static Error InvalidRetryDelay => Error.Create(
             "PaymentRetry.InvalidRetryDelay",
             "Invalid retry delay");
+
+        public static Error AlreadyActive => Error.Create(
+            "PaymentRetry.AlreadyActive",
+            "Payment already has an active retry schedule");
+
+        public static Error NotFailedStatus => Error.Create(
+            "PaymentRetry.NotFailedStatus",
+            "Only failed payments can be retried");
     }
 
     /// <summary>
@@ -365,6 +405,56 @@ public static class DomainErrors
     }
 
     /// <summary>
+    /// TeamMember-related errors
+    /// </summary>
+    public static class TeamMember
+    {
+        public static Error NotFound => Error.Create(
+            "TeamMember.NotFound",
+            "Team member was not found");
+
+        public static Error EmailAlreadyExists => Error.Create(
+            "TeamMember.EmailAlreadyExists",
+            "A team member with this email already exists");
+
+        public static Error Inactive => Error.Create(
+            "TeamMember.Inactive",
+            "Team member is not active");
+
+        public static Error AlreadyInactive => Error.Create(
+            "TeamMember.AlreadyInactive",
+            "Team member is already inactive");
+
+        public static Error CannotRemoveOwner => Error.Create(
+            "TeamMember.CannotRemoveOwner",
+            "Cannot remove the owner from the team");
+
+        public static Error CannotAssignOwnerRole => Error.Create(
+            "TeamMember.CannotAssignOwnerRole",
+            "Cannot assign owner role without proper authorization");
+
+        public static Error CannotDemoteOwner => Error.Create(
+            "TeamMember.CannotDemoteOwner",
+            "Cannot demote the owner to a lower role");
+
+        public static Error SameRole => Error.Create(
+            "TeamMember.SameRole",
+            "Team member already has this role");
+
+        public static Error InvalidRole => Error.Create(
+            "TeamMember.InvalidRole",
+            "Invalid team member role");
+
+        public static Error InvitationExpired => Error.Create(
+            "TeamMember.InvitationExpired",
+            "Team member invitation has expired");
+
+        public static Error AlreadyAccepted => Error.Create(
+            "TeamMember.AlreadyAccepted",
+            "Team member invitation has already been accepted");
+    }
+
+    /// <summary>
     /// Validation-related errors
     /// </summary>
     public static class Validation
@@ -388,5 +478,13 @@ public static class DomainErrors
         public static Error OutOfRange(string fieldName, object min, object max) => Error.Create(
             "Validation.OutOfRange",
             $"{fieldName} must be between {min} and {max}");
+
+        public static Error InvalidPageNumber => Error.Create(
+            "Validation.InvalidPageNumber",
+            "Page number must be greater than zero");
+
+        public static Error InvalidPageSize => Error.Create(
+            "Validation.InvalidPageSize",
+            "Page size must be between 1 and 100");
     }
 }

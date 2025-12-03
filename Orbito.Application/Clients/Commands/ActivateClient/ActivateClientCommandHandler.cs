@@ -1,10 +1,12 @@
+using Orbito.Application.DTOs;
 using MediatR;
 using Orbito.Application.Common.Interfaces;
-using Orbito.Application.Clients.Commands.CreateClient;
+using Orbito.Domain.Common;
+using Orbito.Domain.Errors;
 
 namespace Orbito.Application.Clients.Commands.ActivateClient
 {
-    public class ActivateClientCommandHandler : IRequestHandler<ActivateClientCommand, ActivateClientResult>
+    public class ActivateClientCommandHandler : IRequestHandler<ActivateClientCommand, Result<ClientDto>>
     {
         private readonly IClientRepository _clientRepository;
         private readonly ITenantContext _tenantContext;
@@ -20,56 +22,49 @@ namespace Orbito.Application.Clients.Commands.ActivateClient
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<ActivateClientResult> Handle(ActivateClientCommand request, CancellationToken cancellationToken)
+        public async Task<Result<ClientDto>> Handle(ActivateClientCommand request, CancellationToken cancellationToken)
         {
-            try
+            // Sprawdź czy mamy kontekst tenanta
+            if (!_tenantContext.HasTenant)
             {
-                // Sprawdź czy mamy kontekst tenanta
-                if (!_tenantContext.HasTenant)
-                {
-                    return ActivateClientResult.FailureResult("Tenant context is required");
-                }
-
-                // Pobierz klienta
-                var client = await _clientRepository.GetByIdAsync(request.Id, cancellationToken);
-                if (client == null)
-                {
-                    return ActivateClientResult.FailureResult("Client not found");
-                }
-
-                // Sprawdź czy klient należy do tego samego tenanta
-                if (client.TenantId != _tenantContext.CurrentTenantId)
-                {
-                    return ActivateClientResult.FailureResult("Access denied");
-                }
-
-                // Sprawdź czy klient nie jest już aktywny
-                if (client.IsActive)
-                {
-                    return ActivateClientResult.FailureResult("Client is already active");
-                }
-
-                // Aktywuj klienta
-                client.Activate();
-
-                // Zapisz zmiany
-                await _clientRepository.UpdateAsync(client, cancellationToken);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-                // Pobierz zaktualizowane dane
-                var updatedClient = await _clientRepository.GetByIdAsync(client.Id, cancellationToken);
-                if (updatedClient == null)
-                {
-                    return ActivateClientResult.FailureResult("Failed to retrieve updated client");
-                }
-
-                var clientDto = MapToDto(updatedClient);
-                return ActivateClientResult.SuccessResult(clientDto);
+                return Result.Failure<ClientDto>(DomainErrors.Tenant.NoTenantContext);
             }
-            catch (Exception ex)
+
+            // Pobierz klienta
+            var client = await _clientRepository.GetByIdAsync(request.Id, cancellationToken);
+            if (client == null)
             {
-                return ActivateClientResult.FailureResult($"An error occurred while activating client: {ex.Message}");
+                return Result.Failure<ClientDto>(DomainErrors.Client.NotFound);
             }
+
+            // Sprawdź czy klient należy do tego samego tenanta
+            if (client.TenantId != _tenantContext.CurrentTenantId)
+            {
+                return Result.Failure<ClientDto>(DomainErrors.Tenant.CrossTenantAccess);
+            }
+
+            // Sprawdź czy klient nie jest już aktywny
+            if (client.IsActive)
+            {
+                return Result.Failure<ClientDto>(DomainErrors.Client.AlreadyActive);
+            }
+
+            // Aktywuj klienta
+            client.Activate();
+
+            // Zapisz zmiany
+            await _clientRepository.UpdateAsync(client, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            // Pobierz zaktualizowane dane
+            var updatedClient = await _clientRepository.GetByIdAsync(client.Id, cancellationToken);
+            if (updatedClient == null)
+            {
+                return Result.Failure<ClientDto>(DomainErrors.Client.NotFound);
+            }
+
+            var clientDto = MapToDto(updatedClient);
+            return Result.Success(clientDto);
         }
 
         private static ClientDto MapToDto(Orbito.Domain.Entities.Client client)

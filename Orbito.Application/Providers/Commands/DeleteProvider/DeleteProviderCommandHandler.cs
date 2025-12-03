@@ -1,11 +1,13 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
+using Orbito.Domain.Common;
 using Orbito.Domain.Entities;
+using Orbito.Domain.Errors;
 
 namespace Orbito.Application.Providers.Commands.DeleteProvider
 {
-    public class DeleteProviderCommandHandler : IRequestHandler<DeleteProviderCommand, DeleteProviderResult>
+    public class DeleteProviderCommandHandler : IRequestHandler<DeleteProviderCommand, Result<Unit>>
     {
         private readonly IProviderRepository _providerRepository;
         private readonly IUnitOfWork _unitOfWork;
@@ -21,74 +23,54 @@ namespace Orbito.Application.Providers.Commands.DeleteProvider
             _logger = logger;
         }
 
-        public async Task<DeleteProviderResult> Handle(DeleteProviderCommand request, CancellationToken cancellationToken)
+        public async Task<Result<Unit>> Handle(DeleteProviderCommand request, CancellationToken cancellationToken)
         {
-            try
+            // Get existing provider
+            var provider = await _providerRepository.GetByIdAsync(request.Id, cancellationToken);
+            if (provider == null)
             {
-                // Get existing provider
-                var provider = await _providerRepository.GetByIdAsync(request.Id, cancellationToken);
-                if (provider == null)
-                {
-                    return DeleteProviderResult.FailureResult("Provider not found");
-                }
-
-                // Check if provider can be deleted
-                if (request.HardDelete && !provider.CanBeDeleted())
-                {
-                    return DeleteProviderResult.FailureResult(
-                        "Provider cannot be permanently deleted because it has active clients or subscriptions",
-                        new List<string> 
-                        { 
-                            "Provider has active clients or subscriptions",
-                            "Consider soft delete instead"
-                        });
-                }
-
-                // Begin transaction
-                await _unitOfWork.BeginTransactionAsync(cancellationToken);
-
-                try
-                {
-                    if (request.HardDelete)
-                    {
-                        // Hard delete - remove from database
-                        await _providerRepository.DeleteAsync(provider, cancellationToken);
-                        await _unitOfWork.SaveChangesAsync(cancellationToken);
-                        await _unitOfWork.CommitAsync(cancellationToken);
-
-                        _logger.LogWarning("Provider hard deleted: {ProviderId}", request.Id);
-
-                        return DeleteProviderResult.SuccessResult(
-                            true, 
-                            "Provider permanently deleted");
-                    }
-                    else
-                    {
-                        // Soft delete - deactivate provider
-                        await _providerRepository.SoftDeleteAsync(provider, cancellationToken);
-                        await _unitOfWork.SaveChangesAsync(cancellationToken);
-                        await _unitOfWork.CommitAsync(cancellationToken);
-
-                        _logger.LogInformation("Provider soft deleted (deactivated): {ProviderId}", request.Id);
-
-                        return DeleteProviderResult.SuccessResult(
-                            false, 
-                            "Provider deactivated successfully");
-                    }
-                }
-                catch (Exception)
-                {
-                    await _unitOfWork.RollbackAsync(cancellationToken);
-                    throw;
-                }
+                return Result.Failure<Unit>(DomainErrors.Provider.NotFound);
             }
-            catch (Exception ex)
+
+            // Check if provider can be deleted
+            if (request.HardDelete && !provider.CanBeDeleted())
             {
-                _logger.LogError(ex, "Error deleting provider: {ProviderId}", request.Id);
-                return DeleteProviderResult.FailureResult(
-                    "Error deleting provider",
-                    new List<string> { ex.Message });
+                return Result.Failure<Unit>(DomainErrors.Provider.CannotDeleteWithActiveClients);
             }
+
+            if (request.HardDelete)
+            {
+                // Hard delete - remove from database
+                await _providerRepository.DeleteAsync(provider, cancellationToken);
+            }
+            else
+            {
+                // Soft delete - deactivate provider
+                await _providerRepository.SoftDeleteAsync(provider, cancellationToken);
+            }
+
+            // SaveChanges - EF Core automatycznie utworzy transakcję i zastosuje retry strategy
+            var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            if (!saveResult.IsSuccess)
+            {
+                _logger.LogError("Error deleting provider: {Error}", saveResult.ErrorMessage);
+                var error = Error.Create(
+                    "Provider.DeleteFailed",
+                    saveResult.ErrorMessage ?? "Failed to save changes to database");
+                return Result.Failure<Unit>(error);
+            }
+
+            if (request.HardDelete)
+            {
+                _logger.LogWarning("Provider hard deleted: {ProviderId}", request.Id);
+            }
+            else
+            {
+                _logger.LogInformation("Provider soft deleted (deactivated): {ProviderId}", request.Id);
+            }
+
+            return Result.Success(Unit.Value);
         }
     }
 }

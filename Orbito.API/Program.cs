@@ -9,6 +9,7 @@ using Serilog.Events;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using System.IO;
 
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
@@ -38,6 +39,25 @@ builder.Services.AddProblemDetails();
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+
+// Configure CORS for frontend integration
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins(
+                "http://localhost:3000",  // Next.js dev server
+                "https://localhost:3000", // Next.js dev server (HTTPS)
+                "http://localhost:3001",  // Next.js dev server (alternate port)
+                "https://localhost:3001", // Next.js dev server (HTTPS, alternate port)
+                "http://localhost:5173",  // Vite dev server (backup)
+                "https://localhost:5173"  // Vite dev server (HTTPS)
+            )
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials(); // Required for NextAuth cookies
+    });
+});
 
 // Configure Health Checks with custom checks
 builder.Services.AddHealthChecks()
@@ -99,7 +119,24 @@ builder.Services.AddRateLimiter(rateLimiterOptions =>
 // Add Swagger with JWT support
 builder.Services.AddSwaggerGen(option =>
 {
-    option.SwaggerDoc("v1", new OpenApiInfo { Title = "Demo API", Version = "v1" });
+    option.SwaggerDoc("v1", new OpenApiInfo { Title = "Orbito API", Version = "v1" });
+    
+    // Include XML comments for better documentation
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+    {
+        option.IncludeXmlComments(xmlPath);
+    }
+    
+    // Include XML comments from Application layer (for Commands/Queries)
+    var applicationXmlFile = "Orbito.Application.xml";
+    var applicationXmlPath = Path.Combine(AppContext.BaseDirectory, applicationXmlFile);
+    if (File.Exists(applicationXmlPath))
+    {
+        option.IncludeXmlComments(applicationXmlPath);
+    }
+    
     option.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         In = ParameterLocation.Header,
@@ -167,9 +204,6 @@ app.UseExceptionHandler();
 // Add rate limiting
 app.UseRateLimiter();
 
-// Add tenant middleware
-app.UseMiddleware<TenantMiddleware>();
-
 // Add Stripe signature verification middleware
 app.UseStripeSignatureVerification();
 
@@ -179,6 +213,9 @@ app.UseIdempotency();
 // Add authentication and authorization
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Add tenant middleware (after authentication to access JWT claims)
+app.UseMiddleware<TenantMiddleware>();
 
 app.MapControllers();
 

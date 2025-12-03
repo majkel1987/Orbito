@@ -1,15 +1,17 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
+using Orbito.Domain.Common;
 using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
+using Orbito.Domain.Errors;
 
 namespace Orbito.Application.Features.Payments.Commands
 {
     /// <summary>
     /// Handler for bulk retry payments command
     /// </summary>
-    public class BulkRetryPaymentsCommandHandler : IRequestHandler<BulkRetryPaymentsCommand, BulkRetryPaymentsResult>
+    public class BulkRetryPaymentsCommandHandler : IRequestHandler<BulkRetryPaymentsCommand, Result<BulkRetryPaymentsResponse>>
     {
         private readonly IPaymentRetryService _retryService;
         private readonly IUnitOfWork _unitOfWork;
@@ -25,20 +27,14 @@ namespace Orbito.Application.Features.Payments.Commands
             IUserContextService userContextService,
             ILogger<BulkRetryPaymentsCommandHandler> logger)
         {
-            _retryService = retryService;
-            _unitOfWork = unitOfWork;
-            _userContextService = userContextService;
-            _logger = logger;
+            _retryService = retryService ?? throw new ArgumentNullException(nameof(retryService));
+            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+            _userContextService = userContextService ?? throw new ArgumentNullException(nameof(userContextService));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task<BulkRetryPaymentsResult> Handle(BulkRetryPaymentsCommand request, CancellationToken cancellationToken)
+        public async Task<Result<BulkRetryPaymentsResponse>> Handle(BulkRetryPaymentsCommand request, CancellationToken cancellationToken)
         {
-            var result = new BulkRetryPaymentsResult
-            {
-                TotalProcessed = request.PaymentIds.Count,
-                Results = new List<BulkRetryItemResult>()
-            };
-
             try
             {
                 _logger.LogInformation("Processing bulk retry request for {Count} payments by client {ClientId}",
@@ -49,21 +45,8 @@ namespace Orbito.Application.Features.Payments.Commands
                 {
                     _logger.LogWarning("Client {ClientId} attempted bulk retry with {Count} payments, exceeding limit of {Limit}",
                         request.ClientId, request.PaymentIds.Count, MaxBulkRetryLimit);
-                    return new BulkRetryPaymentsResult
-                    {
-                        TotalProcessed = 0,
-                        SuccessfulRetries = 0,
-                        FailedRetries = 1,
-                        Results = new List<BulkRetryItemResult>
-                        {
-                            new BulkRetryItemResult
-                            {
-                                PaymentId = Guid.Empty,
-                                Success = false,
-                                ErrorMessage = $"Maximum {MaxBulkRetryLimit} payments allowed per bulk retry operation"
-                            }
-                        }
-                    };
+                    return Result.Failure<BulkRetryPaymentsResponse>(
+                        DomainErrors.Validation.OutOfRange("PaymentIds", 1, MaxBulkRetryLimit));
                 }
 
                 // Get current user context
@@ -72,21 +55,7 @@ namespace Orbito.Application.Features.Payments.Commands
                 {
                     _logger.LogWarning("Client {ClientId} attempted bulk retry for different client {RequestClientId}",
                         currentClientId, request.ClientId);
-                    return new BulkRetryPaymentsResult
-                    {
-                        TotalProcessed = 0,
-                        SuccessfulRetries = 0,
-                        FailedRetries = 1,
-                        Results = new List<BulkRetryItemResult>
-                        {
-                            new BulkRetryItemResult
-                            {
-                                PaymentId = Guid.Empty,
-                                Success = false,
-                                ErrorMessage = "You can only retry your own payments"
-                            }
-                        }
-                    };
+                    return Result.Failure<BulkRetryPaymentsResponse>(DomainErrors.General.Unauthorized);
                 }
 
                 // Rate limiting: Check if client has exceeded payment retry limits
@@ -95,21 +64,7 @@ namespace Orbito.Application.Features.Payments.Commands
                 {
                     _logger.LogWarning("Client {ClientId} rate limited for bulk payment retries. Retry after {Minutes} minutes",
                         request.ClientId, rateLimitDelay.Value.TotalMinutes);
-                    return new BulkRetryPaymentsResult
-                    {
-                        TotalProcessed = 0,
-                        SuccessfulRetries = 0,
-                        FailedRetries = 1,
-                        Results = new List<BulkRetryItemResult>
-                        {
-                            new BulkRetryItemResult
-                            {
-                                PaymentId = Guid.Empty,
-                                Success = false,
-                                ErrorMessage = $"Rate limit exceeded. Please try again in {Math.Ceiling(rateLimitDelay.Value.TotalMinutes)} minutes"
-                            }
-                        }
-                    };
+                    return Result.Failure<BulkRetryPaymentsResponse>(DomainErrors.Payment.RateLimitExceeded);
                 }
 
                 // BATCH OPERATION: Load all payments at once to avoid N+1
@@ -123,8 +78,12 @@ namespace Orbito.Application.Features.Payments.Commands
                 if (!transactionResult.IsSuccess)
                 {
                     _logger.LogError("Failed to begin transaction: {Error}", transactionResult.ErrorMessage);
-                    return CreateErrorResult(request.PaymentIds, "Failed to begin transaction");
+                    return Result.Failure<BulkRetryPaymentsResponse>(DomainErrors.General.UnexpectedError);
                 }
+
+                var results = new List<BulkRetryItemResult>();
+                int successfulRetries = 0;
+                int failedRetries = 0;
 
                 try
                 {
@@ -141,25 +100,25 @@ namespace Orbito.Application.Features.Payments.Commands
                             activeRetriesDict,
                             cancellationToken);
 
-                        result.Results.Add(itemResult);
+                        results.Add(itemResult);
 
                         if (itemResult.Success)
                         {
-                            result.SuccessfulRetries++;
+                            successfulRetries++;
                         }
                         else
                         {
-                            result.FailedRetries++;
+                            failedRetries++;
                         }
                     }
 
                     // Record payment attempts AFTER all schedules are created successfully
                     // OPTIMIZATION: Use batch method instead of loop to reduce database round-trips
-                    if (result.SuccessfulRetries > 0)
+                    if (successfulRetries > 0)
                     {
                         await _unitOfWork.Payments.RecordPaymentAttemptsAsync(
                             request.ClientId,
-                            result.SuccessfulRetries,
+                            successfulRetries,
                             cancellationToken);
                     }
 
@@ -168,13 +127,22 @@ namespace Orbito.Application.Features.Payments.Commands
                     if (!commitResult.IsSuccess)
                     {
                         _logger.LogError("Failed to commit transaction: {Error}", commitResult.ErrorMessage);
-                        return CreateErrorResult(request.PaymentIds, "Failed to commit transaction");
+                        await _unitOfWork.RollbackAsync(cancellationToken);
+                        return Result.Failure<BulkRetryPaymentsResponse>(DomainErrors.General.UnexpectedError);
                     }
 
-                    _logger.LogInformation("Bulk retry completed: {Successful} successful, {Failed} failed out of {Total}",
-                        result.SuccessfulRetries, result.FailedRetries, result.TotalProcessed);
+                    var response = new BulkRetryPaymentsResponse
+                    {
+                        TotalProcessed = request.PaymentIds.Count,
+                        SuccessfulRetries = successfulRetries,
+                        FailedRetries = failedRetries,
+                        Results = results
+                    };
 
-                    return result;
+                    _logger.LogInformation("Bulk retry completed: {Successful} successful, {Failed} failed out of {Total}",
+                        response.SuccessfulRetries, response.FailedRetries, response.TotalProcessed);
+
+                    return Result.Success(response);
                 }
                 catch (Exception)
                 {
@@ -183,42 +151,17 @@ namespace Orbito.Application.Features.Payments.Commands
                     throw;
                 }
             }
+            catch (OperationCanceledException)
+            {
+                // Rethrow cancellation exceptions - they should not be caught
+                throw;
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing bulk retry request for {Count} payments. Processed {Successful} successfully before error.",
-                    request.PaymentIds.Count, result.SuccessfulRetries);
-
-                // Return accurate information about what was processed
-                var remainingIds = request.PaymentIds.Skip(result.Results.Count).ToList();
-                foreach (var id in remainingIds)
-                {
-                    result.Results.Add(new BulkRetryItemResult
-                    {
-                        PaymentId = id,
-                        Success = false,
-                        ErrorMessage = "Not processed due to earlier error"
-                    });
-                }
-
-                result.FailedRetries = request.PaymentIds.Count - result.SuccessfulRetries;
-                return result;
+                _logger.LogError(ex, "Error processing bulk retry request for {Count} payments",
+                    request.PaymentIds.Count);
+                return Result.Failure<BulkRetryPaymentsResponse>(DomainErrors.General.UnexpectedError);
             }
-        }
-
-        private static BulkRetryPaymentsResult CreateErrorResult(List<Guid> paymentIds, string errorMessage)
-        {
-            return new BulkRetryPaymentsResult
-            {
-                TotalProcessed = paymentIds.Count,
-                SuccessfulRetries = 0,
-                FailedRetries = paymentIds.Count,
-                Results = paymentIds.Select(id => new BulkRetryItemResult
-                {
-                    PaymentId = id,
-                    Success = false,
-                    ErrorMessage = errorMessage
-                }).ToList()
-            };
         }
 
         /// <summary>
@@ -241,7 +184,7 @@ namespace Orbito.Application.Features.Payments.Commands
                     {
                         PaymentId = paymentId,
                         Success = false,
-                        ErrorMessage = "Payment not found or does not belong to client"
+                        ErrorMessage = DomainErrors.Payment.NotFound.Message
                     };
                 }
 
@@ -252,7 +195,7 @@ namespace Orbito.Application.Features.Payments.Commands
                     {
                         PaymentId = paymentId,
                         Success = false,
-                        ErrorMessage = "Only failed payments can be retried"
+                        ErrorMessage = DomainErrors.PaymentRetry.NotFailedStatus.Message
                     };
                 }
 
@@ -263,7 +206,7 @@ namespace Orbito.Application.Features.Payments.Commands
                     {
                         PaymentId = paymentId,
                         Success = false,
-                        ErrorMessage = "Payment already has an active retry schedule"
+                        ErrorMessage = DomainErrors.PaymentRetry.AlreadyActive.Message
                     };
                 }
 

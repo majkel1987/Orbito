@@ -78,7 +78,7 @@ namespace Orbito.Infrastructure.Data.Configurations.Entity
 
             // Relationships
             builder.HasOne(pm => pm.Client)
-                .WithMany()
+                .WithMany(c => c.PaymentMethods)
                 .HasForeignKey(pm => pm.ClientId)
                 .OnDelete(DeleteBehavior.Cascade);
         }

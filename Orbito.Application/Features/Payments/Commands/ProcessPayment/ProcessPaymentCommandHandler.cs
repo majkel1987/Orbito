@@ -68,13 +68,7 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
 
         var tenantId = _tenantContext.CurrentTenantId!;
 
-        // Validate currency
-        if (!IsValidCurrencyCode(request.Currency))
-        {
-            _logger.LogWarning("Payment processing failed: Invalid currency code {Currency}", request.Currency);
-            return Result.Failure<PaymentDto>(DomainErrors.Payment.InvalidCurrency);
-        }
-
+        // Currency validation is handled by ProcessPaymentCommandValidator through ValidationBehaviour
         // Validate Money.Create before transaction to catch validation errors early
         Money amount;
         try
@@ -87,13 +81,7 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
             return Result.Failure<PaymentDto>(DomainErrors.Payment.InvalidAmount);
         }
 
-        // Validate payment method
-        if (!Domain.Constants.PaymentMethods.IsValid(request.PaymentMethod))
-        {
-            _logger.LogWarning("Payment processing failed: Invalid payment method {PaymentMethod}", request.PaymentMethod);
-            return Result.Failure<PaymentDto>(DomainErrors.Payment.InvalidPaymentMethod);
-        }
-
+        // PaymentMethod validation is handled by ProcessPaymentCommandValidator through ValidationBehaviour
         // Start transaction with ReadCommitted isolation - unique constraint handles race conditions
         await _unitOfWork.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
 
@@ -165,14 +153,11 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                 return await FailWithRollback(DomainErrors.Payment.ExternalPaymentIdRequired, cancellationToken);
             }
 
-            // Check for duplicate external transaction ID within transaction
+            // Check for duplicate external transaction ID within transaction (security: client verification)
             if (!string.IsNullOrEmpty(request.ExternalTransactionId))
             {
-                // NOTE: Using deprecated method because this command is only accessible by Providers and PlatformAdmins
-                // who have proper authorization to view all payments in their tenant
-#pragma warning disable CS0618 // Type or member is obsolete
-                var existingPayment = await _paymentRepository.GetByExternalTransactionIdAsync(request.ExternalTransactionId, cancellationToken);
-#pragma warning restore CS0618 // Type or member is obsolete
+                var existingPayment = await _paymentRepository.GetByExternalTransactionIdForClientAsync(
+                    request.ExternalTransactionId, request.ClientId, cancellationToken);
                 if (existingPayment != null)
                 {
                     // Option: Return existing payment for idempotency

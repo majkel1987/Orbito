@@ -195,7 +195,7 @@ namespace Orbito.Infrastructure.Persistance
                 .AsNoTracking()
                 .Include(p => p.Subscription)
                 .Include(p => p.Client)
-                .Where(p => p.Status == PaymentStatus.Pending && p.TenantId == tenantId) // SECURITY: Filter by tenant
+                .Where(p => EF.Property<string>(p, "Status") == "Pending" && p.TenantId == tenantId) // SECURITY: Filter by tenant
                 .OrderBy(p => p.CreatedAt)
                 .ToListAsync(cancellationToken);
         }
@@ -219,7 +219,7 @@ namespace Orbito.Infrastructure.Persistance
                 .AsNoTracking()
                 .Include(p => p.Subscription)
                 .Include(p => p.Client)
-                .Where(p => p.Status == PaymentStatus.Failed && p.TenantId == tenantId) // SECURITY: Filter by tenant
+                .Where(p => EF.Property<string>(p, "Status") == "Failed" && p.TenantId == tenantId) // SECURITY: Filter by tenant
                 .OrderByDescending(p => p.FailedAt)
                 .ToListAsync(cancellationToken);
         }
@@ -245,7 +245,7 @@ namespace Orbito.Infrastructure.Persistance
                 .AsNoTracking()
                 .Include(p => p.Subscription)
                 .Include(p => p.Client)
-                .Where(p => p.Status == PaymentStatus.Processing && p.TenantId == tenantId) // SECURITY: Filter by tenant
+                .Where(p => EF.Property<string>(p, "Status") == "Processing" && p.TenantId == tenantId) // SECURITY: Filter by tenant
                 .OrderBy(p => p.CreatedAt)
                 .ToListAsync(cancellationToken);
         }
@@ -334,24 +334,25 @@ namespace Orbito.Infrastructure.Persistance
             var tenantId = _tenantContext.CurrentTenantId;
 
             // Single query to get all stats at once
+            // IMPORTANT: Use EF.Property<string> for enum comparisons to avoid InvalidCastException
             var stats = await _context.Payments
                 .Where(p => p.TenantId == tenantId) // SECURITY: Filter by tenant
                 .GroupBy(p => 1)
                 .Select(g => new
                 {
                     TotalPayments = g.Count(),
-                    CompletedPayments = g.Count(p => p.Status == PaymentStatus.Completed),
-                    FailedPayments = g.Count(p => p.Status == PaymentStatus.Failed),
-                    PendingPayments = g.Count(p => p.Status == PaymentStatus.Pending),
-                    ProcessingPayments = g.Count(p => p.Status == PaymentStatus.Processing),
-                    RefundedPayments = g.Count(p => p.Status == PaymentStatus.Refunded),
-                    TotalRevenue = g.Where(p => p.Status == PaymentStatus.Completed && p.Amount != null)
+                    CompletedPayments = g.Count(p => EF.Property<string>(p, "Status") == "Completed"),
+                    FailedPayments = g.Count(p => EF.Property<string>(p, "Status") == "Failed"),
+                    PendingPayments = g.Count(p => EF.Property<string>(p, "Status") == "Pending"),
+                    ProcessingPayments = g.Count(p => EF.Property<string>(p, "Status") == "Processing"),
+                    RefundedPayments = g.Count(p => EF.Property<string>(p, "Status") == "Refunded"),
+                    TotalRevenue = g.Where(p => EF.Property<string>(p, "Status") == "Completed" && p.Amount != null)
                                    .Sum(p => (decimal?)p.Amount!.Amount) ?? 0,
-                    TotalRefunded = g.Where(p => (p.Status == PaymentStatus.Refunded ||
-                                                 p.Status == PaymentStatus.PartiallyRefunded) &&
+                    TotalRefunded = g.Where(p => (EF.Property<string>(p, "Status") == "Refunded" ||
+                                                 EF.Property<string>(p, "Status") == "PartiallyRefunded") &&
                                                  p.Amount != null)
                                     .Sum(p => (decimal?)p.Amount!.Amount) ?? 0,
-                    MostCommonCurrency = g.Where(p => p.Status == PaymentStatus.Completed && p.Amount != null)
+                    MostCommonCurrency = g.Where(p => EF.Property<string>(p, "Status") == "Completed" && p.Amount != null)
                                           .GroupBy(p => p.Amount!.Currency)
                                           .OrderByDescending(c => c.Count())
                                           .Select(c => c.Key)
@@ -409,7 +410,7 @@ namespace Orbito.Infrastructure.Persistance
             var tenantId = _tenantContext.CurrentTenantId;
 
             return await _context.Payments
-                .Where(p => p.Status == PaymentStatus.Completed && p.Amount != null && p.TenantId == tenantId) // SECURITY: Filter by tenant
+                .Where(p => EF.Property<string>(p, "Status") == "Completed" && p.Amount != null && p.TenantId == tenantId) // SECURITY: Filter by tenant
                 .SumAsync(p => p.Amount!.Amount, cancellationToken);
         }
 
@@ -430,7 +431,9 @@ namespace Orbito.Infrastructure.Persistance
 
             var tenantId = _tenantContext.CurrentTenantId;
 
-            return await _context.Payments.CountAsync(p => p.Status == status && p.TenantId == tenantId, cancellationToken); // SECURITY: Filter by tenant
+            // IMPORTANT: Convert enum to string for EF Core ValueConverter compatibility
+            var statusString = status.ToString();
+            return await _context.Payments.CountAsync(p => EF.Property<string>(p, "Status") == statusString && p.TenantId == tenantId, cancellationToken); // SECURITY: Filter by tenant
         }
 
         public async Task<int> GetCountBySubscriptionIdAsync(Guid subscriptionId, CancellationToken cancellationToken = default)
@@ -530,19 +533,20 @@ namespace Orbito.Infrastructure.Persistance
 
         public async Task<PaymentStats> GetPaymentStatsByClientAsync(Guid clientId, CancellationToken cancellationToken = default)
         {
+            // IMPORTANT: Use EF.Property<string> for enum comparisons to avoid InvalidCastException
             var stats = await _context.Payments
                 .Where(p => p.ClientId == clientId)
                 .GroupBy(p => 1)
                 .Select(g => new
                 {
                     TotalPayments = g.Count(),
-                    CompletedPayments = g.Count(p => p.Status == PaymentStatus.Completed),
-                    FailedPayments = g.Count(p => p.Status == PaymentStatus.Failed),
-                    PendingPayments = g.Count(p => p.Status == PaymentStatus.Pending),
-                    ProcessingPayments = g.Count(p => p.Status == PaymentStatus.Processing),
-                    RefundedPayments = g.Count(p => p.Status == PaymentStatus.Refunded || p.Status == PaymentStatus.PartiallyRefunded),
-                    TotalRevenue = g.Where(p => p.Status == PaymentStatus.Completed && p.Amount != null).Sum(p => p.Amount!.Amount),
-                    TotalRefunded = g.Where(p => (p.Status == PaymentStatus.Refunded || p.Status == PaymentStatus.PartiallyRefunded) && p.Amount != null).Sum(p => p.Amount!.Amount),
+                    CompletedPayments = g.Count(p => EF.Property<string>(p, "Status") == "Completed"),
+                    FailedPayments = g.Count(p => EF.Property<string>(p, "Status") == "Failed"),
+                    PendingPayments = g.Count(p => EF.Property<string>(p, "Status") == "Pending"),
+                    ProcessingPayments = g.Count(p => EF.Property<string>(p, "Status") == "Processing"),
+                    RefundedPayments = g.Count(p => EF.Property<string>(p, "Status") == "Refunded" || EF.Property<string>(p, "Status") == "PartiallyRefunded"),
+                    TotalRevenue = g.Where(p => EF.Property<string>(p, "Status") == "Completed" && p.Amount != null).Sum(p => p.Amount!.Amount),
+                    TotalRefunded = g.Where(p => (EF.Property<string>(p, "Status") == "Refunded" || EF.Property<string>(p, "Status") == "PartiallyRefunded") && p.Amount != null).Sum(p => p.Amount!.Amount),
                     MostCommonCurrency = g.Where(p => p.Amount != null).GroupBy(p => p.Amount!.Currency).OrderByDescending(gc => gc.Count()).Select(gc => gc.Key).FirstOrDefault()
                 })
                 .FirstOrDefaultAsync(cancellationToken);
@@ -582,13 +586,15 @@ namespace Orbito.Infrastructure.Persistance
         public async Task<decimal> GetTotalRevenueByClientAsync(Guid clientId, CancellationToken cancellationToken = default)
         {
             return await _context.Payments
-                .Where(p => p.ClientId == clientId && p.Status == PaymentStatus.Completed && p.Amount != null)
+                .Where(p => p.ClientId == clientId && EF.Property<string>(p, "Status") == "Completed" && p.Amount != null)
                 .SumAsync(p => p.Amount!.Amount, cancellationToken);
         }
 
         public async Task<int> GetPaymentsCountByStatusForClientAsync(PaymentStatus status, Guid clientId, CancellationToken cancellationToken = default)
         {
-            return await _context.Payments.CountAsync(p => p.Status == status && p.ClientId == clientId, cancellationToken);
+            // IMPORTANT: Convert enum to string for EF Core ValueConverter compatibility
+            var statusString = status.ToString();
+            return await _context.Payments.CountAsync(p => EF.Property<string>(p, "Status") == statusString && p.ClientId == clientId, cancellationToken);
         }
 
         // Rate limiting operations
@@ -656,8 +662,9 @@ namespace Orbito.Infrastructure.Persistance
         /// </summary>
         public async Task<IQueryable<Payment>> GetFailedPaymentsQueryAsync(Guid? clientId = null, CancellationToken cancellationToken = default)
         {
+            // IMPORTANT: Use EF.Property<string> for enum comparisons to avoid InvalidCastException
             var query = _context.Payments
-                .Where(p => p.Status == PaymentStatus.Failed)
+                .Where(p => EF.Property<string>(p, "Status") == "Failed")
                 .AsQueryable();
 
             if (clientId.HasValue)
@@ -772,6 +779,108 @@ namespace Orbito.Infrastructure.Persistance
             }
 
             return await Task.FromResult(query);
+        }
+
+        /// <summary>
+        /// Gets pending payments for a specific tenant (for background jobs)
+        /// SECURITY: Requires explicit TenantId to prevent cross-tenant access
+        /// </summary>
+        public async Task<IEnumerable<Payment>> GetPendingPaymentsForTenantAsync(TenantId tenantId, CancellationToken cancellationToken = default)
+        {
+            _logger.LogDebug("GetPendingPaymentsForTenantAsync called for tenant {TenantId}", tenantId.Value);
+
+            return await _context.Payments
+                .AsNoTracking()
+                .Include(p => p.Subscription)
+                .Include(p => p.Client)
+                .Where(p => EF.Property<string>(p, "Status") == "Pending" && p.TenantId == tenantId)
+                .OrderBy(p => p.CreatedAt)
+                .ToListAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// Gets failed payments for a specific tenant (for background jobs)
+        /// SECURITY: Requires explicit TenantId to prevent cross-tenant access
+        /// </summary>
+        public async Task<IEnumerable<Payment>> GetFailedPaymentsForTenantAsync(TenantId tenantId, CancellationToken cancellationToken = default)
+        {
+            _logger.LogDebug("GetFailedPaymentsForTenantAsync called for tenant {TenantId}", tenantId.Value);
+
+            return await _context.Payments
+                .AsNoTracking()
+                .Include(p => p.Subscription)
+                .Include(p => p.Client)
+                .Where(p => EF.Property<string>(p, "Status") == "Failed" && p.TenantId == tenantId)
+                .OrderByDescending(p => p.FailedAt)
+                .ToListAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// Gets processing payments for a specific tenant (for background jobs)
+        /// SECURITY: Requires explicit TenantId to prevent cross-tenant access
+        /// </summary>
+        public async Task<IEnumerable<Payment>> GetProcessingPaymentsForTenantAsync(TenantId tenantId, CancellationToken cancellationToken = default)
+        {
+            _logger.LogDebug("GetProcessingPaymentsForTenantAsync called for tenant {TenantId}", tenantId.Value);
+
+            return await _context.Payments
+                .AsNoTracking()
+                .Include(p => p.Subscription)
+                .Include(p => p.Client)
+                .Where(p => EF.Property<string>(p, "Status") == "Processing" && p.TenantId == tenantId)
+                .OrderBy(p => p.CreatedAt)
+                .ToListAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// Gets payments with external IDs for a specific tenant (for background jobs)
+        /// SECURITY: Requires explicit TenantId to prevent cross-tenant access
+        /// </summary>
+        public async Task<IEnumerable<Payment>> GetPaymentsWithExternalIdForTenantAsync(TenantId tenantId, CancellationToken cancellationToken = default)
+        {
+            _logger.LogDebug("GetPaymentsWithExternalIdForTenantAsync called for tenant {TenantId}", tenantId.Value);
+
+            return await _context.Payments
+                .AsNoTracking()
+                .Include(p => p.Subscription)
+                .Include(p => p.Client)
+                .Where(p => !string.IsNullOrEmpty(p.ExternalPaymentId) && p.TenantId == tenantId)
+                .OrderByDescending(p => p.CreatedAt)
+                .ToListAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// Gets payment by ID without tenant validation (WEBHOOK/ADMIN ONLY)
+        /// WARNING: This method bypasses tenant validation. Only use in webhook handlers
+        /// that have been verified by signature middleware or admin operations.
+        /// CALLER MUST verify tenant after retrieving the payment.
+        /// </summary>
+        public async Task<Payment?> GetByIdUnsafeAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            _logger.LogWarning("SECURITY: GetByIdUnsafeAsync called for payment {PaymentId}. Ensure this is from a verified webhook or admin operation.", id);
+
+            return await _context.Payments
+                .IgnoreQueryFilters() // Bypass tenant filter
+                .Include(p => p.Subscription)
+                .Include(p => p.Client)
+                .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+        }
+
+        /// <summary>
+        /// Gets payment by external payment ID without tenant validation (WEBHOOK/ADMIN ONLY)
+        /// WARNING: This method bypasses tenant validation. Only use in webhook handlers
+        /// that have been verified by signature middleware (e.g., Stripe webhooks).
+        /// CALLER MUST verify tenant after retrieving the payment.
+        /// </summary>
+        public async Task<Payment?> GetByExternalPaymentIdUnsafeAsync(string externalPaymentId, CancellationToken cancellationToken = default)
+        {
+            _logger.LogWarning("SECURITY: GetByExternalPaymentIdUnsafeAsync called for external payment {ExternalPaymentId}. Ensure this is from a verified webhook.", externalPaymentId);
+
+            return await _context.Payments
+                .IgnoreQueryFilters() // Bypass tenant filter
+                .Include(p => p.Subscription)
+                .Include(p => p.Client)
+                .FirstOrDefaultAsync(p => p.ExternalPaymentId == externalPaymentId, cancellationToken);
         }
 
         private static (int pageNumber, int pageSize) ValidatePagination(int pageNumber, int pageSize)

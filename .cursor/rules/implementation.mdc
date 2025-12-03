@@ -1,0 +1,219 @@
+---
+alwaysApply: true
+---
+
+# Implementation Guidelines - Orbito Platform
+
+## Backend Implementation
+
+### Controllers
+
+- Inherit from BaseController
+- Use policy-based authorization
+- Return Result<T> pattern
+- Handle errors consistently
+- Apply proper HTTP status codes
+
+### Commands/Queries
+
+- One handler per operation
+- Validate with FluentValidation
+- Include TenantId in all operations
+- Use async/await throughout
+- Log operations with correlation ID
+
+### Repositories
+
+- Always inject ITenantContext for tenant-scoped entities
+- Use GetByIdForClientAsync pattern for security
+- Mark unsafe methods as Obsolete
+- Apply query filters for tenant isolation
+- Include cancellation tokens
+
+### Services
+
+- Keep stateless
+- Use dependency injection
+- Handle Stripe webhooks idempotently
+- Implement retry logic for external calls
+- Log all external interactions
+
+### Database
+
+- Use migrations for schema changes
+- Apply unique constraints for business rules
+- Index foreign keys and search fields
+- Use filtered indexes where appropriate
+- Configure cascade deletes carefully
+
+## Frontend Implementation
+
+### Components
+
+- Use function components with hooks
+- Keep under 500 lines
+- Extract complex logic to custom hooks
+- Implement loading and error states
+- Use shadcn/ui for consistency
+
+### Data Fetching
+
+- Use React Query for all API calls
+- Implement optimistic updates
+- Cache data appropriately (5-10 min)
+- Handle pagination on backend
+- Show loading skeletons
+
+### Forms
+
+- React Hook Form + Zod validation
+- Match backend validation rules
+- Show inline error messages
+- Disable submit during processing
+- Clear form on success
+
+### State Management
+
+- Zustand for global state
+- React Query for server state
+- Local state for UI-only concerns
+- Avoid prop drilling
+- Keep stores focused
+
+### Authentication
+
+- NextAuth for session management
+- Check roles in middleware
+- Refresh tokens automatically
+- Handle 401 globally
+- Redirect to login when needed
+
+### API Integration
+
+- Use axios with interceptors
+- Add auth headers automatically
+- Log requests in development
+- Handle errors consistently
+- Show user-friendly messages
+
+## Security Implementation
+
+### Authentication
+
+- JWT with 15min access token
+- 7-day refresh token
+- Store tokens securely
+- Validate on every request
+- Include tenant claims
+
+### Authorization
+
+- Policy-based, not role-based
+- Check at controller level
+- Verify in business logic
+- Audit sensitive operations
+- Log authorization failures
+
+### Data Access
+
+- Filter by TenantId always
+- Verify ownership in repositories
+- No cross-tenant queries
+- Sanitize all inputs
+- Escape output properly
+
+### Payment Security
+
+- Verify Stripe signatures
+- Implement idempotency
+- Lock during processing
+- Audit all transactions
+- Handle webhooks async
+
+## Performance Guidelines
+
+### Backend
+
+- Use async/await for I/O
+- Implement caching strategically
+- Paginate large datasets
+- Use projection for queries
+- Avoid N+1 problems
+
+### Frontend
+
+- Lazy load routes
+- Optimize images
+- Minimize bundle size
+- Use React.memo wisely
+- Implement virtual scrolling
+
+### Database
+
+- Index search columns
+- Use includes to prevent round trips
+- Batch operations when possible
+- Monitor slow queries
+- Regular maintenance
+
+## Testing Requirements
+
+### Unit Tests
+
+- Test business logic
+- Mock external dependencies
+- Use AAA pattern
+- Assert specific outcomes
+- Cover edge cases
+
+### Integration Tests
+
+- Test API endpoints
+- Use test database
+- Verify full flow
+- Check authorization
+- Test error scenarios
+
+### Frontend Tests
+
+- Test critical user flows
+- Mock API responses
+- Verify form validation
+- Check error handling
+- Test accessibility
+
+## Deployment Process
+
+### Pre-deployment
+
+- Run all tests
+- Check migrations
+- Update configuration
+- Verify environment variables
+- Backup database
+
+### Deployment
+
+- Use blue-green strategy
+- Monitor error rates
+- Check health endpoints
+- Verify integrations
+- Test critical paths
+
+### Post-deployment
+
+- Monitor logs
+- Check performance metrics
+- Verify webhook processing
+- Test payment flow
+- Update documentation
+
+## Code Quality Standards
+
+- No commented code in production
+- No TODO comments in releases
+- Maximum 20-30 lines per method
+- Descriptive variable names
+- Consistent formatting
+- Document complex logic
+- Regular refactoring

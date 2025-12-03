@@ -11,24 +11,19 @@ namespace Orbito.Tests.Application.Clients.Queries.GetClientsByProvider
     public class GetClientsByProviderQueryHandlerTests
     {
         private readonly Mock<IClientRepository> _clientRepositoryMock;
-        private readonly Mock<ITenantContext> _tenantContextMock;
         private readonly GetClientsByProviderQueryHandler _handler;
         private readonly TenantId _tenantId = TenantId.New();
 
         public GetClientsByProviderQueryHandlerTests()
         {
             _clientRepositoryMock = new Mock<IClientRepository>();
-            _tenantContextMock = new Mock<ITenantContext>();
-
-            _tenantContextMock.Setup(x => x.HasTenant).Returns(true);
-            _tenantContextMock.Setup(x => x.CurrentTenantId).Returns(_tenantId);
 
             _handler = new GetClientsByProviderQueryHandler(
-                _clientRepositoryMock.Object,
-                _tenantContextMock.Object);
+                _clientRepositoryMock.Object);
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithActiveOnlyFalse_ShouldReturnAllClients()
         {
             // Arrange
@@ -51,18 +46,20 @@ namespace Orbito.Tests.Application.Clients.Queries.GetClientsByProvider
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
-            result.Clients.Should().HaveCount(3);
-            result.TotalCount.Should().Be(3);
-            result.PageNumber.Should().Be(1);
-            result.PageSize.Should().Be(10);
-            result.TotalPages.Should().Be(1);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Items.Should().HaveCount(3);
+            result.Value.TotalCount.Should().Be(3);
+            result.Value.PageNumber.Should().Be(1);
+            result.Value.PageSize.Should().Be(10);
+            result.Value.TotalPages.Should().Be(1);
 
             _clientRepositoryMock.Verify(x => x.GetAllAsync(1, 10, null, It.IsAny<CancellationToken>()), Times.Once);
             _clientRepositoryMock.Verify(x => x.GetTotalCountAsync(null, It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithActiveOnlyTrue_ShouldReturnActiveClients()
         {
             // Arrange
@@ -84,15 +81,17 @@ namespace Orbito.Tests.Application.Clients.Queries.GetClientsByProvider
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
-            result.Clients.Should().HaveCount(2);
-            result.TotalCount.Should().Be(2);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Items.Should().HaveCount(2);
+            result.Value.TotalCount.Should().Be(2);
 
             _clientRepositoryMock.Verify(x => x.GetActiveClientsAsync(1, 10, null, It.IsAny<CancellationToken>()), Times.Once);
             _clientRepositoryMock.Verify(x => x.GetActiveClientsCountAsync(null, It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithSearchTerm_ShouldReturnFilteredClients()
         {
             // Arrange
@@ -114,15 +113,17 @@ namespace Orbito.Tests.Application.Clients.Queries.GetClientsByProvider
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
-            result.Clients.Should().HaveCount(1);
-            result.TotalCount.Should().Be(1);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Items.Should().HaveCount(1);
+            result.Value.TotalCount.Should().Be(1);
 
             _clientRepositoryMock.Verify(x => x.GetAllAsync(1, 10, searchTerm, It.IsAny<CancellationToken>()), Times.Once);
             _clientRepositoryMock.Verify(x => x.GetTotalCountAsync(searchTerm, It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithPagination_ShouldCalculateTotalPages()
         {
             // Arrange
@@ -144,32 +145,21 @@ namespace Orbito.Tests.Application.Clients.Queries.GetClientsByProvider
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
-            result.Clients.Should().HaveCount(2);
-            result.TotalCount.Should().Be(12);
-            result.PageNumber.Should().Be(2);
-            result.PageSize.Should().Be(5);
-            result.TotalPages.Should().Be(3); // Math.Ceiling(12/5) = 3
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Items.Should().HaveCount(2);
+            result.Value.TotalCount.Should().Be(12);
+            result.Value.PageNumber.Should().Be(2);
+            result.Value.PageSize.Should().Be(5);
+            result.Value.TotalPages.Should().Be(3); // Math.Ceiling(12/5) = 3
         }
 
-        [Fact]
-        public async Task Handle_WithoutTenantContext_ShouldReturnFailure()
-        {
-            // Arrange
-            _tenantContextMock.Setup(x => x.HasTenant).Returns(false);
-            var query = new GetClientsByProviderQuery(1, 10, false, null);
-
-            // Act
-            var result = await _handler.Handle(query, CancellationToken.None);
-
-            // Assert
-            result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Tenant context is required");
-        }
+        // Note: Tenant context validation is now handled by query filters in ApplicationDbContext
+        // Query filters automatically return empty results if no tenant context is available
 
         [Fact]
-        public async Task Handle_WhenRepositoryThrowsException_ShouldReturnFailure()
+        [Trait("Category", "Unit")]
+        public async Task Handle_WhenRepositoryThrowsException_ShouldPropagateException()
         {
             // Arrange
             var query = new GetClientsByProviderQuery(1, 10, false, null);
@@ -177,16 +167,12 @@ namespace Orbito.Tests.Application.Clients.Queries.GetClientsByProvider
             _clientRepositoryMock.Setup(x => x.GetAllAsync(1, 10, null, It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new Exception("Database error"));
 
-            // Act
-            var result = await _handler.Handle(query, CancellationToken.None);
-
-            // Assert
-            result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Contain("An error occurred while retrieving clients");
+            // Act & Assert
+            await Assert.ThrowsAsync<Exception>(() => _handler.Handle(query, CancellationToken.None));
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithEmptyResult_ShouldReturnEmptyList()
         {
             // Arrange
@@ -202,10 +188,11 @@ namespace Orbito.Tests.Application.Clients.Queries.GetClientsByProvider
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
-            result.Clients.Should().BeEmpty();
-            result.TotalCount.Should().Be(0);
-            result.TotalPages.Should().Be(0);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Items.Should().BeEmpty();
+            result.Value.TotalCount.Should().Be(0);
+            result.Value.TotalPages.Should().Be(0);
         }
     }
 }

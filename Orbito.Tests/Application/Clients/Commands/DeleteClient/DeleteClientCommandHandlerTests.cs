@@ -33,6 +33,7 @@ namespace Orbito.Tests.Application.Clients.Commands.DeleteClient
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithSoftDelete_ShouldDeactivateClient()
         {
             // Arrange
@@ -53,7 +54,7 @@ namespace Orbito.Tests.Application.Clients.Commands.DeleteClient
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
+            result.IsSuccess.Should().BeTrue();
 
             _clientRepositoryMock.Verify(x => x.SoftDeleteAsync(It.IsAny<Client>(), It.IsAny<CancellationToken>()), Times.Once);
             _clientRepositoryMock.Verify(x => x.DeleteAsync(It.IsAny<Client>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -61,6 +62,7 @@ namespace Orbito.Tests.Application.Clients.Commands.DeleteClient
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithHardDelete_ShouldDeleteClient()
         {
             // Arrange
@@ -81,7 +83,7 @@ namespace Orbito.Tests.Application.Clients.Commands.DeleteClient
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
+            result.IsSuccess.Should().BeTrue();
 
             _clientRepositoryMock.Verify(x => x.DeleteAsync(It.IsAny<Client>(), It.IsAny<CancellationToken>()), Times.Once);
             _clientRepositoryMock.Verify(x => x.SoftDeleteAsync(It.IsAny<Client>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -89,6 +91,7 @@ namespace Orbito.Tests.Application.Clients.Commands.DeleteClient
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithoutTenantContext_ShouldReturnFailure()
         {
             // Arrange
@@ -100,11 +103,12 @@ namespace Orbito.Tests.Application.Clients.Commands.DeleteClient
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Tenant context is required");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Tenant.NoTenantContext");
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithNonExistentClient_ShouldReturnFailure()
         {
             // Arrange
@@ -118,11 +122,12 @@ namespace Orbito.Tests.Application.Clients.Commands.DeleteClient
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Client not found");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Client.NotFound");
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithDifferentTenant_ShouldReturnFailure()
         {
             // Arrange
@@ -140,11 +145,12 @@ namespace Orbito.Tests.Application.Clients.Commands.DeleteClient
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Access denied");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Tenant.CrossTenantAccess");
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WhenClientCannotBeDeleted_ShouldReturnFailure()
         {
             // Arrange
@@ -163,12 +169,13 @@ namespace Orbito.Tests.Application.Clients.Commands.DeleteClient
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Client cannot be deleted because it has active subscriptions or payments");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Client.CannotDeleteWithActiveSubscriptions");
         }
 
         [Fact]
-        public async Task Handle_WhenRepositoryThrowsException_ShouldReturnFailure()
+        [Trait("Category", "Unit")]
+        public async Task Handle_WhenRepositoryThrowsException_ShouldPropagateException()
         {
             // Arrange
             var client = Client.CreateWithUser(_tenantId, Guid.NewGuid(), "Test Company");
@@ -181,13 +188,8 @@ namespace Orbito.Tests.Application.Clients.Commands.DeleteClient
             _clientRepositoryMock.Setup(x => x.CanClientBeDeletedAsync(_clientId, It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new Exception("Database error"));
 
-            // Act
-            var result = await _handler.Handle(command, CancellationToken.None);
-
-            // Assert
-            result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Contain("An error occurred while deleting client");
+            // Act & Assert
+            await Assert.ThrowsAsync<Exception>(() => _handler.Handle(command, CancellationToken.None));
         }
     }
 }

@@ -1,29 +1,44 @@
 using MediatR;
+using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
+using Orbito.Application.SubscriptionPlans.Queries.GetSubscriptionPlanById;
+using Orbito.Domain.Common;
 using Orbito.Domain.Entities;
+using Orbito.Domain.Errors;
 using Orbito.Domain.ValueObjects;
 
 namespace Orbito.Application.SubscriptionPlans.Commands.UpdateSubscriptionPlan
 {
-    public class UpdateSubscriptionPlanCommandHandler : IRequestHandler<UpdateSubscriptionPlanCommand, UpdateSubscriptionPlanResult>
+    public class UpdateSubscriptionPlanCommandHandler : IRequestHandler<UpdateSubscriptionPlanCommand, Result<SubscriptionPlanDto>>
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ITenantContext _tenantContext;
+        private readonly ILogger<UpdateSubscriptionPlanCommandHandler> _logger;
 
-        public UpdateSubscriptionPlanCommandHandler(IUnitOfWork unitOfWork, ITenantContext tenantContext)
+        public UpdateSubscriptionPlanCommandHandler(
+            IUnitOfWork unitOfWork,
+            ITenantContext tenantContext,
+            ILogger<UpdateSubscriptionPlanCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
             _tenantContext = tenantContext;
+            _logger = logger;
         }
 
-        public async Task<UpdateSubscriptionPlanResult> Handle(UpdateSubscriptionPlanCommand request, CancellationToken cancellationToken)
+        public async Task<Result<SubscriptionPlanDto>> Handle(UpdateSubscriptionPlanCommand request, CancellationToken cancellationToken)
         {
             if (!_tenantContext.HasTenant)
-                throw new InvalidOperationException("Tenant context is required to update subscription plan");
+            {
+                _logger.LogWarning("Attempted to update subscription plan without tenant context");
+                return Result.Failure<SubscriptionPlanDto>(DomainErrors.Tenant.NoTenantContext);
+            }
 
             var subscriptionPlan = await _unitOfWork.SubscriptionPlans.GetByIdAsync(request.Id, cancellationToken);
             if (subscriptionPlan == null)
-                throw new InvalidOperationException($"Subscription plan with ID {request.Id} not found");
+            {
+                _logger.LogWarning("Subscription plan {PlanId} not found", request.Id);
+                return Result.Failure<SubscriptionPlanDto>(DomainErrors.SubscriptionPlan.NotFound);
+            }
 
             // Update basic properties
             subscriptionPlan.Name = request.Name;
@@ -53,7 +68,7 @@ namespace Orbito.Application.SubscriptionPlans.Commands.UpdateSubscriptionPlan
             await _unitOfWork.SubscriptionPlans.UpdateAsync(subscriptionPlan, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            return new UpdateSubscriptionPlanResult
+            var dto = new SubscriptionPlanDto
             {
                 Id = subscriptionPlan.Id,
                 Name = subscriptionPlan.Name,
@@ -61,12 +76,22 @@ namespace Orbito.Application.SubscriptionPlans.Commands.UpdateSubscriptionPlan
                 Amount = subscriptionPlan.Price.Amount,
                 Currency = subscriptionPlan.Price.Currency,
                 BillingPeriod = subscriptionPlan.BillingPeriod.ToString(),
+                TrialDays = subscriptionPlan.TrialDays,
                 TrialPeriodDays = subscriptionPlan.TrialPeriodDays,
+                FeaturesJson = subscriptionPlan.FeaturesJson,
+                LimitationsJson = subscriptionPlan.LimitationsJson,
                 IsActive = subscriptionPlan.IsActive,
                 IsPublic = subscriptionPlan.IsPublic,
                 SortOrder = subscriptionPlan.SortOrder,
-                UpdatedAt = subscriptionPlan.UpdatedAt ?? subscriptionPlan.CreatedAt
+                CreatedAt = subscriptionPlan.CreatedAt,
+                UpdatedAt = subscriptionPlan.UpdatedAt,
+                ActiveSubscriptionsCount = 0,
+                TotalSubscriptionsCount = 0
             };
+
+            _logger.LogInformation("Updated subscription plan {PlanId} with name {Name}", subscriptionPlan.Id, subscriptionPlan.Name);
+
+            return Result.Success(dto);
         }
     }
 }

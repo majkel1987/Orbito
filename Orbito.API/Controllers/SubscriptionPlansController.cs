@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Orbito.Application.Common.Authorization;
 using Orbito.Application.SubscriptionPlans.Commands.CloneSubscriptionPlan;
 using Orbito.Application.SubscriptionPlans.Commands.CreateSubscriptionPlan;
 using Orbito.Application.SubscriptionPlans.Commands.DeleteSubscriptionPlan;
@@ -25,12 +26,18 @@ namespace Orbito.API.Controllers
         /// <param name="command">Subscription plan creation details</param>
         /// <returns>Created subscription plan</returns>
         [HttpPost]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<CreateSubscriptionPlanResult>> CreateSubscriptionPlan(
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        public async Task<IActionResult> CreateSubscriptionPlan(
             [FromBody] CreateSubscriptionPlanCommand command)
         {
             var result = await Mediator.Send(command);
-            return CreatedAtAction(nameof(GetSubscriptionPlan), new { id = result.Id }, result);
+
+            if (result.IsFailure)
+            {
+                return HandleResult(result);
+            }
+
+            return CreatedAtAction(nameof(GetSubscriptionPlan), new { id = result.Value.Id }, result.Value);
         }
 
         /// <summary>
@@ -43,7 +50,7 @@ namespace Orbito.API.Controllers
         /// <param name="searchTerm">Search term for name or description</param>
         /// <returns>List of subscription plans</returns>
         [HttpGet]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
         public async Task<ActionResult<SubscriptionPlansListDto>> GetSubscriptionPlans(
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10,
@@ -61,7 +68,7 @@ namespace Orbito.API.Controllers
             };
 
             var result = await Mediator.Send(query);
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>
@@ -70,16 +77,13 @@ namespace Orbito.API.Controllers
         /// <param name="id">Subscription plan ID</param>
         /// <returns>Subscription plan details</returns>
         [HttpGet("{id}")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
         public async Task<ActionResult<SubscriptionPlanDto>> GetSubscriptionPlan(Guid id)
         {
             var query = new GetSubscriptionPlanByIdQuery { Id = id };
             var result = await Mediator.Send(query);
 
-            if (result == null)
-                return NotFound($"Subscription plan with ID {id} not found");
-
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>
@@ -89,14 +93,20 @@ namespace Orbito.API.Controllers
         /// <param name="command">Updated subscription plan details</param>
         /// <returns>Updated subscription plan</returns>
         [HttpPut("{id}")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<UpdateSubscriptionPlanResult>> UpdateSubscriptionPlan(
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        public async Task<IActionResult> UpdateSubscriptionPlan(
             Guid id,
             [FromBody] UpdateSubscriptionPlanCommand command)
         {
             command = command with { Id = id };
             var result = await Mediator.Send(command);
-            return Ok(result);
+
+            if (result.IsFailure)
+            {
+                return HandleResult(result);
+            }
+
+            return Ok(result.Value);
         }
 
         /// <summary>
@@ -106,8 +116,8 @@ namespace Orbito.API.Controllers
         /// <param name="hardDelete">Whether to perform hard delete (default: false)</param>
         /// <returns>Deletion result</returns>
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<DeleteSubscriptionPlanResult>> DeleteSubscriptionPlan(
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        public async Task<IActionResult> DeleteSubscriptionPlan(
             Guid id,
             [FromQuery] bool hardDelete = false)
         {
@@ -118,7 +128,13 @@ namespace Orbito.API.Controllers
             };
 
             var result = await Mediator.Send(command);
-            return Ok(result);
+
+            if (result.IsFailure)
+            {
+                return HandleResult(result);
+            }
+
+            return Ok(result.Value);
         }
 
         /// <summary>
@@ -128,14 +144,20 @@ namespace Orbito.API.Controllers
         /// <param name="command">Clone details</param>
         /// <returns>Cloned subscription plan</returns>
         [HttpPost("{id}/clone")]
-        [Authorize(Roles = "Provider,PlatformAdmin")]
-        public async Task<ActionResult<CloneSubscriptionPlanResult>> CloneSubscriptionPlan(
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        public async Task<IActionResult> CloneSubscriptionPlan(
             Guid id,
             [FromBody] CloneSubscriptionPlanCommand command)
         {
             command = command with { Id = id };
             var result = await Mediator.Send(command);
-            return CreatedAtAction(nameof(GetSubscriptionPlan), new { id = result.Id }, result);
+
+            if (result.IsFailure)
+            {
+                return HandleResult(result);
+            }
+
+            return CreatedAtAction(nameof(GetSubscriptionPlan), new { id = result.Value.Id }, result.Value);
         }
 
         /// <summary>
@@ -157,7 +179,7 @@ namespace Orbito.API.Controllers
             };
 
             var result = await Mediator.Send(query);
-            return Ok(result);
+            return HandleResult(result);
         }
     }
 }

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
+using Orbito.Domain.ValueObjects;
 using Orbito.Infrastructure.Data;
 
 namespace Orbito.Infrastructure.Persistance
@@ -96,7 +97,7 @@ namespace Orbito.Infrastructure.Persistance
                 .AsNoTracking()
                 .Include(s => s.Client)
                 .Include(s => s.Plan)
-                .Where(s => s.ClientId == clientId && s.Status == SubscriptionStatus.Active)
+                .Where(s => s.ClientId == clientId && EF.Property<string>(s, "Status") == "Active")
                 .OrderByDescending(s => s.CreatedAt)
                 .ToListAsync(cancellationToken);
         }
@@ -110,7 +111,7 @@ namespace Orbito.Infrastructure.Persistance
                 .Include(s => s.Client)
                 .Include(s => s.Plan)
                 .Where(s => s.ClientId == clientId &&
-                           s.Status == SubscriptionStatus.Active &&
+                           EF.Property<string>(s, "Status") == "Active" &&
                            s.NextBillingDate != default(DateTime) &&
                            s.NextBillingDate <= expirationThreshold)
                 .OrderBy(s => s.NextBillingDate)
@@ -124,19 +125,21 @@ namespace Orbito.Infrastructure.Persistance
                 .Include(s => s.Client)
                 .Include(s => s.Plan)
                 .Where(s => s.ClientId == clientId &&
-                           (s.Status == SubscriptionStatus.Expired ||
-                            (s.Status == SubscriptionStatus.Active && s.NextBillingDate != default(DateTime) && s.NextBillingDate < checkDate)))
+                           (EF.Property<string>(s, "Status") == "Expired" ||
+                            (EF.Property<string>(s, "Status") == "Active" && s.NextBillingDate != default(DateTime) && s.NextBillingDate < checkDate)))
                 .OrderByDescending(s => s.NextBillingDate)
                 .ToListAsync(cancellationToken);
         }
 
         public async Task<IEnumerable<Subscription>> GetSubscriptionsByStatusForClientAsync(SubscriptionStatus status, Guid clientId, CancellationToken cancellationToken = default)
         {
+            // IMPORTANT: Convert enum to string for EF Core ValueConverter compatibility
+            var statusString = status.ToString();
             return await _context.Subscriptions
                 .AsNoTracking()
                 .Include(s => s.Client)
                 .Include(s => s.Plan)
-                .Where(s => s.ClientId == clientId && s.Status == status)
+                .Where(s => s.ClientId == clientId && EF.Property<string>(s, "Status") == statusString)
                 .OrderByDescending(s => s.CreatedAt)
                 .ToListAsync(cancellationToken);
         }
@@ -179,13 +182,13 @@ namespace Orbito.Infrastructure.Persistance
         public async Task<bool> HasActiveSubscriptionAsync(Guid clientId, CancellationToken cancellationToken = default)
         {
             return await _context.Subscriptions
-                .AnyAsync(s => s.ClientId == clientId && s.Status == SubscriptionStatus.Active, cancellationToken);
+                .AnyAsync(s => s.ClientId == clientId && EF.Property<string>(s, "Status") == "Active", cancellationToken);
         }
 
         public async Task<bool> CanClientSubscribeToPlanAsync(Guid clientId, Guid planId, CancellationToken cancellationToken = default)
         {
             var existingSubscription = await _context.Subscriptions
-                .AnyAsync(s => s.ClientId == clientId && s.PlanId == planId && s.Status == SubscriptionStatus.Active, cancellationToken);
+                .AnyAsync(s => s.ClientId == clientId && s.PlanId == planId && EF.Property<string>(s, "Status") == "Active", cancellationToken);
 
             return !existingSubscription;
         }
@@ -193,7 +196,7 @@ namespace Orbito.Infrastructure.Persistance
         public async Task<int> GetActiveSubscriptionsCountByClientAsync(Guid clientId, CancellationToken cancellationToken = default)
         {
             return await _context.Subscriptions
-                .CountAsync(s => s.ClientId == clientId && s.Status == SubscriptionStatus.Active, cancellationToken);
+                .CountAsync(s => s.ClientId == clientId && EF.Property<string>(s, "Status") == "Active", cancellationToken);
         }
 
         public async Task<decimal> GetTotalRevenueByClientAsync(Guid clientId, CancellationToken cancellationToken = default)
@@ -210,7 +213,7 @@ namespace Orbito.Infrastructure.Persistance
                 .Include(s => s.Client)
                 .Include(s => s.Plan)
                 .Where(s => s.ClientId == clientId &&
-                           s.Status == SubscriptionStatus.Active &&
+                           EF.Property<string>(s, "Status") == "Active" &&
                            s.NextBillingDate != default(DateTime) &&
                            s.NextBillingDate <= billingDate)
                 .OrderBy(s => s.NextBillingDate)
@@ -224,7 +227,7 @@ namespace Orbito.Infrastructure.Persistance
                 .AsNoTracking()
                 .Include(s => s.Client)
                 .Include(s => s.Plan)
-                .Where(s => s.Status == SubscriptionStatus.Active)
+                .Where(s => EF.Property<string>(s, "Status") == "Active")
                 .OrderByDescending(s => s.CreatedAt)
                 .ToListAsync(cancellationToken);
         }
@@ -233,11 +236,13 @@ namespace Orbito.Infrastructure.Persistance
         {
             var expirationThreshold = checkDate.AddDays(daysBeforeExpiration);
 
+            // Disable query filters for admin operations
             return await _context.Subscriptions
+                .IgnoreQueryFilters()
                 .AsNoTracking()
                 .Include(s => s.Client)
                 .Include(s => s.Plan)
-                .Where(s => s.Status == SubscriptionStatus.Active &&
+                .Where(s => EF.Property<string>(s, "Status") == "Active" &&
                            s.NextBillingDate != default(DateTime) &&
                            s.NextBillingDate <= expirationThreshold)
                 .OrderBy(s => s.NextBillingDate)
@@ -246,23 +251,27 @@ namespace Orbito.Infrastructure.Persistance
 
         public async Task<IEnumerable<Subscription>> GetExpiredSubscriptionsAsync(DateTime checkDate, CancellationToken cancellationToken = default)
         {
+            // Disable query filters for admin operations
             return await _context.Subscriptions
+                .IgnoreQueryFilters()
                 .AsNoTracking()
                 .Include(s => s.Client)
                 .Include(s => s.Plan)
-                .Where(s => s.Status == SubscriptionStatus.Expired ||
-                           (s.Status == SubscriptionStatus.Active && s.NextBillingDate != default(DateTime) && s.NextBillingDate < checkDate))
+                .Where(s => EF.Property<string>(s, "Status") == "Expired" ||
+                           (EF.Property<string>(s, "Status") == "Active" && s.NextBillingDate != default(DateTime) && s.NextBillingDate < checkDate))
                 .OrderByDescending(s => s.NextBillingDate)
                 .ToListAsync(cancellationToken);
         }
 
         public async Task<IEnumerable<Subscription>> GetSubscriptionsByStatusAsync(SubscriptionStatus status, CancellationToken cancellationToken = default)
         {
+            // IMPORTANT: Convert enum to string for EF Core ValueConverter compatibility
+            var statusString = status.ToString();
             return await _context.Subscriptions
                 .AsNoTracking()
                 .Include(s => s.Client)
                 .Include(s => s.Plan)
-                .Where(s => s.Status == status)
+                .Where(s => EF.Property<string>(s, "Status") == statusString)
                 .OrderByDescending(s => s.CreatedAt)
                 .ToListAsync(cancellationToken);
         }
@@ -270,7 +279,7 @@ namespace Orbito.Infrastructure.Persistance
         public async Task<int> GetActiveSubscriptionsCountAsync(CancellationToken cancellationToken = default)
         {
             return await _context.Subscriptions
-                .CountAsync(s => s.Status == SubscriptionStatus.Active, cancellationToken);
+                .CountAsync(s => EF.Property<string>(s, "Status") == "Active", cancellationToken);
         }
 
         public async Task<decimal> GetTotalRevenueAsync(CancellationToken cancellationToken = default)
@@ -282,11 +291,13 @@ namespace Orbito.Infrastructure.Persistance
 
         public async Task<IEnumerable<Subscription>> GetSubscriptionsForBillingAsync(DateTime billingDate, CancellationToken cancellationToken = default)
         {
+            // Disable query filters for admin operations
             return await _context.Subscriptions
+                .IgnoreQueryFilters()
                 .AsNoTracking()
                 .Include(s => s.Client)
                 .Include(s => s.Plan)
-                .Where(s => s.Status == SubscriptionStatus.Active &&
+                .Where(s => EF.Property<string>(s, "Status") == "Active" &&
                            s.NextBillingDate != default(DateTime) &&
                            s.NextBillingDate <= billingDate)
                 .OrderBy(s => s.NextBillingDate)
@@ -308,6 +319,82 @@ namespace Orbito.Infrastructure.Persistance
         public async Task DeleteAsync(Subscription subscription, CancellationToken cancellationToken = default)
         {
             _context.Subscriptions.Remove(subscription);
+        }
+
+        /// <summary>
+        /// Gets active subscriptions for a specific tenant (for background jobs)
+        /// SECURITY: Requires explicit TenantId to prevent cross-tenant access
+        /// </summary>
+        public async Task<IEnumerable<Subscription>> GetActiveSubscriptionsForTenantAsync(TenantId tenantId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Subscriptions
+                .IgnoreQueryFilters() // Bypass query filters
+                .AsNoTracking()
+                .Include(s => s.Client)
+                .Include(s => s.Plan)
+                .Where(s => s.TenantId == tenantId && EF.Property<string>(s, "Status") == "Active")
+                .OrderBy(s => s.NextBillingDate)
+                .ToListAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// Gets expiring subscriptions for a specific tenant (for background jobs)
+        /// SECURITY: Requires explicit TenantId to prevent cross-tenant access
+        /// </summary>
+        public async Task<IEnumerable<Subscription>> GetExpiringSubscriptionsForTenantAsync(TenantId tenantId, DateTime checkDate, int daysBeforeExpiration = 7, CancellationToken cancellationToken = default)
+        {
+            var expirationDate = checkDate.AddDays(daysBeforeExpiration);
+
+            return await _context.Subscriptions
+                .IgnoreQueryFilters() // Bypass query filters
+                .AsNoTracking()
+                .Include(s => s.Client)
+                .Include(s => s.Plan)
+                .Where(s => s.TenantId == tenantId &&
+                           EF.Property<string>(s, "Status") == "Active" &&
+                           s.NextBillingDate != default(DateTime) &&
+                           s.NextBillingDate >= checkDate &&
+                           s.NextBillingDate <= expirationDate)
+                .OrderBy(s => s.NextBillingDate)
+                .ToListAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// Gets expired subscriptions for a specific tenant (for background jobs)
+        /// SECURITY: Requires explicit TenantId to prevent cross-tenant access
+        /// </summary>
+        public async Task<IEnumerable<Subscription>> GetExpiredSubscriptionsForTenantAsync(TenantId tenantId, DateTime checkDate, CancellationToken cancellationToken = default)
+        {
+            return await _context.Subscriptions
+                .IgnoreQueryFilters() // Bypass query filters
+                .AsNoTracking()
+                .Include(s => s.Client)
+                .Include(s => s.Plan)
+                .Where(s => s.TenantId == tenantId &&
+                           EF.Property<string>(s, "Status") == "Active" &&
+                           s.NextBillingDate != default(DateTime) &&
+                           s.NextBillingDate < checkDate)
+                .OrderBy(s => s.NextBillingDate)
+                .ToListAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// Gets subscriptions for billing for a specific tenant (for background jobs)
+        /// SECURITY: Requires explicit TenantId to prevent cross-tenant access
+        /// </summary>
+        public async Task<IEnumerable<Subscription>> GetSubscriptionsForBillingForTenantAsync(TenantId tenantId, DateTime billingDate, CancellationToken cancellationToken = default)
+        {
+            return await _context.Subscriptions
+                .IgnoreQueryFilters() // Bypass query filters
+                .AsNoTracking()
+                .Include(s => s.Client)
+                .Include(s => s.Plan)
+                .Where(s => s.TenantId == tenantId &&
+                           EF.Property<string>(s, "Status") == "Active" &&
+                           s.NextBillingDate != default(DateTime) &&
+                           s.NextBillingDate <= billingDate)
+                .OrderBy(s => s.NextBillingDate)
+                .ToListAsync(cancellationToken);
         }
 
         private static (int pageNumber, int pageSize) ValidatePagination(int pageNumber, int pageSize)

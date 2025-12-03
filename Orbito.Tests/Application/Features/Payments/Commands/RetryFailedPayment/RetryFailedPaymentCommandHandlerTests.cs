@@ -107,12 +107,11 @@ public class RetryFailedPaymentCommandHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeTrue();
-        result.RetryScheduleId.Should().Be(retrySchedule.Id);
-        result.NextAttemptAt.Should().Be(retrySchedule.NextAttemptAt);
-        result.AttemptNumber.Should().Be(1);
-        result.MaxAttempts.Should().Be(3);
-        result.ErrorMessage.Should().BeNull();
+        result.IsSuccess.Should().BeTrue();
+        result.Value.RetryScheduleId.Should().Be(retrySchedule.Id);
+        result.Value.NextAttemptAt.Should().Be(retrySchedule.NextAttemptAt);
+        result.Value.AttemptNumber.Should().Be(1);
+        result.Value.MaxAttempts.Should().Be(3);
 
         // Verify service calls
         _retryServiceMock.Verify(x => x.ScheduleRetryAsync(
@@ -152,9 +151,8 @@ public class RetryFailedPaymentCommandHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("You can only retry your own payments");
-        result.RetryScheduleId.Should().BeNull();
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Message.Should().Contain("Unauthorized access");
     }
 
     [Fact]
@@ -183,9 +181,8 @@ public class RetryFailedPaymentCommandHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("Rate limit exceeded. Please try again in 15 minutes");
-        result.RetryScheduleId.Should().BeNull();
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Message.Should().Contain("Payment rate limit exceeded");
     }
 
     [Fact]
@@ -215,9 +212,8 @@ public class RetryFailedPaymentCommandHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("Payment not found");
-        result.RetryScheduleId.Should().BeNull();
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Message.Should().Contain("Payment was not found");
     }
 
     [Fact]
@@ -253,9 +249,8 @@ public class RetryFailedPaymentCommandHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("Only failed payments can be retried");
-        result.RetryScheduleId.Should().BeNull();
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Message.Should().Contain("Only failed payments can be retried");
     }
 
     [Fact]
@@ -294,9 +289,8 @@ public class RetryFailedPaymentCommandHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("Payment already has an active retry schedule");
-        result.RetryScheduleId.Should().BeNull();
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Message.Should().Contain("Payment already has an active retry schedule");
     }
 
     #endregion
@@ -346,9 +340,8 @@ public class RetryFailedPaymentCommandHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("Failed to begin transaction");
-        result.RetryScheduleId.Should().BeNull();
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Message.Should().Contain("An unexpected error occurred");
     }
 
     [Fact]
@@ -413,9 +406,8 @@ public class RetryFailedPaymentCommandHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("Failed to commit transaction");
-        result.RetryScheduleId.Should().BeNull();
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Message.Should().Contain("An unexpected error occurred");
 
         // Verify rollback was called
         UnitOfWorkMock.Verify(x => x.RollbackAsync(CancellationToken.None), Times.Once);
@@ -442,9 +434,9 @@ public class RetryFailedPaymentCommandHandlerTests : BaseTestFixture
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("An error occurred while processing the retry request");
-        result.RetryScheduleId.Should().BeNull();
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Message.Should().NotBeNullOrEmpty();
+        result.Error.Message.Should().Contain("An unexpected error occurred");
     }
 
     #endregion

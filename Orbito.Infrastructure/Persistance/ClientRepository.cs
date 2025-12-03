@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
+using Orbito.Domain.ValueObjects;
 using Orbito.Infrastructure.Data;
 
 namespace Orbito.Infrastructure.Persistance
@@ -9,33 +10,87 @@ namespace Orbito.Infrastructure.Persistance
     public class ClientRepository : IClientRepository
     {
         private readonly ApplicationDbContext _context;
+        private readonly ITenantProvider _tenantProvider;
 
-        public ClientRepository(ApplicationDbContext context)
+        public ClientRepository(ApplicationDbContext context, ITenantProvider tenantProvider)
         {
             _context = context;
+            _tenantProvider = tenantProvider;
+        }
+
+        /// <summary>
+        /// Gets current tenant ID for filtering, or returns null if admin access is needed
+        /// </summary>
+        private Guid? GetCurrentTenantIdForFilter()
+        {
+            try
+            {
+                var tenantId = _tenantProvider.GetCurrentTenantIdAsGuid();
+                return tenantId == Guid.Empty ? null : tenantId;
+            }
+            catch
+            {
+                return null; // Admin access if tenant context unavailable
+            }
+        }
+
+        /// <summary>
+        /// Applies tenant filtering to query using direct property access
+        /// IMPORTANT: Do NOT use EF.Property with value converters - it causes InvalidCastException
+        /// </summary>
+        private IQueryable<Client> ApplyTenantFilter(IQueryable<Client> query)
+        {
+            var tenantId = GetCurrentTenantIdForFilter();
+            if (tenantId.HasValue)
+            {
+                // Direct property access - EF Core knows how to translate TenantId value object
+                // DO NOT use EF.Property<Guid>(c, "TenantId") - it breaks with value converters
+                var tenantIdValue = TenantId.Create(tenantId.Value);
+                query = query.Where(c => c.TenantId == tenantIdValue);
+            }
+            // If no tenant context, return all (admin access)
+            return query;
         }
 
         public async Task<Client?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
-            return await _context.Clients
+            var query = _context.Clients
                 .Include(c => c.User)
                 .Include(c => c.Subscriptions)
                 .Include(c => c.Payments)
-                .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
+                .Where(c => c.Id == id)
+                .AsQueryable();
+
+            // Apply tenant filtering
+            query = ApplyTenantFilter(query);
+
+            return await query.FirstOrDefaultAsync(cancellationToken);
         }
 
         public async Task<Client?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
         {
-            return await _context.Clients
+            var query = _context.Clients
                 .Include(c => c.User)
-                .FirstOrDefaultAsync(c => c.DirectEmail == email || c.User!.Email == email, cancellationToken);
+                .Where(c => c.DirectEmail == email || c.User!.Email == email)
+                .AsQueryable();
+
+            // Apply tenant filtering
+            query = ApplyTenantFilter(query);
+
+            return await query.FirstOrDefaultAsync(cancellationToken);
         }
 
         public async Task<Client?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
         {
-            return await _context.Clients
+            var query = _context.Clients
                 .Include(c => c.User)
-                .FirstOrDefaultAsync(c => c.UserId == userId, cancellationToken);
+                .Where(c => c.UserId == userId)
+                .AsQueryable();
+
+            // Apply tenant filtering
+            query = ApplyTenantFilter(query);
+
+            return await query.FirstOrDefaultAsync(cancellationToken);
         }
 
         public async Task<IEnumerable<Client>> GetAllAsync(int pageNumber = 1, int pageSize = 10, string? searchTerm = null, CancellationToken cancellationToken = default)
@@ -43,6 +98,9 @@ namespace Orbito.Infrastructure.Persistance
             var query = _context.Clients
                 .Include(c => c.User)
                 .AsQueryable();
+
+            // Apply tenant filtering
+            query = ApplyTenantFilter(query);
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
@@ -70,6 +128,9 @@ namespace Orbito.Infrastructure.Persistance
                 .Where(c => c.IsActive)
                 .AsQueryable();
 
+            // Apply tenant filtering
+            query = ApplyTenantFilter(query);
+
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
                 query = query.Where(c =>
@@ -93,6 +154,9 @@ namespace Orbito.Infrastructure.Persistance
         {
             var query = _context.Clients.AsQueryable();
 
+            // Apply tenant filtering
+            query = ApplyTenantFilter(query);
+
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
                 query = query.Where(c =>
@@ -111,6 +175,9 @@ namespace Orbito.Infrastructure.Persistance
         public async Task<int> GetActiveClientsCountAsync(string? searchTerm = null, CancellationToken cancellationToken = default)
         {
             var query = _context.Clients.Where(c => c.IsActive).AsQueryable();
+
+            // Apply tenant filtering
+            query = ApplyTenantFilter(query);
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
@@ -132,6 +199,9 @@ namespace Orbito.Infrastructure.Persistance
             var query = _context.Clients
                 .Include(c => c.User)
                 .AsQueryable();
+
+            // Apply tenant filtering
+            query = ApplyTenantFilter(query);
 
             if (activeOnly)
             {
@@ -157,6 +227,9 @@ namespace Orbito.Infrastructure.Persistance
         public async Task<int> GetSearchCountAsync(string searchTerm, bool activeOnly = false, CancellationToken cancellationToken = default)
         {
             var query = _context.Clients.AsQueryable();
+
+            // Apply tenant filtering
+            query = ApplyTenantFilter(query);
 
             if (activeOnly)
             {
@@ -203,52 +276,43 @@ namespace Orbito.Infrastructure.Persistance
 
         public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
         {
-            return await _context.Clients.AnyAsync(c => c.Id == id, cancellationToken);
+            var query = _context.Clients
+                .Where(c => c.Id == id)
+                .AsQueryable();
+
+            // Apply tenant filtering
+            query = ApplyTenantFilter(query);
+
+            return await query.AnyAsync(cancellationToken);
         }
 
         public async Task<bool> ExistsAsync(string email, CancellationToken cancellationToken = default)
         {
-            return await _context.Clients.AnyAsync(c => c.DirectEmail == email || c.User!.Email == email, cancellationToken);
+            var query = _context.Clients
+                .Where(c => c.DirectEmail == email || c.User!.Email == email)
+                .AsQueryable();
+
+            // Apply tenant filtering
+            query = ApplyTenantFilter(query);
+
+            return await query.AnyAsync(cancellationToken);
         }
 
         public async Task<bool> CanClientBeDeletedAsync(Guid clientId, CancellationToken cancellationToken = default)
         {
-            var client = await _context.Clients
+            var query = _context.Clients
                 .Include(c => c.Subscriptions)
-                .FirstOrDefaultAsync(c => c.Id == clientId, cancellationToken);
+                .Where(c => c.Id == clientId)
+                .AsQueryable();
+
+            // Apply tenant filtering
+            query = ApplyTenantFilter(query);
+
+            var client = await query.FirstOrDefaultAsync(cancellationToken);
 
             if (client == null) return false;
 
             return client.CanBeDeleted();
-        }
-
-        public async Task<ClientStats> GetClientStatsAsync(CancellationToken cancellationToken = default)
-        {
-            var totalClients = await _context.Clients.CountAsync(cancellationToken);
-            var activeClients = await _context.Clients.CountAsync(c => c.IsActive, cancellationToken);
-            var inactiveClients = totalClients - activeClients;
-            var clientsWithIdentity = await _context.Clients.CountAsync(c => c.UserId != null, cancellationToken);
-            var directClients = totalClients - clientsWithIdentity;
-
-            var clientsWithActiveSubscriptions = await _context.Clients
-                .Include(c => c.Subscriptions)
-                .CountAsync(c => c.Subscriptions.Any(s => s.Status == SubscriptionStatus.Active), cancellationToken);
-
-            var totalRevenue = await _context.Payments
-                .Where(p => p.Status == PaymentStatus.Completed)
-                .SumAsync(p => p.Amount.Amount, cancellationToken);
-
-            return new ClientStats
-            {
-                TotalClients = totalClients,
-                ActiveClients = activeClients,
-                InactiveClients = inactiveClients,
-                ClientsWithIdentity = clientsWithIdentity,
-                DirectClients = directClients,
-                ClientsWithActiveSubscriptions = clientsWithActiveSubscriptions,
-                TotalRevenue = totalRevenue,
-                Currency = "USD" // TODO: Get from configuration
-            };
         }
     }
 }

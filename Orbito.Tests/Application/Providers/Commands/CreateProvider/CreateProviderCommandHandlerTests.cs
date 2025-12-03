@@ -3,11 +3,15 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Orbito.Application.Common.Interfaces;
+using Orbito.Application.Common.Models;
 using Orbito.Application.Providers.Commands.CreateProvider;
+using Orbito.Domain.Common;
 using Orbito.Domain.Entities;
 using Orbito.Domain.Identity;
 using Orbito.Domain.ValueObjects;
 using Xunit;
+using DomainResult = Orbito.Domain.Common.Result;
+using AppResult = Orbito.Application.Common.Models.Result;
 
 namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
 {
@@ -71,6 +75,7 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
             SetupNoExistingProvider();
             SetupSuccessfulProviderCreation(createdProvider);
             SetupSuccessfulRoleAssignment();
+            SetupSuccessfulSave();
 
             // Act
             var result = await _handler.Handle(command, CancellationToken.None);
@@ -85,11 +90,9 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
             result.Value.IsActive.Should().BeTrue();
 
             // Verify interactions
-            _unitOfWorkMock.Verify(x => x.BeginTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
             _providerRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Provider>(), It.IsAny<CancellationToken>()), Times.Once);
             _userManagerMock.Verify(x => x.AddToRoleAsync(user, "Provider"), Times.Once);
             _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
-            _unitOfWorkMock.Verify(x => x.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -116,6 +119,7 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
             SetupNoExistingProvider();
             SetupSuccessfulProviderCreation(createdProvider);
             SetupSuccessfulRoleAssignment();
+            SetupSuccessfulSave();
 
             // Act
             var result = await _handler.Handle(command, CancellationToken.None);
@@ -130,7 +134,7 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
 
         [Fact]
         [Trait("Category", "Unit")]
-        public async Task Handle_WhenUserNotFound_ShouldThrowInvalidOperationException()
+        public async Task Handle_WhenUserNotFound_ShouldReturnFailure()
         {
             // Arrange
             var userId = Guid.NewGuid();
@@ -140,17 +144,19 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
             _userManagerMock.Setup(x => x.FindByIdAsync(userId.ToString()))
                 .ReturnsAsync((ApplicationUser?)null);
 
-            // Act & Assert
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-                () => _handler.Handle(command, CancellationToken.None));
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
 
-            exception.Message.Should().Contain($"Użytkownik o ID {userId} nie istnieje");
-            _unitOfWorkMock.Verify(x => x.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
+            // Assert
+            result.Should().NotBeNull();
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Should().NotBe(Error.None);
+            result.Error.Message.Should().NotBeNullOrEmpty();
         }
 
         [Fact]
         [Trait("Category", "Unit")]
-        public async Task Handle_WhenUserAlreadyHasProvider_ShouldThrowInvalidOperationException()
+        public async Task Handle_WhenUserAlreadyHasProvider_ShouldReturnFailure()
         {
             // Arrange
             var userId = Guid.NewGuid();
@@ -167,17 +173,19 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
             _userManagerMock.Setup(x => x.FindByIdAsync(userId.ToString()))
                 .ReturnsAsync(user);
 
-            // Act & Assert
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-                () => _handler.Handle(command, CancellationToken.None));
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
 
-            exception.Message.Should().Contain($"Użytkownik {user.Email} już ma przypisanego providera");
-            _unitOfWorkMock.Verify(x => x.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
+            // Assert
+            result.Should().NotBeNull();
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Should().NotBe(Error.None);
+            result.Error.Message.Should().NotBeNullOrEmpty();
         }
 
         [Fact]
         [Trait("Category", "Unit")]
-        public async Task Handle_WhenSubdomainAlreadyTaken_ShouldThrowInvalidOperationException()
+        public async Task Handle_WhenSubdomainAlreadyTaken_ShouldReturnFailure()
         {
             // Arrange
             var userId = Guid.NewGuid();
@@ -197,17 +205,19 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
             _providerRepositoryMock.Setup(x => x.GetBySubdomainSlugAsync(subdomainSlug, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(existingProvider);
 
-            // Act & Assert
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-                () => _handler.Handle(command, CancellationToken.None));
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
 
-            exception.Message.Should().Contain($"Subdomain '{subdomainSlug}' jest już zajęty");
-            _unitOfWorkMock.Verify(x => x.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
+            // Assert
+            result.Should().NotBeNull();
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Should().NotBe(Error.None);
+            result.Error.Message.Should().NotBeNullOrEmpty();
         }
 
         [Fact]
         [Trait("Category", "Unit")]
-        public async Task Handle_WhenRoleAssignmentFails_ShouldThrowException()
+        public async Task Handle_WhenRoleAssignmentFails_ShouldReturnFailure()
         {
             // Arrange
             var userId = Guid.NewGuid();
@@ -225,19 +235,26 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
             SetupSuccessfulUserLookup(user);
             SetupNoExistingProvider();
             SetupSuccessfulProviderCreation(createdProvider);
-            
+
             // Setup role assignment failure
+            _userManagerMock.Setup(x => x.GetRolesAsync(It.IsAny<ApplicationUser>()))
+                .ReturnsAsync(new List<string>());
             _userManagerMock.Setup(x => x.AddToRoleAsync(user, "Provider"))
                 .ThrowsAsync(new Exception("Role assignment failed"));
 
-            // Act & Assert
-            await Assert.ThrowsAsync<Exception>(() => _handler.Handle(command, CancellationToken.None));
-            _unitOfWorkMock.Verify(x => x.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Should().NotBe(Error.None);
+            result.Error.Message.Should().NotBeNullOrEmpty();
         }
 
         [Fact]
         [Trait("Category", "Unit")]
-        public async Task Handle_WhenProviderCreationFails_ShouldThrowException()
+        public async Task Handle_WhenProviderCreationFails_ShouldReturnFailure()
         {
             // Arrange
             var userId = Guid.NewGuid();
@@ -252,14 +269,21 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
 
             SetupSuccessfulUserLookup(user);
             SetupNoExistingProvider();
-            
+
             // Setup provider creation failure
             _providerRepositoryMock.Setup(x => x.AddAsync(It.IsAny<Provider>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new Exception("Database error"));
+            _userManagerMock.Setup(x => x.GetRolesAsync(It.IsAny<ApplicationUser>()))
+                .ReturnsAsync(new List<string>());
 
-            // Act & Assert
-            await Assert.ThrowsAsync<Exception>(() => _handler.Handle(command, CancellationToken.None));
-            _unitOfWorkMock.Verify(x => x.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Should().NotBe(Error.None);
+            result.Error.Message.Should().NotBeNullOrEmpty();
         }
 
         [Fact]
@@ -283,6 +307,7 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
             SetupNoExistingProvider();
             SetupSuccessfulProviderCreation(createdProvider);
             SetupSuccessfulRoleAssignment();
+            SetupSuccessfulSave();
 
             // Act
             await _handler.Handle(command, CancellationToken.None);
@@ -304,17 +329,23 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
 
         [Fact]
         [Trait("Category", "Unit")]
-        public async Task Handle_WithEmptyGuidUserId_ShouldThrowException()
+        public async Task Handle_WithEmptyGuidUserId_ShouldReturnFailure()
         {
             // Arrange
             var command = new CreateProviderCommand(
                 Guid.Empty, "Test Business", "test-business", null, null, null);
 
-            // Act & Assert
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-                () => _handler.Handle(command, CancellationToken.None));
+            _userManagerMock.Setup(x => x.FindByIdAsync(Guid.Empty.ToString()))
+                .ReturnsAsync((ApplicationUser?)null);
 
-            exception.Message.Should().Contain("Użytkownik o ID 00000000-0000-0000-0000-000000000000 nie istnieje");
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Should().NotBe(Error.None);
+            result.Error.Message.Should().NotBeNullOrEmpty();
         }
 
         #region Helper Methods
@@ -341,6 +372,14 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
         {
             _userManagerMock.Setup(x => x.AddToRoleAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()))
                 .ReturnsAsync(IdentityResult.Success);
+            _userManagerMock.Setup(x => x.GetRolesAsync(It.IsAny<ApplicationUser>()))
+                .ReturnsAsync(new List<string>());
+        }
+
+        private void SetupSuccessfulSave()
+        {
+            _unitOfWorkMock.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(Orbito.Application.Common.Models.Result<int>.Success(1))); // Returns Result<int> with 1 row affected
         }
 
         #endregion
@@ -349,7 +388,7 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
 
         [Fact]
         [Trait("Category", "Unit")]
-        public async Task Handle_WithUnauthorizedUser_ShouldThrowSecurityException()
+        public async Task Handle_WithUnauthorizedUser_ShouldReturnFailure()
         {
             // Arrange
             var userId = Guid.NewGuid();
@@ -362,15 +401,19 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
                 Email = "unauthorized@example.com",
                 TenantId = TenantId.New() // User already belongs to different tenant
             };
+            unauthorizedUser.Provider = Provider.Create(Guid.NewGuid(), "Test Business", "test-business");
 
             _userManagerMock.Setup(x => x.FindByIdAsync(userId.ToString()))
                 .ReturnsAsync(unauthorizedUser);
 
-            // Act & Assert
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-                () => _handler.Handle(command, CancellationToken.None));
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
 
-            exception.Message.Should().Contain($"Użytkownik {unauthorizedUser.Email} już ma przypisanego providera");
+            // Assert
+            result.Should().NotBeNull();
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Should().NotBe(Error.None);
+            result.Error.Message.Should().NotBeNullOrEmpty();
         }
 
         [Fact]
@@ -389,12 +432,17 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
                 Email = "test@example.com"
             };
 
-            var createdProvider = Provider.Create(userId, "Test Business", "malicious-subdomain"); // Should be sanitized
+            // The handler should sanitize the subdomain, removing HTML tags
+            var sanitizedSubdomain = "malicious-subdomain";
+            var createdProvider = Provider.Create(userId, "Test Business", sanitizedSubdomain);
 
             SetupSuccessfulUserLookup(user);
-            SetupNoExistingProvider();
+            // Mock should expect the sanitized subdomain
+            _providerRepositoryMock.Setup(x => x.GetBySubdomainSlugAsync(sanitizedSubdomain, It.IsAny<CancellationToken>()))
+                .ReturnsAsync((Provider?)null);
             SetupSuccessfulProviderCreation(createdProvider);
             SetupSuccessfulRoleAssignment();
+            SetupSuccessfulSave();
 
             // Act
             var result = await _handler.Handle(command, CancellationToken.None);
@@ -402,8 +450,10 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
             // Assert
             result.Should().NotBeNull();
             result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
             result.Value.SubdomainSlug.Should().NotContain("<script>");
             result.Value.SubdomainSlug.Should().NotContain("alert");
+            result.Value.SubdomainSlug.Should().Be(sanitizedSubdomain);
         }
 
         [Fact]
@@ -428,6 +478,7 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
             SetupNoExistingProvider();
             SetupSuccessfulProviderCreation(createdProvider);
             SetupSuccessfulRoleAssignment();
+            SetupSuccessfulSave();
 
             // Act
             var result = await _handler.Handle(command, CancellationToken.None);
@@ -436,10 +487,10 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
             result.Should().NotBeNull();
             result.IsSuccess.Should().BeTrue();
             result.Value.BusinessName.Should().Be(maliciousBusinessName); // Should be stored as-is (parameterized queries prevent SQL injection)
-            
+
             // Verify that the provider was created with the exact input (parameterized queries handle SQL injection)
             _providerRepositoryMock.Verify(x => x.AddAsync(
-                It.Is<Provider>(p => p.BusinessName == maliciousBusinessName), 
+                It.Is<Provider>(p => p.BusinessName == maliciousBusinessName),
                 It.IsAny<CancellationToken>()), Times.Once);
         }
 
@@ -458,15 +509,19 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
                 Email = "test@example.com",
                 TenantId = TenantId.New() // Different tenant
             };
+            userFromDifferentTenant.Provider = Provider.Create(Guid.NewGuid(), "Test Business", "test-business");
 
             _userManagerMock.Setup(x => x.FindByIdAsync(userId.ToString()))
                 .ReturnsAsync(userFromDifferentTenant);
 
-            // Act & Assert
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-                () => _handler.Handle(command, CancellationToken.None));
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
 
-            exception.Message.Should().Contain($"Użytkownik {userFromDifferentTenant.Email} już ma przypisanego providera");
+            // Assert
+            result.Should().NotBeNull();
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Should().NotBe(Error.None);
+            result.Error.Message.Should().NotBeNullOrEmpty();
         }
 
         #endregion

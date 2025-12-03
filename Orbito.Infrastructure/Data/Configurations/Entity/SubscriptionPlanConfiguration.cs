@@ -69,9 +69,7 @@ namespace Orbito.Infrastructure.Data.Configurations.Entity
             {
                 period.Property(bp => bp.Value)
                     .HasColumnName("BillingPeriodValue");
-                period.Property(bp => bp.Type)
-                    .HasColumnName("BillingPeriodType")
-                    .HasConversion<string>();
+                // NOTE: BillingPeriodType conversion is configured globally in ValueObjectsConfiguration.ConfigureEnumConverters()
             });
 
             // Timestamps

@@ -15,6 +15,7 @@ namespace Orbito.Tests.Application.Common.Services
     {
         private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
         private readonly Mock<RoleManager<ApplicationRole>> _roleManagerMock;
+        private readonly Mock<ITenantValidationBypass> _tenantValidationBypassMock;
         private readonly Mock<IConfiguration> _configurationMock;
         private readonly Mock<ILogger<AdminSetupService>> _loggerMock;
         private readonly AdminSetupService _adminSetupService;
@@ -27,12 +28,14 @@ namespace Orbito.Tests.Application.Common.Services
             _roleManagerMock = new Mock<RoleManager<ApplicationRole>>(
                 Mock.Of<IRoleStore<ApplicationRole>>(), null!, null!, null!, null!);
             
+            _tenantValidationBypassMock = new Mock<ITenantValidationBypass>();
             _configurationMock = new Mock<IConfiguration>();
             _loggerMock = new Mock<ILogger<AdminSetupService>>();
 
             _adminSetupService = new AdminSetupService(
                 _userManagerMock.Object,
                 _roleManagerMock.Object,
+                _tenantValidationBypassMock.Object,
                 _configurationMock.Object,
                 _loggerMock.Object);
         }

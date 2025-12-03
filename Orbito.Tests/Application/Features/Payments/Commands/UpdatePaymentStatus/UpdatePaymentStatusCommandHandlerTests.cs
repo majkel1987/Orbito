@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.Common.Models;
@@ -17,6 +18,7 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
         private readonly Mock<IPaymentRepository> _paymentRepositoryMock;
         private readonly Mock<ITenantContext> _tenantContextMock;
         private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+        private readonly Mock<ILogger<UpdatePaymentStatusCommandHandler>> _loggerMock;
         private readonly UpdatePaymentStatusCommandHandler _handler;
 
         public UpdatePaymentStatusCommandHandlerTests()
@@ -24,11 +26,13 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
             _paymentRepositoryMock = new Mock<IPaymentRepository>();
             _tenantContextMock = new Mock<ITenantContext>();
             _unitOfWorkMock = new Mock<IUnitOfWork>();
+            _loggerMock = new Mock<ILogger<UpdatePaymentStatusCommandHandler>>();
 
             _handler = new UpdatePaymentStatusCommandHandler(
                 _paymentRepositoryMock.Object,
                 _tenantContextMock.Object,
-                _unitOfWorkMock.Object);
+                _unitOfWorkMock.Object,
+                _loggerMock.Object);
         }
 
         #region Constructor Tests
@@ -40,7 +44,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
             var handler = new UpdatePaymentStatusCommandHandler(
                 _paymentRepositoryMock.Object,
                 _tenantContextMock.Object,
-                _unitOfWorkMock.Object);
+                _unitOfWorkMock.Object,
+                _loggerMock.Object);
 
             // Assert
             handler.Should().NotBeNull();
@@ -54,7 +59,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
                 new UpdatePaymentStatusCommandHandler(
                     null!,
                     _tenantContextMock.Object,
-                    _unitOfWorkMock.Object));
+                    _unitOfWorkMock.Object,
+                    _loggerMock.Object));
 
             exception.ParamName.Should().Be("paymentRepository");
         }
@@ -67,7 +73,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
                 new UpdatePaymentStatusCommandHandler(
                     _paymentRepositoryMock.Object,
                     null!,
-                    _unitOfWorkMock.Object));
+                    _unitOfWorkMock.Object,
+                    _loggerMock.Object));
 
             exception.ParamName.Should().Be("tenantContext");
         }
@@ -80,7 +87,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
                 new UpdatePaymentStatusCommandHandler(
                     _paymentRepositoryMock.Object,
                     _tenantContextMock.Object,
-                    null!));
+                    null!,
+                    _loggerMock.Object));
 
             exception.ParamName.Should().Be("unitOfWork");
         }
@@ -98,6 +106,7 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
             var clientId = Guid.NewGuid();
             var command = new UpdatePaymentStatusCommand(
                 paymentId,
+                clientId,
                 PaymentStatus.Completed);
 
             var payment = CreateTestPayment(paymentId, tenantId, PaymentStatus.Processing);
@@ -120,9 +129,9 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
-            result.Payment.Should().NotBeNull();
-            result.Payment!.Status.Should().Be(PaymentStatus.Completed.ToString());
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Status.Should().Be(PaymentStatus.Completed.ToString());
         }
 
         [Fact]
@@ -132,6 +141,7 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
             var paymentId = Guid.NewGuid();
             var command = new UpdatePaymentStatusCommand(
                 paymentId,
+                Guid.NewGuid(),
                 PaymentStatus.Completed);
 
             _tenantContextMock.Setup(x => x.HasTenant).Returns(false);
@@ -141,8 +151,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Contain("Tenant context is required");
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Message.Should().Contain("Tenant context is not available");
         }
 
         [Fact]
@@ -154,6 +164,7 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
             var clientId = Guid.NewGuid();
             var command = new UpdatePaymentStatusCommand(
                 paymentId,
+                clientId,
                 PaymentStatus.Completed);
 
             _tenantContextMock.Setup(x => x.HasTenant).Returns(true);
@@ -167,9 +178,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Contain("Payment with ID");
-            result.Message.Should().Contain("not found");
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Message.Should().Contain("Payment was not found");
         }
 
         [Fact]
@@ -182,6 +192,7 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
             var clientId = Guid.NewGuid();
             var command = new UpdatePaymentStatusCommand(
                 paymentId,
+                clientId,
                 PaymentStatus.Completed);
 
             var payment = CreateTestPayment(paymentId, differentTenantId, PaymentStatus.Processing);
@@ -198,8 +209,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Contain("Payment does not belong to current tenant");
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Message.Should().Contain("Cross-tenant access is not allowed");
         }
 
         [Fact]
@@ -211,6 +222,7 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
             var clientId = Guid.NewGuid();
             var command = new UpdatePaymentStatusCommand(
                 paymentId,
+                clientId,
                 PaymentStatus.Completed);
 
             var payment = CreateTestPayment(paymentId, tenantId, PaymentStatus.Completed);
@@ -227,8 +239,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Contain("Invalid status transition");
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Message.Should().Contain("Invalid status transition");
         }
 
         [Fact]
@@ -240,6 +252,7 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
             var clientId = Guid.NewGuid();
             var command = new UpdatePaymentStatusCommand(
                 paymentId,
+                clientId,
                 PaymentStatus.Failed);
 
             var payment = CreateTestPayment(paymentId, tenantId, PaymentStatus.Processing);
@@ -256,8 +269,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Contain("FailureReason is required when marking payment as Failed");
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Message.Should().Contain("Failure reason is required");
         }
 
         [Fact]
@@ -269,6 +282,7 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
             var clientId = Guid.NewGuid();
             var command = new UpdatePaymentStatusCommand(
                 paymentId,
+                clientId,
                 PaymentStatus.Refunded);
 
             var payment = CreateTestPayment(paymentId, tenantId, PaymentStatus.Completed);
@@ -285,8 +299,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Contain("RefundReason is required when marking payment as Refunded");
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Message.Should().Contain("Refund reason is required");
         }
 
         [Fact]
@@ -298,6 +312,7 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
             var clientId = Guid.NewGuid();
             var command = new UpdatePaymentStatusCommand(
                 paymentId,
+                clientId,
                 PaymentStatus.PartiallyRefunded);
 
             var payment = CreateTestPayment(paymentId, tenantId, PaymentStatus.Completed);
@@ -314,8 +329,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Contain("RefundReason is required when marking payment as PartiallyRefunded");
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Message.Should().Contain("Refund reason is required");
         }
 
         [Fact]
@@ -327,6 +342,7 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
             var clientId = Guid.NewGuid();
             var command = new UpdatePaymentStatusCommand(
                 paymentId,
+                clientId,
                 (PaymentStatus)999); // Unsupported status
 
             var payment = CreateTestPayment(paymentId, tenantId, PaymentStatus.Pending);
@@ -343,8 +359,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Contain("Unsupported payment status");
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Message.Should().Contain("Invalid status transition for payment");
         }
 
         [Fact]
@@ -356,6 +372,7 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
             var clientId = Guid.NewGuid();
             var command = new UpdatePaymentStatusCommand(
                 paymentId,
+                clientId,
                 PaymentStatus.Completed);
 
             var payment = CreateTestPayment(paymentId, tenantId, PaymentStatus.Processing);
@@ -378,8 +395,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Contain("Save failed");
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Message.Should().Contain("Save failed");
         }
 
         [Fact]
@@ -389,6 +406,7 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
             var paymentId = Guid.NewGuid();
             var command = new UpdatePaymentStatusCommand(
                 paymentId,
+                Guid.NewGuid(),
                 PaymentStatus.Completed);
 
             var cancellationTokenSource = new CancellationTokenSource();
@@ -408,11 +426,37 @@ namespace Orbito.Tests.Application.Features.Payments.Commands.UpdatePaymentStatu
 
         private Payment CreateTestPayment(Guid paymentId, TenantId tenantId, PaymentStatus status)
         {
-            return Payment.Create(
+            var payment = Payment.Create(
                 tenantId,
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 Money.Create(100, "USD"));
+
+            // Set the desired status
+            switch (status)
+            {
+                case PaymentStatus.Processing:
+                    payment.MarkAsProcessing();
+                    break;
+                case PaymentStatus.Completed:
+                    payment.MarkAsCompleted();
+                    break;
+                case PaymentStatus.Failed:
+                    payment.MarkAsFailed("Test failure");
+                    break;
+                case PaymentStatus.Cancelled:
+                    payment.MarkAsCancelled();
+                    break;
+                case PaymentStatus.Refunded:
+                    payment.MarkAsRefunded("Test refund");
+                    break;
+                case PaymentStatus.PartiallyRefunded:
+                    payment.MarkAsPartiallyRefunded("Test partial refund", Money.Create(50, "USD"));
+                    break;
+                // Pending is the default, no action needed
+            }
+
+            return payment;
         }
 
         #endregion

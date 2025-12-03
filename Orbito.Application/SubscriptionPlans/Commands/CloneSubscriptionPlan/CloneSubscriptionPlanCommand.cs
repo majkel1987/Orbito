@@ -1,8 +1,9 @@
 using MediatR;
+using Orbito.Domain.Common;
 
 namespace Orbito.Application.SubscriptionPlans.Commands.CloneSubscriptionPlan
 {
-    public record CloneSubscriptionPlanCommand : IRequest<CloneSubscriptionPlanResult>
+    public record CloneSubscriptionPlanCommand : IRequest<Result<CloneSubscriptionPlanResult>>
     {
         public Guid Id { get; init; }
         public string NewName { get; init; } = string.Empty;

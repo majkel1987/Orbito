@@ -28,10 +28,8 @@ namespace Orbito.Infrastructure.Data.Configurations.Entity
             builder.Property(p => p.ClientId)
                 .IsRequired();
 
-            // Status
-            builder.Property(p => p.Status)
-                .HasConversion<string>()
-                .IsRequired();
+            // Status - Configured globally in ValueObjectsConfiguration.ConfigureEnumConverters()
+            // NOTE: HasConversion, HasMaxLength, and IsRequired are set in the global configuration
 
             // Money Value Object
             builder.OwnsOne(p => p.Amount, money =>

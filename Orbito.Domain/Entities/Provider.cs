@@ -4,7 +4,12 @@ using Orbito.Domain.ValueObjects;
 
 namespace Orbito.Domain.Entities
 {
-    public class Provider : IMustHaveTenant
+    /// <summary>
+    /// Provider entity - represents a tenant in the system
+    /// Provider does NOT implement IMustHaveTenant because it IS a tenant itself
+    /// Provider.TenantId is self-referencing (TenantId == Provider.Id)
+    /// </summary>
+    public class Provider
     {
         public Guid Id { get; set; }
         public TenantId TenantId { get; set; }

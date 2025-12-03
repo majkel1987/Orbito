@@ -146,6 +146,9 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
             _unitOfWorkMock.Setup(x => x.BeginTransactionAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Result.Success());
 
+            _retryServiceMock.Setup(x => x.CalculateNextAttemptNumberAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(1);
+
             _retryServiceMock.Setup(x => x.ScheduleRetryAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(PaymentRetrySchedule.Create(TenantId.New(), Guid.NewGuid(), Guid.NewGuid(), 1));
 
@@ -160,11 +163,11 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
 
             // Assert
             result.Should().NotBeNull();
-            result.TotalProcessed.Should().Be(2);
-            result.SuccessfulRetries.Should().Be(2);
-            result.FailedRetries.Should().Be(0);
-            result.Results.Should().HaveCount(2);
-            result.Results.All(r => r.Success).Should().BeTrue();
+            result.Value.TotalProcessed.Should().Be(2);
+            result.Value.SuccessfulRetries.Should().Be(2);
+            result.Value.FailedRetries.Should().Be(0);
+            result.Value.Results.Should().HaveCount(2);
+            result.Value.Results.All(r => r.Success).Should().BeTrue();
         }
 
         [Fact]
@@ -185,12 +188,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
 
             // Assert
             result.Should().NotBeNull();
-            result.TotalProcessed.Should().Be(0);
-            result.SuccessfulRetries.Should().Be(0);
-            result.FailedRetries.Should().Be(1);
-            result.Results.Should().HaveCount(1);
-            result.Results[0].Success.Should().BeFalse();
-            result.Results[0].ErrorMessage.Should().Contain("Maximum 50 payments allowed");
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Message.Should().Contain("PaymentIds must be between 1 and 50");
         }
 
         [Fact]
@@ -215,12 +214,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
 
             // Assert
             result.Should().NotBeNull();
-            result.TotalProcessed.Should().Be(0);
-            result.SuccessfulRetries.Should().Be(0);
-            result.FailedRetries.Should().Be(1);
-            result.Results.Should().HaveCount(1);
-            result.Results[0].Success.Should().BeFalse();
-            result.Results[0].ErrorMessage.Should().Contain("You can only retry your own payments");
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Message.Should().Be("Unauthorized access");
         }
 
         [Fact]
@@ -247,12 +242,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
 
             // Assert
             result.Should().NotBeNull();
-            result.TotalProcessed.Should().Be(0);
-            result.SuccessfulRetries.Should().Be(0);
-            result.FailedRetries.Should().Be(1);
-            result.Results.Should().HaveCount(1);
-            result.Results[0].Success.Should().BeFalse();
-            result.Results[0].ErrorMessage.Should().Contain("Rate limit exceeded");
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Message.Should().Be("Payment rate limit exceeded");
         }
 
         [Fact]
@@ -282,12 +273,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
 
             // Assert
             result.Should().NotBeNull();
-            result.TotalProcessed.Should().Be(0);
-            result.SuccessfulRetries.Should().Be(0);
-            result.FailedRetries.Should().Be(1);
-            result.Results.Should().HaveCount(1);
-            result.Results[0].Success.Should().BeFalse();
-            result.Results[0].ErrorMessage.Should().Contain("Failed to begin transaction");
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Message.Should().Be("An unexpected error occurred");
         }
 
         [Fact]
@@ -323,8 +310,14 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
             _unitOfWorkMock.Setup(x => x.BeginTransactionAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Result.Success());
 
+            _retryServiceMock.Setup(x => x.CalculateNextAttemptNumberAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(1);
+
             _retryServiceMock.Setup(x => x.ScheduleRetryAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(PaymentRetrySchedule.Create(TenantId.New(), Guid.NewGuid(), Guid.NewGuid(), 1));
+
+            _unitOfWorkMock.Setup(x => x.Payments.RecordPaymentAttemptsAsync(clientId, 1, It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
 
             _unitOfWorkMock.Setup(x => x.CommitAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Result.Failure("Commit failed"));
@@ -334,12 +327,8 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
 
             // Assert
             result.Should().NotBeNull();
-            result.TotalProcessed.Should().Be(0);
-            result.SuccessfulRetries.Should().Be(0);
-            result.FailedRetries.Should().Be(1);
-            result.Results.Should().HaveCount(1);
-            result.Results[0].Success.Should().BeFalse();
-            result.Results[0].ErrorMessage.Should().Contain("Failed to commit transaction");
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Message.Should().Be("An unexpected error occurred");
         }
 
         [Fact]
@@ -412,6 +401,9 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
             _unitOfWorkMock.Setup(x => x.BeginTransactionAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Result.Success());
 
+            _retryServiceMock.Setup(x => x.CalculateNextAttemptNumberAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(1);
+
             _retryServiceMock.Setup(x => x.ScheduleRetryAsync(paymentIds[0], clientId, 1, It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(PaymentRetrySchedule.Create(TenantId.New(), clientId, paymentIds[0], 1));
 
@@ -429,12 +421,12 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
 
             // Assert
             result.Should().NotBeNull();
-            result.TotalProcessed.Should().Be(2);
-            result.SuccessfulRetries.Should().Be(1);
-            result.FailedRetries.Should().Be(1);
-            result.Results.Should().HaveCount(2);
-            result.Results.Count(r => r.Success).Should().Be(1);
-            result.Results.Count(r => !r.Success).Should().Be(1);
+            result.Value.TotalProcessed.Should().Be(2);
+            result.Value.SuccessfulRetries.Should().Be(1);
+            result.Value.FailedRetries.Should().Be(1);
+            result.Value.Results.Should().HaveCount(2);
+            result.Value.Results.Count(r => r.Success).Should().Be(1);
+            result.Value.Results.Count(r => !r.Success).Should().Be(1);
         }
 
         #endregion
@@ -443,11 +435,16 @@ namespace Orbito.Tests.Application.Features.Payments.Commands
 
         private Payment CreateTestPayment(Guid paymentId, Guid clientId)
         {
-            return Payment.Create(
+            var payment = Payment.Create(
                 TenantId.New(),
                 Guid.NewGuid(),
                 clientId,
                 Money.Create(100, "USD"));
+            
+            // Set status to Failed so it can be retried
+            payment.MarkAsFailed("Test failure");
+            
+            return payment;
         }
 
         #endregion

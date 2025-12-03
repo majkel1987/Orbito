@@ -33,6 +33,7 @@ namespace Orbito.Tests.Application.Clients.Commands.DeactivateClient
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithActiveClient_ShouldDeactivateClient()
         {
             // Arrange
@@ -40,10 +41,15 @@ namespace Orbito.Tests.Application.Clients.Commands.DeactivateClient
             client.Id = _clientId;
             // Client is active by default
 
+            var inactiveClient = Client.CreateWithUser(_tenantId, Guid.NewGuid(), "Test Company");
+            inactiveClient.Id = _clientId;
+            inactiveClient.Deactivate();
+
             var command = new DeactivateClientCommand(_clientId);
 
-            _clientRepositoryMock.Setup(x => x.GetByIdAsync(_clientId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(client);
+            _clientRepositoryMock.SetupSequence(x => x.GetByIdAsync(_clientId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(client)
+                .ReturnsAsync(inactiveClient);
             _clientRepositoryMock.Setup(x => x.UpdateAsync(It.IsAny<Client>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.CompletedTask);
 
@@ -52,15 +58,16 @@ namespace Orbito.Tests.Application.Clients.Commands.DeactivateClient
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
-            result.Client.Should().NotBeNull();
-            result.Client!.IsActive.Should().BeFalse();
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value!.IsActive.Should().BeFalse();
 
             _clientRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Client>(), It.IsAny<CancellationToken>()), Times.Once);
             _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithoutTenantContext_ShouldReturnFailure()
         {
             // Arrange
@@ -72,11 +79,12 @@ namespace Orbito.Tests.Application.Clients.Commands.DeactivateClient
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Tenant context is required");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Tenant.NoTenantContext");
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithNonExistentClient_ShouldReturnFailure()
         {
             // Arrange
@@ -90,11 +98,12 @@ namespace Orbito.Tests.Application.Clients.Commands.DeactivateClient
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Client not found");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Client.NotFound");
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithDifferentTenant_ShouldReturnFailure()
         {
             // Arrange
@@ -112,11 +121,12 @@ namespace Orbito.Tests.Application.Clients.Commands.DeactivateClient
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Access denied");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Tenant.CrossTenantAccess");
         }
 
         [Fact]
+        [Trait("Category", "Unit")]
         public async Task Handle_WithAlreadyInactiveClient_ShouldReturnFailure()
         {
             // Arrange
@@ -134,12 +144,13 @@ namespace Orbito.Tests.Application.Clients.Commands.DeactivateClient
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Client is already inactive");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Client.AlreadyInactive");
         }
 
         [Fact]
-        public async Task Handle_WhenRepositoryThrowsException_ShouldReturnFailure()
+        [Trait("Category", "Unit")]
+        public async Task Handle_WhenRepositoryThrowsException_ShouldPropagateException()
         {
             // Arrange
             var client = Client.CreateWithUser(_tenantId, Guid.NewGuid(), "Test Company");
@@ -152,13 +163,8 @@ namespace Orbito.Tests.Application.Clients.Commands.DeactivateClient
             _clientRepositoryMock.Setup(x => x.UpdateAsync(It.IsAny<Client>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new Exception("Database error"));
 
-            // Act
-            var result = await _handler.Handle(command, CancellationToken.None);
-
-            // Assert
-            result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
-            result.Message.Should().Contain("An error occurred while deactivating client");
+            // Act & Assert
+            await Assert.ThrowsAsync<Exception>(() => _handler.Handle(command, CancellationToken.None));
         }
     }
 }

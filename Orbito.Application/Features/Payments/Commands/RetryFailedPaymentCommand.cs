@@ -1,12 +1,12 @@
 using MediatR;
-using Orbito.Application.Common.Interfaces;
+using Orbito.Domain.Common;
 
 namespace Orbito.Application.Features.Payments.Commands
 {
     /// <summary>
     /// Command to retry a failed payment
     /// </summary>
-    public class RetryFailedPaymentCommand : IRequest<RetryFailedPaymentResult>
+    public class RetryFailedPaymentCommand : IRequest<Result<RetryFailedPaymentResponse>>
     {
         /// <summary>
         /// ID of the payment to retry

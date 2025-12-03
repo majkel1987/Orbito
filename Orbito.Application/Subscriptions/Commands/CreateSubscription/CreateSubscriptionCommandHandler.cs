@@ -1,11 +1,15 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
+using Orbito.Application.DTOs;
+using Orbito.Domain.Common;
+using Orbito.Domain.Enums;
+using Orbito.Domain.Errors;
 using Orbito.Domain.ValueObjects;
 
 namespace Orbito.Application.Subscriptions.Commands.CreateSubscription
 {
-    public class CreateSubscriptionCommandHandler : IRequestHandler<CreateSubscriptionCommand, CreateSubscriptionResult>
+    public class CreateSubscriptionCommandHandler : IRequestHandler<CreateSubscriptionCommand, Result<SubscriptionDto>>
     {
         private readonly ISubscriptionService _subscriptionService;
         private readonly IClientRepository _clientRepository;
@@ -24,28 +28,31 @@ namespace Orbito.Application.Subscriptions.Commands.CreateSubscription
             _logger = logger;
         }
 
-        public async Task<CreateSubscriptionResult> Handle(CreateSubscriptionCommand request, CancellationToken cancellationToken)
+        public async Task<Result<SubscriptionDto>> Handle(CreateSubscriptionCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Creating subscription for client {ClientId} with plan {PlanId}", 
+            _logger.LogInformation("Creating subscription for client {ClientId} with plan {PlanId}",
                 request.ClientId, request.PlanId);
 
             // Validate client exists
             var client = await _clientRepository.GetByIdAsync(request.ClientId, cancellationToken);
             if (client == null)
             {
-                throw new InvalidOperationException($"Client with ID {request.ClientId} not found");
+                _logger.LogWarning("Client with ID {ClientId} not found", request.ClientId);
+                return Result.Failure<SubscriptionDto>(DomainErrors.Client.NotFound);
             }
 
             // Validate plan exists and is active
             var plan = await _subscriptionPlanRepository.GetByIdAsync(request.PlanId, cancellationToken);
             if (plan == null)
             {
-                throw new InvalidOperationException($"Plan with ID {request.PlanId} not found");
+                _logger.LogWarning("Subscription plan with ID {PlanId} not found", request.PlanId);
+                return Result.Failure<SubscriptionDto>(DomainErrors.SubscriptionPlan.NotFound);
             }
 
             if (!plan.IsActive)
             {
-                throw new InvalidOperationException($"Plan with ID {request.PlanId} is not active");
+                _logger.LogWarning("Subscription plan with ID {PlanId} is not active", request.PlanId);
+                return Result.Failure<SubscriptionDto>(DomainErrors.SubscriptionPlan.Inactive);
             }
 
             // Create value objects
@@ -62,10 +69,32 @@ namespace Orbito.Application.Subscriptions.Commands.CreateSubscription
                 request.TrialDays,
                 cancellationToken);
 
-            _logger.LogInformation("Successfully created subscription {SubscriptionId} for client {ClientId}", 
+            _logger.LogInformation("Successfully created subscription {SubscriptionId} for client {ClientId}",
                 subscription.Id, request.ClientId);
 
-            return CreateSubscriptionResult.FromSubscription(subscription);
+            var subscriptionDto = new SubscriptionDto
+            {
+                Id = subscription.Id,
+                TenantId = subscription.TenantId.Value,
+                ClientId = subscription.ClientId,
+                PlanId = subscription.PlanId,
+                Status = subscription.Status.ToString(),
+                Amount = subscription.CurrentPrice.Amount,
+                Currency = subscription.CurrentPrice.Currency,
+                BillingPeriodValue = subscription.BillingPeriod.Value,
+                BillingPeriodType = subscription.BillingPeriod.Type.ToString(),
+                StartDate = subscription.StartDate,
+                EndDate = subscription.EndDate,
+                NextBillingDate = subscription.NextBillingDate,
+                IsInTrial = subscription.IsInTrial,
+                TrialEndDate = subscription.TrialEndDate,
+                ExternalSubscriptionId = subscription.ExternalSubscriptionId,
+                CreatedAt = subscription.CreatedAt,
+                CancelledAt = subscription.CancelledAt,
+                UpdatedAt = subscription.UpdatedAt
+            };
+
+            return Result.Success(subscriptionDto);
         }
     }
 }   

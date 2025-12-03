@@ -28,10 +28,8 @@ namespace Orbito.Infrastructure.Data.Configurations.Entity
             builder.Property(s => s.PlanId)
                 .IsRequired();
 
-            // Status
-            builder.Property(s => s.Status)
-                .HasConversion<string>()
-                .IsRequired();
+            // Status - Configured globally in ValueObjectsConfiguration.ConfigureEnumConverters()
+            // NOTE: HasConversion, HasMaxLength, and IsRequired are set in the global configuration
 
             // Money Value Object
             builder.OwnsOne(s => s.CurrentPrice, money =>
@@ -52,9 +50,7 @@ namespace Orbito.Infrastructure.Data.Configurations.Entity
             {
                 period.Property(bp => bp.Value)
                     .HasColumnName("BillingPeriodValue");
-                period.Property(bp => bp.Type)
-                    .HasColumnName("BillingPeriodType")
-                    .HasConversion<string>();
+                // NOTE: BillingPeriodType conversion is configured globally in ValueObjectsConfiguration.ConfigureEnumConverters()
             });
 
             // Dates

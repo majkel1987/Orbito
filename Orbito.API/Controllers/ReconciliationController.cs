@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Orbito.Application.Common.Authorization;
 using Orbito.API.Extensions;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Domain.Enums;
@@ -12,7 +13,7 @@ namespace Orbito.API.Controllers;
 /// <summary>
 /// Controller for payment reconciliation operations
 /// </summary>
-[Authorize(Roles = "PlatformAdmin,Provider")]
+[Authorize(Policy = PolicyNames.ProviderTeamAccess)]
 [Route("api/reconciliation")]
 public class ReconciliationController : BaseController
 {

@@ -247,9 +247,7 @@ namespace Orbito.Application.Services
                 await _retryRepository.SaveChangesAsync(cancellationToken);
 
                 // Get payment...
-#pragma warning disable CS0618
-                var payment = await _paymentRepository.GetByIdAsync(retry.PaymentId, cancellationToken);
-#pragma warning restore CS0618
+                var payment = await _paymentRepository.GetByIdUnsafeAsync(retry.PaymentId, cancellationToken);
                 
                 if (payment == null)
                 {

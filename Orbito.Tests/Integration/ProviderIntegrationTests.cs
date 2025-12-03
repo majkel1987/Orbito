@@ -1,14 +1,18 @@
 using FluentAssertions;
+using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Orbito.Application.DTOs;
 using Orbito.Application.Providers.Commands.CreateProvider;
 using Orbito.Application.Providers.Commands.UpdateProvider;
+using Orbito.Application.Providers.Commands.DeleteProvider;
 using Orbito.Application.Providers.Queries.GetProviderById;
 using Orbito.Application.Providers.Queries.GetAllProviders;
 using Orbito.Application.Providers.Queries.GetProviderByUserId;
 using Orbito.Application.Common.Interfaces;
+using Orbito.Domain.Common;
 using Orbito.Domain.Entities;
 using Orbito.Domain.ValueObjects;
 using Orbito.Domain.Identity;
@@ -26,6 +30,7 @@ namespace Orbito.Tests.Integration
         private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
         private readonly Mock<ILogger<CreateProviderCommandHandler>> _createLoggerMock;
         private readonly Mock<ILogger<UpdateProviderCommandHandler>> _updateLoggerMock;
+        private readonly Mock<ILogger<DeleteProviderCommandHandler>> _deleteLoggerMock;
         private readonly Mock<ILogger<GetProviderByIdQueryHandler>> _getByIdLoggerMock;
         private readonly Mock<ILogger<GetAllProvidersQueryHandler>> _getAllLoggerMock;
         private readonly Mock<ILogger<GetProviderByUserIdQueryHandler>> _getByUserIdLoggerMock;
@@ -47,6 +52,7 @@ namespace Orbito.Tests.Integration
             
             _createLoggerMock = new Mock<ILogger<CreateProviderCommandHandler>>();
             _updateLoggerMock = new Mock<ILogger<UpdateProviderCommandHandler>>();
+            _deleteLoggerMock = new Mock<ILogger<DeleteProviderCommandHandler>>();
             _getByIdLoggerMock = new Mock<ILogger<GetProviderByIdQueryHandler>>();
             _getAllLoggerMock = new Mock<ILogger<GetAllProvidersQueryHandler>>();
             _getByUserIdLoggerMock = new Mock<ILogger<GetProviderByUserIdQueryHandler>>();
@@ -55,14 +61,28 @@ namespace Orbito.Tests.Integration
             _tenantContextMock.Setup(x => x.HasTenant).Returns(true);
             _tenantContextMock.Setup(x => x.CurrentTenantId).Returns(_tenantId);
 
+            // Setup UnitOfWork default behavior - return success with 1 affected record
+            var successResult = Orbito.Application.Common.Models.Result<int>.Success(1);
+            _unitOfWorkMock.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(successResult));
+
             // Setup UserManager mock
             _userManagerMock.Setup(x => x.FindByIdAsync(It.IsAny<string>()))
                 .ReturnsAsync((string id) => new ApplicationUser
                 {
                     Id = Guid.Parse(id),
                     Email = "test@example.com",
-                    UserName = "test@example.com"
+                    UserName = "test@example.com",
+                    Provider = null // User doesn't have a provider yet
                 });
+
+            // Setup UserManager.GetRolesAsync to return empty list (no roles yet)
+            _userManagerMock.Setup(x => x.GetRolesAsync(It.IsAny<ApplicationUser>()))
+                .ReturnsAsync(new List<string>());
+
+            // Setup UserManager.AddToRoleAsync to succeed
+            _userManagerMock.Setup(x => x.AddToRoleAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()))
+                .ReturnsAsync(IdentityResult.Success);
 
             // Register services
             services.AddSingleton(_tenantContextMock.Object);
@@ -71,6 +91,7 @@ namespace Orbito.Tests.Integration
             services.AddSingleton(_userManagerMock.Object);
             services.AddSingleton(_createLoggerMock.Object);
             services.AddSingleton(_updateLoggerMock.Object);
+            services.AddSingleton(_deleteLoggerMock.Object);
             services.AddSingleton(_getByIdLoggerMock.Object);
             services.AddSingleton(_getAllLoggerMock.Object);
             services.AddSingleton(_getByUserIdLoggerMock.Object);
@@ -123,7 +144,7 @@ namespace Orbito.Tests.Integration
 
         [Fact]
         [Trait("Category", "Integration")]
-        public async Task CreateProvider_WithUnavailableSubdomain_ShouldThrowException()
+        public async Task CreateProvider_WithUnavailableSubdomain_ShouldReturnFailure()
         {
             // Arrange
             var userId = Guid.NewGuid();
@@ -142,8 +163,13 @@ namespace Orbito.Tests.Integration
                 _userManagerMock.Object,
                 _createLoggerMock.Object);
 
-            // Act & Assert
-            await Assert.ThrowsAsync<InvalidOperationException>(() => handler.Handle(command, CancellationToken.None));
+            // Act
+            var result = await handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Provider.SubdomainAlreadyExists");
 
             _providerRepositoryMock.Verify(x => x.GetBySubdomainSlugAsync(subdomainSlug, It.IsAny<CancellationToken>()), Times.Once);
             _providerRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Provider>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -187,13 +213,13 @@ namespace Orbito.Tests.Integration
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
-            result.Provider.Should().NotBeNull();
-            result.Provider!.Id.Should().Be(providerId);
-            result.Provider.BusinessName.Should().Be(businessName);
-            result.Provider.Description.Should().Be(description);
-            result.Provider.SubdomainSlug.Should().Be(subdomainSlug);
-            result.Provider.CustomDomain.Should().Be(customDomain);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value!.Id.Should().Be(providerId);
+            result.Value.BusinessName.Should().Be(businessName);
+            result.Value.Description.Should().Be(description);
+            result.Value.SubdomainSlug.Should().Be(subdomainSlug);
+            result.Value.CustomDomain.Should().Be(customDomain);
 
             _providerRepositoryMock.Verify(x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
             _providerRepositoryMock.Verify(x => x.IsSubdomainAvailableAsync(subdomainSlug, providerId, It.IsAny<CancellationToken>()), Times.Once);
@@ -225,8 +251,8 @@ namespace Orbito.Tests.Integration
             var result = await handler.Handle(command, CancellationToken.None);
 
             // Assert
-            result.Success.Should().BeFalse();
-            result.Message.Should().Be("Provider not found");
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Provider.NotFound");
 
             _providerRepositoryMock.Verify(x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()), Times.Once);
             _providerRepositoryMock.Verify(x => x.IsSubdomainAvailableAsync(It.IsAny<string>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -259,18 +285,18 @@ namespace Orbito.Tests.Integration
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
-            result.Provider.Should().NotBeNull();
-            result.Provider!.Id.Should().Be(providerId);
-            result.Provider.BusinessName.Should().Be("Test Business");
-            result.Provider.SubdomainSlug.Should().Be("test-business");
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.Id.Should().Be(providerId);
+            result.Value.BusinessName.Should().Be("Test Business");
+            result.Value.SubdomainSlug.Should().Be("test-business");
 
             _providerRepositoryMock.Verify(x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
         [Trait("Category", "Integration")]
-        public async Task GetProviderById_WithNonExistentId_ShouldReturnNull()
+        public async Task GetProviderById_WithNonExistentId_ShouldReturnNotFound()
         {
             // Arrange
             var providerId = Guid.NewGuid();
@@ -286,7 +312,9 @@ namespace Orbito.Tests.Integration
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeFalse();
+            result.IsFailure.Should().BeTrue();
+            result.Error.Should().NotBeNull();
+            result.Error.Code.Should().Be("Provider.NotFound");
 
             _providerRepositoryMock.Verify(x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()), Times.Once);
         }
@@ -353,6 +381,212 @@ namespace Orbito.Tests.Integration
 
         #endregion
 
+        #region Delete Provider Integration Tests
+
+        [Fact]
+        [Trait("Category", "Integration")]
+        public async Task SoftDelete_ValidProvider_ShouldDeactivateProvider()
+        {
+            // Arrange
+            var providerId = Guid.NewGuid();
+            var command = new DeleteProviderCommand(providerId, false);
+
+            var existingProvider = Provider.Create(Guid.NewGuid(), "Test Business", "test-business");
+            existingProvider.Id = providerId;
+
+            _providerRepositoryMock.Setup(x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(existingProvider);
+            _providerRepositoryMock.Setup(x => x.SoftDeleteAsync(It.IsAny<Provider>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+
+            var handler = new DeleteProviderCommandHandler(
+                _providerRepositoryMock.Object,
+                _unitOfWorkMock.Object,
+                _deleteLoggerMock.Object);
+
+            // Act
+            var result = await handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().Be(Unit.Value);
+
+            _providerRepositoryMock.Verify(x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()), Times.Once);
+            _providerRepositoryMock.Verify(x => x.SoftDeleteAsync(It.IsAny<Provider>(), It.IsAny<CancellationToken>()), Times.Once);
+            _providerRepositoryMock.Verify(x => x.DeleteAsync(It.IsAny<Provider>(), It.IsAny<CancellationToken>()), Times.Never);
+            _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
+        [Trait("Category", "Integration")]
+        public async Task HardDelete_ProviderWithoutDependencies_ShouldDeletePermanently()
+        {
+            // Arrange
+            var providerId = Guid.NewGuid();
+            var command = new DeleteProviderCommand(providerId, true);
+
+            var existingProvider = Provider.Create(Guid.NewGuid(), "Test Business", "test-business");
+            existingProvider.Id = providerId;
+
+            // Mock CanBeDeleted to return true (no dependencies)
+            _providerRepositoryMock.Setup(x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(existingProvider);
+            _providerRepositoryMock.Setup(x => x.DeleteAsync(It.IsAny<Provider>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+
+            var handler = new DeleteProviderCommandHandler(
+                _providerRepositoryMock.Object,
+                _unitOfWorkMock.Object,
+                _deleteLoggerMock.Object);
+
+            // Act
+            var result = await handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().Be(Unit.Value);
+
+            _providerRepositoryMock.Verify(x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()), Times.Once);
+            _providerRepositoryMock.Verify(x => x.DeleteAsync(It.IsAny<Provider>(), It.IsAny<CancellationToken>()), Times.Once);
+            _providerRepositoryMock.Verify(x => x.SoftDeleteAsync(It.IsAny<Provider>(), It.IsAny<CancellationToken>()), Times.Never);
+            _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
+        [Trait("Category", "Integration")]
+        public async Task DeleteProvider_NonExistentId_ShouldReturnFailure()
+        {
+            // Arrange
+            var providerId = Guid.NewGuid();
+            var command = new DeleteProviderCommand(providerId, false);
+
+            _providerRepositoryMock.Setup(x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync((Provider?)null);
+
+            var handler = new DeleteProviderCommandHandler(
+                _providerRepositoryMock.Object,
+                _unitOfWorkMock.Object,
+                _deleteLoggerMock.Object);
+
+            // Act
+            var result = await handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Provider.NotFound");
+
+            _providerRepositoryMock.Verify(x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()), Times.Once);
+            _providerRepositoryMock.Verify(x => x.DeleteAsync(It.IsAny<Provider>(), It.IsAny<CancellationToken>()), Times.Never);
+            _providerRepositoryMock.Verify(x => x.SoftDeleteAsync(It.IsAny<Provider>(), It.IsAny<CancellationToken>()), Times.Never);
+            _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Fact]
+        [Trait("Category", "Integration")]
+        public async Task DeleteProvider_DatabaseError_ShouldReturnFailure()
+        {
+            // Arrange
+            var providerId = Guid.NewGuid();
+            var command = new DeleteProviderCommand(providerId, false);
+
+            var existingProvider = Provider.Create(Guid.NewGuid(), "Test Business", "test-business");
+            existingProvider.Id = providerId;
+
+            _providerRepositoryMock.Setup(x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(existingProvider);
+            _providerRepositoryMock.Setup(x => x.SoftDeleteAsync(It.IsAny<Provider>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new Exception("Database connection error"));
+
+            var handler = new DeleteProviderCommandHandler(
+                _providerRepositoryMock.Object,
+                _unitOfWorkMock.Object,
+                _deleteLoggerMock.Object);
+
+            // Act & Assert
+            // Exception should propagate - handler doesn't catch exceptions anymore
+            await Assert.ThrowsAsync<Exception>(() => handler.Handle(command, CancellationToken.None));
+
+            _providerRepositoryMock.Verify(x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()), Times.Once);
+            _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Fact]
+        [Trait("Category", "Integration")]
+        public async Task SoftDelete_MultipleTimes_ShouldHandleGracefully()
+        {
+            // Arrange
+            var providerId = Guid.NewGuid();
+            var command = new DeleteProviderCommand(providerId, false);
+
+            var existingProvider = Provider.Create(Guid.NewGuid(), "Test Business", "test-business");
+            existingProvider.Id = providerId;
+            existingProvider.Deactivate(); // Already deactivated
+
+            _providerRepositoryMock.Setup(x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(existingProvider);
+            _providerRepositoryMock.Setup(x => x.SoftDeleteAsync(It.IsAny<Provider>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+
+            var handler = new DeleteProviderCommandHandler(
+                _providerRepositoryMock.Object,
+                _unitOfWorkMock.Object,
+                _deleteLoggerMock.Object);
+
+            // Act
+            var result = await handler.Handle(command, CancellationToken.None);
+
+            // Assert - Should still succeed even if already deactivated
+            result.Should().NotBeNull();
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().Be(Unit.Value);
+
+            _providerRepositoryMock.Verify(x => x.SoftDeleteAsync(It.IsAny<Provider>(), It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
+        [Trait("Category", "Integration")]
+        public async Task DeleteProvider_SaveChangesFails_ShouldReturnFailure()
+        {
+            // Arrange
+            var providerId = Guid.NewGuid();
+            var command = new DeleteProviderCommand(providerId, false);
+
+            var existingProvider = Provider.Create(Guid.NewGuid(), "Test Business", "test-business");
+            existingProvider.Id = providerId;
+
+            _providerRepositoryMock.Setup(x => x.GetByIdAsync(providerId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(existingProvider);
+            _providerRepositoryMock.Setup(x => x.SoftDeleteAsync(It.IsAny<Provider>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+
+            // Setup UnitOfWork to return failure
+            var failureResult = Orbito.Application.Common.Models.Result<int>.Failure("Database save failed", "SaveFailed");
+            _unitOfWorkMock.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(failureResult));
+
+            var handler = new DeleteProviderCommandHandler(
+                _providerRepositoryMock.Object,
+                _unitOfWorkMock.Object,
+                _deleteLoggerMock.Object);
+
+            // Act
+            var result = await handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Provider.DeleteFailed");
+            result.Error.Message.Should().Contain("Database save failed");
+
+            _providerRepositoryMock.Verify(x => x.SoftDeleteAsync(It.IsAny<Provider>(), It.IsAny<CancellationToken>()), Times.Once);
+            _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        #endregion
+
         #region Business Logic Integration Tests
 
         [Fact]
@@ -415,11 +649,11 @@ namespace Orbito.Tests.Integration
 
             // Assert
             updateResult.Should().NotBeNull();
-            updateResult.Success.Should().BeTrue();
-            updateResult.Provider.Should().NotBeNull();
-            updateResult.Provider!.Id.Should().Be(providerId);
-            updateResult.Provider.BusinessName.Should().Be("Updated Complex Business");
-            updateResult.Provider.CustomDomain.Should().Be("complex-business.com");
+            updateResult.IsSuccess.Should().BeTrue();
+            updateResult.Value.Should().NotBeNull();
+            updateResult.Value!.Id.Should().Be(providerId);
+            updateResult.Value.BusinessName.Should().Be("Updated Complex Business");
+            updateResult.Value.CustomDomain.Should().Be("complex-business.com");
         }
 
         [Fact]
@@ -444,8 +678,13 @@ namespace Orbito.Tests.Integration
                 _userManagerMock.Object,
                 _createLoggerMock.Object);
 
-            // Act & Assert
-            await Assert.ThrowsAsync<Exception>(() => handler.Handle(command, CancellationToken.None));
+            // Act
+            var result = await handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("General.UnexpectedError");
 
             _providerRepositoryMock.Verify(x => x.GetBySubdomainSlugAsync(subdomainSlug, It.IsAny<CancellationToken>()), Times.Once);
             _providerRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Provider>(), It.IsAny<CancellationToken>()), Times.Never);
