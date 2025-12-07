@@ -536,10 +536,10 @@ Działający endpoint `/api/auth/signin` i możliwość wywołania `signIn('cred
 
 | #     | Zadanie                  | Priorytet | Status | Opis                                             |
 | ----- | ------------------------ | --------- | ------ | ------------------------------------------------ |
-| 1.2.1 | 🔴 Next.js Middleware    | Krytyczne | ⬜     | middleware.ts - ochrona tras /dashboard, /portal |
-| 1.2.2 | 🔴 Role-based redirects  | Krytyczne | ⬜     | Provider → /dashboard, Client → /portal          |
-| 1.2.3 | 🔴 TenantGuard component | Krytyczne | ⬜     | Client component weryfikujący tenantId w URL     |
-| 1.2.4 | 🟡 useAuth hook          | Ważne     | ⬜     | Custom hook opakowujący useSession z type safety |
+| 1.2.1 | 🔴 Next.js Middleware    | Krytyczne | ✅     | middleware.ts - ochrona tras /dashboard, /portal |
+| 1.2.2 | 🔴 Role-based redirects  | Krytyczne | ✅     | Provider → /dashboard, Client → /portal          |
+| 1.2.3 | 🔴 TenantGuard component | Krytyczne | ✅     | Client component weryfikujący tenantId w URL     |
+| 1.2.4 | 🟡 useAuth hook          | Ważne     | ✅     | Custom hook opakowujący useSession z type safety |
 
 **Blok 1.2 - Wymagania wejściowe**: Blok 1.1 (NextAuth)  
 **Blok 1.2 - Rezultat**: Chronione trasy z weryfikacją tenant context
@@ -657,14 +657,14 @@ Middleware chroniący trasy, komponenty guard oraz custom hook do łatwego dost�
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [ ] `middleware.ts` chroni `/dashboard` i `/portal`
-- [ ] Redirect do `/login` gdy brak sesji
-- [ ] Role-based routing działa poprawnie
-- [ ] TenantGuard weryfikuje tenant context
-- [ ] useAuth hook zwraca typed user data
-- [ ] Test: próba dostępu do `/dashboard` bez logowania
-- [ ] Test: Client nie może wejść na `/dashboard`
-- [ ] Git commit: `feat(auth): implement middleware and auth guards`
+- [x] `middleware.ts` chroni `/dashboard` i `/portal`
+- [x] Redirect do `/login` gdy brak sesji
+- [x] Role-based routing działa poprawnie
+- [x] TenantGuard weryfikuje tenant context
+- [x] useAuth hook zwraca typed user data
+- [x] Test: próba dostępu do `/dashboard` bez logowania
+- [x] Test: Client nie może wejść na `/dashboard`
+- [x] Git commit: `feat(auth): implement middleware and auth guards`
 
 <!-- BLOCK_END: 1.2 -->
 
