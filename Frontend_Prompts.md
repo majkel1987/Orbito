@@ -123,10 +123,10 @@ Gotowy do uruchomienia projekt, który kompiluje się bez błędów, posiada pus
 
 | #     | Zadanie                        | Priorytet | Status | Opis                                                                      |
 | ----- | ------------------------------ | --------- | ------ | ------------------------------------------------------------------------- |
-| 0.2.1 | 🔴 Konfiguracja Tailwind CSS   | Krytyczne | ⬜     | tailwind.config.ts z custom colors, fonts                                 |
-| 0.2.2 | 🔴 Inicjalizacja shadcn/ui     | Krytyczne | ⬜     | `npx shadcn@latest init`, konfiguracja components.json                    |
-| 0.2.3 | 🔴 Import bazowych komponentów | Krytyczne | ⬜     | Button, Input, Card, Dialog, DropdownMenu, Select, Badge, Skeleton, Toast |
-| 0.2.4 | 🟡 Utility functions           | Ważne     | ⬜     | cn() helper, formatters (currency, date)                                  |
+| 0.2.1 | 🔴 Konfiguracja Tailwind CSS   | Krytyczne | ✅     | tailwind.config.ts z custom colors, fonts                                 |
+| 0.2.2 | 🔴 Inicjalizacja shadcn/ui     | Krytyczne | ✅     | `npx shadcn@latest init`, konfiguracja components.json                    |
+| 0.2.3 | 🔴 Import bazowych komponentów | Krytyczne | ✅     | Button, Input, Card, Dialog, DropdownMenu, Select, Badge, Skeleton, Toast |
+| 0.2.4 | 🟡 Utility functions           | Ważne     | ✅     | cn() helper, formatters (currency, date)                                  |
 
 **Blok 0.2 - Wymagania wejściowe**: Blok 0.1  
 **Blok 0.2 - Rezultat**: Gotowy UI kit z shadcn/ui
@@ -202,14 +202,14 @@ Projekt z zainstalowanym shadcn/ui, gdzie komponenty (np. Button) znajdują się
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [ ] `components.json` skonfigurowany z aliasami do `src/shared/ui`
-- [ ] Wszystkie wymienione komponenty shadcn zainstalowane
-- [ ] `tailwind.config.ts` zawiera ścieżki do `features/` i `shared/`
-- [ ] Funkcja `cn()` działa w `src/shared/lib/utils.ts`
-- [ ] `formatCurrency()` i `formatDate()` zaimplementowane
-- [ ] Import `<Button>` z `@/shared/ui/button` działa
-- [ ] `npm run dev` wyświetla stronę z poprawnym stylem
-- [ ] Git commit: `feat(ui): setup shadcn/ui and utility functions`
+- [x] `components.json` skonfigurowany z aliasami do `src/shared/ui`
+- [x] Wszystkie wymienione komponenty shadcn zainstalowane
+- [x] `tailwind.config.ts` zawiera ścieżki do `features/` i `shared/` (Tailwind v4 auto-detection)
+- [x] Funkcja `cn()` działa w `src/shared/lib/utils.ts`
+- [x] `formatCurrency()` i `formatDate()` zaimplementowane
+- [x] Import `<Button>` z `@/shared/ui/button` działa
+- [x] `npm run dev` wyświetla stronę z poprawnym stylem
+- [x] Git commit: `feat(ui): setup shadcn/ui and utility functions`
 
 <!-- BLOCK_END: 0.2 -->
 
