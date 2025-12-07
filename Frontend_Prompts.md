@@ -779,13 +779,13 @@ Działający Zustand store z tenant context oraz Provider inicjalizujący store 
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [ ] Zustand store w `tenant.store.ts`
-- [ ] useTenant hook działa
-- [ ] TenantProvider inicjalizuje store
-- [ ] TenantSwitcher wyświetla tenant name
-- [ ] Store aktualizuje się po logowaniu
-- [ ] Store czyszczony przy wylogowaniu
-- [ ] Test: useTenant() zwraca poprawne dane
+- [x] Zustand store w `tenant.store.ts`
+- [x] useTenant hook działa
+- [x] TenantProvider inicjalizuje store
+- [x] TenantSwitcher wyświetla tenant name
+- [x] Store aktualizuje się po logowaniu
+- [x] Store czyszczony przy wylogowaniu
+- [x] Test: useTenant() zwraca poprawne dane
 - [ ] Git commit: `feat(auth): implement tenant context store with Zustand`
 
 <!-- BLOCK_END: 1.3 -->
