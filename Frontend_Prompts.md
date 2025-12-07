@@ -524,7 +524,7 @@ Działający endpoint `/api/auth/signin` i możliwość wywołania `signIn('cred
 - [x] Type definitions w `next-auth.d.ts`
 - [x] `.env.local` zawiera NEXTAUTH_SECRET i NEXTAUTH_URL
 - [ ] Test: `signIn('credentials')` działa
-- [ ] Git commit: `feat(auth): configure NextAuth with JWT and tenant context`
+- [x] Git commit: `feat(auth): configure NextAuth with JWT and tenant context`
 
 <!-- BLOCK_END: 1.1 -->
 
