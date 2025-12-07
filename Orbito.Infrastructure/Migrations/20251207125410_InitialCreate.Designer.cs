@@ -12,8 +12,8 @@ using Orbito.Infrastructure.Data;
 namespace Orbito.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251110184707_FixEnumValueConverters")]
-    partial class FixEnumValueConverters
+    [Migration("20251207125410_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

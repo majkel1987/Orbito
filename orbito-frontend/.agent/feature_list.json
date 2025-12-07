@@ -1,0 +1,313 @@
+{
+  "project": "Orbito Frontend",
+  "version": "6.0",
+  "lastUpdated": "2025-12-07",
+  "freshStart": true,
+  "note": "Frontend tworzony od nowa - wszystkie bloki do wykonania",
+  "promptsFile": "../Frontend_Prompts.md",
+  "implementPlanFile": "../Frontend_Implement_Plan.md",
+  "features": [
+    {
+      "id": "0.1",
+      "phase": "FAZA 0",
+      "block": "0.1 Inicjalizacja Projektu",
+      "description": "Utworzenie projektu Next.js 15 z TypeScript strict i strukturą katalogów",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: 0.1",
+      "tasks": ["0.1.1", "0.1.2", "0.1.3"],
+      "dependencies": [],
+      "passes": true
+    },
+    {
+      "id": "0.2",
+      "phase": "FAZA 0",
+      "block": "0.2 Stylowanie i UI Kit",
+      "description": "Konfiguracja Tailwind CSS i shadcn/ui z utility functions",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: 0.2",
+      "tasks": ["0.2.1", "0.2.2", "0.2.3", "0.2.4"],
+      "dependencies": ["0.1"],
+      "passes": false
+    },
+    {
+      "id": "0.3",
+      "phase": "FAZA 0",
+      "block": "0.3 API Layer Setup",
+      "description": "Konfiguracja Orval, Axios client i Result<T> interceptor",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: 0.3",
+      "tasks": ["0.3.1", "0.3.2", "0.3.3", "0.3.4", "0.3.5"],
+      "dependencies": ["0.1"],
+      "passes": false
+    },
+    {
+      "id": "1.1",
+      "phase": "FAZA 1",
+      "block": "1.1 NextAuth Configuration",
+      "description": "Konfiguracja NextAuth v5 z Credentials provider i rozszerzenie typów",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: 1.1",
+      "tasks": ["1.1.1", "1.1.2", "1.1.3", "1.1.4", "1.1.5"],
+      "dependencies": ["0.1", "0.2", "0.3"],
+      "passes": false
+    },
+    {
+      "id": "1.2",
+      "phase": "FAZA 1",
+      "block": "1.2 Tenant Context",
+      "description": "TenantProvider, useTenant hook i TenantGuard component",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: 1.2",
+      "tasks": ["1.2.1", "1.2.2", "1.2.3", "1.2.4"],
+      "dependencies": ["1.1"],
+      "passes": false
+    },
+    {
+      "id": "1.3",
+      "phase": "FAZA 1",
+      "block": "1.3 Auth Store & Middleware",
+      "description": "Zustand auth store, middleware ochrony tras i synchronizacja sesji",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: 1.3",
+      "tasks": ["1.3.1", "1.3.2", "1.3.3"],
+      "dependencies": ["1.1"],
+      "passes": false
+    },
+    {
+      "id": "1.4",
+      "phase": "FAZA 1",
+      "block": "1.4 Auth UI Pages",
+      "description": "Strony logowania i rejestracji z React Hook Form i Zod",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: 1.4",
+      "tasks": ["1.4.1", "1.4.2", "1.4.3", "1.4.4", "1.4.5"],
+      "dependencies": ["1.1", "1.3"],
+      "passes": false
+    },
+    {
+      "id": "2.1",
+      "phase": "FAZA 2",
+      "block": "2.1 Layout Components",
+      "description": "Dashboard layout z Sidebar, Header i UserMenu",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: 2.1",
+      "tasks": ["2.1.1", "2.1.2", "2.1.3", "2.1.4", "2.1.5"],
+      "dependencies": ["1.1", "1.2", "1.3", "1.4"],
+      "passes": false
+    },
+    {
+      "id": "2.2",
+      "phase": "FAZA 2",
+      "block": "2.2 Global State & Feedback",
+      "description": "QueryProvider, ErrorBoundary, Suspense, Toast i Loading skeletons",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: 2.2",
+      "tasks": ["2.2.1", "2.2.2", "2.2.3", "2.2.4", "2.2.5"],
+      "dependencies": ["2.1"],
+      "passes": false
+    },
+    {
+      "id": "3.1",
+      "phase": "FAZA 3",
+      "block": "3.1 Team List & CRUD",
+      "description": "Lista członków zespołu z MemberCard, MemberList i hooks",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: 3.1",
+      "tasks": ["3.1.1", "3.1.2", "3.1.3", "3.1.4"],
+      "dependencies": ["2.1", "2.2"],
+      "passes": false
+    },
+    {
+      "id": "3.2",
+      "phase": "FAZA 3",
+      "block": "3.2 Invitations",
+      "description": "System zaproszeń: InviteMemberDialog, Accept page, Pending list",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: 3.2",
+      "tasks": ["3.2.1", "3.2.2", "3.2.3", "3.2.4", "3.2.5"],
+      "dependencies": ["3.1"],
+      "passes": false
+    },
+    {
+      "id": "4A.1",
+      "phase": "FAZA 4A",
+      "block": "4A.1 Clients List",
+      "description": "Lista klientów z ClientTable, ClientCard, view toggle i paginacja",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: 4A.1",
+      "tasks": ["4A.1.1", "4A.1.2", "4A.1.3", "4A.1.4", "4A.1.5"],
+      "dependencies": ["3.1", "3.2"],
+      "passes": false
+    },
+    {
+      "id": "4A.2",
+      "phase": "FAZA 4A",
+      "block": "4A.2 Clients Search & Filters",
+      "description": "ClientSearch z debounce, ClientFilters i URL persistence",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: 4A.2",
+      "tasks": ["4A.2.1", "4A.2.2", "4A.2.3", "4A.2.4"],
+      "dependencies": ["4A.1"],
+      "passes": false
+    },
+    {
+      "id": "4A.3",
+      "phase": "FAZA 4A",
+      "block": "4A.3 Client CRUD",
+      "description": "ClientForm, Create/Edit/Detail pages i mutation hooks",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: 4A.3",
+      "tasks": ["4A.3.1", "4A.3.2", "4A.3.3", "4A.3.4", "4A.3.5", "4A.3.6"],
+      "dependencies": ["4A.1"],
+      "passes": false
+    },
+    {
+      "id": "4B.1",
+      "phase": "FAZA 4B",
+      "block": "4B.1 Plans List",
+      "description": "Lista planów z PlanCard, PlanGrid i pricing cards UI",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: 4B.1",
+      "tasks": ["4B.1.1", "4B.1.2", "4B.1.3", "4B.1.4", "4B.1.5"],
+      "dependencies": ["3.1", "3.2"],
+      "passes": false
+    },
+    {
+      "id": "4B.2",
+      "phase": "FAZA 4B",
+      "block": "4B.2 Plan CRUD",
+      "description": "PlanForm z useFieldArray dla features, Create/Edit/Detail pages",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: 4B.2",
+      "tasks": [
+        "4B.2.1",
+        "4B.2.2",
+        "4B.2.3",
+        "4B.2.4",
+        "4B.2.5",
+        "4B.2.6",
+        "4B.2.7"
+      ],
+      "dependencies": ["4B.1"],
+      "passes": false
+    },
+    {
+      "id": "5.1",
+      "phase": "FAZA 5",
+      "block": "5.1 Subscriptions List",
+      "description": "Lista subskrypcji z SubscriptionTable, StatusBadge i filters",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: 5.1",
+      "tasks": ["5.1.1", "5.1.2", "5.1.3", "5.1.4", "5.1.5"],
+      "dependencies": ["4A.1", "4A.2", "4A.3", "4B.1", "4B.2"],
+      "passes": false
+    },
+    {
+      "id": "5.2",
+      "phase": "FAZA 5",
+      "block": "5.2 Subscription Actions",
+      "description": "Create subscription wizard, Detail page, Cancel/Pause/Change Plan",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: 5.2",
+      "tasks": ["5.2.1", "5.2.2", "5.2.3", "5.2.4", "5.2.5"],
+      "dependencies": ["5.1"],
+      "passes": false
+    },
+    {
+      "id": "6.1",
+      "phase": "FAZA 6",
+      "block": "6.1 Payment History",
+      "description": "Historia płatności z PaymentTable, StatusBadge i detail dialog",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: 6.1",
+      "tasks": ["6.1.1", "6.1.2", "6.1.3", "6.1.4"],
+      "dependencies": ["5.1", "5.2"],
+      "passes": false
+    },
+    {
+      "id": "6.2",
+      "phase": "FAZA 6",
+      "block": "6.2 Payment Methods & Manual Payments",
+      "description": "PaymentMethodForm (Stripe placeholder), ManualPayment i Refund dialogs",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: 6.2",
+      "tasks": ["6.2.1", "6.2.2", "6.2.3", "6.2.4"],
+      "dependencies": ["6.1"],
+      "passes": false
+    },
+    {
+      "id": "7.1",
+      "phase": "FAZA 7",
+      "block": "7.1 Analytics Dashboard",
+      "description": "Dashboard analityczny z RevenueChart, StatCards i DateRangePicker",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: 7.1",
+      "tasks": ["7.1.1", "7.1.2", "7.1.3", "7.1.4", "7.1.5", "7.1.6"],
+      "dependencies": ["6.1", "6.2"],
+      "passes": false
+    },
+    {
+      "id": "8.1",
+      "phase": "FAZA 8",
+      "block": "8.1 Testing",
+      "description": "Vitest setup, Component tests, Playwright E2E",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: 8.1",
+      "tasks": ["8.1.1", "8.1.2", "8.1.3", "8.1.4", "8.1.5"],
+      "dependencies": ["7.1"],
+      "passes": false
+    },
+    {
+      "id": "8.2",
+      "phase": "FAZA 8",
+      "block": "8.2 Polish & Optimization",
+      "description": "TypeScript audit, A11y audit, Performance, Documentation",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: 8.2",
+      "tasks": ["8.2.1", "8.2.2", "8.2.3", "8.2.4", "8.2.5"],
+      "dependencies": ["8.1"],
+      "passes": false
+    },
+    {
+      "id": "9.1",
+      "phase": "FAZA 9",
+      "block": "9.1 Client Portal Foundation",
+      "description": "Portal Layout, PortalGuard, Portal Dashboard z Invoices",
+      "priority": "important",
+      "promptMarker": "BLOCK_START: 9.1",
+      "tasks": ["9.1.1", "9.1.2", "9.1.3", "9.1.4", "9.1.5"],
+      "dependencies": ["1.1", "5.1", "5.2"],
+      "passes": false
+    }
+  ],
+  "stats": {
+    "totalBlocks": 24,
+    "completedBlocks": 1,
+    "remainingBlocks": 23,
+    "completionPercentage": 4.17
+  },
+  "nextPriority": "0.2",
+  "agentInstructions": {
+    "beforeStarting": [
+      "1. Uruchom ./init.sh",
+      "2. Przeczytaj claude-progress.txt",
+      "3. Sprawdź git log --oneline -10",
+      "4. Znajdź w tym pliku pierwszy blok z passes: false",
+      "5. Otwórz Frontend_Prompts.md i znajdź sekcję z promptMarker",
+      "6. Przeczytaj CAŁY prompt przed rozpoczęciem pracy"
+    ],
+    "duringWork": [
+      "Wykonuj DOKŁADNIE kroki z promptu",
+      "Pracuj nad JEDNYM blokiem na raz",
+      "Testuj w przeglądarce po każdej zmianie",
+      "Rób git commit po znaczących zmianach"
+    ],
+    "afterCompletion": [
+      "1. npm run typecheck && npm run lint",
+      "2. Przetestuj ręcznie wszystkie funkcje z bloku",
+      "3. Zmień passes: true w tym pliku",
+      "4. Dodaj wpis do claude-progress.txt",
+      "5. Git commit: feat(scope): description"
+    ]
+  }
+}

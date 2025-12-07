@@ -185,6 +185,51 @@ function Badge({ className, variant, ...props }: BadgeProps) {
 }
 ```
 
+## Agent Workflow
+
+Ten projekt używa systemu śledzenia postępu w `.agent/`:
+- `feature_list.json` - lista bloków do wykonania (szukaj "passes": false)
+- `claude-progress.txt` - log sesji
+- `init.sh` - skrypt inicjalizacji
+
+Prompty do wykonania są w `Frontend_Prompts.md`.
+
+Na początku sesji zawsze sprawdź jaki jest następny blok do wykonania.
+```
+
+### 4. Przykładowa sesja
+```
+Ty: Kontynuuj pracę nad frontendem Orbito
+
+Claude Code:
+> Sprawdzam .agent/feature_list.json...
+> Następny blok: 0.1 (Inicjalizacja Projektu) - passes: false
+> Czytam Frontend_Prompts.md, sekcja BLOCK_START: 0.1...
+>
+> Wykonuję:
+> npx create-next-app@latest orbito-frontend --typescript --tailwind...
+> [wykonuje kroki z promptu]
+>
+> ✅ Blok 0.1 ukończony
+> Aktualizuję feature_list.json (passes: true)
+> Dodaję wpis do claude-progress.txt
+> git commit -m "feat(setup): initialize Next.js 15 project"
+```
+
+---
+
+## 💡 Pro tips
+
+1. **Jeden blok = jedna sesja** - nie próbuj robić wielu bloków naraz
+
+2. **Zawsze sprawdzaj dependencies** - blok 1.1 wymaga ukończenia 0.x
+
+3. **Git commit po każdym bloku** - czysta historia, łatwy rollback
+
+4. **Jeśli Claude Code "zapomni"** - przypomnij mu:
+```
+   Sprawdź .agent/feature_list.json - jaki jest następny blok?
+
 ```
 ```
 ````

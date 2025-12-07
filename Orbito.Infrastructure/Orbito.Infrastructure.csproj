@@ -35,7 +35,6 @@
     <Folder Include="Data\Configurations\Entity\" />
     <Folder Include="Data\Configurations\Identity\" />
     <Folder Include="Data\Configurations\ValueObjects\" />
-    <Folder Include="Migrations\" />
   </ItemGroup>
 
 </Project>

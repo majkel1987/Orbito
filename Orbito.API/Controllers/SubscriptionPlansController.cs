@@ -51,7 +51,7 @@ namespace Orbito.API.Controllers
         /// <returns>List of subscription plans</returns>
         [HttpGet]
         [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
-        public async Task<ActionResult<SubscriptionPlansListDto>> GetSubscriptionPlans(
+        public async Task<IActionResult> GetSubscriptionPlans(
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10,
             [FromQuery] bool activeOnly = false,
@@ -78,7 +78,7 @@ namespace Orbito.API.Controllers
         /// <returns>Subscription plan details</returns>
         [HttpGet("{id}")]
         [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
-        public async Task<ActionResult<SubscriptionPlanDto>> GetSubscriptionPlan(Guid id)
+        public async Task<IActionResult> GetSubscriptionPlan(Guid id)
         {
             var query = new GetSubscriptionPlanByIdQuery { Id = id };
             var result = await Mediator.Send(query);
@@ -168,7 +168,7 @@ namespace Orbito.API.Controllers
         /// <returns>List of active subscription plans</returns>
         [HttpGet("active")]
         [AllowAnonymous]
-        public async Task<ActionResult<ActiveSubscriptionPlansDto>> GetActiveSubscriptionPlans(
+        public async Task<IActionResult> GetActiveSubscriptionPlans(
             [FromQuery] bool publicOnly = true,
             [FromQuery] int? limit = null)
         {
