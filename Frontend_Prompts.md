@@ -786,7 +786,7 @@ Działający Zustand store z tenant context oraz Provider inicjalizujący store 
 - [x] Store aktualizuje się po logowaniu
 - [x] Store czyszczony przy wylogowaniu
 - [x] Test: useTenant() zwraca poprawne dane
-- [ ] Git commit: `feat(auth): implement tenant context store with Zustand`
+- [x] Git commit: `feat(auth): implement tenant context store with Zustand`
 
 <!-- BLOCK_END: 1.3 -->
 
@@ -898,17 +898,17 @@ Kod dla schematów, komponentów formularzy oraz stron w Next.js App Router.
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [ ] `LoginSchema` i `RegisterSchema` w Zod
-- [ ] `LoginForm` z React Hook Form i shadcn/ui
-- [ ] `RegisterForm` z walidacją
-- [ ] Auth layout centruje content
-- [ ] `/login` wyświetla formularz logowania
-- [ ] `/register` wyświetla formularz rejestracji
-- [ ] `/auth/error` wyświetla stronę błędu
-- [ ] Logowanie działa z mock credentials
-- [ ] Loading states podczas submit
-- [ ] Error states przy błędnych danych
-- [ ] Git commit: `feat(auth): implement login and register pages`
+- [x] `LoginSchema` i `RegisterSchema` w Zod
+- [x] `LoginForm` z React Hook Form i shadcn/ui
+- [x] `RegisterForm` z walidacją
+- [x] Auth layout centruje content
+- [x] `/login` wyświetla formularz logowania
+- [x] `/register` wyświetla formularz rejestracji
+- [x] `/auth/error` wyświetla stronę błędu
+- [x] Logowanie działa z mock credentials
+- [x] Loading states podczas submit
+- [x] Error states przy błędnych danych
+- [x] Git commit: `feat(auth): implement login and register pages`
 
 <!-- BLOCK_END: 1.4 -->
 
