@@ -42,13 +42,32 @@ Issues encountered:
 - katalog Orbito.Frontend nie mógł być użyty z create-next-app (naming restrictions)
 Next priority: 0.2 (Stylowanie i UI Kit)
 
+--- Session 2025-12-07 14:15 UTC ---
+Agent: Claude Sonnet 4.5
+Duration: ~15 min
+Block worked on: 0.2 (Stylowanie i UI Kit)
+Status: COMPLETED
+Changes:
+- Zainicjowano shadcn/ui z właściwą konfiguracją (components.json wskazuje na @/shared/ui)
+- Zainstalowano 9 bazowych komponentów: button, input, card, dialog, dropdown-menu, select, badge, skeleton, sonner
+- Utworzono katalogi src/shared/lib, src/shared/ui, src/shared/hooks
+- Dodano utility functions: formatCurrency() i formatDate() w src/shared/lib/formatters.ts
+- Przeniesiono utils.ts z src/lib do src/shared/lib
+- Tailwind CSS v4 automatycznie wykrywa wszystkie pliki (nie wymaga content paths)
+Git commits:
+- (pending)
+Issues encountered:
+- Tailwind v4 używa CSS-based config zamiast tailwind.config.ts (zaakceptowano nową architekturę)
+- Toast component jest deprecated (użyto sonner zgodnie z zaleceniem)
+Next priority: 0.3 (API Layer Setup)
+
 ================================================================================
 CURRENT STATUS
 ================================================================================
 
-Last completed block: 0.1 (Inicjalizacja Projektu)
-Next block to work on: 0.2 (Stylowanie i UI Kit)
-Overall progress: 1/24 blocks (4.17%)
+Last completed block: 0.2 (Stylowanie i UI Kit)
+Next block to work on: 0.3 (API Layer Setup)
+Overall progress: 2/24 blocks (8.33%)
 
 ================================================================================
 ENVIRONMENT CHECKLIST
