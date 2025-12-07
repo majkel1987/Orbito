@@ -346,13 +346,13 @@ Działający system generowania API z automatycznym rozpakowywaniem Result<T>, g
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [ ] Orval zainstalowany i skonfigurowany
-- [ ] `orval.config.ts` zawiera poprawną konfigurację
-- [ ] `src/core/api/client.ts` z axios instance i interceptorami
-- [ ] Result<T> interceptor poprawnie rozpakkowuje odpowiedzi
-- [ ] `npm run api:generate` generuje pliki bez błędów
-- [ ] Wygenerowane typy w `src/core/api/generated/`
-- [ ] `.env.local` zawiera `NEXT_PUBLIC_API_URL`
+- [x] Orval zainstalowany i skonfigurowany
+- [x] `orval.config.ts` zawiera poprawną konfigurację
+- [x] `src/core/api/client.ts` z axios instance i interceptorami
+- [x] Result<T> interceptor poprawnie rozpakkowuje odpowiedzi
+- [x] `npm run api:generate` generuje pliki bez błędów
+- [x] Wygenerowane typy w `src/core/api/generated/`
+- [x] `.env.local` zawiera `NEXT_PUBLIC_API_URL`
 - [ ] Git commit: `feat(api): setup orval and API layer with Result<T> handling`
 
 <!-- BLOCK_END: 0.3 -->

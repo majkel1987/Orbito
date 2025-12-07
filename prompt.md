@@ -60,3 +60,24 @@ Niech formularz logowania będzie modalem który pojawia się na wyblurowanym ek
 Stosuj się do wszystkich zasad z cursor rules
 Frontend ma prawidłowo komunikować się z backendem dlatego zawsze sprawdzaj jak dana funkcjonalność wygląda w backendzie
 Zaktualizuj wszystkie pliki z planem po zakończeniu tej implenentacji
+
+---
+
+Pracujesz nad projektem Orbito Frontend.
+
+PRZED rozpoczęciem pracy:
+
+1. Przeczytaj orbito-frontend\.agent\feature_list.json - znajdź pierwszy blok z "passes": false
+2. Przeczytaj orbito-frontend\.agent\claude-progress.txt - kontekst poprzednich sesji
+3. Otwórz Frontend_Prompts.md i znajdź sekcję dla tego bloku (szukaj BLOCK_START: X.X)
+4. Wykonaj DOKŁADNIE kroki z promptu
+
+PO zakończeniu bloku:
+
+1. npm run typecheck && npm run lint
+2. Zmień "passes": true w feature_list.json dla ukończonego bloku
+3. Dodaj wpis do claude-progress.txt
+4. Zaktualizuj checklistę w pliku Frontend_Prompts.md
+5. Git commit
+
+Zacznij od sprawdzenia stanu projektu.

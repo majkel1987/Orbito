@@ -61,13 +61,34 @@ Issues encountered:
 - Toast component jest deprecated (użyto sonner zgodnie z zaleceniem)
 Next priority: 0.3 (API Layer Setup)
 
+--- Session 2025-12-07 15:00 UTC ---
+Agent: Claude Sonnet 4.5
+Duration: ~20 min
+Block worked on: 0.3 (API Layer Setup)
+Status: COMPLETED
+Changes:
+- Zainstalowano dependencies: orval, @tanstack/react-query, axios
+- Utworzono orval.config.ts z konfiguracją dla backendu (port 5211)
+- Utworzono src/core/api/client.ts z axios instance i Result<T> interceptor
+- Skonfigurowano .env.local z NEXT_PUBLIC_API_URL=http://localhost:5211/api
+- Wygenerowano typy i hooki API przez npm run api:generate
+- Dodano src/core/api/generated/** do eslintignore (auto-generated code)
+- Auth interceptor zakomentowany (będzie dodany w bloku 1.1 z NextAuth)
+Git commits:
+- (pending)
+Issues encountered:
+- Backend działa na porcie 5211, nie 5000 (zaktualizowano konfigurację)
+- Orval generuje kod z query.queryKey mutation (ESLint error) - rozwiązane przez eslintignore
+- NextAuth import w client.ts usunięty (dodamy w 1.1)
+Next priority: 1.1 (NextAuth Configuration)
+
 ================================================================================
 CURRENT STATUS
 ================================================================================
 
-Last completed block: 0.2 (Stylowanie i UI Kit)
-Next block to work on: 0.3 (API Layer Setup)
-Overall progress: 2/24 blocks (8.33%)
+Last completed block: 0.3 (API Layer Setup)
+Next block to work on: 1.1 (NextAuth Configuration)
+Overall progress: 3/24 blocks (12.5%)
 
 ================================================================================
 ENVIRONMENT CHECKLIST
@@ -84,7 +105,8 @@ Before starting any session:
 BACKEND API REFERENCE
 ================================================================================
 
-Swagger UI: http://localhost:5000/swagger
+Swagger UI: http://localhost:5211/swagger
+Backend API Base: http://localhost:5211/api
 Key endpoints already implemented:
 - POST /api/auth/login
 - GET/POST /api/clients
@@ -97,8 +119,10 @@ Key endpoints already implemented:
 IMPORTANT NOTES
 ================================================================================
 
-- Blok 0.1 ukończony - TypeScript strict działa
-- Następny blok: 0.2 (Stylowanie i UI Kit) - wymaga shadcn/ui setup
+- FAZA 0 ukończona (3/3 bloki) - fundament aplikacji gotowy
+- Orval generuje typy i hooki z backendu automatycznie
+- Backend port: 5211 (nie 5000)
+- Następny blok: 1.1 (NextAuth) - wymaga instalacji next-auth v5
 - TypeScript strict mode jest OBOWIĄZKOWY
 - Brak kompromisów na 'any' lub '@ts-ignore'
 
@@ -111,5 +135,8 @@ LESSONS LEARNED
 3. create-next-app wymaga lowercase nazw projektów
 4. React Compiler jest opcjonalny w Next.js 16
 5. Struktura src/ z features/shared/core działa dobrze
+6. Auto-generated pliki powinny być w eslintignore
+7. Backend port może się różnić - zawsze sprawdź
+8. Auth interceptor dodajemy dopiero po zainstalowaniu NextAuth
 
 ================================================================================
