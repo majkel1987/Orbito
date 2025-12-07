@@ -353,7 +353,7 @@ Działający system generowania API z automatycznym rozpakowywaniem Result<T>, g
 - [x] `npm run api:generate` generuje pliki bez błędów
 - [x] Wygenerowane typy w `src/core/api/generated/`
 - [x] `.env.local` zawiera `NEXT_PUBLIC_API_URL`
-- [ ] Git commit: `feat(api): setup orval and API layer with Result<T> handling`
+- [x] Git commit: `feat(api): setup orval and API layer with Result<T> handling`
 
 <!-- BLOCK_END: 0.3 -->
 
@@ -367,11 +367,11 @@ Działający system generowania API z automatycznym rozpakowywaniem Result<T>, g
 
 | #     | Zadanie                      | Priorytet | Status | Opis                                               |
 | ----- | ---------------------------- | --------- | ------ | -------------------------------------------------- |
-| 1.1.1 | 🔴 NextAuth setup            | Krytyczne | ⬜     | app/api/auth/[...nextauth]/route.ts z JWT          |
-| 1.1.2 | 🔴 Credentials provider      | Krytyczne | ⬜     | Autoryzacja przez backend API /auth/login          |
-| 1.1.3 | 🔴 JWT callbacks             | Krytyczne | ⬜     | Dołączanie tenantId, role do tokena                |
-| 1.1.4 | 🔴 Session types             | Krytyczne | ⬜     | Rozszerzenie NextAuth types (tenantId, role, name) |
-| 1.1.5 | 🟡 NEXTAUTH_SECRET generator | Ważne     | ⬜     | Skrypt generowania bezpiecznego secret             |
+| 1.1.1 | 🔴 NextAuth setup            | Krytyczne | ✅     | app/api/auth/[...nextauth]/route.ts z JWT          |
+| 1.1.2 | 🔴 Credentials provider      | Krytyczne | ✅     | Autoryzacja przez backend API /auth/login          |
+| 1.1.3 | 🔴 JWT callbacks             | Krytyczne | ✅     | Dołączanie tenantId, role do tokena                |
+| 1.1.4 | 🔴 Session types             | Krytyczne | ✅     | Rozszerzenie NextAuth types (tenantId, role, name) |
+| 1.1.5 | 🟡 NEXTAUTH_SECRET generator | Ważne     | ✅     | Skrypt generowania bezpiecznego secret             |
 
 **Blok 1.1 - Wymagania wejściowe**: Blok 0.3 (API Layer)  
 **Blok 1.1 - Rezultat**: Działający system logowania z JWT
@@ -516,13 +516,13 @@ Działający endpoint `/api/auth/signin` i możliwość wywołania `signIn('cred
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [ ] NextAuth zainstalowany
-- [ ] Route handler w `app/api/auth/[...nextauth]/route.ts`
-- [ ] Credentials provider komunikuje się z backendem
-- [ ] JWT callback zapisuje token i dane user
-- [ ] Session callback wypełnia session.user
-- [ ] Type definitions w `next-auth.d.ts`
-- [ ] `.env.local` zawiera NEXTAUTH_SECRET i NEXTAUTH_URL
+- [x] NextAuth zainstalowany
+- [x] Route handler w `app/api/auth/[...nextauth]/route.ts`
+- [x] Credentials provider komunikuje się z backendem
+- [x] JWT callback zapisuje token i dane user
+- [x] Session callback wypełnia session.user
+- [x] Type definitions w `next-auth.d.ts`
+- [x] `.env.local` zawiera NEXTAUTH_SECRET i NEXTAUTH_URL
 - [ ] Test: `signIn('credentials')` działa
 - [ ] Git commit: `feat(auth): configure NextAuth with JWT and tenant context`
 

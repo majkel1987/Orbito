@@ -82,13 +82,34 @@ Issues encountered:
 - NextAuth import w client.ts usunięty (dodamy w 1.1)
 Next priority: 1.1 (NextAuth Configuration)
 
+--- Session 2025-12-07 16:00 UTC ---
+Agent: Claude Sonnet 4.5
+Duration: ~20 min
+Block worked on: 1.1 (NextAuth Configuration)
+Status: COMPLETED
+Changes:
+- Zainstalowano next-auth@beta (NextAuth v5)
+- Utworzono route handler w src/app/api/auth/[...nextauth]/route.ts
+- Skonfigurowano CredentialsProvider komunikujący się z backend API /auth/login
+- Dodano JWT callback zapisujący accessToken, userId, role, tenantId, name
+- Dodano Session callback wypełniający session.user z danymi z JWT
+- Utworzono type definitions w src/core/types/next-auth.d.ts
+- Wygenerowano NEXTAUTH_SECRET używając openssl rand -base64 32
+- Zaktualizowano .env.local z NEXTAUTH_SECRET i NEXTAUTH_URL
+Git commits:
+- (pending)
+Issues encountered:
+- Import apiClient wymagał default import zamiast named import (rozwiązane)
+- TypeScript strict mode wymaga explicit type assertions w session callback
+Next priority: 1.2 (Tenant Context)
+
 ================================================================================
 CURRENT STATUS
 ================================================================================
 
-Last completed block: 0.3 (API Layer Setup)
-Next block to work on: 1.1 (NextAuth Configuration)
-Overall progress: 3/24 blocks (12.5%)
+Last completed block: 1.1 (NextAuth Configuration)
+Next block to work on: 1.2 (Tenant Context)
+Overall progress: 4/24 blocks (16.67%)
 
 ================================================================================
 ENVIRONMENT CHECKLIST

@@ -49,7 +49,7 @@
       "promptMarker": "BLOCK_START: 1.1",
       "tasks": ["1.1.1", "1.1.2", "1.1.3", "1.1.4", "1.1.5"],
       "dependencies": ["0.1", "0.2", "0.3"],
-      "passes": false
+      "passes": true
     },
     {
       "id": "1.2",
@@ -282,11 +282,11 @@
   ],
   "stats": {
     "totalBlocks": 24,
-    "completedBlocks": 3,
-    "remainingBlocks": 21,
-    "completionPercentage": 12.5
+    "completedBlocks": 4,
+    "remainingBlocks": 20,
+    "completionPercentage": 16.67
   },
-  "nextPriority": "1.1",
+  "nextPriority": "1.2",
   "agentInstructions": {
     "beforeStarting": [
       "1. Uruchom ./init.sh",
