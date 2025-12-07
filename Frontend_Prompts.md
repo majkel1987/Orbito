@@ -105,13 +105,13 @@ Gotowy do uruchomienia projekt, który kompiluje się bez błędów, posiada pus
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [ ] Projekt utworzony komendą `create-next-app` z wszystkimi flagami
-- [ ] `tsconfig.json` zawiera wszystkie strict opcje
-- [ ] Struktura katalogów: `src/features/`, `src/shared/`, `src/core/`
-- [ ] `npm run dev` uruchamia się bez błędów
-- [ ] `npm run build` kompiluje się bez błędów
-- [ ] `npm run typecheck` (jeśli skonfigurowany) przechodzi
-- [ ] Git commit z opisowym message: `feat(setup): initialize Next.js 15 project with TypeScript strict`
+- [x] Projekt utworzony komendą `create-next-app` z wszystkimi flagami
+- [x] `tsconfig.json` zawiera wszystkie strict opcje
+- [x] Struktura katalogów: `src/features/`, `src/shared/`, `src/core/`
+- [x] `npm run dev` uruchamia się bez błędów
+- [x] `npm run build` kompiluje się bez błędów
+- [x] `npm run typecheck` (jeśli skonfigurowany) przechodzi
+- [x] Git commit z opisowym message: `feat(setup): initialize Next.js 15 project with TypeScript strict`
 
 <!-- BLOCK_END: 0.1 -->
 
