@@ -1,8 +1,9 @@
-import NextAuth from "next-auth";
+import NextAuth, { type User, type Session } from "next-auth";
+import { type JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials";
 import apiClient from "@/core/api/client";
 
-const handler = NextAuth({
+const authOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -51,7 +52,7 @@ const handler = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: { token: JWT; user: User | undefined }) {
       // On sign in, user object is available
       if (user) {
         token.accessToken = user.token;
@@ -62,7 +63,7 @@ const handler = NextAuth({
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: { session: Session; token: JWT }) {
       // Attach data from JWT token to session
       session.accessToken = token.accessToken as string;
       session.user.id = token.userId as string;
@@ -77,8 +78,9 @@ const handler = NextAuth({
     error: "/auth/error",
   },
   session: {
-    strategy: "jwt",
+    strategy: "jwt" as const,
   },
-});
+};
 
-export { handler as GET, handler as POST };
+const { handlers } = NextAuth(authOptions);
+export const { GET, POST } = handlers;

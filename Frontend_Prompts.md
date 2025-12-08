@@ -1000,13 +1000,13 @@ Kod dla Sidebara, Headera, UserMenu oraz głównego Layoutu.
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [ ] Sidebar z nawigacją i active states
-- [ ] UserMenu z dropdown
-- [ ] Header z logo i user menu
-- [ ] Dashboard layout łączy wszystko
-- [ ] Responsywność na mobile
-- [ ] Logout działa
-- [ ] Git commit: `feat(layout): implement dashboard layout with sidebar and header`
+- [x] Sidebar z nawigacją i active states
+- [x] UserMenu z dropdown
+- [x] Header z logo i user menu
+- [x] Dashboard layout łączy wszystko
+- [x] Responsywność na mobile
+- [x] Logout działa
+- [x] Git commit: `feat(layout): implement dashboard layout with sidebar and header`
 
 <!-- BLOCK_END: 2.1 -->
 
