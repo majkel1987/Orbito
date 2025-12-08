@@ -4,6 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import apiClient from "@/core/api/client";
 
 const authOptions = {
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -23,11 +24,12 @@ const authOptions = {
             user: {
               id: string;
               email: string;
-              name: string;
-              role: "Provider" | "Client" | "TeamMember" | "PlatformAdmin";
-              tenantId: string;
+              firstName: string;
+              lastName: string;
+              tenantId: string | null;
+              roles: string[];
             };
-          }>("/auth/login", {
+          }>("/api/Account/login", {
             email: credentials.email,
             password: credentials.password,
           });
@@ -35,17 +37,35 @@ const authOptions = {
           // Result<T> interceptor returns response.data directly (value from backend)
           const { token, user } = response.data;
 
-          // Return user object with token
-          return {
+          console.log("Backend response:", { token, user });
+
+          // Map backend response to NextAuth user format
+          const fullName = `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email || "User";
+          const role = (user.roles?.[0] as
+            | "Provider"
+            | "Client"
+            | "TeamMember"
+            | "PlatformAdmin") || "Client";
+
+          const userObject = {
             id: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role,
-            tenantId: user.tenantId,
+            email: user.email || "",
+            name: fullName,
+            role: role,
+            tenantId: user.tenantId || null,
             token,
           };
+
+          console.log("Mapped user object:", userObject);
+
+          // Return user object with token
+          return userObject;
         } catch (error) {
           console.error("Authentication failed:", error);
+          if (error instanceof Error) {
+            console.error("Error message:", error.message);
+            console.error("Error stack:", error.stack);
+          }
           return null;
         }
       },
@@ -68,7 +88,7 @@ const authOptions = {
       session.accessToken = token.accessToken as string;
       session.user.id = token.userId as string;
       session.user.role = token.role as "Provider" | "Client" | "TeamMember" | "PlatformAdmin";
-      session.user.tenantId = token.tenantId as string;
+      session.user.tenantId = token.tenantId as string | null;
       session.user.name = token.name as string;
       return session;
     },

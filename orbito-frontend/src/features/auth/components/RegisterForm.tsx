@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
+import { AxiosError } from "axios";
 import {
   Card,
   CardContent,
@@ -18,36 +18,60 @@ import { Input } from "@/shared/ui/input";
 import { Button } from "@/shared/ui/button";
 import { Label } from "@/shared/ui/label";
 import { RegisterSchema, type RegisterInput } from "../schemas/auth.schemas";
+import { usePostApiAccountRegisterProvider } from "@/core/api/generated/account/account";
 
 export function RegisterForm() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<RegisterInput>({
     resolver: zodResolver(RegisterSchema),
   });
 
+  const { mutate: registerProvider } = usePostApiAccountRegisterProvider({
+    mutation: {
+      onSuccess: () => {
+        toast.success("Registration successful! Please log in.");
+        router.push("/login");
+      },
+      onError: (error: AxiosError) => {
+        console.error("Registration error:", error);
+        console.error("Error response:", error.response?.data);
+
+        const errorData = error.response?.data as
+          | { message?: string; errors?: string[] }
+          | undefined;
+
+        const errorMessage =
+          errorData?.message ||
+          error.message ||
+          "An error occurred during registration";
+
+        toast.error(errorMessage);
+
+        if (errorData?.errors && errorData.errors.length > 0) {
+          errorData.errors.forEach((err) => {
+            toast.error(err);
+          });
+        }
+      },
+    },
+  });
+
   const onSubmit = async (data: RegisterInput) => {
-    setIsLoading(true);
-
-    try {
-      // TODO: Replace with actual API call when backend endpoint is ready
-      // For now, mock the registration process
-      console.log("Registration data:", data);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      toast.success("Registration successful! Please log in.");
-      router.push("/login");
-    } catch (error) {
-      toast.error("An error occurred during registration");
-      console.error("Registration error:", error);
-    } finally {
-      setIsLoading(false);
-    }
+    registerProvider({
+      data: {
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        businessName: data.businessName,
+        subdomainSlug: data.subdomainSlug,
+      },
+    });
   };
 
   return (
@@ -60,18 +84,83 @@ export function RegisterForm() {
       </CardHeader>
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">First Name</Label>
+              <Input
+                id="firstName"
+                type="text"
+                placeholder="John"
+                {...register("firstName")}
+                disabled={isSubmitting}
+                autoComplete="given-name"
+              />
+              {errors.firstName && (
+                <p className="text-sm text-destructive">
+                  {errors.firstName.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Last Name</Label>
+              <Input
+                id="lastName"
+                type="text"
+                placeholder="Doe"
+                {...register("lastName")}
+                disabled={isSubmitting}
+                autoComplete="family-name"
+              />
+              {errors.lastName && (
+                <p className="text-sm text-destructive">
+                  {errors.lastName.message}
+                </p>
+              )}
+            </div>
+          </div>
+
           <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
+            <Label htmlFor="businessName">Business Name</Label>
             <Input
-              id="name"
+              id="businessName"
               type="text"
-              placeholder="John Doe"
-              {...register("name")}
-              disabled={isLoading}
+              placeholder="Acme Corporation"
+              {...register("businessName")}
+              disabled={isSubmitting}
+              autoComplete="organization"
             />
-            {errors.name && (
-              <p className="text-sm text-destructive">{errors.name.message}</p>
+            {errors.businessName && (
+              <p className="text-sm text-destructive">
+                {errors.businessName.message}
+              </p>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="subdomainSlug">Subdomain</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="subdomainSlug"
+                type="text"
+                placeholder="acme"
+                {...register("subdomainSlug")}
+                disabled={isSubmitting}
+                className="flex-1"
+              />
+              <span className="text-sm text-muted-foreground whitespace-nowrap">
+                .orbito.com
+              </span>
+            </div>
+            {errors.subdomainSlug && (
+              <p className="text-sm text-destructive">
+                {errors.subdomainSlug.message}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Only lowercase letters, numbers, and hyphens. Cannot start or end
+              with a hyphen.
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -81,7 +170,8 @@ export function RegisterForm() {
               type="email"
               placeholder="you@example.com"
               {...register("email")}
-              disabled={isLoading}
+              disabled={isSubmitting}
+              autoComplete="email"
             />
             {errors.email && (
               <p className="text-sm text-destructive">{errors.email.message}</p>
@@ -95,7 +185,8 @@ export function RegisterForm() {
               type="password"
               placeholder="••••••••"
               {...register("password")}
-              disabled={isLoading}
+              disabled={isSubmitting}
+              autoComplete="new-password"
             />
             {errors.password && (
               <p className="text-sm text-destructive">
@@ -111,7 +202,8 @@ export function RegisterForm() {
               type="password"
               placeholder="••••••••"
               {...register("confirmPassword")}
-              disabled={isLoading}
+              disabled={isSubmitting}
+              autoComplete="new-password"
             />
             {errors.confirmPassword && (
               <p className="text-sm text-destructive">
@@ -122,8 +214,8 @@ export function RegisterForm() {
         </CardContent>
 
         <CardFooter className="flex flex-col gap-4">
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Registering..." : "Register"}
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? "Registering..." : "Register"}
           </Button>
           <p className="text-sm text-muted-foreground">
             Already have an account?{" "}

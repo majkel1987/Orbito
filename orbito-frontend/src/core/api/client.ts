@@ -9,8 +9,9 @@ interface Result<T> {
 }
 
 // Create axios instance with base configuration
+// Note: baseURL should NOT include /api because generated endpoints already include it
 const axiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5211",
   headers: {
     "Content-Type": "application/json",
   },
@@ -51,9 +52,13 @@ axiosInstance.interceptors.response.use(
     if (error.response) {
       const status = error.response.status;
 
+      // For 400 Bad Request and 401 Unauthorized, preserve the original error
+      // so that components/handlers can access error details
+      if (status === 400 || status === 401) {
+        return Promise.reject(error);
+      }
+
       switch (status) {
-        case 401:
-          throw new Error("Unauthorized. Please log in again.");
         case 403:
           throw new Error(
             "Forbidden. You don't have permission to access this resource."
