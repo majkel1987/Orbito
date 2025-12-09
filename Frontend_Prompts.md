@@ -12,11 +12,37 @@
 >
 > **Workflow:**
 >
-> 1. Znajdź swój blok używając markera z `feature_list.json` (pole `promptMarker`)
-> 2. Przeczytaj CAŁY prompt przed rozpoczęciem pracy
-> 3. Wykonaj DOKŁADNIE kroki opisane w promptcie
-> 4. Na końcu przejdź przez CHECKLIST WERYFIKACJI
-> 5. Zaktualizuj `feature_list.json` i `claude-progress.txt`
+> 1. 🚨 **PRZECZYTAJ `API_RULES.md` PRZED ROZPOCZĘCIEM!** (obowiązkowe dla bloków z API)
+> 2. Znajdź swój blok używając markera z `feature_list.json` (pole `promptMarker`)
+> 3. Przeczytaj CAŁY prompt przed rozpoczęciem pracy
+> 4. Wykonuj DOKŁADNIE kroki opisane w promptcie
+> 5. Na końcu przejdź przez CHECKLIST WERYFIKACJI
+> 6. Zaktualizuj `feature_list.json` i `claude-progress.txt`
+
+---
+
+## 🚨 KRYTYCZNE ZASADY API
+
+> **UWAGA**: Te zasady powstały po naprawie krytycznych bugów (2025-12-09).
+> Ich ignorowanie prowadzi do 401 Unauthorized i hardcoded danych.
+
+### ❌ ABSOLUTNIE ZABRONIONE:
+
+1. **Hardcoded Data**: `const data = 0`, `const items = []`, `const user = { name: "Test" }`
+2. **Mock Functions**: `console.log('TODO: call API')`, placeholder funkcje
+3. **TODO Comments**: Zostawianie TODO bez implementacji
+4. **Pomijanie Auth Interceptora**: W bloku 1.1 MUSISZ dodać auth interceptor do `client.ts`!
+
+### ✅ ZAWSZE WYMAGANE:
+
+1. **Import Hooków z Orval**: `import { useGetApiClients } from "@/core/api/generated/..."`
+2. **Obsługa 3 Stanów**: loading (Skeleton), error (ErrorMessage), data (actual content)
+3. **Weryfikacja Network Tab**: Przed `passes: true` sprawdź DevTools → 200 OK + Authorization header
+4. **TypeScript**: Zero błędów, zero `any`, zero `@ts-ignore`
+
+### 📖 Pełna Dokumentacja:
+
+**Przed rozpoczęciem bloku który używa API - PRZECZYTAJ: [`API_RULES.md`](./API_RULES.md)**
 
 ---
 
@@ -516,6 +542,7 @@ Działający endpoint `/api/auth/signin` i możliwość wywołania `signIn('cred
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
+#### Code Implementation
 - [x] NextAuth zainstalowany
 - [x] Route handler w `app/api/auth/[...nextauth]/route.ts`
 - [x] Credentials provider komunikuje się z backendem
@@ -523,8 +550,39 @@ Działający endpoint `/api/auth/signin` i możliwość wywołania `signIn('cred
 - [x] Session callback wypełnia session.user
 - [x] Type definitions w `next-auth.d.ts`
 - [x] `.env.local` zawiera NEXTAUTH_SECRET i NEXTAUTH_URL
-- [ ] Test: `signIn('credentials')` działa
-- [x] Git commit: `feat(auth): configure NextAuth with JWT and tenant context`
+
+#### 🚨 KRYTYCZNE: Auth Interceptor
+**To jest NAJWAŻNIEJSZY punkt tego bloku!**
+
+- [ ] **Auth interceptor DODANY do `src/core/api/client.ts`**:
+  ```typescript
+  import { getSession } from "next-auth/react";
+
+  axiosInstance.interceptors.request.use(async (config) => {
+    if (typeof window !== "undefined") {
+      const session = await getSession();
+      if (session?.accessToken) {
+        config.headers.Authorization = `Bearer ${session.accessToken}`;
+      }
+    }
+    return config;
+  });
+  ```
+
+#### Network Tab Verification (OBOWIĄZKOWE!)
+- [ ] Zaloguj się do aplikacji
+- [ ] Otwórz DevTools → Network tab
+- [ ] Nawiguj do strony dashboard
+- [ ] Sprawdź KAŻDY request do `/api/*`:
+  - [ ] **Request Headers MUSZĄ zawierać**: `Authorization: Bearer eyJ...`
+  - [ ] **Response Status MUSI być**: `200 OK` (NIE 401!)
+
+**JEŚLI widzisz 401 Unauthorized → auth interceptor NIE DZIAŁA → FIX przed passes:true!**
+
+#### Final Checks
+- [ ] Test: `signIn('credentials')` działa i przekierowuje do /dashboard
+- [ ] TypeScript: `npm run typecheck` → zero błędów
+- [x] Git commit: `feat(auth): configure NextAuth with JWT and auth interceptor`
 
 <!-- BLOCK_END: 1.1 -->
 
@@ -2790,3 +2848,184 @@ Użyj tego szablonu przy dodawaniu nowych bloków:
 
 _Ostatnia aktualizacja: 2025-12-06_  
 _Wersja: 6.1 (z markerami dla agentów AI)_
+
+
+---
+
+## 📋 UNIVERSAL API VERIFICATION CHECKLIST
+
+> **Użyj tej checklisty dla WSZYSTKICH bloków które zawierają `apiEndpoints` lub `requiredHooks` w feature_list.json**
+
+### 🚨 PRZED ustawieniem `"passes": true`:
+
+#### 1. Code Review
+- [ ] Komponent importuje hooki z `@/core/api/generated/` (NIE mock data)
+- [ ] ZERO hardcoded wartości: `0`, `"$0"`, `[]`, `"placeholder"`, `{ test: true }`
+- [ ] ZERO komentarzy TODO dotyczących API
+- [ ] Loading states używają `<Skeleton>` z shadcn/ui
+- [ ] Error handling wyświetla `error.message`
+- [ ] Wszystkie hooki z `requiredHooks` są zaimplementowane
+
+#### 2. DevTools Network Verification (KRYTYCZNE!)
+**To jest NAJWAŻNIEJSZY krok - bez tego wprowadzasz bugi!**
+
+```bash
+# 1. Uruchom aplikację
+npm run dev
+
+# 2. Otwórz przeglądarkę: http://localhost:3000
+# 3. Otwórz DevTools → Network tab
+# 4. Zaloguj się do aplikacji
+# 5. Nawiguj do strony z funkcjonalnością z tego bloku
+```
+
+**Sprawdź dla KAŻDEGO endpointu z `apiEndpoints`:**
+
+✅ **MUSI BYĆ:**
+```
+Request URL: http://localhost:5211/api/[endpoint]
+Request Method: GET/POST/PUT/DELETE
+Request Headers:
+  Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Status: 200 OK
+Response: { ... } (prawdziwe dane z backendu)
+```
+
+❌ **FAIL jeśli:**
+- Status: `401 Unauthorized` → Brak tokena JWT lub auth interceptor nie działa!
+- Brak requestów do `/api/*` → Komponent nie wywołuje API!
+- Response: `null` lub `undefined` → Endpoint nie istnieje!
+- Hardcoded dane w UI → Nie używasz `data` z hooka!
+
+#### 3. TypeScript & Linting
+```bash
+npm run typecheck  # MUSI: zero błędów
+npm run lint       # MUSI: zero warnings
+```
+
+#### 4. Visual Testing
+- [ ] Loading spinner pojawia się przy pierwszym ładowaniu
+- [ ] Dane wyświetlają się po załadowaniu (NIE "0" ani puste listy)
+- [ ] Error state działa (wyłącz backend na chwilę i sprawdź)
+- [ ] Formatowanie danych poprawne:
+  - [ ] Daty: DD.MM.YYYY (użyj `formatDate()`)
+  - [ ] Kwoty: PLN 1 234,56 (użyj `formatCurrency()`)
+  - [ ] Statusy: Badge z odpowiednim wariantem
+
+#### 5. Git Commit
+```bash
+git add .
+git commit -m "feat(scope): description
+
+- Implementacja [lista funkcjonalności]
+- Wszystkie API calls używają wygenerowanych hooków
+- Loading states i error handling
+- TypeScript strict: zero błędów
+
+🤖 Generated with Claude Code
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
+```
+
+---
+
+## ⚠️ COMMON MISTAKES - Don't Do This!
+
+### ❌ Mistake 1: Hardcoded Data
+```typescript
+// BAD
+const totalClients = 0;
+const clients = [];
+
+// GOOD
+const { data } = useGetApiClients();
+const totalClients = data?.totalCount ?? 0;
+```
+
+### ❌ Mistake 2: Mock Functions
+```typescript
+// BAD
+function getClients() {
+  console.log('TODO: implement');
+  return [];
+}
+
+// GOOD
+const { data } = useGetApiClients();
+```
+
+### ❌ Mistake 3: Skipping Error Handling
+```typescript
+// BAD
+const { data } = useGetApiClients();
+return <List data={data.items} />;
+
+// GOOD
+const { data, isLoading, error } = useGetApiClients();
+if (error) return <ErrorMessage />;
+if (isLoading) return <Skeleton />;
+return <List data={data?.items ?? []} />;
+```
+
+### ❌ Mistake 4: Type Assertions Abuse
+```typescript
+// BAD - ukrywanie prawdziwych błędów
+const data = response as any;
+
+// GOOD - tylko dla Orval bug workaround
+const { data } = useGetApiClients() as {
+  data: ClientDtoPaginatedList | undefined;
+};
+```
+
+---
+
+## 🎯 Quick Verification Script
+
+Użyj tego przed ustawieniem `passes: true`:
+
+```bash
+#!/bin/bash
+
+echo "🔍 API Verification Checklist"
+echo ""
+
+# 1. TypeScript
+echo "1️⃣ TypeScript Check..."
+npm run typecheck
+if [ $? -ne 0 ]; then
+  echo "❌ FAIL: TypeScript errors found!"
+  exit 1
+fi
+
+# 2. Linting
+echo "2️⃣ Linting Check..."
+npm run lint
+if [ $? -ne 0 ]; then
+  echo "❌ FAIL: Lint warnings found!"
+  exit 1
+fi
+
+# 3. Check for hardcoded data
+echo "3️⃣ Checking for hardcoded data..."
+grep -r "const.*= 0" src/app/(dashboard) && echo "⚠️  WARNING: Found hardcoded '0'"
+grep -r "const.*= \[\]" src/app/(dashboard) && echo "⚠️  WARNING: Found hardcoded '[]'"
+
+# 4. Check for TODO comments
+echo "4️⃣ Checking for TODO comments..."
+grep -r "TODO.*API" src/app/(dashboard) && echo "⚠️  WARNING: Found TODO API comments"
+
+echo ""
+echo "✅ Automated checks passed!"
+echo "📝 NOW: Check DevTools Network tab manually!"
+echo "    1. Open http://localhost:3000"
+echo "    2. Login to app"
+echo "    3. Navigate to your feature"
+echo "    4. Check Network tab for:"
+echo "       - Requests to /api/*"
+echo "       - Authorization header"
+echo "       - 200 OK status"
+```
+
+---
+
+**Remember**: Jedna minuta weryfikacji Network tab = uniknięcie godzin debugowania później!

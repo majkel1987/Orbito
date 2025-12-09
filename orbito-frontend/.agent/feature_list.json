@@ -1,11 +1,18 @@
 {
   "project": "Orbito Frontend",
-  "version": "6.0",
-  "lastUpdated": "2025-12-07",
-  "freshStart": true,
-  "note": "Frontend tworzony od nowa - wszystkie bloki do wykonania",
+  "version": "7.0",
+  "lastUpdated": "2025-12-09",
+  "note": "Frontend z poprawionymi regułami API - wszystkie bloki muszą używać prawdziwego API",
   "promptsFile": "../Frontend_Prompts.md",
   "implementPlanFile": "../Frontend_Implement_Plan.md",
+  "apiRulesFile": "../API_RULES.md",
+  "criticalRules": {
+    "readFirst": "ZAWSZE przeczytaj API_RULES.md przed rozpoczęciem bloku!",
+    "noMocks": "ZERO mockowanych funkcji - tylko prawdziwe API",
+    "noHardcode": "ZERO hardcoded data - zawsze hooki Orval",
+    "verifyNetwork": "ZAWSZE sprawdź Network tab po zakończeniu bloku",
+    "askIfMissing": "Endpoint nie istnieje? PYTAJ, nie mockuj"
+  },
   "features": [
     {
       "id": "0.1",
@@ -16,6 +23,12 @@
       "promptMarker": "BLOCK_START: 0.1",
       "tasks": ["0.1.1", "0.1.2", "0.1.3"],
       "dependencies": [],
+      "apiEndpoints": [],
+      "verificationSteps": [
+        "npm run dev działa bez błędów",
+        "npm run typecheck przechodzi",
+        "Struktura katalogów src/features, src/shared, src/core istnieje"
+      ],
       "passes": true
     },
     {
@@ -27,6 +40,12 @@
       "promptMarker": "BLOCK_START: 0.2",
       "tasks": ["0.2.1", "0.2.2", "0.2.3", "0.2.4"],
       "dependencies": ["0.1"],
+      "apiEndpoints": [],
+      "verificationSteps": [
+        "shadcn/ui komponenty są w src/shared/ui/",
+        "Button, Input, Card renderują się poprawnie",
+        "formatCurrency i formatDate działają"
+      ],
       "passes": true
     },
     {
@@ -38,17 +57,40 @@
       "promptMarker": "BLOCK_START: 0.3",
       "tasks": ["0.3.1", "0.3.2", "0.3.3", "0.3.4", "0.3.5"],
       "dependencies": ["0.1"],
+      "apiEndpoints": ["Swagger: /swagger/v1/swagger.json"],
+      "criticalNote": "Auth interceptor ZOSTANIE DODANY W BLOKU 1.1 - nie zostawiaj TODO!",
+      "verificationSteps": [
+        "npm run api:generate tworzy pliki w src/core/api/generated/",
+        "Typy DTO są wygenerowane (ClientDto, PlanDto, etc.)",
+        "Result<T> interceptor rozpakowuje odpowiedzi"
+      ],
       "passes": true
     },
     {
       "id": "1.1",
       "phase": "FAZA 1",
       "block": "1.1 NextAuth Configuration",
-      "description": "Konfiguracja NextAuth v5 z Credentials provider i rozszerzenie typów",
+      "description": "Konfiguracja NextAuth v5 z Credentials provider + AUTH INTERCEPTOR",
       "priority": "critical",
       "promptMarker": "BLOCK_START: 1.1",
       "tasks": ["1.1.1", "1.1.2", "1.1.3", "1.1.4", "1.1.5"],
       "dependencies": ["0.1", "0.2", "0.3"],
+      "apiEndpoints": [
+        "POST /api/Account/login → { token, user }",
+        "POST /api/Account/register → { token, user }"
+      ],
+      "criticalNote": "🚨 TEN BLOK MUSI DODAĆ AUTH INTERCEPTOR DO client.ts! Bez tego wszystkie requesty zwrócą 401!",
+      "mustImplement": [
+        "NextAuth route handler z Credentials provider",
+        "JWT callback zapisujący accessToken",
+        "Session callback z accessToken",
+        "🚨 AUTH INTERCEPTOR w src/core/api/client.ts"
+      ],
+      "verificationSteps": [
+        "Logowanie działa - token jest zapisywany",
+        "Network tab: requesty mają header Authorization: Bearer ...",
+        "Wylogowanie czyści sesję"
+      ],
       "passes": true
     },
     {
@@ -60,6 +102,11 @@
       "promptMarker": "BLOCK_START: 1.2",
       "tasks": ["1.2.1", "1.2.2", "1.2.3", "1.2.4"],
       "dependencies": ["1.1"],
+      "apiEndpoints": [],
+      "verificationSteps": [
+        "useTenant() zwraca tenantId z sesji",
+        "TenantGuard przekierowuje nieautoryzowanych"
+      ],
       "passes": true
     },
     {
@@ -71,6 +118,11 @@
       "promptMarker": "BLOCK_START: 1.3",
       "tasks": ["1.3.1", "1.3.2", "1.3.3"],
       "dependencies": ["1.1"],
+      "apiEndpoints": [],
+      "verificationSteps": [
+        "Middleware chroni /dashboard/*",
+        "Niezalogowany user jest przekierowany do /login"
+      ],
       "passes": true
     },
     {
@@ -82,6 +134,13 @@
       "promptMarker": "BLOCK_START: 1.4",
       "tasks": ["1.4.1", "1.4.2", "1.4.3", "1.4.4", "1.4.5"],
       "dependencies": ["1.1", "1.3"],
+      "apiEndpoints": ["POST /api/Account/login", "POST /api/Account/register"],
+      "verificationSteps": [
+        "Formularz logowania wysyła dane do API",
+        "Network tab: widzę POST /api/Account/login",
+        "Błędne dane pokazują komunikat błędu",
+        "Poprawne logowanie przekierowuje do /dashboard"
+      ],
       "passes": true
     },
     {
@@ -93,6 +152,12 @@
       "promptMarker": "BLOCK_START: 2.1",
       "tasks": ["2.1.1", "2.1.2", "2.1.3", "2.1.4", "2.1.5"],
       "dependencies": ["1.1", "1.2", "1.3", "1.4"],
+      "apiEndpoints": [],
+      "verificationSteps": [
+        "Sidebar pokazuje nawigację",
+        "UserMenu pokazuje dane z sesji (NIE hardcoded)",
+        "Logout działa"
+      ],
       "passes": true
     },
     {
@@ -104,79 +169,149 @@
       "promptMarker": "BLOCK_START: 2.2",
       "tasks": ["2.2.1", "2.2.2", "2.2.3", "2.2.4", "2.2.5"],
       "dependencies": ["2.1"],
+      "apiEndpoints": [],
+      "verificationSteps": [
+        "QueryProvider opakowuje aplikację",
+        "Toast notifications działają",
+        "ErrorBoundary łapie błędy"
+      ],
       "passes": false
     },
     {
       "id": "3.1",
       "phase": "FAZA 3",
       "block": "3.1 Team List & CRUD",
-      "description": "Lista członków zespołu z MemberCard, MemberList i hooks",
+      "description": "Lista członków zespołu z PRAWDZIWYMI danymi z API",
       "priority": "critical",
       "promptMarker": "BLOCK_START: 3.1",
       "tasks": ["3.1.1", "3.1.2", "3.1.3", "3.1.4"],
       "dependencies": ["2.1", "2.2"],
+      "apiEndpoints": [
+        "GET /api/Team → TeamMemberDto[]",
+        "DELETE /api/Team/{id} → void"
+      ],
+      "requiredHooks": ["useGetApiTeam()", "useDeleteApiTeamId()"],
+      "verificationSteps": [
+        "Network tab: GET /api/Team zwraca 200",
+        "Lista pokazuje PRAWDZIWE dane z bazy",
+        "Usunięcie członka wywołuje DELETE i odświeża listę"
+      ],
       "passes": false
     },
     {
       "id": "3.2",
       "phase": "FAZA 3",
       "block": "3.2 Invitations",
-      "description": "System zaproszeń: InviteMemberDialog, Accept page, Pending list",
+      "description": "System zaproszeń z PRAWDZIWYMI wywołaniami API",
       "priority": "critical",
       "promptMarker": "BLOCK_START: 3.2",
       "tasks": ["3.2.1", "3.2.2", "3.2.3", "3.2.4", "3.2.5"],
       "dependencies": ["3.1"],
+      "apiEndpoints": [
+        "POST /api/Team/invite → InvitationDto",
+        "GET /api/Team/invitations → InvitationDto[]",
+        "POST /api/Team/invitations/{token}/accept → void"
+      ],
+      "requiredHooks": ["usePostApiTeamInvite()", "useGetApiTeamInvitations()"],
+      "verificationSteps": [
+        "Wysłanie zaproszenia wywołuje POST",
+        "Lista zaproszeń pokazuje dane z API",
+        "Akceptacja zaproszenia działa"
+      ],
       "passes": false
     },
     {
       "id": "4A.1",
       "phase": "FAZA 4A",
       "block": "4A.1 Clients List",
-      "description": "Lista klientów z ClientTable, ClientCard, view toggle i paginacja",
+      "description": "Lista klientów z PRAWDZIWYMI danymi z API",
       "priority": "critical",
       "promptMarker": "BLOCK_START: 4A.1",
       "tasks": ["4A.1.1", "4A.1.2", "4A.1.3", "4A.1.4", "4A.1.5"],
       "dependencies": ["3.1", "3.2"],
+      "apiEndpoints": [
+        "GET /api/Clients → PagedResult<ClientDto>",
+        "GET /api/Clients?pageNumber=1&pageSize=10"
+      ],
+      "requiredHooks": ["useGetApiClients({ pageNumber, pageSize })"],
+      "verificationSteps": [
+        "Network tab: GET /api/Clients zwraca 200",
+        "Lista pokazuje PRAWDZIWE dane z bazy",
+        "Paginacja zmienia pageNumber w URL",
+        "ZERO hardcoded '0' lub pustych list"
+      ],
       "passes": false
     },
     {
       "id": "4A.2",
       "phase": "FAZA 4A",
       "block": "4A.2 Clients Search & Filters",
-      "description": "ClientSearch z debounce, ClientFilters i URL persistence",
+      "description": "Wyszukiwanie i filtry z query params do API",
       "priority": "critical",
       "promptMarker": "BLOCK_START: 4A.2",
       "tasks": ["4A.2.1", "4A.2.2", "4A.2.3", "4A.2.4"],
       "dependencies": ["4A.1"],
+      "apiEndpoints": ["GET /api/Clients?search=query&status=active"],
+      "requiredHooks": ["useGetApiClients({ search, status, pageNumber })"],
+      "verificationSteps": [
+        "Wpisanie w search wysyła request z ?search=",
+        "Filtry zmieniają query params",
+        "URL persistence - odświeżenie strony zachowuje filtry"
+      ],
       "passes": false
     },
     {
       "id": "4A.3",
       "phase": "FAZA 4A",
       "block": "4A.3 Client CRUD",
-      "description": "ClientForm, Create/Edit/Detail pages i mutation hooks",
+      "description": "Tworzenie/edycja klientów z PRAWDZIWYMI mutacjami",
       "priority": "critical",
       "promptMarker": "BLOCK_START: 4A.3",
       "tasks": ["4A.3.1", "4A.3.2", "4A.3.3", "4A.3.4", "4A.3.5", "4A.3.6"],
       "dependencies": ["4A.1"],
+      "apiEndpoints": [
+        "POST /api/Clients → ClientDto",
+        "GET /api/Clients/{id} → ClientDto",
+        "PUT /api/Clients/{id} → ClientDto",
+        "DELETE /api/Clients/{id} → void"
+      ],
+      "requiredHooks": [
+        "usePostApiClients()",
+        "useGetApiClientsId(id)",
+        "usePutApiClientsId()",
+        "useDeleteApiClientsId()"
+      ],
+      "verificationSteps": [
+        "Utworzenie klienta: POST, potem pojawia się na liście",
+        "Edycja: GET wypełnia formularz, PUT zapisuje",
+        "Usunięcie: DELETE, klient znika z listy",
+        "ZERO console.log('TODO')"
+      ],
       "passes": false
     },
     {
       "id": "4B.1",
       "phase": "FAZA 4B",
       "block": "4B.1 Plans List",
-      "description": "Lista planów z PlanCard, PlanGrid i pricing cards UI",
+      "description": "Lista planów z PRAWDZIWYMI danymi z API",
       "priority": "critical",
       "promptMarker": "BLOCK_START: 4B.1",
       "tasks": ["4B.1.1", "4B.1.2", "4B.1.3", "4B.1.4", "4B.1.5"],
       "dependencies": ["3.1", "3.2"],
+      "apiEndpoints": ["GET /api/Plans → PlanDto[]"],
+      "requiredHooks": ["useGetApiPlans()"],
+      "verificationSteps": [
+        "Network tab: GET /api/Plans zwraca 200",
+        "Karty planów pokazują prawdziwe dane",
+        "Ceny formatowane przez formatCurrency()"
+      ],
       "passes": false
     },
     {
       "id": "4B.2",
       "phase": "FAZA 4B",
       "block": "4B.2 Plan CRUD",
-      "description": "PlanForm z useFieldArray dla features, Create/Edit/Detail pages",
+      "description": "Tworzenie/edycja planów z useFieldArray dla features",
       "priority": "critical",
       "promptMarker": "BLOCK_START: 4B.2",
       "tasks": [
@@ -189,61 +324,133 @@
         "4B.2.7"
       ],
       "dependencies": ["4B.1"],
+      "apiEndpoints": [
+        "POST /api/Plans → PlanDto",
+        "GET /api/Plans/{id} → PlanDto",
+        "PUT /api/Plans/{id} → PlanDto",
+        "DELETE /api/Plans/{id} → void"
+      ],
+      "requiredHooks": [
+        "usePostApiPlans()",
+        "useGetApiPlansId(id)",
+        "usePutApiPlansId()",
+        "useDeleteApiPlansId()"
+      ],
+      "verificationSteps": [
+        "Utworzenie planu z features działa",
+        "Edycja planu: GET → formularz → PUT",
+        "useFieldArray dodaje/usuwa features"
+      ],
       "passes": false
     },
     {
       "id": "5.1",
       "phase": "FAZA 5",
       "block": "5.1 Subscriptions List",
-      "description": "Lista subskrypcji z SubscriptionTable, StatusBadge i filters",
+      "description": "Lista subskrypcji z PRAWDZIWYMI danymi",
       "priority": "critical",
       "promptMarker": "BLOCK_START: 5.1",
       "tasks": ["5.1.1", "5.1.2", "5.1.3", "5.1.4", "5.1.5"],
       "dependencies": ["4A.1", "4A.2", "4A.3", "4B.1", "4B.2"],
+      "apiEndpoints": [
+        "GET /api/Subscriptions → PagedResult<SubscriptionDto>",
+        "GET /api/Subscriptions?status=active&clientId=123"
+      ],
+      "requiredHooks": [
+        "useGetApiSubscriptions({ status, clientId, pageNumber })"
+      ],
+      "verificationSteps": [
+        "Lista pokazuje prawdziwe subskrypcje",
+        "StatusBadge odpowiada rzeczywistemu statusowi",
+        "Filtry działają"
+      ],
       "passes": false
     },
     {
       "id": "5.2",
       "phase": "FAZA 5",
       "block": "5.2 Subscription Actions",
-      "description": "Create subscription wizard, Detail page, Cancel/Pause/Change Plan",
+      "description": "Tworzenie/anulowanie subskrypcji",
       "priority": "critical",
       "promptMarker": "BLOCK_START: 5.2",
       "tasks": ["5.2.1", "5.2.2", "5.2.3", "5.2.4", "5.2.5"],
       "dependencies": ["5.1"],
+      "apiEndpoints": [
+        "POST /api/Subscriptions → SubscriptionDto",
+        "GET /api/Subscriptions/{id} → SubscriptionDto",
+        "PUT /api/Subscriptions/{id}/cancel → void",
+        "PUT /api/Subscriptions/{id}/pause → void"
+      ],
+      "requiredHooks": [
+        "usePostApiSubscriptions()",
+        "useGetApiSubscriptionsId(id)",
+        "usePutApiSubscriptionsIdCancel()",
+        "usePutApiSubscriptionsIdPause()"
+      ],
+      "verificationSteps": [
+        "Wizard tworzy subskrypcję (POST)",
+        "Cancel zmienia status",
+        "Pause zmienia status"
+      ],
       "passes": false
     },
     {
       "id": "6.1",
       "phase": "FAZA 6",
       "block": "6.1 Payment History",
-      "description": "Historia płatności z PaymentTable, StatusBadge i detail dialog",
+      "description": "Historia płatności z API",
       "priority": "critical",
       "promptMarker": "BLOCK_START: 6.1",
       "tasks": ["6.1.1", "6.1.2", "6.1.3", "6.1.4"],
       "dependencies": ["5.1", "5.2"],
+      "apiEndpoints": [
+        "GET /api/Payments → PagedResult<PaymentDto>",
+        "GET /api/Payments/{id} → PaymentDto"
+      ],
+      "requiredHooks": ["useGetApiPayments()", "useGetApiPaymentsId(id)"],
+      "verificationSteps": [
+        "Lista płatności z prawdziwymi danymi",
+        "Kwoty formatowane przez formatCurrency()"
+      ],
       "passes": false
     },
     {
       "id": "6.2",
       "phase": "FAZA 6",
       "block": "6.2 Payment Methods & Manual Payments",
-      "description": "PaymentMethodForm (Stripe placeholder), ManualPayment i Refund dialogs",
+      "description": "Metody płatności (Stripe placeholder)",
       "priority": "critical",
       "promptMarker": "BLOCK_START: 6.2",
       "tasks": ["6.2.1", "6.2.2", "6.2.3", "6.2.4"],
       "dependencies": ["6.1"],
+      "apiEndpoints": [
+        "POST /api/Payments/manual → PaymentDto",
+        "POST /api/Payments/{id}/refund → void"
+      ],
+      "verificationSteps": [
+        "Manual payment wywołuje POST",
+        "Refund wywołuje POST"
+      ],
       "passes": false
     },
     {
       "id": "7.1",
       "phase": "FAZA 7",
       "block": "7.1 Analytics Dashboard",
-      "description": "Dashboard analityczny z RevenueChart, StatCards i DateRangePicker",
+      "description": "Dashboard z PRAWDZIWYMI statystykami",
       "priority": "critical",
       "promptMarker": "BLOCK_START: 7.1",
       "tasks": ["7.1.1", "7.1.2", "7.1.3", "7.1.4", "7.1.5", "7.1.6"],
       "dependencies": ["6.1", "6.2"],
+      "apiEndpoints": [
+        "GET /api/Analytics/dashboard → DashboardStatsDto",
+        "GET /api/Analytics/revenue?from=&to= → RevenueDataDto[]"
+      ],
+      "criticalNote": "Jeśli endpoint /api/Analytics nie istnieje - PYTAJ, nie mockuj!",
+      "verificationSteps": [
+        "Statystyki z prawdziwego API (nie '0')",
+        "Wykres z prawdziwymi danymi"
+      ],
       "passes": false
     },
     {
@@ -255,28 +462,43 @@
       "promptMarker": "BLOCK_START: 8.1",
       "tasks": ["8.1.1", "8.1.2", "8.1.3", "8.1.4", "8.1.5"],
       "dependencies": ["7.1"],
+      "apiEndpoints": [],
+      "verificationSteps": [
+        "npm run test przechodzi",
+        "E2E testy logowania działają"
+      ],
       "passes": false
     },
     {
       "id": "8.2",
       "phase": "FAZA 8",
       "block": "8.2 Polish & Optimization",
-      "description": "TypeScript audit, A11y audit, Performance, Documentation",
+      "description": "Audyty TypeScript, A11y, Performance",
       "priority": "critical",
       "promptMarker": "BLOCK_START: 8.2",
       "tasks": ["8.2.1", "8.2.2", "8.2.3", "8.2.4", "8.2.5"],
       "dependencies": ["8.1"],
+      "apiEndpoints": [],
+      "verificationSteps": ["Zero błędów TypeScript", "Zero ostrzeżeń A11y"],
       "passes": false
     },
     {
       "id": "9.1",
       "phase": "FAZA 9",
       "block": "9.1 Client Portal Foundation",
-      "description": "Portal Layout, PortalGuard, Portal Dashboard z Invoices",
+      "description": "Portal dla klientów końcowych",
       "priority": "important",
       "promptMarker": "BLOCK_START: 9.1",
       "tasks": ["9.1.1", "9.1.2", "9.1.3", "9.1.4", "9.1.5"],
       "dependencies": ["1.1", "5.1", "5.2"],
+      "apiEndpoints": [
+        "GET /api/Portal/my-subscriptions",
+        "GET /api/Portal/my-invoices"
+      ],
+      "verificationSteps": [
+        "Portal dostępny tylko dla roli Client",
+        "Dane z prawdziwego API"
+      ],
       "passes": false
     }
   ],
@@ -289,25 +511,32 @@
   "nextPriority": "2.2",
   "agentInstructions": {
     "beforeStarting": [
-      "1. Uruchom ./init.sh",
-      "2. Przeczytaj claude-progress.txt",
-      "3. Sprawdź git log --oneline -10",
-      "4. Znajdź w tym pliku pierwszy blok z passes: false",
+      "🚨 1. PRZECZYTAJ API_RULES.md - to jest OBOWIĄZKOWE!",
+      "2. Sprawdź claude-progress.txt",
+      "3. Znajdź w tym pliku pierwszy blok z passes: false",
+      "4. Sprawdź apiEndpoints dla tego bloku",
       "5. Otwórz Frontend_Prompts.md i znajdź sekcję z promptMarker",
       "6. Przeczytaj CAŁY prompt przed rozpoczęciem pracy"
     ],
     "duringWork": [
-      "Wykonuj DOKŁADNIE kroki z promptu",
-      "Pracuj nad JEDNYM blokiem na raz",
-      "Testuj w przeglądarce po każdej zmianie",
-      "Rób git commit po znaczących zmianach"
+      "🚫 NIGDY nie używaj hardcoded data (0, [], 'placeholder')",
+      "🚫 NIGDY nie twórz mock funkcji z console.log('TODO')",
+      "✅ ZAWSZE używaj hooków z @/core/api/generated/",
+      "✅ ZAWSZE obsługuj loading, error, empty states",
+      "✅ Testuj w przeglądarce po każdej zmianie"
     ],
     "afterCompletion": [
       "1. npm run typecheck && npm run lint",
-      "2. Przetestuj ręcznie wszystkie funkcje z bloku",
-      "3. Zmień passes: true w tym pliku",
-      "4. Dodaj wpis do claude-progress.txt",
-      "5. Git commit: feat(scope): description"
+      "2. 🔍 SPRAWDŹ NETWORK TAB w DevTools:",
+      "   - Czy widzę requesty do /api/?",
+      "   - Czy mają status 200 (nie 401)?",
+      "   - Czy mają header Authorization?",
+      "3. 🔍 SPRAWDŹ UI:",
+      "   - Czy dane są PRAWDZIWE (nie '0', nie puste)?",
+      "   - Czy loading spinner się pokazuje?",
+      "4. Zmień passes: true w tym pliku",
+      "5. Dodaj wpis do claude-progress.txt",
+      "6. Git commit: feat(scope): description"
     ]
   }
 }
