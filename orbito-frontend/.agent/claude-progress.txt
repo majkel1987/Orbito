@@ -209,13 +209,33 @@ Issues encountered:
 - Orval generuje `customInstance<void>` zamiast proper types (backend OpenAPI issue)
 Next priority: 2.2 (Global State & Query Client) - ale teraz z prawdziwymi API calls!
 
+--- Session 2025-12-09 20:30 UTC ---
+Agent: Claude Sonnet 4.5
+Duration: ~15 min
+Block worked on: 2.2 (Global State & Query Client)
+Status: COMPLETED
+Changes:
+- Utworzono QueryProvider w src/core/providers/QueryProvider.tsx z QueryClient
+- Skonfigurowano sensowne defaults (staleTime: 60s, retry: 1, refetchOnWindowFocus: false)
+- Zainstalowano @tanstack/react-query-devtools jako dev dependency
+- Utworzono ErrorBoundary (class component) w src/shared/components/ErrorBoundary.tsx
+- Utworzono Loading Skeletons: TableSkeleton, CardSkeleton, FormSkeleton
+- Dodano Toaster (Sonner) do root layout
+- Utworzono useToast hook w src/shared/hooks/useToast.ts
+- QueryProvider dodany do layout.tsx, opakowuje całą aplikację
+Git commits:
+- (pending) feat(core): setup React Query and global error handling
+Issues encountered:
+- None - wszystkie komponenty utworzone bez problemów
+Next priority: 3.1 (Team List & CRUD) - pierwsze features z prawdziwym API
+
 ================================================================================
 CURRENT STATUS
 ================================================================================
 
-Last completed block: 2.1 (Layout Components) + API Integration Hotfix
-Next block to work on: 2.2 (Global State & Query Client)
-Overall progress: 8/24 blocks (33.33%)
+Last completed block: 2.2 (Global State & Query Client)
+Next block to work on: 3.1 (Team List & CRUD)
+Overall progress: 9/24 blocks (37.5%)
 CRITICAL: API Integration is now WORKING - Authorization header is sent!
 
 ================================================================================

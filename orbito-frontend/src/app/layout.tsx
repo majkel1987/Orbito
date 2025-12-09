@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { QueryProvider } from "@/core/providers/QueryProvider";
+import { Toaster } from "@/shared/ui/sonner";
 
 export const metadata: Metadata = {
   title: "Orbito Platform",
@@ -15,7 +16,10 @@ export default function RootLayout({
   return (
     <html lang="pl">
       <body className="antialiased">
-        <QueryProvider>{children}</QueryProvider>
+        <QueryProvider>
+          {children}
+          <Toaster />
+        </QueryProvider>
       </body>
     </html>
   );

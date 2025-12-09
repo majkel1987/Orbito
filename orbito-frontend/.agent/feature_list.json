@@ -175,7 +175,7 @@
         "Toast notifications działają",
         "ErrorBoundary łapie błędy"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "3.1",
