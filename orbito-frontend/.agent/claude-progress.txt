@@ -183,13 +183,40 @@ Issues encountered:
 - TypeScript strict mode wymagał explicit typów w jwt() i session() callbackach (rozwiązane)
 Next priority: 2.2 (Global State & Query Client)
 
+--- Session 2025-12-09 (HOTFIX) ---
+Agent: Claude Sonnet 4.5
+Duration: ~30 min
+Block worked on: Fixing API Integration Issues (Blocks 0.3, 1.1, 2.1)
+Status: COMPLETED
+Changes:
+- ✅ CRITICAL FIX: Dodano auth interceptor do src/core/api/client.ts (było TODO od bloku 0.3!)
+- ✅ Zastąpiono hardcoded dane w dashboard/page.tsx prawdziwymi API calls
+  - useGetApiClients() - pobiera totalCount klientów
+  - useGetApiSubscriptions() - pobiera aktywne subskrypcje
+  - useGetApiPaymentMetricsStatistics() - pobiera miesięczny przychód
+- ✅ Zastąpiono placeholder w clients/page.tsx pełną tabelą z API
+  - useGetApiClients() z paginacją
+  - Loading states (Skeleton)
+  - Error handling
+  - Formatowanie dat i statusów
+- ✅ Dodano type assertions dla Orval hooków (workaround dla backend OpenAPI bug)
+- ✅ Zaktualizowano claude-progress.txt z sekcją CRITICAL LESSONS LEARNED
+Git commits:
+- (pending) fix(api): add JWT auth interceptor and replace mock data with real API calls
+Issues encountered:
+- Auth interceptor nigdy nie został dodany mimo TODO w 0.3 i completion of 1.1
+- Dashboard i Clients pages miały hardcoded dane zamiast API calls
+- Orval generuje `customInstance<void>` zamiast proper types (backend OpenAPI issue)
+Next priority: 2.2 (Global State & Query Client) - ale teraz z prawdziwymi API calls!
+
 ================================================================================
 CURRENT STATUS
 ================================================================================
 
-Last completed block: 2.1 (Layout Components)
+Last completed block: 2.1 (Layout Components) + API Integration Hotfix
 Next block to work on: 2.2 (Global State & Query Client)
 Overall progress: 8/24 blocks (33.33%)
+CRITICAL: API Integration is now WORKING - Authorization header is sent!
 
 ================================================================================
 ENVIRONMENT CHECKLIST
@@ -239,5 +266,113 @@ LESSONS LEARNED
 6. Auto-generated pliki powinny być w eslintignore
 7. Backend port może się różnić - zawsze sprawdź
 8. Auth interceptor dodajemy dopiero po zainstalowaniu NextAuth
+
+================================================================================
+CRITICAL LESSONS LEARNED - API Integration Issues (2025-12-09)
+================================================================================
+
+## ❌ Problem 1: Auth Interceptor Bug (Blok 1.1)
+
+**Opis**: TODO w bloku 0.3 mówił "będzie dodany w 1.1" - nigdy nie został dodany
+**Impact**: Wszystkie API calls zwracały 401 Unauthorized
+**Root Cause**:
+  - client.ts:20-21 miał tylko komentarz TODO
+  - Blok 1.1 został oznaczony jako "passes: true" mimo że interceptor nie został zaimplementowany
+  - Frontend wyglądał jak działający (hardcoded dane), więc błąd nie został wykryty
+
+**Fix Applied (2025-12-09)**:
+```typescript
+// src/core/api/client.ts:22-36
+axiosInstance.interceptors.request.use(async (config) => {
+  if (typeof window !== "undefined") {
+    const session = await getSession();
+    if (session?.accessToken) {
+      config.headers.Authorization = `Bearer ${session.accessToken}`;
+    }
+  }
+  return config;
+});
+```
+
+**Lesson**: Auth interceptor MUSI być dodany w tym samym bloku co NextAuth setup.
+**Checklist Item**: Przed passes:true sprawdź DevTools Network - requesty MUSZĄ mieć Authorization header.
+
+---
+
+## ❌ Problem 2: Hardcoded Data Pattern (Bloki 2.1-2.2)
+
+**Opis**: Komponenty pokazywały "0", "$0" zamiast używać hooków API
+**Impact**: Frontend wyglądał jak działający, ale nie komunikował się z backendem
+**Root Cause**:
+  - dashboard/page.tsx:19,29 - hardcoded wartości
+  - clients/page.tsx:1-8 - tylko nagłówek, brak wywołań API
+  - ZERO importów z @/core/api/generated
+
+**Fix Applied (2025-12-09)**:
+- dashboard/page.tsx - dodano useGetApiClients, useGetApiSubscriptions, useGetApiPaymentMetricsStatistics
+- clients/page.tsx - dodano useGetApiClients z pełną tabelą i error handling
+- Wszystkie dane teraz pochodzą z prawdziwych API calls
+
+**Lesson**: ZAWSZE używać wygenerowanych hooków, NIGDY nie zostawiać hardcoded danych.
+**Checklist Item**:
+  - [ ] Komponent importuje hooki z @/core/api/generated
+  - [ ] DevTools Network pokazuje requesty do /api/*
+  - [ ] Backend zwraca 200 OK (nie 401)
+
+---
+
+## ❌ Problem 3: Orval Type Generation (Backend OpenAPI Issue)
+
+**Opis**: Orval wygenerował `customInstance<void>` zamiast `customInstance<ClientDtoPaginatedList>`
+**Impact**: TypeScript errors, konieczność type assertions
+**Root Cause**: Backend OpenAPI spec nie definiuje response type dla GET /api/Clients
+**Workaround Applied**:
+```typescript
+const { data } = useGetApiClients() as {
+  data: ClientDtoPaginatedList | undefined;
+  isLoading: boolean;
+};
+```
+
+**Lesson**: Backend OpenAPI spec MUSI definiować typy response dla wszystkich endpointów.
+**TODO Backend**: Dodać ProducesResponseType attributes do kontrolerów.
+
+---
+
+## ✅ Co działało dobrze:
+
+1. **Orval generuje poprawne hooki** - struktura hooków jest OK
+2. **Result<T> interceptor działa** - unwrapping jest poprawny
+3. **NextAuth flow jest OK** - token jest zapisywany w session
+4. **TypeScript strict mode** - wykrył wszystkie błędy typów
+
+---
+
+## 📋 Nowa Checklist dla bloków API (OBOWIĄZKOWA):
+
+Przed ustawieniem "passes": true dla KAŻDEGO bloku który używa API:
+
+### 1. Code Review
+- [ ] Komponent importuje hooki z @/core/api/generated (nie mock data)
+- [ ] ZERO hardcoded wartości ("0", "$0", [], itp.)
+- [ ] ZERO komentarzy TODO związanych z API
+- [ ] Type assertions tylko jeśli Orval wygenerował `void` (bug backendu)
+
+### 2. DevTools Network Verification
+- [ ] Otwórz DevTools → Network tab
+- [ ] Zaloguj się do aplikacji
+- [ ] Nawiguj do strony z API calls
+- [ ] Sprawdź Request Headers → Authorization: Bearer <token> (MUSI być!)
+- [ ] Sprawdź Response Status → 200 OK (nie 401!)
+- [ ] Sprawdź Response Data → prawdziwe dane z backendu
+
+### 3. TypeScript Verification
+- [ ] npm run typecheck → ZERO błędów
+- [ ] npm run lint → ZERO warnings
+
+### 4. Visual Verification
+- [ ] Loading states działają (Skeleton pokazuje się)
+- [ ] Dane wyświetlają się po załadowaniu
+- [ ] Error states działają (spróbuj wyłączyć backend)
 
 ================================================================================

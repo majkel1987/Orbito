@@ -1,4 +1,5 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
+import { getSession } from "next-auth/react";
 
 // Backend Result<T> type definition
 interface Result<T> {
@@ -17,8 +18,22 @@ const axiosInstance = axios.create({
   },
 });
 
-// TODO: Request interceptor for auth will be added in Block 1.1 (NextAuth setup)
-// Will add Bearer token from NextAuth session when available
+// Request interceptor: Add JWT token from NextAuth session
+axiosInstance.interceptors.request.use(
+  async (config) => {
+    // Only run on client-side (browser)
+    if (typeof window !== "undefined") {
+      const session = await getSession();
+      if (session?.accessToken) {
+        config.headers.Authorization = `Bearer ${session.accessToken}`;
+      }
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 // Response interceptor: Handle Result<T> and map errors
 axiosInstance.interceptors.response.use(
