@@ -229,13 +229,38 @@ Issues encountered:
 - None - wszystkie komponenty utworzone bez problemów
 Next priority: 3.1 (Team List & CRUD) - pierwsze features z prawdziwym API
 
+--- Session 2025-12-10 12:00 UTC ---
+Agent: Claude Sonnet 4.5
+Duration: ~45 min
+Block worked on: 3.1 (Team List & CRUD)
+Status: COMPLETED
+Changes:
+- Utworzono feature structure: src/features/team/{components,hooks,schemas,types}
+- Utworzono TeamMemberDto type i helper functions (getTeamMemberRoleName, getTeamMemberRoleVariant)
+- Utworzono Zod schemas: InviteTeamMemberSchema, UpdateTeamMemberRoleSchema
+- Utworzono custom hooks: useTeamMembers, useInviteTeamMember, useRemoveTeamMember, useUpdateTeamMemberRole
+- Utworzono TeamTable component z loading/error/empty states, dropdown actions
+- Utworzono TeamInviteForm component z React Hook Form + dialog
+- Utworzono stronę /dashboard/team
+- Zainstalowano shadcn/ui komponenty: table, textarea
+- Wszystkie hooki używają wygenerowanych Orval hooków z @/core/api/generated/team-members
+- Type assertions dla TeamMemberDto[] (backend OpenAPI issue - brak response type)
+Git commits:
+- (pending) feat(team): implement team management with invite and CRUD operations
+Issues encountered:
+- Backend nie zwraca TeamMemberDto w OpenAPI spec (Orval generuje customInstance<void>)
+- Rozwiązanie: utworzono własny type TeamMemberDto i używam type assertions
+- TeamMemberRole to enum z liczbami (1, 2, 3) - dodano helper functions do wyświetlania
+- ESLint warning o React Compiler i watch() - rozwiązane przez useState zamiast watch
+Next priority: 3.2 (Invitations) - system zaproszeń z akceptacją
+
 ================================================================================
 CURRENT STATUS
 ================================================================================
 
-Last completed block: 2.2 (Global State & Query Client)
-Next block to work on: 3.1 (Team List & CRUD)
-Overall progress: 9/24 blocks (37.5%)
+Last completed block: 3.1 (Team List & CRUD)
+Next block to work on: 3.2 (Invitations)
+Overall progress: 10/24 blocks (41.7%)
 CRITICAL: API Integration is now WORKING - Authorization header is sent!
 
 ================================================================================

@@ -196,7 +196,7 @@
         "Lista pokazuje PRAWDZIWE dane z bazy",
         "Usunięcie członka wywołuje DELETE i odświeża listę"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "3.2",
