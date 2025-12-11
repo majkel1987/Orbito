@@ -10,6 +10,7 @@ using Orbito.Application.Features.TeamMembers.Commands.UpdateTeamMemberRole;
 using Orbito.Application.Features.TeamMembers.Commands.AcceptInvitation;
 using Orbito.Application.Features.TeamMembers.Queries.GetTeamMemberById;
 using Orbito.Application.Features.TeamMembers.Queries.GetTeamMembers;
+using Orbito.Application.Features.TeamMembers.Queries.GetPendingInvitations;
 using Orbito.Domain.Enums;
 using System.Security.Claims;
 
@@ -41,6 +42,20 @@ public class TeamMembersController : BaseController
     public async Task<IActionResult> GetTeamMembers()
     {
         var query = new GetTeamMembersQuery();
+        var result = await _mediator.Send(query);
+
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Gets all pending invitations for the current provider organization.
+    /// </summary>
+    /// <returns>List of pending invitations.</returns>
+    [HttpGet("invitations")]
+    [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+    public async Task<IActionResult> GetPendingInvitations()
+    {
+        var query = new GetPendingInvitationsQuery();
         var result = await _mediator.Send(query);
 
         return HandleResult(result);

@@ -258,9 +258,9 @@ Next priority: 3.2 (Invitations) - system zaproszeń z akceptacją
 CURRENT STATUS
 ================================================================================
 
-Last completed block: 3.1 (Team List & CRUD)
-Next block to work on: 3.2 (Invitations)
-Overall progress: 10/24 blocks (41.7%)
+Last completed block: 3.2 (Invitations)
+Next block to work on: 4A.1 (Clients List)
+Overall progress: 11/24 blocks (45.8%)
 CRITICAL: API Integration is now WORKING - Authorization header is sent!
 
 ================================================================================
@@ -421,3 +421,29 @@ Przed ustawieniem "passes": true dla KAŻDEGO bloku który używa API:
 - [ ] Error states działają (spróbuj wyłączyć backend)
 
 ================================================================================
+
+--- Session 2025-12-11 18:15 UTC ---
+Agent: Claude Sonnet 4.5
+Duration: ~2 hours
+Block worked on: 3.2 (Invitations)
+Status: COMPLETED
+Changes:
+BACKEND:
+- Utworzono GetPendingInvitationsQuery i GetPendingInvitationsQueryHandler
+- Dodano endpoint GET /api/TeamMembers/invitations w TeamMembersController
+- Endpoint zwraca tylko pending invitations (HasAcceptedInvitation = false, InvitationExpiresAt > now)
+FRONTEND:
+- Utworzono src/features/team/schemas/invitation.schemas.ts (InviteSchema)
+- Utworzono src/features/team/hooks/useInvitations.ts z useGetApiTeamMembersInvitations
+- Utworzono src/features/team/components/invitations/InviteForm.tsx (standalone form)
+- Utworzono src/features/team/components/invitations/InvitationsList.tsx
+- Utworzono stronę /dashboard/team/invite z formularzem i listą zaproszeń
+- Utworzono publiczną stronę /invite/[token] do akceptacji zaproszenia
+- Zregenerowano hooki API (useGetApiTeamMembersInvitations został dodany)
+Git commits:
+- (pending) feat(team): add invitations system with backend endpoint and frontend UI
+Issues encountered:
+- Brak endpointu GET /api/TeamMembers/invitations - rozwiązane przez dodanie query i handlera w backendzie
+- TeamMemberRole generowany jako NUMBER_1, NUMBER_2, NUMBER_3 - używamy helper functions z team.types.ts
+- Orval wygenerował customInstance<void> dla GET /invitations - używamy type assertion do TeamMemberDto[]
+Next priority: 4A.1 (Clients List) - lista klientów z prawdziwymi danymi z API

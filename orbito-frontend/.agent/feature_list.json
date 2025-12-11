@@ -218,7 +218,7 @@
         "Lista zaproszeń pokazuje dane z API",
         "Akceptacja zaproszenia działa"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "4A.1",
