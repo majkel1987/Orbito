@@ -1,6 +1,9 @@
+"use client";
+
 import { SessionProvider } from "next-auth/react";
 import { TenantProvider } from "@/features/auth";
 import { DashboardShell } from "@/shared/components/layout/DashboardShell";
+import { AuthInterceptorProvider } from "@/core/providers/AuthInterceptorProvider";
 
 export default function DashboardLayout({
   children,
@@ -9,9 +12,11 @@ export default function DashboardLayout({
 }) {
   return (
     <SessionProvider>
-      <TenantProvider>
-        <DashboardShell>{children}</DashboardShell>
-      </TenantProvider>
+      <AuthInterceptorProvider>
+        <TenantProvider>
+          <DashboardShell>{children}</DashboardShell>
+        </TenantProvider>
+      </AuthInterceptorProvider>
     </SessionProvider>
   );
 }

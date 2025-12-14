@@ -12,7 +12,7 @@ using Orbito.Infrastructure.Data;
 namespace Orbito.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251207125410_InitialCreate")]
+    [Migration("20251213103142_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />

@@ -42,7 +42,7 @@
 
 ### 📖 Pełna Dokumentacja:
 
-**Przed rozpoczęciem bloku który używa API - PRZECZYTAJ: [`API_RULES.md`](./API_RULES.md)**
+**Przed rozpoczęciem bloku który używa API - PRZECZYTAJ: [`API_RULES.md`](.agent/API_RULES.md)**
 
 ---
 
@@ -54,9 +54,9 @@
 
 | #     | Zadanie                              | Priorytet | Status | Opis                                                                |
 | ----- | ------------------------------------ | --------- | ------ | ------------------------------------------------------------------- |
-| 0.1.1 | 🔴 Utworzenie projektu Next.js 15    | Krytyczne | ⬜     | `create-next-app` z TypeScript, Tailwind, App Router, src directory |
-| 0.1.2 | 🔴 Konfiguracja tsconfig.json strict | Krytyczne | ⬜     | strict: true, allowJs: false, wszystkie strict\* opcje              |
-| 0.1.3 | 🔴 Struktura katalogów               | Krytyczne | ⬜     | Utworzenie features/, shared/, core/ zgodnie z planem               |
+| 0.1.1 | 🔴 Utworzenie projektu Next.js 15    | Krytyczne | ✅     | `create-next-app` z TypeScript, Tailwind, App Router, src directory |
+| 0.1.2 | 🔴 Konfiguracja tsconfig.json strict | Krytyczne | ✅     | strict: true, allowJs: false, wszystkie strict\* opcje              |
+| 0.1.3 | 🔴 Struktura katalogów               | Krytyczne | ✅     | Utworzenie features/, shared/, core/ zgodnie z planem               |
 
 **Blok 0.1 - Wymagania wejściowe**: Brak  
 **Blok 0.1 - Rezultat**: Działający projekt Next.js z TypeScript strict
@@ -235,7 +235,7 @@ Projekt z zainstalowanym shadcn/ui, gdzie komponenty (np. Button) znajdują się
 - [x] `formatCurrency()` i `formatDate()` zaimplementowane
 - [x] Import `<Button>` z `@/shared/ui/button` działa
 - [x] `npm run dev` wyświetla stronę z poprawnym stylem
-- [x] Git commit: `feat(ui): setup shadcn/ui and utility functions`
+- [x] Git commit: `feat(ui): setup shadcn/ui with custom paths`
 
 <!-- BLOCK_END: 0.2 -->
 
@@ -245,87 +245,90 @@ Projekt z zainstalowanym shadcn/ui, gdzie komponenty (np. Button) znajdują się
 
 ### 0.3 API Layer Setup
 
-| #     | Zadanie                         | Priorytet | Status | Opis                                                        |
-| ----- | ------------------------------- | --------- | ------ | ----------------------------------------------------------- |
-| 0.3.1 | 🔴 Instalacja orval             | Krytyczne | ⬜     | `npm install -D orval`                                      |
-| 0.3.2 | 🔴 Konfiguracja orval.config.ts | Krytyczne | ⬜     | Input: swagger.json, output: generated/, react-query client |
-| 0.3.3 | 🔴 Axios client setup           | Krytyczne | ⬜     | src/core/api/client.ts - bazowa instancja z baseURL         |
-| 0.3.4 | 🔴 Result<T> interceptor        | Krytyczne | ⬜     | Rozpakowywanie Result<T>, mapowanie błędów                  |
-| 0.3.5 | 🔴 Pierwsze generowanie API     | Krytyczne | ⬜     | `npm run api:generate` - weryfikacja że działa              |
+| #     | Zadanie                          | Priorytet | Status | Opis                                                 |
+| ----- | -------------------------------- | --------- | ------ | ---------------------------------------------------- |
+| 0.3.1 | 🔴 Konfiguracja Orval            | Krytyczne | ✅     | orval.config.ts z konfiguracją do generowania hooków |
+| 0.3.2 | 🔴 Axios instance                | Krytyczne | ✅     | client.ts z baseURL i interceptorami                 |
+| 0.3.3 | 🔴 Result<T> interceptor         | Krytyczne | ✅     | Response interceptor rozpakowujący Result<T>         |
+| 0.3.4 | 🔴 Generowanie pierwszych hooków | Krytyczne | ✅     | npm run api:generate → pliki w core/api/generated    |
+| 0.3.5 | 🟡 Typy pomocnicze               | Ważne     | ✅     | ApiError type, isApiError guard                      |
 
-**Blok 0.3 - Wymagania wejściowe**: Blok 0.1, działający backend ze Swagger  
-**Blok 0.3 - Rezultat**: Wygenerowane typy i hooki z backendu
+**Blok 0.3 - Wymagania wejściowe**: Blok 0.1  
+**Blok 0.3 - Rezultat**: Działający system generowania API hooków
 
 **📦 DEPENDENCIES:**
 
 - ✅ Blok 0.1 (Inicjalizacja Projektu)
-- ✅ Backend API ze Swagger endpoint
 
 **⬅️ BLOKUJE:**
 
-- Wszystkie bloki korzystające z API
-- Blok 1.1 (NextAuth - potrzebuje axios client)
+- Wszystkie bloki korzystające z API (1.1, 3.x, 4.x, 5.x, 6.x)
+
+**⚠️ KRYTYCZNA UWAGA:**
+Auth interceptor (dodający token JWT do nagłówków) będzie dodany w **Bloku 1.1**!
+W tym bloku tworzymy tylko infrastrukturę bez autoryzacji.
 
 ---
 
 ### 🤖 PROMPT
 
-Działaj jako Senior Frontend Developer / API Integration Specialist.
-Kontynuujemy pracę nad projektem Next.js 15. Twoim zadaniem jest wykonanie Fazy 0.3 (API Layer Setup) zgodnie z planem.
+Działaj jako Senior Frontend Developer specjalizujący się w integracji API.
+Twoim zadaniem jest wykonanie Fazy 0.3 (API Layer Setup) z planu implementacji.
 
 ### CEL GŁÓWNY:
 
-Zautomatyzować generowanie typów TypeScript i hooków React Query na podstawie OpenAPI Specification (Swagger) z backendu.
-Skonfigurować interceptory do obsługi Result<T> i zarządzania tokenami JWT.
+Skonfigurować Orval do automatycznego generowania React Query hooków z OpenAPI spec oraz przygotować Axios client z interceptorami obsługującymi nasz format odpowiedzi `Result<T>`.
 
-### KONTEKST:
+### KONTEKST BACKENDU:
 
-Backend API zwraca dane w formacie Result<T>:
+Backend zwraca odpowiedzi w formacie:
 
-```typescript
+```json
 {
-  isSuccess: boolean;
-  value?: T;
-  error?: string;
-  errors?: string[];
+  "isSuccess": true,
+  "value": { ... },  // dane gdy sukces
+  "error": null
+}
+// lub
+{
+  "isSuccess": false,
+  "value": null,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "..."
+  }
 }
 ```
 
 ### KROKI DO WYKONANIA:
 
-**KROK 1: Instalacja Dependencies (Zadanie 0.3.1)**
+**KROK 1: Instalacja zależności**
 
 ```bash
+npm install axios @tanstack/react-query
 npm install -D orval
-npm install @tanstack/react-query axios
 ```
 
-**KROK 2: Konfiguracja Orval (Zadanie 0.3.2)**
-Utwórz plik `orval.config.ts` w głównym katalogu projektu.
-Wymagania:
-
-- Input: URL Swaggera backendu (np. `http://localhost:5000/swagger/v1/swagger.json`)
-- Output: `src/core/api/generated/`
-- Client: `react-query`
-- Mode: `tags-split` (każdy tag API w osobnym pliku)
-- Override axios instance: `@/core/api/client`
-
-Przykładowa konfiguracja:
+**KROK 2: Orval Config (Zadanie 0.3.1)**
+Utwórz `orval.config.ts` w root projektu:
 
 ```typescript
 import { defineConfig } from "orval";
 
 export default defineConfig({
   orbito: {
-    input: "http://localhost:5000/swagger/v1/swagger.json",
+    input: {
+      target: "http://localhost:5211/swagger/v1/swagger.json",
+    },
     output: {
       mode: "tags-split",
-      target: "src/core/api/generated/endpoints.ts",
-      schemas: "src/core/api/generated/models",
+      target: "./src/core/api/generated",
+      schemas: "./src/core/api/generated/model",
       client: "react-query",
+      httpClient: "axios",
       override: {
         mutator: {
-          path: "src/core/api/client.ts",
+          path: "./src/core/api/client.ts",
           name: "customInstance",
         },
       },
@@ -334,52 +337,104 @@ export default defineConfig({
 });
 ```
 
-**KROK 3: Axios Client Setup (Zadanie 0.3.3)**
-Utwórz `src/core/api/client.ts`.
-Wymagania:
+**KROK 3: Axios Client (Zadanie 0.3.2, 0.3.3)**
+Utwórz `src/core/api/client.ts`:
 
-- Bazowa instancja Axios z `baseURL` z zmiennej środowiskowej
-- Interceptor request: Dodawanie Bearer token z NextAuth session
-- Export funkcji `customInstance` dla Orval
+```typescript
+import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 
-**KROK 4: Result<T> Interceptor (Zadanie 0.3.4)**
-W pliku `src/core/api/client.ts` dodaj response interceptor.
-Wymagania:
+const axiosInstance = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5211",
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
 
-- Jeśli response.data ma pole `isSuccess`:
-  - `true` → zwróć `data.value`
-  - `false` → rzuć error z `data.error` lub `data.errors`
-- Mapowanie błędów HTTP (401, 403, 500) na user-friendly messages
+// Result<T> Response Interceptor
+axiosInstance.interceptors.response.use(
+  (response: AxiosResponse) => {
+    // Backend zwraca { isSuccess, value, error }
+    const data = response.data;
+    if (data && typeof data === "object" && "isSuccess" in data) {
+      if (data.isSuccess) {
+        response.data = data.value;
+      } else {
+        return Promise.reject({
+          code: data.error?.code || "UNKNOWN_ERROR",
+          message: data.error?.message || "An error occurred",
+        });
+      }
+    }
+    return response;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
-**KROK 5: Package.json Scripts (Zadanie 0.3.5)**
-Dodaj skrypt:
+// 🚨 AUTH INTERCEPTOR BĘDZIE DODANY W BLOKU 1.1!
+// NIE ZOSTAWIAJ TODO - to jest celowe rozdzielenie bloków
+
+export const customInstance = <T>(config: AxiosRequestConfig): Promise<T> => {
+  const promise = axiosInstance(config).then((response) => response.data as T);
+  return promise;
+};
+
+export default axiosInstance;
+```
+
+**KROK 4: npm script (Zadanie 0.3.4)**
+Dodaj do `package.json`:
 
 ```json
 {
   "scripts": {
-    "api:generate": "orval --config orval.config.ts"
+    "api:generate": "orval"
   }
 }
 ```
 
-Uruchom `npm run api:generate` i zweryfikuj, że pliki zostały wygenerowane w `src/core/api/generated/`.
+Uruchom `npm run api:generate` - powinny powstać pliki w `src/core/api/generated/`.
+
+**KROK 5: Typy pomocnicze (Zadanie 0.3.5)**
+Utwórz `src/core/api/types.ts`:
+
+```typescript
+export interface ApiError {
+  code: string;
+  message: string;
+}
+
+export function isApiError(error: unknown): error is ApiError {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    "message" in error
+  );
+}
+```
 
 ### OCZEKIWANY REZULTAT:
 
-Działający system generowania API z automatycznym rozpakowywaniem Result<T>, gotowy do użycia w hookach React Query.
+Po uruchomieniu `npm run api:generate`:
+
+- Katalog `src/core/api/generated/` zawiera pliki z hookami (np. `clients.ts`, `plans.ts`)
+- Katalog `src/core/api/generated/model/` zawiera typy DTO
+- `customInstance` jest gotowy do użycia (bez auth - to będzie w 1.1)
 
 ---
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [x] Orval zainstalowany i skonfigurowany
-- [x] `orval.config.ts` zawiera poprawną konfigurację
-- [x] `src/core/api/client.ts` z axios instance i interceptorami
-- [x] Result<T> interceptor poprawnie rozpakkowuje odpowiedzi
-- [x] `npm run api:generate` generuje pliki bez błędów
-- [x] Wygenerowane typy w `src/core/api/generated/`
-- [x] `.env.local` zawiera `NEXT_PUBLIC_API_URL`
-- [x] Git commit: `feat(api): setup orval and API layer with Result<T> handling`
+- [x] `orval.config.ts` utworzony
+- [x] `src/core/api/client.ts` z customInstance
+- [x] Result<T> interceptor działa
+- [x] `npm run api:generate` generuje hooki
+- [x] Wygenerowane typy DTO (ClientDto, PlanDto, etc.)
+- [x] ApiError type i isApiError guard
+- [x] NIE MA auth interceptora (to jest w 1.1)
+- [x] Git commit: `feat(api): setup Orval and Axios client with Result<T> handling`
 
 <!-- BLOCK_END: 0.3 -->
 
@@ -387,202 +442,239 @@ Działający system generowania API z automatycznym rozpakowywaniem Result<T>, g
 
 <!-- BLOCK_START: 1.1 -->
 
-## 🔵 FAZA 1: Authentication & Tenant Context (Tydzień 2)
+## 🔵 FAZA 1: Auth & Tenant Context (Tydzień 2)
 
 ### 1.1 NextAuth Configuration
 
-| #     | Zadanie                      | Priorytet | Status | Opis                                               |
-| ----- | ---------------------------- | --------- | ------ | -------------------------------------------------- |
-| 1.1.1 | 🔴 NextAuth setup            | Krytyczne | ✅     | app/api/auth/[...nextauth]/route.ts z JWT          |
-| 1.1.2 | 🔴 Credentials provider      | Krytyczne | ✅     | Autoryzacja przez backend API /auth/login          |
-| 1.1.3 | 🔴 JWT callbacks             | Krytyczne | ✅     | Dołączanie tenantId, role do tokena                |
-| 1.1.4 | 🔴 Session types             | Krytyczne | ✅     | Rozszerzenie NextAuth types (tenantId, role, name) |
-| 1.1.5 | 🟡 NEXTAUTH_SECRET generator | Ważne     | ✅     | Skrypt generowania bezpiecznego secret             |
+| #     | Zadanie                             | Priorytet | Status | Opis                                                      |
+| ----- | ----------------------------------- | --------- | ------ | --------------------------------------------------------- |
+| 1.1.1 | 🔴 NextAuth v5 setup                | Krytyczne | ✅     | auth.ts, route handler, next.config.js                    |
+| 1.1.2 | 🔴 Credentials provider             | Krytyczne | ✅     | Login via POST /api/Account/login                         |
+| 1.1.3 | 🔴 JWT callback z accessToken       | Krytyczne | ✅     | Zapisanie tokena JWT do sesji                             |
+| 1.1.4 | 🔴 Session callback                 | Krytyczne | ✅     | Udostępnienie accessToken w useSession                    |
+| 1.1.5 | 🔴 **AUTH INTERCEPTOR w client.ts** | Krytyczne | ✅     | 🚨 Interceptor dodający Authorization header do requestów |
 
-**Blok 1.1 - Wymagania wejściowe**: Blok 0.3 (API Layer)  
-**Blok 1.1 - Rezultat**: Działający system logowania z JWT
+**Blok 1.1 - Wymagania wejściowe**: Bloki 0.x  
+**Blok 1.1 - Rezultat**: Działająca autoryzacja z tokenem JWT
 
 **📦 DEPENDENCIES:**
 
+- ✅ Blok 0.1 (Project Init)
+- ✅ Blok 0.2 (UI Kit)
 - ✅ Blok 0.3 (API Layer)
-- ✅ Backend endpoint /auth/login
 
 **⬅️ BLOKUJE:**
 
-- Blok 1.2 (Auth Guards)
-- Blok 1.3 (Tenant Store)
-- Wszystkie chronione strony
+- Wszystkie bloki wymagające autoryzacji (1.2, 1.3, 1.4, 2.x, 3.x, 4.x, 5.x, 6.x)
+
+**🚨 KRYTYCZNE:**
+Ten blok MUSI dodać auth interceptor do `client.ts`! Bez tego WSZYSTKIE requesty do API zwrócą 401 Unauthorized!
 
 ---
 
 ### 🤖 PROMPT
 
-Działaj jako Senior Frontend Developer / Auth Specialist.
-Mamy działający API Layer. Przechodzimy do Fazy 1.1: **Konfiguracja NextAuth**.
+Działaj jako Senior Frontend Developer specjalizujący się w Auth.
+Twoim zadaniem jest wykonanie Fazy 1.1 (NextAuth Configuration) z planu implementacji.
 
 ### CEL GŁÓWNY:
 
-Skonfigurować NextAuth.js z Credentials Providerem, który komunikuje się z naszym backendem i zapisuje w session: `tenantId`, `role`, `userId`, `name`.
+Skonfigurować NextAuth v5 z Credentials provider i **DODAĆ AUTH INTERCEPTOR do Axios client**.
 
-### KONTEKST BACKENDU:
+### API ENDPOINTS:
 
-Backend ma endpoint `POST /api/auth/login` zwracający:
+```
+POST /api/Account/login
+Body: { email: string, password: string }
+Response (Result<T>): { token: string, user: { id, email, role, tenantId } }
 
-```typescript
-{
-  isSuccess: true,
-  value: {
-    token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    user: {
-      id: "uuid",
-      email: "user@example.com",
-      name: "John Doe",
-      role: "Provider" | "Client" | "TeamMember",
-      tenantId: "uuid"
-    }
-  }
-}
+POST /api/Account/register
+Body: { email, password, firstName, lastName }
+Response (Result<T>): { token: string, user: { ... } }
 ```
 
 ### KROKI DO WYKONANIA:
 
-**KROK 1: Instalacja NextAuth (Zadanie 1.1.1)**
+**KROK 1: Instalacja NextAuth v5**
 
 ```bash
 npm install next-auth@beta
 ```
 
-**KROK 2: Konfiguracja Route Handler (Zadanie 1.1.1)**
-Utwórz `src/app/api/auth/[...nextauth]/route.ts`.
-Wymagania:
-
-- Import `NextAuth` z `next-auth`
-- Użyj `CredentialsProvider`
-- W funkcji `authorize()`:
-  - Wyślij request do backend API `/auth/login`
-  - Jeśli sukces → zwróć obiekt user z tokenem
-  - Jeśli błąd → zwróć null
-
-**KROK 3: JWT i Session Callbacks (Zadanie 1.1.3)**
-W konfiguracji NextAuth dodaj callbacks:
+**KROK 2: auth.ts (Zadanie 1.1.1, 1.1.2)**
+Utwórz `src/core/auth/auth.ts`:
 
 ```typescript
-callbacks: {
-  async jwt({ token, user }) {
-    // Przy logowaniu user będzie dostępny
-    if (user) {
-      token.accessToken = user.token;
-      token.userId = user.id;
-      token.role = user.role;
-      token.tenantId = user.tenantId;
-      token.name = user.name;
-    }
-    return token;
+import NextAuth from "next-auth";
+import Credentials from "next-auth/providers/credentials";
+import { customInstance } from "@/core/api/client";
+
+export const { handlers, signIn, signOut, auth } = NextAuth({
+  providers: [
+    Credentials({
+      async authorize(credentials) {
+        try {
+          const response = await customInstance<{
+            token: string;
+            user: {
+              id: string;
+              email: string;
+              role: string;
+              tenantId: string;
+            };
+          }>({
+            url: "/api/Account/login",
+            method: "POST",
+            data: {
+              email: credentials.email,
+              password: credentials.password,
+            },
+          });
+
+          return {
+            id: response.user.id,
+            email: response.user.email,
+            role: response.user.role,
+            tenantId: response.user.tenantId,
+            accessToken: response.token,
+          };
+        } catch {
+          return null;
+        }
+      },
+    }),
+  ],
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.accessToken = user.accessToken;
+        token.role = user.role;
+        token.tenantId = user.tenantId;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      session.accessToken = token.accessToken as string;
+      session.user.role = token.role as string;
+      session.user.tenantId = token.tenantId as string;
+      return session;
+    },
   },
-  async session({ session, token }) {
-    session.accessToken = token.accessToken;
-    session.user.id = token.userId;
-    session.user.role = token.role;
-    session.user.tenantId = token.tenantId;
-    session.user.name = token.name;
-    return session;
+  pages: {
+    signIn: "/login",
   },
-}
+});
 ```
 
-**KROK 4: Type Definitions (Zadanie 1.1.4)**
-Utwórz `src/core/types/next-auth.d.ts`:
+**KROK 3: Route Handler**
+Utwórz `src/app/api/auth/[...nextauth]/route.ts`:
 
 ```typescript
-import { DefaultSession } from "next-auth";
+import { handlers } from "@/core/auth/auth";
+export const { GET, POST } = handlers;
+```
+
+**KROK 4: TypeScript types**
+Utwórz `src/core/auth/next-auth.d.ts`:
+
+```typescript
+import "next-auth";
 
 declare module "next-auth" {
-  interface Session {
-    accessToken: string;
-    user: {
-      id: string;
-      role: "Provider" | "Client" | "TeamMember" | "PlatformAdmin";
-      tenantId: string;
-      name: string;
-    } & DefaultSession["user"];
+  interface User {
+    accessToken?: string;
+    role?: string;
+    tenantId?: string;
   }
 
-  interface User {
-    token: string;
-    id: string;
-    role: string;
-    tenantId: string;
-    name: string;
+  interface Session {
+    accessToken?: string;
+    user: User & {
+      role?: string;
+      tenantId?: string;
+    };
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
-    accessToken: string;
-    userId: string;
-    role: string;
-    tenantId: string;
+    accessToken?: string;
+    role?: string;
+    tenantId?: string;
   }
 }
 ```
 
-**KROK 5: Environment Variables (Zadanie 1.1.5)**
-W pliku `.env.local` dodaj:
+**KROK 5: 🚨 AUTH INTERCEPTOR (Zadanie 1.1.5) - KRYTYCZNE!**
+Zaktualizuj `src/core/api/client.ts`:
 
-```
-NEXTAUTH_SECRET=wygeneruj-bezpieczny-secret-openssl-rand-base64-32
-NEXTAUTH_URL=http://localhost:3000
+```typescript
+import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
+import { getSession } from "next-auth/react";
+
+const axiosInstance = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5211",
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+// 🚨 AUTH INTERCEPTOR - dodaje token do KAŻDEGO requestu
+axiosInstance.interceptors.request.use(
+  async (config) => {
+    const session = await getSession();
+    if (session?.accessToken) {
+      config.headers.Authorization = `Bearer ${session.accessToken}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Result<T> Response Interceptor
+axiosInstance.interceptors.response.use(
+  (response: AxiosResponse) => {
+    const data = response.data;
+    if (data && typeof data === "object" && "isSuccess" in data) {
+      if (data.isSuccess) {
+        response.data = data.value;
+      } else {
+        return Promise.reject({
+          code: data.error?.code || "UNKNOWN_ERROR",
+          message: data.error?.message || "An error occurred",
+        });
+      }
+    }
+    return response;
+  },
+  (error) => Promise.reject(error)
+);
+
+export const customInstance = <T>(config: AxiosRequestConfig): Promise<T> => {
+  return axiosInstance(config).then((response) => response.data as T);
+};
+
+export default axiosInstance;
 ```
 
 ### OCZEKIWANY REZULTAT:
 
-Działający endpoint `/api/auth/signin` i możliwość wywołania `signIn('credentials', {...})` z formularza.
+- NextAuth v5 skonfigurowany
+- Logowanie przez `/api/Account/login` działa
+- Token JWT zapisany w sesji
+- **KAŻDY request do API ma header `Authorization: Bearer ...`**
 
 ---
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-#### Code Implementation
-- [x] NextAuth zainstalowany
-- [x] Route handler w `app/api/auth/[...nextauth]/route.ts`
-- [x] Credentials provider komunikuje się z backendem
-- [x] JWT callback zapisuje token i dane user
-- [x] Session callback wypełnia session.user
-- [x] Type definitions w `next-auth.d.ts`
-- [x] `.env.local` zawiera NEXTAUTH_SECRET i NEXTAUTH_URL
-
-#### 🚨 KRYTYCZNE: Auth Interceptor
-**To jest NAJWAŻNIEJSZY punkt tego bloku!**
-
-- [ ] **Auth interceptor DODANY do `src/core/api/client.ts`**:
-  ```typescript
-  import { getSession } from "next-auth/react";
-
-  axiosInstance.interceptors.request.use(async (config) => {
-    if (typeof window !== "undefined") {
-      const session = await getSession();
-      if (session?.accessToken) {
-        config.headers.Authorization = `Bearer ${session.accessToken}`;
-      }
-    }
-    return config;
-  });
-  ```
-
-#### Network Tab Verification (OBOWIĄZKOWE!)
-- [ ] Zaloguj się do aplikacji
-- [ ] Otwórz DevTools → Network tab
-- [ ] Nawiguj do strony dashboard
-- [ ] Sprawdź KAŻDY request do `/api/*`:
-  - [ ] **Request Headers MUSZĄ zawierać**: `Authorization: Bearer eyJ...`
-  - [ ] **Response Status MUSI być**: `200 OK` (NIE 401!)
-
-**JEŚLI widzisz 401 Unauthorized → auth interceptor NIE DZIAŁA → FIX przed passes:true!**
-
-#### Final Checks
-- [ ] Test: `signIn('credentials')` działa i przekierowuje do /dashboard
-- [ ] TypeScript: `npm run typecheck` → zero błędów
-- [x] Git commit: `feat(auth): configure NextAuth with JWT and auth interceptor`
+- [x] NextAuth v5 zainstalowany i skonfigurowany
+- [x] Credentials provider wywołuje POST /api/Account/login
+- [x] JWT callback zapisuje accessToken
+- [x] Session callback udostępnia accessToken
+- [x] 🚨 **AUTH INTERCEPTOR w client.ts DODANY!**
+- [x] Sprawdź w Network tab: requesty mają header Authorization
+- [x] Git commit: `feat(auth): setup NextAuth v5 with JWT and auth interceptor`
 
 <!-- BLOCK_END: 1.1 -->
 
@@ -590,139 +682,129 @@ Działający endpoint `/api/auth/signin` i możliwość wywołania `signIn('cred
 
 <!-- BLOCK_START: 1.2 -->
 
-### 1.2 Auth Guards & Middleware
+### 1.2 Tenant Context
 
-| #     | Zadanie                  | Priorytet | Status | Opis                                             |
-| ----- | ------------------------ | --------- | ------ | ------------------------------------------------ |
-| 1.2.1 | 🔴 Next.js Middleware    | Krytyczne | ✅     | middleware.ts - ochrona tras /dashboard, /portal |
-| 1.2.2 | 🔴 Role-based redirects  | Krytyczne | ✅     | Provider → /dashboard, Client → /portal          |
-| 1.2.3 | 🔴 TenantGuard component | Krytyczne | ✅     | Client component weryfikujący tenantId w URL     |
-| 1.2.4 | 🟡 useAuth hook          | Ważne     | ✅     | Custom hook opakowujący useSession z type safety |
+| #     | Zadanie            | Priorytet | Status | Opis                                     |
+| ----- | ------------------ | --------- | ------ | ---------------------------------------- |
+| 1.2.1 | 🔴 TenantProvider  | Krytyczne | ✅     | React context z tenantId z sesji         |
+| 1.2.2 | 🔴 useTenant hook  | Krytyczne | ✅     | Hook do odczytu tenant context           |
+| 1.2.3 | 🔴 TenantGuard     | Krytyczne | ✅     | Component sprawdzający dostęp do tenanta |
+| 1.2.4 | 🟡 Tenant switcher | Ważne     | ✅     | Dla admins: wybór tenanta (opcjonalne)   |
 
-**Blok 1.2 - Wymagania wejściowe**: Blok 1.1 (NextAuth)  
-**Blok 1.2 - Rezultat**: Chronione trasy z weryfikacją tenant context
+**Blok 1.2 - Wymagania wejściowe**: Blok 1.1  
+**Blok 1.2 - Rezultat**: System multi-tenant context
 
 **📦 DEPENDENCIES:**
 
-- ✅ Blok 1.1 (NextAuth Configuration)
+- ✅ Blok 1.1 (NextAuth)
 
 **⬅️ BLOKUJE:**
 
-- Wszystkie strony wymagające autentykacji
-- Blok 2.1 (Dashboard Layout)
+- Wszystkie komponenty wymagające tenantId
 
 ---
 
 ### 🤖 PROMPT
 
-Działaj jako Senior Frontend Developer / Security Specialist.
-Mamy działający NextAuth. Przechodzimy do Fazy 1.2: **Auth Guards & Middleware**.
+Działaj jako Senior Frontend Developer.
+Twoim zadaniem jest wykonanie Fazy 1.2 (Tenant Context) z planu implementacji.
 
 ### CEL GŁÓWNY:
 
-Zabezpieczyć trasy aplikacji przed nieautoryzowanym dostępem oraz zaimplementować przekierowania oparte na rolach użytkownika.
-
-### KONTEKST:
-
-Aplikacja ma dwie główne strefy:
-
-- `/dashboard/*` → dla Provider/TeamMember
-- `/portal/*` → dla Client
+Stworzyć system kontekstu multi-tenant oparty na tenantId z sesji NextAuth.
 
 ### KROKI DO WYKONANIA:
 
-**KROK 1: Next.js Middleware (Zadanie 1.2.1)**
-Utwórz `src/middleware.ts`.
-Wymagania:
-
-- Import `NextResponse` i `getToken` z NextAuth
-- Matcher: `/dashboard/:path*`, `/portal/:path*`
-- Logika:
-  - Brak tokena → redirect `/login`
-  - Provider/TeamMember próbuje wejść na `/portal` → redirect `/dashboard`
-  - Client próbuje wejść na `/dashboard` → redirect `/portal`
-
-Przykładowy kod:
+**KROK 1: TenantProvider (Zadanie 1.2.1)**
+Utwórz `src/core/tenant/TenantProvider.tsx`:
 
 ```typescript
-import { NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
-import type { NextRequest } from "next/server";
+"use client";
 
-export async function middleware(request: NextRequest) {
-  const token = await getToken({ req: request });
-  const { pathname } = request.nextUrl;
-
-  // Brak sesji - redirect do login
-  if (!token) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  // Role-based routing
-  const role = token.role as string;
-
-  if (pathname.startsWith("/dashboard") && role === "Client") {
-    return NextResponse.redirect(new URL("/portal", request.url));
-  }
-
-  if (pathname.startsWith("/portal") && role !== "Client") {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
-  }
-
-  return NextResponse.next();
-}
-
-export const config = {
-  matcher: ["/dashboard/:path*", "/portal/:path*"],
-};
-```
-
-**KROK 2: TenantGuard Component (Zadanie 1.2.3)**
-Utwórz `src/features/auth/components/TenantGuard.tsx`.
-Wymagania:
-
-- "use client"
-- Weryfikuje czy `session.user.tenantId` zgadza się z `tenantId` w URL
-- Jeśli nie → pokazuje error page lub redirect
-
-**KROK 3: useAuth Hook (Zadanie 1.2.4)**
-Utwórz `src/features/auth/hooks/useAuth.ts`.
-Wymagania:
-
-```typescript
+import { createContext, ReactNode } from "react";
 import { useSession } from "next-auth/react";
 
-export function useAuth() {
+interface TenantContextType {
+  tenantId: string | null;
+  isLoading: boolean;
+}
+
+export const TenantContext = createContext<TenantContextType>({
+  tenantId: null,
+  isLoading: true,
+});
+
+export function TenantProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession();
 
-  return {
-    user: session?.user,
-    isLoading: status === "loading",
-    isAuthenticated: status === "authenticated",
-    role: session?.user?.role,
-    tenantId: session?.user?.tenantId,
-  };
+  return (
+    <TenantContext.Provider
+      value={{
+        tenantId: session?.user?.tenantId ?? null,
+        isLoading: status === "loading",
+      }}
+    >
+      {children}
+    </TenantContext.Provider>
+  );
+}
+```
+
+**KROK 2: useTenant hook (Zadanie 1.2.2)**
+Utwórz `src/core/tenant/useTenant.ts`:
+
+```typescript
+"use client";
+
+import { useContext } from "react";
+import { TenantContext } from "./TenantProvider";
+
+export function useTenant() {
+  const context = useContext(TenantContext);
+  if (!context) {
+    throw new Error("useTenant must be used within TenantProvider");
+  }
+  return context;
+}
+```
+
+**KROK 3: TenantGuard (Zadanie 1.2.3)**
+Utwórz `src/core/tenant/TenantGuard.tsx`:
+
+```typescript
+"use client";
+
+import { ReactNode } from "react";
+import { useTenant } from "./useTenant";
+import { redirect } from "next/navigation";
+
+export function TenantGuard({ children }: { children: ReactNode }) {
+  const { tenantId, isLoading } = useTenant();
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!tenantId) {
+    redirect("/login");
+  }
+
+  return <>{children}</>;
 }
 ```
 
 ### OCZEKIWANY REZULTAT:
 
-Middleware chroniący trasy, komponenty guard oraz custom hook do łatwego dostępu do danych sesji.
+TenantProvider i useTenant hook działają, TenantGuard chroni strony.
 
 ---
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [x] `middleware.ts` chroni `/dashboard` i `/portal`
-- [x] Redirect do `/login` gdy brak sesji
-- [x] Role-based routing działa poprawnie
-- [x] TenantGuard weryfikuje tenant context
-- [x] useAuth hook zwraca typed user data
-- [x] Test: próba dostępu do `/dashboard` bez logowania
-- [x] Test: Client nie może wejść na `/dashboard`
-- [x] Git commit: `feat(auth): implement middleware and auth guards`
+- [x] TenantProvider utworzony
+- [x] useTenant() zwraca tenantId z sesji
+- [x] TenantGuard przekierowuje nieautoryzowanych
+- [x] Git commit: `feat(tenant): implement tenant context and guard`
 
 <!-- BLOCK_END: 1.2 -->
 
@@ -730,121 +812,95 @@ Middleware chroniący trasy, komponenty guard oraz custom hook do łatwego dost�
 
 <!-- BLOCK_START: 1.3 -->
 
-### 1.3 Tenant Context & Store
+### 1.3 Auth Store & Middleware
 
-| #     | Zadanie                   | Priorytet | Status | Opis                                       |
-| ----- | ------------------------- | --------- | ------ | ------------------------------------------ |
-| 1.3.1 | 🔴 Zustand store          | Krytyczne | ⬜     | Tenant state (id, name, settings)          |
-| 1.3.2 | 🔴 useTenant hook         | Krytyczne | ⬜     | Wrapper do łatwego dostępu                 |
-| 1.3.3 | 🔴 TenantProvider wrapper | Krytyczne | ⬜     | Inicjalizacja store z session              |
-| 1.3.4 | 🟡 TenantSwitcher         | Ważne     | ⬜     | Component do zmiany contextu (jeśli multi) |
+| #     | Zadanie               | Priorytet | Status | Opis                                      |
+| ----- | --------------------- | --------- | ------ | ----------------------------------------- |
+| 1.3.1 | 🔴 Zustand auth store | Krytyczne | ✅     | Stan user, isAuthenticated, actions       |
+| 1.3.2 | 🔴 NextJS middleware  | Krytyczne | ✅     | Ochrona tras /dashboard/\*                |
+| 1.3.3 | 🟡 Session sync       | Ważne     | ✅     | Synchronizacja Zustand z NextAuth session |
 
-**Blok 1.3 - Wymagania wejściowe**: Blok 1.1 (NextAuth)  
-**Blok 1.3 - Rezultat**: Globalny state zarządzający kontekstem tenanta
-
-**📦 DEPENDENCIES:**
-
-- ✅ Blok 1.1 (NextAuth Configuration)
-
-**⬅️ BLOKUJE:**
-
-- Wszystkie features wymagające tenant context
-- Blok 3.1 (Clients Management)
+**Blok 1.3 - Wymagania wejściowe**: Blok 1.1  
+**Blok 1.3 - Rezultat**: Middleware ochrony tras i auth store
 
 ---
 
 ### 🤖 PROMPT
 
-Działaj jako Senior Frontend Developer / State Management Specialist.
-Mamy działający NextAuth z tenant context w session. Przechodzimy do Fazy 1.3: **Tenant Context & Store**.
-
-### CEL GŁÓWNY:
-
-Stworzyć globalny state (Zustand) do zarządzania aktywnym tenantem oraz komponent Provider inicjalizujący store danymi z session.
-
-### KONTEKST:
-
-Multi-tenancy wymaga, aby każda operacja była wykonywana w kontekście konkretnego tenanta (Provider).
-Dane tenanta są dostępne w `session.user.tenantId`.
+Działaj jako Senior Frontend Developer.
+Twoim zadaniem jest wykonanie Fazy 1.3 (Auth Store & Middleware).
 
 ### KROKI DO WYKONANIA:
 
-**KROK 1: Zustand Store (Zadanie 1.3.1)**
-Utwórz `src/features/auth/store/tenant.store.ts`.
-Wymagania:
+**KROK 1: Middleware (Zadanie 1.3.2)**
+Utwórz `src/middleware.ts`:
+
+```typescript
+import { auth } from "@/core/auth/auth";
+import { NextResponse } from "next/server";
+
+export default auth((req) => {
+  const isLoggedIn = !!req.auth;
+  const isOnDashboard = req.nextUrl.pathname.startsWith("/dashboard");
+  const isOnAuth =
+    req.nextUrl.pathname.startsWith("/login") ||
+    req.nextUrl.pathname.startsWith("/register");
+
+  if (isOnDashboard && !isLoggedIn) {
+    return NextResponse.redirect(new URL("/login", req.url));
+  }
+
+  if (isOnAuth && isLoggedIn) {
+    return NextResponse.redirect(new URL("/dashboard", req.url));
+  }
+
+  return NextResponse.next();
+});
+
+export const config = {
+  matcher: ["/dashboard/:path*", "/login", "/register"],
+};
+```
+
+**KROK 2: Auth Store (Zadanie 1.3.1)**
+Utwórz `src/core/auth/useAuthStore.ts`:
 
 ```typescript
 import { create } from "zustand";
 
-interface TenantState {
-  tenantId: string | null;
-  tenantName: string | null;
-  setTenant: (id: string, name: string) => void;
-  clearTenant: () => void;
+interface AuthState {
+  isAuthenticated: boolean;
+  user: {
+    id: string;
+    email: string;
+    role: string;
+    tenantId: string;
+  } | null;
+  setAuth: (user: AuthState["user"]) => void;
+  clearAuth: () => void;
 }
 
-export const useTenantStore = create<TenantState>((set) => ({
-  tenantId: null,
-  tenantName: null,
-  setTenant: (id, name) => set({ tenantId: id, tenantName: name }),
-  clearTenant: () => set({ tenantId: null, tenantName: null }),
+export const useAuthStore = create<AuthState>((set) => ({
+  isAuthenticated: false,
+  user: null,
+  setAuth: (user) => set({ isAuthenticated: true, user }),
+  clearAuth: () => set({ isAuthenticated: false, user: null }),
 }));
 ```
 
-**KROK 2: useTenant Hook (Zadanie 1.3.2)**
-Utwórz `src/features/auth/hooks/useTenant.ts`.
-Wymagania:
-
-```typescript
-import { useTenantStore } from "../store/tenant.store";
-
-export function useTenant() {
-  const { tenantId, tenantName, setTenant, clearTenant } = useTenantStore();
-
-  return {
-    tenantId,
-    tenantName,
-    setTenant,
-    clearTenant,
-    isReady: !!tenantId,
-  };
-}
-```
-
-**KROK 3: TenantProvider (Zadanie 1.3.3)**
-Utwórz `src/features/auth/components/TenantProvider.tsx`.
-Wymagania:
-
-- "use client"
-- Pobiera session przez `useSession()`
-- Efekt: gdy session.user.tenantId zmienia się → wywołaj `setTenant()`
-- Render: `{children}`
-
-**KROK 4: TenantSwitcher Component (Zadanie 1.3.4)**
-Utwórz `src/features/auth/components/TenantSwitcher.tsx`.
-Wymagania:
-
-- "use client"
-- Wyświetla aktualnego tenanta (name)
-- W przyszłości: dropdown do zmiany (jeśli user ma dostęp do wielu tenantów)
-- MVP: Tylko display, bez switchowania
-
 ### OCZEKIWANY REZULTAT:
 
-Działający Zustand store z tenant context oraz Provider inicjalizujący store przy logowaniu.
+Middleware chroni /dashboard/\*, auth store gotowy do użycia.
 
 ---
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [x] Zustand store w `tenant.store.ts`
-- [x] useTenant hook działa
-- [x] TenantProvider inicjalizuje store
-- [x] TenantSwitcher wyświetla tenant name
-- [x] Store aktualizuje się po logowaniu
-- [x] Store czyszczony przy wylogowaniu
-- [x] Test: useTenant() zwraca poprawne dane
-- [x] Git commit: `feat(auth): implement tenant context store with Zustand`
+- [x] Middleware chroni /dashboard/\*
+- [x] Niezalogowany user przekierowany do /login
+- [x] Zalogowany user na /login przekierowany do /dashboard
+- [x] Auth store z Zustand
+- [x] Git commit: `feat(auth): add middleware and auth store`
 
 <!-- BLOCK_END: 1.3 -->
 
@@ -852,120 +908,84 @@ Działający Zustand store z tenant context oraz Provider inicjalizujący store 
 
 <!-- BLOCK_START: 1.4 -->
 
-### 1.4 Login & Register Pages
+### 1.4 Auth UI Pages
 
-| #     | Zadanie              | Priorytet | Status | Opis                                   |
-| ----- | -------------------- | --------- | ------ | -------------------------------------- |
-| 1.4.1 | 🔴 Auth layout       | Krytyczne | ⬜     | (auth)/layout.tsx - centered content   |
-| 1.4.2 | 🔴 Login form schema | Krytyczne | ⬜     | Zod schema dla email + password        |
-| 1.4.3 | 🔴 Login page        | Krytyczne | ⬜     | /login - React Hook Form + NextAuth    |
-| 1.4.4 | 🔴 Register page     | Krytyczne | ⬜     | /register - mock API call              |
-| 1.4.5 | 🟡 Auth error page   | Ważne     | ⬜     | /auth/error - wyświetlanie błędów auth |
+| #     | Zadanie                  | Priorytet | Status | Opis                                |
+| ----- | ------------------------ | --------- | ------ | ----------------------------------- |
+| 1.4.1 | 🔴 Login page            | Krytyczne | ✅     | /login z formularzem                |
+| 1.4.2 | 🔴 Register page         | Krytyczne | ✅     | /register z formularzem             |
+| 1.4.3 | 🔴 Auth forms components | Krytyczne | ✅     | LoginForm, RegisterForm z RHF + Zod |
+| 1.4.4 | 🟡 Error handling        | Ważne     | ✅     | Toast notifications dla błędów      |
+| 1.4.5 | 🟡 Loading states        | Ważne     | ✅     | Button loading podczas submit       |
 
-**Blok 1.4 - Wymagania wejściowe**: Blok 1.1 (NextAuth), Blok 1.3 (Tenant Store)  
+**Blok 1.4 - Wymagania wejściowe**: Blok 1.1, 1.3  
 **Blok 1.4 - Rezultat**: Działające strony logowania i rejestracji
 
 **📦 DEPENDENCIES:**
 
-- ✅ Blok 0.2 (shadcn/ui components)
 - ✅ Blok 1.1 (NextAuth)
-- ✅ Blok 1.3 (Tenant Store)
+- ✅ Blok 1.3 (Middleware)
 
-**⬅️ BLOKUJE:**
+**API ENDPOINTS:**
 
-- Wszystkie features (wymaga możliwości logowania)
+```
+POST /api/Account/login
+POST /api/Account/register
+```
 
 ---
 
 ### 🤖 PROMPT
 
-Działaj jako Senior Frontend Developer / Forms Specialist.
-Mamy działający NextAuth i tenant store. Przechodzimy do Fazy 1.4: **Login & Register Pages**.
-
-### CEL GŁÓWNY:
-
-Stworzyć profesjonalne strony logowania i rejestracji z walidacją formularzy (Zod + React Hook Form) oraz integracją z NextAuth.
-
-### KONTEKST:
-
-Używamy shadcn/ui do UI, React Hook Form do zarządzania stanem formularza, Zod do walidacji.
+Działaj jako Senior Frontend Developer.
+Twoim zadaniem jest wykonanie Fazy 1.4 (Auth UI Pages).
 
 ### KROKI DO WYKONANIA:
 
-**KROK 1: Validation Schemas (Zadanie 1.4.2)**
-Utwórz `src/features/auth/schemas/auth.schemas.ts`.
-Wymagania:
+**KROK 1: Auth Schemas**
+Utwórz `src/features/auth/schemas/auth.schemas.ts`:
 
 ```typescript
 import { z } from "zod";
 
 export const LoginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  email: z.string().email("Invalid email"),
+  password: z.string().min(1, "Password required"),
 });
 
-export const RegisterSchema = z
-  .object({
-    name: z.string().min(2, "Name must be at least 2 characters"),
-    email: z.string().email("Invalid email address"),
-    password: z.string().min(8, "Password must be at least 8 characters"),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  });
-
-export type LoginInput = z.infer<typeof LoginSchema>;
-export type RegisterInput = z.infer<typeof RegisterSchema>;
+export const RegisterSchema = z.object({
+  email: z.string().email("Invalid email"),
+  password: z.string().min(8, "Min 8 characters"),
+  firstName: z.string().min(2),
+  lastName: z.string().min(2),
+});
 ```
 
-**KROK 2: LoginForm Component (Zadanie 1.4.3)**
-Utwórz `src/features/auth/components/LoginForm.tsx`.
-Wymagania:
+**KROK 2: Login Page**
+Utwórz `src/app/(auth)/login/page.tsx` z LoginForm używającym:
 
-- "use client"
-- React Hook Form z zodResolver
-- shadcn/ui: Card, Input, Button
-- Submit: `signIn('credentials', { email, password })`
-- Loading state podczas logowania
-- Error toast jeśli logowanie się nie powiedzie
-- Link "Don't have an account? Register"
+- React Hook Form
+- Zod validation
+- signIn z NextAuth
+- Toast dla błędów
 
-**KROK 3: RegisterForm Component (Zadanie 1.4.4)**
-Utwórz `src/features/auth/components/RegisterForm.tsx`.
-Wymagania:
-
-- Analogicznie do LoginForm (Card UI, React Hook Form, Zod).
-- Pola: Name, Email, Password, Confirm Password.
-- Submit: Na ten moment (MVP) tylko zamockuj wywołanie API i po 1s przekieruj do `/login` z toastem sukcesu.
-- Link do logowania na dole.
-
-**KROK 4: Strony i Layout (Zadania 1.4.1, 1.4.3, 1.4.5)**
-
-1. Utwórz `src/app/(auth)/layout.tsx`: Prosty layout centrujący zawartość.
-2. Utwórz `src/app/(auth)/login/page.tsx`: Renderuje `LoginForm`.
-3. Utwórz `src/app/(auth)/register/page.tsx`: Renderuje `RegisterForm`.
-4. Utwórz `src/app/(auth)/auth/error/page.tsx`: Karta błędu z przyciskiem "Back to Login".
+**KROK 3: Register Page**
+Analogicznie dla `/register`.
 
 ### OCZEKIWANY REZULTAT:
 
-Kod dla schematów, komponentów formularzy oraz stron w Next.js App Router.
+Działające formularze logowania i rejestracji z walidacją i obsługą błędów.
 
 ---
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [x] `LoginSchema` i `RegisterSchema` w Zod
-- [x] `LoginForm` z React Hook Form i shadcn/ui
-- [x] `RegisterForm` z walidacją
-- [x] Auth layout centruje content
-- [x] `/login` wyświetla formularz logowania
-- [x] `/register` wyświetla formularz rejestracji
-- [x] `/auth/error` wyświetla stronę błędu
-- [x] Logowanie działa z mock credentials
-- [x] Loading states podczas submit
-- [x] Error states przy błędnych danych
+- [x] Login form wysyła POST /api/Account/login
+- [x] Register form wysyła POST /api/Account/register
+- [x] Zod validation działa
+- [x] Error toast dla błędnych danych
+- [x] Loading state podczas submit
+- [x] Redirect do /dashboard po sukcesie
 - [x] Git commit: `feat(auth): implement login and register pages`
 
 <!-- BLOCK_END: 1.4 -->
@@ -974,96 +994,94 @@ Kod dla schematów, komponentów formularzy oraz stron w Next.js App Router.
 
 <!-- BLOCK_START: 2.1 -->
 
-## 🔵 FAZA 2: Layout & Global UI (Tydzień 3-4)
+## 🔵 FAZA 2: Layout & Global UI (Tydzień 3)
 
 ### 2.1 Layout Components
 
-| #     | Zadanie               | Priorytet  | Status | Opis                                               |
-| ----- | --------------------- | ---------- | ------ | -------------------------------------------------- |
-| 2.1.1 | 🔴 Dashboard layout   | Krytyczne  | ⬜     | (dashboard)/layout.tsx z Sidebar + Header          |
-| 2.1.2 | 🔴 Sidebar component  | Krytyczne  | ⬜     | Nawigacja z ikonami, active state, role-based menu |
-| 2.1.3 | 🔴 Header component   | Krytyczne  | ⬜     | Logo, UserMenu, notifications placeholder          |
-| 2.1.4 | 🔴 UserMenu component | Krytyczne  | ⬜     | Dropdown z avatar, role badge, logout              |
-| 2.1.5 | 🟢 Footer component   | Opcjonalne | ⬜     | Copyright, links                                   |
+| #     | Zadanie               | Priorytet | Status | Opis                                   |
+| ----- | --------------------- | --------- | ------ | -------------------------------------- |
+| 2.1.1 | 🔴 Dashboard layout   | Krytyczne | ✅     | Layout z sidebar i header              |
+| 2.1.2 | 🔴 Sidebar component  | Krytyczne | ✅     | Nawigacja główna                       |
+| 2.1.3 | 🔴 Header component   | Krytyczne | ✅     | Logo, search, notifications, user menu |
+| 2.1.4 | 🔴 UserMenu component | Krytyczne | ✅     | Dropdown z danymi z sesji, logout      |
+| 2.1.5 | 🟡 Mobile responsive  | Ważne     | ✅     | Hamburger menu na mobile               |
 
-**Blok 2.1 - Wymagania wejściowe**: Faza 1 (Auth zakończone)  
-**Blok 2.1 - Rezultat**: Gotowy szkielet aplikacji (Layout) z nawigacją
-
-**📦 DEPENDENCIES:**
-
-- ✅ Blok 1.1, 1.2, 1.3, 1.4 (cała Faza 1)
-
-**⬅️ BLOKUJE:**
-
-- Blok 2.2 (Global State)
-- Wszystkie strony dashboard
+**Blok 2.1 - Wymagania wejściowe**: Faza 1  
+**Blok 2.1 - Rezultat**: Gotowy layout dashboardu
 
 ---
 
 ### 🤖 PROMPT
 
-Działaj jako Senior Frontend Developer / UI Specialist.
-Mamy działającą autentykację. Przechodzimy do Fazy 2.1: **Implementacja Głównego Layoutu Dashboardu**.
+Działaj jako Senior Frontend Developer.
+Twoim zadaniem jest wykonanie Fazy 2.1 (Layout Components).
 
 ### CEL GŁÓWNY:
 
-Stworzyć responsywny layout aplikacji ("shell"), który będzie zawierał boczny pasek nawigacyjny (Sidebar), górny pasek (Header) oraz miejsce na zmienną zawartość (page content).
-
-### STRUKTURA KATALOGÓW:
-
-Komponenty layoutu mają trafić do: `src/shared/components/layout/`
-Layout strony: `src/app/(dashboard)/layout.tsx`
+Stworzyć profesjonalny layout dashboardu z sidebar, header i user menu.
 
 ### KROKI DO WYKONANIA:
 
-**KROK 1: Sidebar Component (Zadanie 2.1.2)**
-Utwórz `src/shared/components/layout/Sidebar.tsx` ("use client").
-Wymagania:
+**KROK 1: Dashboard Layout**
+Utwórz `src/app/(dashboard)/layout.tsx`:
 
-- Zdefiniuj tablicę nawigacji: Dashboard, Team, Clients, Plans, Subscriptions, Payments, Analytics.
-- Użyj ikon z `lucide-react` pasujących do każdej sekcji.
-- Active State: Użyj hooka `usePathname`. Jeśli link pokrywa się z obecną ścieżką, nadaj mu inny styl.
-- Styl: Fixed width (np. w-64) na desktopie, ukryty lub jako Drawer na mobile.
+```typescript
+import { Sidebar } from "@/shared/components/layout/Sidebar";
+import { Header } from "@/shared/components/layout/Header";
+import { TenantProvider } from "@/core/tenant/TenantProvider";
+import { SessionProvider } from "next-auth/react";
 
-**KROK 2: UserMenu Component (Zadanie 2.1.4)**
-Utwórz `src/shared/components/layout/UserMenu.tsx` ("use client").
-Wymagania:
+export default function DashboardLayout({ children }) {
+  return (
+    <SessionProvider>
+      <TenantProvider>
+        <div className="flex h-screen">
+          <Sidebar />
+          <div className="flex-1 flex flex-col">
+            <Header />
+            <main className="flex-1 overflow-auto p-6">{children}</main>
+          </div>
+        </div>
+      </TenantProvider>
+    </SessionProvider>
+  );
+}
+```
 
-- Pobierz dane użytkownika z `useSession`.
-- Użyj `DropdownMenu` z `shadcn/ui`.
-- Trigger: Avatar użytkownika.
-- Content: Label z imieniem, Items: Profile, Settings, Log out.
+**KROK 2: Sidebar**
+Utwórz `src/shared/components/layout/Sidebar.tsx`:
 
-**KROK 3: Header Component (Zadanie 2.1.3)**
-Utwórz `src/shared/components/layout/Header.tsx`.
-Wymagania:
+- Logo
+- Navigation items (Dashboard, Team, Clients, Plans, Subscriptions, Payments)
+- Active state
 
-- Flex container.
-- Lewa strona: Mobile Menu Trigger + Logo.
-- Prawa strona: `UserMenu` + `TenantSwitcher`.
+**KROK 3: Header**
+Utwórz `src/shared/components/layout/Header.tsx`:
 
-**KROK 4: Dashboard Layout (Zadanie 2.1.1)**
-Utwórz `src/app/(dashboard)/layout.tsx`.
-Wymagania:
+- Search input
+- Notifications bell
+- UserMenu
 
-- Struktura: Sidebar (fixed left) + Main Content Area.
-- Header (sticky top).
-- Layout ma być responsywny.
+**KROK 4: UserMenu**
+Utwórz `src/shared/components/layout/UserMenu.tsx`:
+
+- Avatar z danymi z sesji (NIE hardcoded!)
+- Dropdown: Profile, Settings, Logout
+- signOut z NextAuth
 
 ### OCZEKIWANY REZULTAT:
 
-Kod dla Sidebara, Headera, UserMenu oraz głównego Layoutu.
+Profesjonalny dashboard layout.
 
 ---
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [x] Sidebar z nawigacją i active states
-- [x] UserMenu z dropdown
-- [x] Header z logo i user menu
-- [x] Dashboard layout łączy wszystko
-- [x] Responsywność na mobile
+- [x] Dashboard layout z sidebar i header
+- [x] Sidebar z nawigacją
+- [x] UserMenu pokazuje dane z sesji (nie hardcoded)
 - [x] Logout działa
+- [x] Mobile responsive
 - [x] Git commit: `feat(layout): implement dashboard layout with sidebar and header`
 
 <!-- BLOCK_END: 2.1 -->
@@ -1072,103 +1090,82 @@ Kod dla Sidebara, Headera, UserMenu oraz głównego Layoutu.
 
 <!-- BLOCK_START: 2.2 -->
 
-### 2.2 Global State & Query Client
+### 2.2 Global State & Feedback
 
-| #     | Zadanie                      | Priorytet | Status | Opis                                   |
-| ----- | ---------------------------- | --------- | ------ | -------------------------------------- |
-| 2.2.1 | 🔴 React Query setup         | Krytyczne | ⬜     | QueryClientProvider w layout           |
-| 2.2.2 | 🔴 Error boundary            | Krytyczne | ⬜     | Global error handling component        |
-| 2.2.3 | 🟡 Loading states            | Ważne     | ⬜     | Suspense boundaries, loading skeletons |
-| 2.2.4 | 🟡 Toast notifications setup | Ważne     | ⬜     | Sonner provider, useToast wrapper      |
+| #     | Zadanie                | Priorytet | Status | Opis                          |
+| ----- | ---------------------- | --------- | ------ | ----------------------------- |
+| 2.2.1 | 🔴 QueryClientProvider | Krytyczne | ✅     | React Query provider w root   |
+| 2.2.2 | 🔴 ErrorBoundary       | Krytyczne | ✅     | Global error catching         |
+| 2.2.3 | 🔴 Loading Skeletons   | Krytyczne | ✅     | Reusable skeleton components  |
+| 2.2.4 | 🔴 Toast setup         | Krytyczne | ✅     | Sonner toast provider         |
+| 2.2.5 | 🟡 Suspense boundaries | Ważne     | ✅     | Suspense dla async components |
 
-**Blok 2.2 - Wymagania wejściowe**: Blok 2.1 (Layout)  
-**Blok 2.2 - Rezultat**: Globalny state management i UI feedback
-
-**📦 DEPENDENCIES:**
-
-- ✅ Blok 2.1 (Dashboard Layout)
-- ✅ Blok 0.2 (shadcn/ui Toast)
-
-**⬅️ BLOKUJE:**
-
-- Wszystkie features używające React Query
-- Blok 3.1 (Clients)
+**Blok 2.2 - Wymagania wejściowe**: Blok 2.1  
+**Blok 2.2 - Rezultat**: Global state management i feedback UI
 
 ---
 
 ### 🤖 PROMPT
 
-Działaj jako Senior Frontend Developer / State Management Specialist.
-Mamy działający Layout. Przechodzimy do Fazy 2.2: **Global State & Query Client**.
-
-### CEL GŁÓWNY:
-
-Skonfigurować React Query (TanStack Query) oraz globalne mechanizmy obsługi błędów i powiadomień.
+Działaj jako Senior Frontend Developer.
+Twoim zadaniem jest wykonanie Fazy 2.2 (Global State & Feedback).
 
 ### KROKI DO WYKONANIA:
 
-**KROK 1: Query Client Setup (Zadanie 2.2.1)**
-Utwórz `src/core/providers/QueryProvider.tsx`.
-Wymagania:
-
-- "use client"
-- Konfiguracja QueryClient z sensownymi defaultami:
-  - `staleTime`: 60000 (1 min)
-  - `retry`: 1
-- Wrap children w `QueryClientProvider`
-
-Dodaj Provider do głównego layout: `src/app/layout.tsx`.
-
-**KROK 2: Error Boundary (Zadanie 2.2.2)**
-Utwórz `src/shared/components/ErrorBoundary.tsx`.
-Wymagania:
-
-- Class component (Error Boundaries w React)
-- Catch errors i wyświetl user-friendly message
-- Button "Try Again" resetujący error state
-
-**KROK 3: Loading Skeletons (Zadanie 2.2.3)**
-Utwórz kilka reużywalnych komponentów skeleton:
-
-- `src/shared/components/TableSkeleton.tsx`
-- `src/shared/components/CardSkeleton.tsx`
-- `src/shared/components/FormSkeleton.tsx`
-
-Użyj `Skeleton` z shadcn/ui.
-
-**KROK 4: Toast Setup (Zadanie 2.2.4)**
-
-1. Sprawdź czy `Toaster` z Sonner jest dodany do layout
-2. Utwórz `src/shared/hooks/useToast.ts`:
+**KROK 1: QueryClientProvider (Zadanie 2.2.1)**
+Utwórz `src/core/providers/QueryProvider.tsx`:
 
 ```typescript
-import { toast as sonnerToast } from "sonner";
+"use client";
 
-export function useToast() {
-  return {
-    success: (message: string) => sonnerToast.success(message),
-    error: (message: string) => sonnerToast.error(message),
-    info: (message: string) => sonnerToast.info(message),
-  };
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState, ReactNode } from "react";
+
+export function QueryProvider({ children }: { children: ReactNode }) {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 60 * 1000, // 1 minute
+            retry: 1,
+          },
+        },
+      })
+  );
+
+  return (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
 }
 ```
 
+**KROK 2: ErrorBoundary (Zadanie 2.2.2)**
+Utwórz `src/shared/components/ErrorBoundary.tsx`.
+
+**KROK 3: Loading Skeletons (Zadanie 2.2.3)**
+Utwórz skeleton components:
+
+- `TableSkeleton.tsx`
+- `CardSkeleton.tsx`
+- `FormSkeleton.tsx`
+
+**KROK 4: Toast Setup (Zadanie 2.2.4)**
+Dodaj Sonner Toaster do layout.
+
 ### OCZEKIWANY REZULTAT:
 
-Konfiguracja React Query, Error Boundary, Loading Skeletons i Toast system.
+Global providers i feedback components gotowe.
 
 ---
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [ ] QueryClientProvider w root layout
-- [ ] QueryClient z sensownymi defaults
-- [ ] ErrorBoundary łapie błędy
-- [ ] Skeleton components gotowe
-- [ ] useToast hook działa
-- [ ] Toaster component w layout
-- [ ] Test: useQuery() działa
-- [ ] Git commit: `feat(core): setup React Query and global error handling`
+- [x] QueryClientProvider w root
+- [x] ErrorBoundary łapie błędy
+- [x] Skeleton components
+- [x] Toast system działa
+- [x] Git commit: `feat(core): setup React Query and global feedback`
 
 <!-- BLOCK_END: 2.2 -->
 
@@ -1176,63 +1173,1276 @@ Konfiguracja React Query, Error Boundary, Loading Skeletons i Toast system.
 
 <!-- BLOCK_START: 3.1 -->
 
-## 🔵 FAZA 3: Shared Data Layer (Tydzień 4)
+## 🔵 FAZA 3: Team Management (Tydzień 4)
 
-### 3.1 Clients Management Foundation
+### 3.1 Team List & CRUD
 
-| #     | Zadanie                      | Priorytet | Status | Opis                                          |
-| ----- | ---------------------------- | --------- | ------ | --------------------------------------------- |
-| 3.1.1 | 🔴 Client types & validation | Krytyczne | ⬜     | Zod schemas dla Client CRUD                   |
-| 3.1.2 | 🔴 useClients hooks          | Krytyczne | ⬜     | useQuery + useMutation dla clients            |
-| 3.1.3 | 🔴 ClientsTable component    | Krytyczne | ⬜     | Tabela z sortowaniem, filtrowaniem, paginacją |
-| 3.1.4 | 🔴 ClientForm component      | Krytyczne | ⬜     | Dialog z formularzem add/edit                 |
-| 3.1.5 | 🔴 Clients list page         | Krytyczne | ⬜     | /dashboard/clients - integracja wszystkiego   |
+| #     | Zadanie               | Priorytet | Status | Opis                                         |
+| ----- | --------------------- | --------- | ------ | -------------------------------------------- |
+| 3.1.1 | 🔴 Team types & hooks | Krytyczne | ✅     | Typy TeamMemberDto, hooki useGetApiTeam      |
+| 3.1.2 | 🔴 TeamMembersTable   | Krytyczne | ✅     | Tabela członków zespołu                      |
+| 3.1.3 | 🔴 Delete team member | Krytyczne | ✅     | Dialog potwierdzenia i DELETE /api/Team/{id} |
+| 3.1.4 | 🔴 Team list page     | Krytyczne | ✅     | /dashboard/team z tabelą i akcjami           |
 
 **Blok 3.1 - Wymagania wejściowe**: Faza 2 (Layout & State)  
-**Blok 3.1 - Rezultat**: Działający moduł zarządzania klientami
+**Blok 3.1 - Rezultat**: Działający moduł zarządzania zespołem
 
 **📦 DEPENDENCIES:**
 
 - ✅ Blok 2.1 (Dashboard Layout)
 - ✅ Blok 2.2 (React Query)
-- ✅ Blok 0.3 (API Generated)
 
 **⬅️ BLOKUJE:**
 
-- Blok 5.1 (Subscriptions - potrzebuje clients)
+- Blok 3.2 (Invitations)
+
+**🚨 API ENDPOINTS (z feature_list.json):**
+
+```
+GET /api/Team → TeamMemberDto[]
+DELETE /api/Team/{id} → void
+```
+
+**🚨 REQUIRED HOOKS:**
+
+```typescript
+useGetApiTeam();
+useDeleteApiTeamId();
+```
 
 ---
 
 ### 🤖 PROMPT
 
-Działaj jako Senior Frontend Developer / Feature Developer.
-Mamy gotowy Layout i State Management. Przechodzimy do Fazy 3.1: **Clients Management Foundation**.
+Działaj jako Senior Frontend Developer.
+Twoim zadaniem jest wykonanie Fazy 3.1 (Team List & CRUD).
 
 ### CEL GŁÓWNY:
 
-Stworzyć kompletny moduł CRUD dla klientów z profesjonalną tabelą, formularzami i integracją z API.
+Stworzyć moduł zarządzania członkami zespołu z listą i możliwością usuwania.
 
 ### ARCHITEKTURA (Vertical Slice):
+
+```
+src/features/team/
+├── components/
+│   ├── TeamMembersTable.tsx
+│   ├── TeamMemberRow.tsx
+│   ├── DeleteMemberDialog.tsx
+│   └── RoleBadge.tsx
+├── hooks/
+│   └── useTeamMembers.ts
+└── types/
+    └── team.types.ts
+```
+
+### KROKI DO WYKONANIA:
+
+**KROK 1: Types & Hooks (Zadanie 3.1.1)**
+Utwórz `src/features/team/hooks/useTeamMembers.ts`:
+
+```typescript
+import { useGetApiTeam, useDeleteApiTeamId } from "@/core/api/generated/team";
+import { useQueryClient } from "@tanstack/react-query";
+
+export function useTeamMembers() {
+  const queryClient = useQueryClient();
+
+  const { data, isLoading, error } = useGetApiTeam();
+
+  const deleteMutation = useDeleteApiTeamId({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["/api/Team"] });
+      },
+    },
+  });
+
+  return {
+    members: data ?? [],
+    isLoading,
+    error,
+    deleteMember: deleteMutation.mutate,
+    isDeleting: deleteMutation.isPending,
+  };
+}
+```
+
+**KROK 2: TeamMembersTable (Zadanie 3.1.2)**
+Utwórz `src/features/team/components/TeamMembersTable.tsx`:
+
+```typescript
+"use client";
+
+import { useTeamMembers } from "../hooks/useTeamMembers";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/shared/ui/table";
+import { Badge } from "@/shared/ui/badge";
+import { Button } from "@/shared/ui/button";
+import { Skeleton } from "@/shared/ui/skeleton";
+import { Trash2 } from "lucide-react";
+
+export function TeamMembersTable() {
+  const { members, isLoading, error, deleteMember, isDeleting } =
+    useTeamMembers();
+
+  if (error) {
+    return <div className="text-red-500">Error: {error.message}</div>;
+  }
+
+  if (isLoading) {
+    return <TeamTableSkeleton />;
+  }
+
+  if (members.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        No team members yet
+      </div>
+    );
+  }
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Name</TableHead>
+          <TableHead>Email</TableHead>
+          <TableHead>Role</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead>Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {members.map((member) => (
+          <TableRow key={member.id}>
+            <TableCell>
+              {member.firstName} {member.lastName}
+            </TableCell>
+            <TableCell>{member.email}</TableCell>
+            <TableCell>
+              <Badge
+                variant={member.role === "Owner" ? "default" : "secondary"}
+              >
+                {member.role}
+              </Badge>
+            </TableCell>
+            <TableCell>
+              <Badge variant={member.isActive ? "success" : "outline"}>
+                {member.isActive ? "Active" : "Inactive"}
+              </Badge>
+            </TableCell>
+            <TableCell>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => deleteMember({ id: member.id })}
+                disabled={isDeleting || member.role === "Owner"}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+function TeamTableSkeleton() {
+  return (
+    <div className="space-y-2">
+      {[...Array(3)].map((_, i) => (
+        <Skeleton key={i} className="h-12 w-full" />
+      ))}
+    </div>
+  );
+}
+```
+
+**KROK 3: Delete Dialog (Zadanie 3.1.3)**
+Utwórz `src/features/team/components/DeleteMemberDialog.tsx`:
+
+```typescript
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/shared/ui/alert-dialog";
+
+interface Props {
+  memberName: string;
+  onConfirm: () => void;
+  children: React.ReactNode;
+}
+
+export function DeleteMemberDialog({ memberName, onConfirm, children }: Props) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Remove team member?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to remove {memberName} from the team? This
+            action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm}>Remove</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+```
+
+**KROK 4: Team Page (Zadanie 3.1.4)**
+Utwórz `src/app/(dashboard)/dashboard/team/page.tsx`:
+
+```typescript
+import { TeamMembersTable } from "@/features/team/components/TeamMembersTable";
+import { Button } from "@/shared/ui/button";
+import { UserPlus } from "lucide-react";
+import Link from "next/link";
+
+export default function TeamPage() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Team</h1>
+          <p className="text-muted-foreground">Manage your team members</p>
+        </div>
+        <Link href="/dashboard/team/invite">
+          <Button>
+            <UserPlus className="mr-2 h-4 w-4" />
+            Invite Member
+          </Button>
+        </Link>
+      </div>
+
+      <TeamMembersTable />
+    </div>
+  );
+}
+```
+
+### OCZEKIWANY REZULTAT:
+
+Lista członków zespołu z danymi z API i możliwością usuwania.
+
+---
+
+### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
+
+- [x] Network tab: GET /api/Team zwraca 200
+- [x] Lista pokazuje PRAWDZIWE dane z bazy
+- [x] Role badge wyświetla Owner/Admin/Member
+- [x] Usunięcie członka wywołuje DELETE /api/Team/{id}
+- [x] Po usunięciu lista się odświeża
+- [x] Owner nie może być usunięty
+- [x] Loading skeleton podczas ładowania
+- [x] Error state dla błędów API
+- [x] Empty state gdy brak członków
+- [x] Git commit: `feat(team): implement team members list with CRUD`
+
+<!-- BLOCK_END: 3.1 -->
+
+---
+
+<!-- BLOCK_START: 3.2 -->
+
+### 3.2 Invitations
+
+| #     | Zadanie                     | Priorytet | Status | Opis                                          |
+| ----- | --------------------------- | --------- | ------ | --------------------------------------------- |
+| 3.2.1 | 🔴 Invitation types & hooks | Krytyczne | ⬜     | InvitationDto, usePostApiTeamInvite           |
+| 3.2.2 | 🔴 InviteForm component     | Krytyczne | ⬜     | Formularz zaproszenia (email, role)           |
+| 3.2.3 | 🔴 InvitationsList          | Krytyczne | ⬜     | Lista pending invitations                     |
+| 3.2.4 | 🔴 Invite page              | Krytyczne | ⬜     | /dashboard/team/invite                        |
+| 3.2.5 | 🟡 Accept invitation page   | Ważne     | ⬜     | /invite/[token] - publiczna strona akceptacji |
+
+**Blok 3.2 - Wymagania wejściowe**: Blok 3.1  
+**Blok 3.2 - Rezultat**: System zaproszeń do zespołu
+
+**📦 DEPENDENCIES:**
+
+- ✅ Blok 3.1 (Team List)
+
+**⬅️ BLOKUJE:**
+
+- Blok 4A.1 (Clients List)
+- Blok 4B.1 (Plans List)
+
+**🚨 API ENDPOINTS (z feature_list.json):**
+
+```
+POST /api/Team/invite → InvitationDto
+GET /api/Team/invitations → InvitationDto[]
+POST /api/Team/invitations/{token}/accept → void
+```
+
+**🚨 REQUIRED HOOKS:**
+
+```typescript
+usePostApiTeamInvite();
+useGetApiTeamInvitations();
+```
+
+---
+
+### 🤖 PROMPT
+
+Działaj jako Senior Frontend Developer.
+Twoim zadaniem jest wykonanie Fazy 3.2 (Invitations).
+
+### CEL GŁÓWNY:
+
+Stworzyć system zaproszeń do zespołu z formularzem wysyłania i listą oczekujących zaproszeń.
+
+### ARCHITEKTURA:
+
+```
+src/features/team/
+├── components/
+│   ├── invitations/
+│   │   ├── InviteForm.tsx
+│   │   ├── InvitationsList.tsx
+│   │   └── InvitationRow.tsx
+├── hooks/
+│   └── useInvitations.ts
+└── schemas/
+    └── invitation.schemas.ts
+```
+
+### KROKI DO WYKONANIA:
+
+**KROK 1: Schemas (Zadanie 3.2.1)**
+Utwórz `src/features/team/schemas/invitation.schemas.ts`:
+
+```typescript
+import { z } from "zod";
+
+export const InviteSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  role: z.enum(["Admin", "Member"]),
+});
+
+export type InviteInput = z.infer<typeof InviteSchema>;
+```
+
+**KROK 2: Hooks (Zadanie 3.2.1)**
+Utwórz `src/features/team/hooks/useInvitations.ts`:
+
+```typescript
+import {
+  useGetApiTeamInvitations,
+  usePostApiTeamInvite,
+} from "@/core/api/generated/team";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+
+export function useInvitations() {
+  const queryClient = useQueryClient();
+
+  const { data, isLoading, error } = useGetApiTeamInvitations();
+
+  const inviteMutation = usePostApiTeamInvite({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["/api/Team/invitations"] });
+        toast.success("Invitation sent!");
+      },
+      onError: (error) => {
+        toast.error(error.message || "Failed to send invitation");
+      },
+    },
+  });
+
+  return {
+    invitations: data ?? [],
+    isLoading,
+    error,
+    sendInvite: inviteMutation.mutate,
+    isSending: inviteMutation.isPending,
+  };
+}
+```
+
+**KROK 3: InviteForm (Zadanie 3.2.2)**
+Utwórz `src/features/team/components/invitations/InviteForm.tsx`:
+
+```typescript
+"use client";
+
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { InviteSchema, InviteInput } from "../../schemas/invitation.schemas";
+import { useInvitations } from "../../hooks/useInvitations";
+import { Button } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/shared/ui/form";
+
+export function InviteForm() {
+  const { sendInvite, isSending } = useInvitations();
+
+  const form = useForm<InviteInput>({
+    resolver: zodResolver(InviteSchema),
+    defaultValues: {
+      email: "",
+      role: "Member",
+    },
+  });
+
+  function onSubmit(data: InviteInput) {
+    sendInvite({ data });
+    form.reset();
+  }
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl>
+                <Input placeholder="colleague@example.com" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="role"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Role</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="Admin">Admin</SelectItem>
+                  <SelectItem value="Member">Member</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <Button type="submit" disabled={isSending}>
+          {isSending ? "Sending..." : "Send Invitation"}
+        </Button>
+      </form>
+    </Form>
+  );
+}
+```
+
+**KROK 4: InvitationsList (Zadanie 3.2.3)**
+Utwórz `src/features/team/components/invitations/InvitationsList.tsx`:
+
+```typescript
+"use client";
+
+import { useInvitations } from "../../hooks/useInvitations";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/shared/ui/table";
+import { Badge } from "@/shared/ui/badge";
+import { Skeleton } from "@/shared/ui/skeleton";
+import { formatDate } from "@/shared/lib/formatters";
+
+export function InvitationsList() {
+  const { invitations, isLoading, error } = useInvitations();
+
+  if (error) {
+    return <div className="text-red-500">Error: {error.message}</div>;
+  }
+
+  if (isLoading) {
+    return <InvitationsListSkeleton />;
+  }
+
+  if (invitations.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        No pending invitations
+      </div>
+    );
+  }
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Email</TableHead>
+          <TableHead>Role</TableHead>
+          <TableHead>Sent</TableHead>
+          <TableHead>Expires</TableHead>
+          <TableHead>Status</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {invitations.map((invitation) => (
+          <TableRow key={invitation.id}>
+            <TableCell>{invitation.email}</TableCell>
+            <TableCell>
+              <Badge variant="outline">{invitation.role}</Badge>
+            </TableCell>
+            <TableCell>{formatDate(invitation.createdAt)}</TableCell>
+            <TableCell>{formatDate(invitation.expiresAt)}</TableCell>
+            <TableCell>
+              <Badge
+                variant={
+                  invitation.status === "Pending" ? "warning" : "secondary"
+                }
+              >
+                {invitation.status}
+              </Badge>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+function InvitationsListSkeleton() {
+  return (
+    <div className="space-y-2">
+      {[...Array(3)].map((_, i) => (
+        <Skeleton key={i} className="h-12 w-full" />
+      ))}
+    </div>
+  );
+}
+```
+
+**KROK 5: Invite Page (Zadanie 3.2.4)**
+Utwórz `src/app/(dashboard)/dashboard/team/invite/page.tsx`:
+
+```typescript
+import { InviteForm } from "@/features/team/components/invitations/InviteForm";
+import { InvitationsList } from "@/features/team/components/invitations/InvitationsList";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/shared/ui/card";
+import Link from "next/link";
+import { Button } from "@/shared/ui/button";
+import { ArrowLeft } from "lucide-react";
+
+export default function InvitePage() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <Link href="/dashboard/team">
+          <Button variant="ghost" size="icon">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-3xl font-bold">Invite Team Member</h1>
+          <p className="text-muted-foreground">
+            Send invitations to join your team
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Send Invitation</CardTitle>
+            <CardDescription>
+              Enter the email address and role for the new team member
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <InviteForm />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Pending Invitations</CardTitle>
+            <CardDescription>
+              Invitations waiting to be accepted
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <InvitationsList />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+```
+
+**KROK 6: Accept Invitation Page (Zadanie 3.2.5)**
+Utwórz `src/app/(public)/invite/[token]/page.tsx`:
+
+```typescript
+"use client";
+
+import { use, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/shared/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/shared/ui/card";
+import { customInstance } from "@/core/api/client";
+import { toast } from "sonner";
+
+interface Props {
+  params: Promise<{ token: string }>;
+}
+
+export default function AcceptInvitationPage({ params }: Props) {
+  const { token } = use(params);
+  const router = useRouter();
+  const [isAccepting, setIsAccepting] = useState(false);
+
+  async function handleAccept() {
+    setIsAccepting(true);
+    try {
+      await customInstance({
+        url: `/api/Team/invitations/${token}/accept`,
+        method: "POST",
+      });
+      toast.success("Invitation accepted! Please login to continue.");
+      router.push("/login");
+    } catch (error) {
+      toast.error("Failed to accept invitation. It may have expired.");
+    } finally {
+      setIsAccepting(false);
+    }
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Team Invitation</CardTitle>
+          <CardDescription>
+            You have been invited to join a team on Orbito Platform
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Click the button below to accept this invitation and join the team.
+          </p>
+          <Button
+            onClick={handleAccept}
+            disabled={isAccepting}
+            className="w-full"
+          >
+            {isAccepting ? "Accepting..." : "Accept Invitation"}
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+```
+
+### OCZEKIWANY REZULTAT:
+
+System zaproszeń z formularzem, listą pending invitations i stroną akceptacji.
+
+---
+
+### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
+
+- [ ] Network tab: POST /api/Team/invite zwraca 200/201
+- [ ] Network tab: GET /api/Team/invitations zwraca 200
+- [ ] Formularz wysyła zaproszenie z email i role
+- [ ] Lista pokazuje pending invitations z API
+- [ ] Toast notification po wysłaniu zaproszenia
+- [ ] Strona /invite/[token] akceptuje zaproszenie
+- [ ] Loading states podczas wysyłania/akceptowania
+- [ ] Error handling dla błędów API
+- [ ] Zod validation na formularzu
+- [ ] Git commit: `feat(team): implement invitations system`
+
+<!-- BLOCK_END: 3.2 -->
+
+---
+
+<!-- BLOCK_START: 4A.1 -->
+
+## 🔵 FAZA 4A: Clients Management (Tydzień 5) - PARALLEL z 4B
+
+### 4A.1 Clients List
+
+| #      | Zadanie                   | Priorytet | Status | Opis                        |
+| ------ | ------------------------- | --------- | ------ | --------------------------- |
+| 4A.1.1 | 🔴 Client types & hooks   | Krytyczne | ⬜     | ClientDto, useGetApiClients |
+| 4A.1.2 | 🔴 ClientsTable component | Krytyczne | ⬜     | Tabela z paginacją          |
+| 4A.1.3 | 🔴 Pagination component   | Krytyczne | ⬜     | Reusable pagination         |
+| 4A.1.4 | 🔴 Clients list page      | Krytyczne | ⬜     | /dashboard/clients          |
+| 4A.1.5 | 🔴 Empty & loading states | Krytyczne | ⬜     | Skeleton, empty message     |
+
+**Blok 4A.1 - Wymagania wejściowe**: Blok 3.1, 3.2  
+**Blok 4A.1 - Rezultat**: Lista klientów z paginacją
+
+**📦 DEPENDENCIES:**
+
+- ✅ Blok 3.1 (Team List)
+- ✅ Blok 3.2 (Invitations)
+
+**⬅️ BLOKUJE:**
+
+- Blok 4A.2 (Search & Filters)
+- Blok 4A.3 (Client CRUD)
+
+**🚨 API ENDPOINTS (z feature_list.json):**
+
+```
+GET /api/Clients → PagedResult<ClientDto>
+GET /api/Clients?pageNumber=1&pageSize=10
+```
+
+**🚨 REQUIRED HOOKS:**
+
+```typescript
+useGetApiClients({ pageNumber, pageSize });
+```
+
+---
+
+### 🤖 PROMPT
+
+Działaj jako Senior Frontend Developer.
+Twoim zadaniem jest wykonanie Fazy 4A.1 (Clients List).
+
+### CEL GŁÓWNY:
+
+Stworzyć listę klientów z paginacją pobierającą dane z API.
+
+### ARCHITEKTURA:
 
 ```
 src/features/clients/
 ├── components/
 │   ├── ClientsTable.tsx
-│   ├── ClientForm.tsx
-│   └── ClientActions.tsx
+│   └── ClientRow.tsx
 ├── hooks/
 │   └── useClients.ts
-├── schemas/
-│   └── client.schemas.ts
 └── types/
     └── client.types.ts
 ```
 
 ### KROKI DO WYKONANIA:
 
-**KROK 1: Types & Validation (Zadanie 3.1.1)**
-Utwórz `src/features/clients/schemas/client.schemas.ts`.
-Wymagania:
+**KROK 1: Hooks (Zadanie 4A.1.1)**
+Utwórz `src/features/clients/hooks/useClients.ts`:
+
+```typescript
+import { useGetApiClients } from "@/core/api/generated/clients";
+import { useState } from "react";
+
+export function useClients() {
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(10);
+
+  const { data, isLoading, error } = useGetApiClients({
+    pageNumber: page,
+    pageSize,
+  });
+
+  return {
+    clients: data?.items ?? [],
+    totalCount: data?.totalCount ?? 0,
+    totalPages: data?.totalPages ?? 0,
+    currentPage: page,
+    pageSize,
+    isLoading,
+    error,
+    setPage,
+  };
+}
+```
+
+**KROK 2: ClientsTable (Zadanie 4A.1.2)**
+Utwórz `src/features/clients/components/ClientsTable.tsx`:
+
+```typescript
+"use client";
+
+import { useClients } from "../hooks/useClients";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/shared/ui/table";
+import { Badge } from "@/shared/ui/badge";
+import { Skeleton } from "@/shared/ui/skeleton";
+import { Pagination } from "@/shared/components/Pagination";
+import Link from "next/link";
+
+export function ClientsTable() {
+  const { clients, isLoading, error, currentPage, totalPages, setPage } =
+    useClients();
+
+  if (error) {
+    return <div className="text-red-500">Error: {error.message}</div>;
+  }
+
+  if (isLoading) {
+    return <ClientsTableSkeleton />;
+  }
+
+  if (clients.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        No clients yet. Add your first client to get started.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Company</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {clients.map((client) => (
+            <TableRow key={client.id}>
+              <TableCell className="font-medium">{client.name}</TableCell>
+              <TableCell>{client.email}</TableCell>
+              <TableCell>{client.company || "-"}</TableCell>
+              <TableCell>
+                <Badge variant={client.isActive ? "success" : "secondary"}>
+                  {client.isActive ? "Active" : "Inactive"}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <Link
+                  href={`/dashboard/clients/${client.id}`}
+                  className="text-sm text-blue-600 hover:underline"
+                >
+                  View
+                </Link>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+
+      {totalPages > 1 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setPage}
+        />
+      )}
+    </div>
+  );
+}
+
+function ClientsTableSkeleton() {
+  return (
+    <div className="space-y-2">
+      {[...Array(5)].map((_, i) => (
+        <Skeleton key={i} className="h-12 w-full" />
+      ))}
+    </div>
+  );
+}
+```
+
+**KROK 3: Pagination Component (Zadanie 4A.1.3)**
+Utwórz `src/shared/components/Pagination.tsx`:
+
+```typescript
+import { Button } from "@/shared/ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
+interface Props {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}
+
+export function Pagination({ currentPage, totalPages, onPageChange }: Props) {
+  return (
+    <div className="flex items-center justify-center gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage <= 1}
+      >
+        <ChevronLeft className="h-4 w-4" />
+        Previous
+      </Button>
+
+      <span className="text-sm text-muted-foreground">
+        Page {currentPage} of {totalPages}
+      </span>
+
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage >= totalPages}
+      >
+        Next
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
+```
+
+**KROK 4: Clients Page (Zadanie 4A.1.4)**
+Utwórz `src/app/(dashboard)/dashboard/clients/page.tsx`:
+
+```typescript
+import { ClientsTable } from "@/features/clients/components/ClientsTable";
+import { Button } from "@/shared/ui/button";
+import { Plus } from "lucide-react";
+import Link from "next/link";
+
+export default function ClientsPage() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Clients</h1>
+          <p className="text-muted-foreground">Manage your clients</p>
+        </div>
+        <Link href="/dashboard/clients/new">
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Client
+          </Button>
+        </Link>
+      </div>
+
+      <ClientsTable />
+    </div>
+  );
+}
+```
+
+### OCZEKIWANY REZULTAT:
+
+Lista klientów z paginacją i prawdziwymi danymi z API.
+
+---
+
+### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
+
+- [ ] Network tab: GET /api/Clients zwraca 200
+- [ ] Lista pokazuje PRAWDZIWE dane z bazy
+- [ ] Paginacja zmienia pageNumber w request
+- [ ] ZERO hardcoded '0' lub pustych list
+- [ ] Loading skeleton podczas ładowania
+- [ ] Empty state gdy brak klientów
+- [ ] Error state dla błędów API
+- [ ] Git commit: `feat(clients): implement clients list with pagination`
+
+<!-- BLOCK_END: 4A.1 -->
+
+---
+
+<!-- BLOCK_START: 4A.2 -->
+
+### 4A.2 Clients Search & Filters
+
+| #      | Zadanie          | Priorytet | Status | Opis                           |
+| ------ | ---------------- | --------- | ------ | ------------------------------ |
+| 4A.2.1 | 🔴 Search input  | Krytyczne | ⬜     | Debounced search z query param |
+| 4A.2.2 | 🔴 Status filter | Krytyczne | ⬜     | Active/Inactive/All dropdown   |
+| 4A.2.3 | 🔴 URL sync      | Krytyczne | ⬜     | Filtry zapisywane w URL        |
+| 4A.2.4 | 🔴 Clear filters | Krytyczne | ⬜     | Reset button                   |
+
+**Blok 4A.2 - Wymagania wejściowe**: Blok 4A.1  
+**Blok 4A.2 - Rezultat**: Wyszukiwanie i filtry dla klientów
+
+**🚨 API ENDPOINTS:**
+
+```
+GET /api/Clients?search=query&status=active
+```
+
+**🚨 REQUIRED HOOKS:**
+
+```typescript
+useGetApiClients({ search, status, pageNumber });
+```
+
+---
+
+### 🤖 PROMPT
+
+Działaj jako Senior Frontend Developer.
+Twoim zadaniem jest wykonanie Fazy 4A.2 (Clients Search & Filters).
+
+### CEL GŁÓWNY:
+
+Dodać wyszukiwanie i filtry do listy klientów z synchronizacją URL.
+
+### KROKI DO WYKONANIA:
+
+**KROK 1: Rozszerzenie useClients hook**
+Zaktualizuj `src/features/clients/hooks/useClients.ts` o obsługę search i status:
+
+```typescript
+import { useGetApiClients } from "@/core/api/generated/clients";
+import { useState, useDeferredValue } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+
+export function useClients() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const page = Number(searchParams.get("page")) || 1;
+  const search = searchParams.get("search") || "";
+  const status = searchParams.get("status") || "";
+
+  const deferredSearch = useDeferredValue(search);
+
+  const { data, isLoading, error } = useGetApiClients({
+    pageNumber: page,
+    pageSize: 10,
+    search: deferredSearch || undefined,
+    status: status || undefined,
+  });
+
+  function updateParams(updates: Record<string, string | undefined>) {
+    const params = new URLSearchParams(searchParams.toString());
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value) {
+        params.set(key, value);
+      } else {
+        params.delete(key);
+      }
+    });
+    // Reset to page 1 when filters change
+    if (!updates.page) {
+      params.set("page", "1");
+    }
+    router.push(`?${params.toString()}`);
+  }
+
+  return {
+    clients: data?.items ?? [],
+    totalCount: data?.totalCount ?? 0,
+    totalPages: data?.totalPages ?? 0,
+    currentPage: page,
+    search,
+    status,
+    isLoading,
+    error,
+    setSearch: (value: string) => updateParams({ search: value || undefined }),
+    setStatus: (value: string) => updateParams({ status: value || undefined }),
+    setPage: (value: number) => updateParams({ page: String(value) }),
+    clearFilters: () => router.push("?"),
+  };
+}
+```
+
+**KROK 2: ClientsFilters component**
+Utwórz `src/features/clients/components/ClientsFilters.tsx`:
+
+```typescript
+"use client";
+
+import { Input } from "@/shared/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select";
+import { Button } from "@/shared/ui/button";
+import { Search, X } from "lucide-react";
+
+interface Props {
+  search: string;
+  status: string;
+  onSearchChange: (value: string) => void;
+  onStatusChange: (value: string) => void;
+  onClear: () => void;
+}
+
+export function ClientsFilters({
+  search,
+  status,
+  onSearchChange,
+  onStatusChange,
+  onClear,
+}: Props) {
+  const hasFilters = search || status;
+
+  return (
+    <div className="flex flex-col sm:flex-row gap-4">
+      <div className="relative flex-1">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search clients..."
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
+      <Select value={status} onValueChange={onStatusChange}>
+        <SelectTrigger className="w-[180px]">
+          <SelectValue placeholder="All statuses" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="">All statuses</SelectItem>
+          <SelectItem value="active">Active</SelectItem>
+          <SelectItem value="inactive">Inactive</SelectItem>
+        </SelectContent>
+      </Select>
+
+      {hasFilters && (
+        <Button variant="ghost" onClick={onClear}>
+          <X className="mr-2 h-4 w-4" />
+          Clear
+        </Button>
+      )}
+    </div>
+  );
+}
+```
+
+**KROK 3: Integracja z Clients Page**
+Zaktualizuj stronę aby używać filtrów.
+
+### OCZEKIWANY REZULTAT:
+
+Wyszukiwanie i filtry z synchronizacją URL.
+
+---
+
+### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
+
+- [ ] Wpisanie w search wysyła request z ?search=
+- [ ] Zmiana status filtruje po statusie
+- [ ] URL persistence - odświeżenie strony zachowuje filtry
+- [ ] Clear filters resetuje wszystko
+- [ ] Debounced search (nie wysyła requestu przy każdym znaku)
+- [ ] Git commit: `feat(clients): add search and filters with URL sync`
+
+<!-- BLOCK_END: 4A.2 -->
+
+---
+
+<!-- BLOCK_START: 4A.3 -->
+
+### 4A.3 Client CRUD
+
+| #      | Zadanie                 | Priorytet | Status | Opis                         |
+| ------ | ----------------------- | --------- | ------ | ---------------------------- |
+| 4A.3.1 | 🔴 ClientForm component | Krytyczne | ⬜     | Formularz create/edit        |
+| 4A.3.2 | 🔴 Create client page   | Krytyczne | ⬜     | /dashboard/clients/new       |
+| 4A.3.3 | 🔴 Client detail page   | Krytyczne | ⬜     | /dashboard/clients/[id]      |
+| 4A.3.4 | 🔴 Edit client page     | Krytyczne | ⬜     | /dashboard/clients/[id]/edit |
+| 4A.3.5 | 🔴 Delete client        | Krytyczne | ⬜     | Dialog z potwierdzeniem      |
+| 4A.3.6 | 🔴 Toast notifications  | Krytyczne | ⬜     | Success/error messages       |
+
+**Blok 4A.3 - Wymagania wejściowe**: Blok 4A.1  
+**Blok 4A.3 - Rezultat**: Pełny CRUD dla klientów
+
+**🚨 API ENDPOINTS (z feature_list.json):**
+
+```
+POST /api/Clients → ClientDto
+GET /api/Clients/{id} → ClientDto
+PUT /api/Clients/{id} → ClientDto
+DELETE /api/Clients/{id} → void
+```
+
+**🚨 REQUIRED HOOKS:**
+
+```typescript
+usePostApiClients();
+useGetApiClientsId(id);
+usePutApiClientsId();
+useDeleteApiClientsId();
+```
+
+---
+
+### 🤖 PROMPT
+
+Działaj jako Senior Frontend Developer.
+Twoim zadaniem jest wykonanie Fazy 4A.3 (Client CRUD).
+
+### CEL GŁÓWNY:
+
+Zaimplementować pełny CRUD (Create, Read, Update, Delete) dla klientów.
+
+### KROKI DO WYKONANIA:
+
+**KROK 1: Schemas**
+Utwórz `src/features/clients/schemas/client.schemas.ts`:
 
 ```typescript
 import { z } from "zod";
@@ -1248,106 +2458,149 @@ export const ClientSchema = z.object({
 export type ClientInput = z.infer<typeof ClientSchema>;
 ```
 
-**KROK 2: API Hooks (Zadanie 3.1.2)**
-Utwórz `src/features/clients/hooks/useClients.ts`.
-Wymagania:
+**KROK 2: Client mutations hook**
+Utwórz `src/features/clients/hooks/useClientMutations.ts`:
 
-- Użyj wygenerowanych hooków z orval (lub stwórz wrapper)
-- `useClients()`: Query pobierająca listę z filtrowaniem
-- `useCreateClient()`: Mutation
-- `useUpdateClient()`: Mutation
-- `useDeleteClient()`: Mutation
-- Wszystkie mutacje invalidują query cache
+```typescript
+import {
+  usePostApiClients,
+  usePutApiClientsId,
+  useDeleteApiClientsId,
+} from "@/core/api/generated/clients";
+import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
-**KROK 3: ClientsTable (Zadanie 3.1.3)**
-Utwórz `src/features/clients/components/ClientsTable.tsx`.
-Wymagania:
+export function useClientMutations() {
+  const queryClient = useQueryClient();
+  const router = useRouter();
 
-- shadcn/ui Table
-- Kolumny: Name, Email, Company, Status, Actions
-- Sortowanie (client-side lub server-side)
-- Filtrowanie po nazwie/email
-- Pagination
-- Actions dropdown: Edit, Delete
+  const createMutation = usePostApiClients({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["/api/Clients"] });
+        toast.success("Client created successfully");
+        router.push("/dashboard/clients");
+      },
+      onError: (error) => {
+        toast.error(error.message || "Failed to create client");
+      },
+    },
+  });
 
-**KROK 4: ClientForm (Zadanie 3.1.4)**
-Utwórz `src/features/clients/components/ClientForm.tsx`.
-Wymagania:
+  const updateMutation = usePutApiClientsId({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["/api/Clients"] });
+        toast.success("Client updated successfully");
+        router.push("/dashboard/clients");
+      },
+      onError: (error) => {
+        toast.error(error.message || "Failed to update client");
+      },
+    },
+  });
 
-- Dialog z formem
-- React Hook Form + Zod validation
-- Mode: "create" lub "edit"
-- Submit → wywołanie odpowiedniej mutation
-- Toast na sukces/błąd
+  const deleteMutation = useDeleteApiClientsId({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["/api/Clients"] });
+        toast.success("Client deleted successfully");
+        router.push("/dashboard/clients");
+      },
+      onError: (error) => {
+        toast.error(error.message || "Failed to delete client");
+      },
+    },
+  });
 
-**KROK 5: Clients Page (Zadanie 3.1.5)**
-Utwórz `src/app/(dashboard)/dashboard/clients/page.tsx`.
-Wymagania:
+  return {
+    createClient: createMutation.mutate,
+    updateClient: updateMutation.mutate,
+    deleteClient: deleteMutation.mutate,
+    isCreating: createMutation.isPending,
+    isUpdating: updateMutation.isPending,
+    isDeleting: deleteMutation.isPending,
+  };
+}
+```
 
-- Header z przyciskiem "Add Client"
-- Statystyki (Total Clients, Active, Inactive)
-- ClientsTable
-- Search bar
+**KROK 3: ClientForm component**
+Utwórz `src/features/clients/components/ClientForm.tsx` z React Hook Form i Zod.
+
+**KROK 4: Create/Edit/Detail pages**
+Utwórz odpowiednie strony w `src/app/(dashboard)/dashboard/clients/`.
 
 ### OCZEKIWANY REZULTAT:
 
-Pełny CRUD dla klientów z profesjonalnym UI.
+Pełny CRUD dla klientów z formularzami i toastami.
 
 ---
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [ ] Client schemas z Zod validation
-- [ ] useClients hooks działają
-- [ ] ClientsTable wyświetla dane z API
-- [ ] Sortowanie i filtrowanie działa
-- [ ] ClientForm tworzy nowych klientów
-- [ ] Edit client działa
-- [ ] Delete client działa
-- [ ] Toast notifications
-- [ ] Loading states
-- [ ] Error handling
-- [ ] Git commit: `feat(clients): implement full CRUD with table and forms`
+- [ ] POST /api/Clients tworzy klienta
+- [ ] GET /api/Clients/{id} pobiera szczegóły
+- [ ] PUT /api/Clients/{id} aktualizuje klienta
+- [ ] DELETE /api/Clients/{id} usuwa klienta
+- [ ] Formularz z Zod validation
+- [ ] Toast notifications dla sukcesu/błędu
+- [ ] Redirect po operacjach
+- [ ] Loading states na buttonach
+- [ ] Git commit: `feat(clients): implement full CRUD operations`
 
-<!-- BLOCK_END: 3.1 -->
+<!-- BLOCK_END: 4A.3 -->
 
 ---
 
-<!-- BLOCK_START: 3.2 -->
+<!-- BLOCK_START: 4B.1 -->
 
-### 3.2 Plans Management Foundation
+## 🔵 FAZA 4B: Plans Management (Tydzień 5) - PARALLEL z 4A
 
-| #     | Zadanie                 | Priorytet | Status | Opis                                         |
-| ----- | ----------------------- | --------- | ------ | -------------------------------------------- |
-| 3.2.1 | 🔴 Plan types & schemas | Krytyczne | ⬜     | Zod schemas dla Plan CRUD                    |
-| 3.2.2 | 🔴 usePlans hooks       | Krytyczne | ⬜     | useQuery + useMutation                       |
-| 3.2.3 | 🔴 PlansGrid component  | Krytyczne | ⬜     | Card grid z cenami i features                |
-| 3.2.4 | 🔴 PlanForm component   | Krytyczne | ⬜     | Dialog z multi-step form (details + pricing) |
-| 3.2.5 | 🔴 Plans page           | Krytyczne | ⬜     | /dashboard/plans                             |
+### 4B.1 Plans List
 
-**Blok 3.2 - Wymagania wejściowe**: Blok 3.1 (Clients)  
-**Blok 3.2 - Rezultat**: Moduł zarządzania planami subskrypcyjnymi
+| #      | Zadanie                | Priorytet | Status | Opis                                    |
+| ------ | ---------------------- | --------- | ------ | --------------------------------------- |
+| 4B.1.1 | 🔴 Plan types & hooks  | Krytyczne | ⬜     | PlanDto, useGetApiPlans                 |
+| 4B.1.2 | 🔴 PlansGrid component | Krytyczne | ⬜     | Grid z kartami planów                   |
+| 4B.1.3 | 🔴 PlanCard component  | Krytyczne | ⬜     | Karta z ceną, features, status          |
+| 4B.1.4 | 🔴 Plans list page     | Krytyczne | ⬜     | /dashboard/plans                        |
+| 4B.1.5 | 🔴 formatCurrency      | Krytyczne | ⬜     | Ceny formatowane przez formatCurrency() |
+
+**Blok 4B.1 - Wymagania wejściowe**: Blok 3.1, 3.2  
+**Blok 4B.1 - Rezultat**: Lista planów z kartami
 
 **📦 DEPENDENCIES:**
 
-- ✅ Blok 2.1 (Dashboard Layout)
-- ✅ Blok 2.2 (React Query)
-- ✅ Blok 3.1 (Clients - używają planów)
+- ✅ Blok 3.1 (Team List)
+- ✅ Blok 3.2 (Invitations)
 
 **⬅️ BLOKUJE:**
 
-- Blok 5.1 (Subscriptions - potrzebuje planów)
+- Blok 4B.2 (Plan CRUD)
+
+**🚨 API ENDPOINTS (z feature_list.json):**
+
+```
+GET /api/Plans → PlanDto[]
+```
+
+**🚨 REQUIRED HOOKS:**
+
+```typescript
+useGetApiPlans();
+```
 
 ---
 
 ### 🤖 PROMPT
 
 Działaj jako Senior Frontend Developer.
-Przechodzimy do Fazy 3.2: **Plans Management Foundation**.
+Twoim zadaniem jest wykonanie Fazy 4B.1 (Plans List).
 
 ### CEL GŁÓWNY:
 
-Stworzyć moduł zarządzania planami subskrypcyjnymi (Subscription Plans) z możliwością definiowania cen, interwałów rozliczeniowych i feature lists.
+Stworzyć listę planów subskrypcyjnych w formie kart z cenami i features.
 
 ### ARCHITEKTURA:
 
@@ -1356,452 +2609,209 @@ src/features/plans/
 ├── components/
 │   ├── PlansGrid.tsx
 │   ├── PlanCard.tsx
-│   ├── PlanForm.tsx
 │   └── PlanFeatures.tsx
 ├── hooks/
 │   └── usePlans.ts
-└── schemas/
-    └── plan.schemas.ts
+└── types/
+    └── plan.types.ts
 ```
 
 ### KROKI DO WYKONANIA:
 
-**KROK 1: Schemas (Zadanie 3.2.1)**
-Utwórz `src/features/plans/schemas/plan.schemas.ts`.
-Wymagania:
+**KROK 1: Hooks (Zadanie 4B.1.1)**
+Utwórz `src/features/plans/hooks/usePlans.ts`:
 
 ```typescript
-import { z } from "zod";
+import { useGetApiPlans } from "@/core/api/generated/plans";
 
-export const PlanSchema = z.object({
-  name: z.string().min(2),
-  description: z.string().optional(),
-  price: z.number().min(0),
-  interval: z.enum(["MONTHLY", "YEARLY", "QUARTERLY"]),
-  features: z.array(z.string()),
-  isActive: z.boolean().default(true),
-});
+export function usePlans() {
+  const { data, isLoading, error } = useGetApiPlans();
 
-export type PlanInput = z.infer<typeof PlanSchema>;
+  return {
+    plans: data ?? [],
+    isLoading,
+    error,
+  };
+}
 ```
 
-**KROK 2: API Hooks (Zadanie 3.2.2)**
-Utwórz `src/features/plans/hooks/usePlans.ts`.
-Analogicznie do useClients.
+**KROK 2: PlanCard (Zadanie 4B.1.3)**
+Utwórz `src/features/plans/components/PlanCard.tsx`:
 
-**KROK 3: PlansGrid & PlanCard (Zadanie 3.2.3)**
-Utwórz komponenty wyświetlające plany w formie kart.
-Wymagania:
+```typescript
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/shared/ui/card";
+import { Badge } from "@/shared/ui/badge";
+import { Button } from "@/shared/ui/button";
+import { Check } from "lucide-react";
+import { formatCurrency } from "@/shared/lib/formatters";
+import Link from "next/link";
 
-- Grid layout (3 kolumny na desktop)
-- Każda karta: Name, Price, Interval, Feature list
-- Badge "Active/Inactive"
-- Actions: Edit, Delete, Duplicate
+interface PlanCardProps {
+  plan: {
+    id: string;
+    name: string;
+    description?: string;
+    price: number;
+    currency: string;
+    interval: string;
+    features: string[];
+    isActive: boolean;
+  };
+}
 
-**KROK 4: PlanForm (Zadanie 3.2.4)**
-Multi-step form lub pojedynczy form z sekcjami:
+export function PlanCard({ plan }: PlanCardProps) {
+  return (
+    <Card className={!plan.isActive ? "opacity-60" : ""}>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle>{plan.name}</CardTitle>
+          <Badge variant={plan.isActive ? "default" : "secondary"}>
+            {plan.isActive ? "Active" : "Inactive"}
+          </Badge>
+        </div>
+        {plan.description && (
+          <p className="text-sm text-muted-foreground">{plan.description}</p>
+        )}
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <span className="text-3xl font-bold">
+            {formatCurrency(plan.price, plan.currency)}
+          </span>
+          <span className="text-muted-foreground">
+            /{plan.interval.toLowerCase()}
+          </span>
+        </div>
 
-- Section 1: Basic Info (Name, Description)
-- Section 2: Pricing (Price, Interval)
-- Section 3: Features (Dynamic list - add/remove)
+        <ul className="space-y-2">
+          {plan.features.map((feature, index) => (
+            <li key={index} className="flex items-center gap-2">
+              <Check className="h-4 w-4 text-green-500" />
+              <span className="text-sm">{feature}</span>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+      <CardFooter className="flex gap-2">
+        <Link href={`/dashboard/plans/${plan.id}`} className="flex-1">
+          <Button variant="outline" className="w-full">
+            View
+          </Button>
+        </Link>
+        <Link href={`/dashboard/plans/${plan.id}/edit`} className="flex-1">
+          <Button className="w-full">Edit</Button>
+        </Link>
+      </CardFooter>
+    </Card>
+  );
+}
+```
 
-**KROK 5: Plans Page (Zadanie 3.2.5)**
-`src/app/(dashboard)/dashboard/plans/page.tsx`
+**KROK 3: PlansGrid (Zadanie 4B.1.2)**
+Utwórz `src/features/plans/components/PlansGrid.tsx`:
 
-- Header z "Create Plan"
-- PlansGrid
-- Stats: Total Plans, Active Plans
+```typescript
+"use client";
+
+import { usePlans } from "../hooks/usePlans";
+import { PlanCard } from "./PlanCard";
+import { Skeleton } from "@/shared/ui/skeleton";
+
+export function PlansGrid() {
+  const { plans, isLoading, error } = usePlans();
+
+  if (error) {
+    return <div className="text-red-500">Error: {error.message}</div>;
+  }
+
+  if (isLoading) {
+    return <PlansGridSkeleton />;
+  }
+
+  if (plans.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        No plans yet. Create your first subscription plan to get started.
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {plans.map((plan) => (
+        <PlanCard key={plan.id} plan={plan} />
+      ))}
+    </div>
+  );
+}
+
+function PlansGridSkeleton() {
+  return (
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {[...Array(3)].map((_, i) => (
+        <Skeleton key={i} className="h-[400px]" />
+      ))}
+    </div>
+  );
+}
+```
+
+**KROK 4: Plans Page (Zadanie 4B.1.4)**
+Utwórz `src/app/(dashboard)/dashboard/plans/page.tsx`:
+
+```typescript
+import { PlansGrid } from "@/features/plans/components/PlansGrid";
+import { Button } from "@/shared/ui/button";
+import { Plus } from "lucide-react";
+import Link from "next/link";
+
+export default function PlansPage() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Plans</h1>
+          <p className="text-muted-foreground">
+            Manage your subscription plans
+          </p>
+        </div>
+        <Link href="/dashboard/plans/new">
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Plan
+          </Button>
+        </Link>
+      </div>
+
+      <PlansGrid />
+    </div>
+  );
+}
+```
 
 ### OCZEKIWANY REZULTAT:
 
-Działający CRUD dla planów subskrypcyjnych.
+Grid kart z planami subskrypcyjnymi i prawdziwymi danymi z API.
 
 ---
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [ ] Plan schemas gotowe
-- [ ] usePlans hooks działają
-- [ ] PlansGrid wyświetla karty
-- [ ] PlanForm tworzy/edytuje plany
-- [ ] Feature list jest dynamiczna
-- [ ] Delete plan działa
-- [ ] Toast notifications
-- [ ] Git commit: `feat(plans): implement subscription plans management`
-
-<!-- BLOCK_END: 3.2 -->
-
----
-
-<!-- BLOCK_START: 4A.1 -->
-
-## 🔵 FAZA 4A: Clients Detail (Tydzień 5) - PARALLEL z 4B
-
-### 4A.1 Client Detail Page
-
-| #      | Zadanie                        | Priorytet | Status | Opis                                          |
-| ------ | ------------------------------ | --------- | ------ | --------------------------------------------- |
-| 4A.1.1 | 🔴 Client detail layout        | Krytyczne | ⬜     | /clients/[id] - tabs: Overview, Subscriptions |
-| 4A.1.2 | 🔴 ClientHeader component      | Krytyczne | ⬜     | Name, email, status, edit button              |
-| 4A.1.3 | 🔴 ClientOverview tab          | Krytyczne | ⬜     | Info cards, activity timeline                 |
-| 4A.1.4 | 🔴 ClientSubscriptions tab     | Krytyczne | ⬜     | Lista subskrypcji tego klienta                |
-| 4A.1.5 | 🟡 ClientActivityLog component | Ważne     | ⬜     | Timeline z historią zmian                     |
-
-**Blok 4A.1 - Wymagania wejściowe**: Blok 3.1 (Clients List)  
-**Blok 4A.1 - Rezultat**: Szczegółowy widok klienta z zakładkami
-
-**📦 DEPENDENCIES:**
-
-- ✅ Blok 3.1 (Clients Management)
-
-**⬅️ BLOKUJE:**
-
-- Blok 5.1 (Subscriptions - korzysta z client detail)
-
----
-
-### 🤖 PROMPT
-
-Działaj jako Senior Frontend Developer.
-Przechodzimy do Fazy 4A.1: **Client Detail Page**.
-
-### CEL GŁÓWNY:
-
-Stworzyć szczegółowy widok pojedynczego klienta z zakładkami: Overview i Subscriptions.
-
-### ARCHITEKTURA:
-
-```
-src/features/clients/
-└── components/
-    ├── detail/
-    │   ├── ClientHeader.tsx
-    │   ├── ClientOverview.tsx
-    │   ├── ClientSubscriptions.tsx
-    │   └── ClientActivityLog.tsx
-```
-
-### KROKI DO WYKONANIA:
-
-**KROK 1: Dynamic Route (Zadanie 4A.1.1)**
-Utwórz `src/app/(dashboard)/dashboard/clients/[id]/page.tsx`.
-Wymagania:
-
-- Async component (Next.js 15)
-- `await params` do pobrania ID
-- Tabs: Overview, Subscriptions, Activity
-
-**KROK 2: ClientHeader (Zadanie 4A.1.2)**
-Wymagania:
-
-- Avatar (lub initials)
-- Name + Email
-- Status badge
-- Edit button (otwiera ClientForm w trybie edit)
-
-**KROK 3: ClientOverview (Zadanie 4A.1.3)**
-Wymagania:
-
-- Info cards: Total Subscriptions, Active Plans, Total Revenue
-- Recent activity timeline (placeholder)
-
-**KROK 4: ClientSubscriptions (Zadanie 4A.1.4)**
-Wymagania:
-
-- Tabela subskrypcji należących do tego klienta
-- Kolumny: Plan, Status, Next Billing, Amount
-- Action: View Subscription Details
-
-**KROK 5: Activity Log (Zadanie 4A.1.5)**
-Timeline component:
-
-- "Created", "Updated", "Subscription Added", etc.
-- Use shadcn/ui Timeline or custom
-
-### OCZEKIWANY REZULTAT:
-
-Szczegółowa strona klienta z nawigacją tabs.
-
----
-
-### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
-
-- [ ] `/clients/[id]` wyświetla client data
-- [ ] Tabs działają
-- [ ] ClientHeader pokazuje info
-- [ ] Overview z statystykami
-- [ ] ClientSubscriptions lista
-- [ ] Activity log (może być placeholder)
-- [ ] Edit client z tej strony działa
-- [ ] Git commit: `feat(clients): implement client detail page with tabs`
-
-<!-- BLOCK_END: 4A.1 -->
-
----
-
-<!-- BLOCK_START: 4A.2 -->
-
-### 4A.2 Bulk Operations & Advanced Filters
-
-| #      | Zadanie              | Priorytet  | Status | Opis                                 |
-| ------ | -------------------- | ---------- | ------ | ------------------------------------ |
-| 4A.2.1 | 🟡 Multi-select rows | Ważne      | ⬜     | Checkboxes w tabeli                  |
-| 4A.2.2 | 🟡 Bulk actions bar  | Ważne      | ⬜     | Delete, Export, Tag (gdy zaznaczone) |
-| 4A.2.3 | 🟡 Advanced filters  | Ważne      | ⬜     | Status, Date range, Tags             |
-| 4A.2.4 | 🟢 Export to CSV     | Opcjonalne | ⬜     | Eksport zaznaczonych lub wszystkich  |
-| 4A.2.5 | 🟢 Import from CSV   | Opcjonalne | ⬜     | Bulk import klientów                 |
-
-**Blok 4A.2 - Wymagania wejściowe**: Blok 4A.1 (Client Detail)  
-**Blok 4A.2 - Rezultat**: Zaawansowane operacje na klientach
-
-**📦 DEPENDENCIES:**
-
-- ✅ Blok 3.1 (Clients Table)
-- ✅ Blok 4A.1 (Client Detail)
-
-**⬅️ BLOKUJE:**
-
-- Opcjonalne usprawnienia UX
-
----
-
-### 🤖 PROMPT
-
-Działaj jako Senior Frontend Developer.
-Przechodzimy do Fazy 4A.2: **Bulk Operations & Advanced Filters**.
-
-### CEL GŁÓWNY:
-
-Dodać zaawansowane funkcje do modułu klientów: multi-select, bulk delete, filtry, eksport/import.
-
-### KROKI DO WYKONANIA:
-
-**KROK 1: Multi-select (Zadanie 4A.2.1)**
-W ClientsTable:
-
-- Dodaj kolumnę checkbox (select all + individual)
-- State: `selectedIds: string[]`
-
-**KROK 2: Bulk Actions Bar (Zadanie 4A.2.2)**
-Sticky bar na dole/górze tabeli gdy `selectedIds.length > 0`:
-
-- Delete Selected
-- Export Selected
-- Close button (clear selection)
-
-**KROK 3: Advanced Filters (Zadanie 4A.2.3)**
-Utwórz `ClientsFilters.tsx`:
-
-- Dropdown: Status (All, Active, Inactive)
-- Date range picker
-- Search bar enhancement
-
-**KROK 4: Export CSV (Zadanie 4A.2.4)**
-Funkcja konwertująca selected clients do CSV i trigger download.
-
-**KROK 5: Import CSV (Zadanie 4A.2.5)**
-Dialog z file upload:
-
-- Parse CSV
-- Validate rows
-- Bulk create mutation
-
-### OCZEKIWANY REZULTAT:
-
-Zaawansowane operacje bulk w module clients.
-
----
-
-### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
-
-- [ ] Multi-select checkboxes działają
-- [ ] Bulk delete działa
-- [ ] Advanced filters filtrują
-- [ ] Export CSV działa
-- [ ] Import CSV parsuje i tworzy
-- [ ] Toast confirmations
-- [ ] Git commit: `feat(clients): add bulk operations and advanced filters`
-
-<!-- BLOCK_END: 4A.2 -->
-
----
-
-<!-- BLOCK_START: 4A.3 -->
-
-### 4A.3 Client Notes & Tags
-
-| #      | Zadanie           | Priorytet  | Status | Opis                             |
-| ------ | ----------------- | ---------- | ------ | -------------------------------- |
-| 4A.3.1 | 🟡 Notes system   | Ważne      | ⬜     | Add/Edit/Delete notes per client |
-| 4A.3.2 | 🟡 Tags system    | Ważne      | ⬜     | Assign multiple tags to clients  |
-| 4A.3.3 | 🟡 Filter by tags | Ważne      | ⬜     | Filter clients by assigned tags  |
-| 4A.3.4 | 🟢 Notes timeline | Opcjonalne | ⬜     | Chronological notes view         |
-
-**Blok 4A.3 - Wymagania wejściowe**: Blok 4A.1 (Client Detail)  
-**Blok 4A.3 - Rezultat**: System notatek i tagów dla klientów
-
-**📦 DEPENDENCIES:**
-
-- ✅ Blok 4A.1 (Client Detail Page)
-
-**⬅️ BLOKUJE:**
-
-- Brak (opcjonalne feature)
-
----
-
-### 🤖 PROMPT
-
-Działaj jako Senior Frontend Developer.
-Przechodzimy do Fazy 4A.3: **Client Notes & Tags**.
-
-### CEL GŁÓWNY:
-
-Dodać system notatek i tagów do klientów dla lepszej organizacji.
-
-### KROKI DO WYKONANIA:
-
-**KROK 1: Notes Component (Zadanie 4A.3.1)**
-Utwórz `src/features/clients/components/ClientNotes.tsx`.
-Wymagania:
-
-- Textarea do dodawania nowej notatki
-- Lista notatek z timestamp i author
-- Edit/Delete dla każdej notatki
-
-**KROK 2: Tags Component (Zadanie 4A.3.2)**
-Utwórz `ClientTags.tsx`:
-
-- Multi-select tag input (shadcn/ui Badge + Command)
-- Create new tag on the fly
-- Display assigned tags with remove option
-
-**KROK 3: Tag Filters (Zadanie 4A.3.3)**
-W ClientsFilters dodaj:
-
-- Tag filter dropdown (multi-select)
-
-**KROK 4: Notes Timeline (Zadanie 4A.3.4)**
-Opcjonalny widok chronologiczny notatek w Activity tab.
-
-### OCZEKIWANY REZULTAT:
-
-System notatek i tagów zintegrowany z client detail.
-
----
-
-### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
-
-- [ ] Można dodać notatkę do klienta
-- [ ] Można edytować/usuwać notatki
-- [ ] Tagi można przypisywać
-- [ ] Filter by tags działa
-- [ ] UI przyjazny dla użytkownika
-- [ ] Git commit: `feat(clients): add notes and tags system`
-
-<!-- BLOCK_END: 4A.3 -->
-
----
-
-<!-- BLOCK_START: 4B.1 -->
-
-## 🔵 FAZA 4B: Plans Detail (Tydzień 5) - PARALLEL z 4A
-
-### 4B.1 Plan Detail Page
-
-| #      | Zadanie                 | Priorytet | Status | Opis                                      |
-| ------ | ----------------------- | --------- | ------ | ----------------------------------------- |
-| 4B.1.1 | 🔴 Plan detail layout   | Krytyczne | ⬜     | /plans/[id] - tabs: Overview, Subscribers |
-| 4B.1.2 | 🔴 PlanHeader component | Krytyczne | ⬜     | Name, price, interval, status             |
-| 4B.1.3 | 🔴 PlanOverview tab     | Krytyczne | ⬜     | Stats, features list, pricing tiers       |
-| 4B.1.4 | 🔴 PlanSubscribers tab  | Krytyczne | ⬜     | Lista aktywnych subskrypcji tego planu    |
-| 4B.1.5 | 🟡 Plan analytics       | Ważne     | ⬜     | Revenue chart, growth metrics             |
-
-**Blok 4B.1 - Wymagania wejściowe**: Blok 3.2 (Plans List)  
-**Blok 4B.1 - Rezultat**: Szczegółowy widok planu subskrypcyjnego
-
-**📦 DEPENDENCIES:**
-
-- ✅ Blok 3.2 (Plans Management)
-
-**⬅️ BLOKUJE:**
-
-- Blok 5.1 (Subscriptions)
-
----
-
-### 🤖 PROMPT
-
-Działaj jako Senior Frontend Developer.
-Przechodzimy do Fazy 4B.1: **Plan Detail Page**.
-
-### CEL GŁÓWNY:
-
-Stworzyć szczegółowy widok planu subskrypcyjnego z zakładkami i statystykami.
-
-### ARCHITEKTURA:
-
-```
-src/features/plans/
-└── components/
-    └── detail/
-        ├── PlanHeader.tsx
-        ├── PlanOverview.tsx
-        ├── PlanSubscribers.tsx
-        └── PlanAnalytics.tsx
-```
-
-### KROKI DO WYKONANIA:
-
-**KROK 1: Dynamic Route (Zadanie 4B.1.1)**
-`src/app/(dashboard)/dashboard/plans/[id]/page.tsx`
-Tabs: Overview, Subscribers, Analytics
-
-**KROK 2: PlanHeader (Zadanie 4B.1.2)**
-
-- Plan name + description
-- Price badge
-- Interval badge
-- Active/Inactive status
-- Edit button
-
-**KROK 3: PlanOverview (Zadanie 4B.1.3)**
-Stats cards:
-
-- Active Subscriptions
-- Monthly Recurring Revenue (MRR)
-- Average Customer Value
-  Features list display
-
-**KROK 4: PlanSubscribers (Zadanie 4B.1.4)**
-Tabela subskrypcji:
-
-- Client Name
-- Status
-- Start Date
-- Next Billing
-
-**KROK 5: Analytics (Zadanie 4B.1.5)**
-Wykresy (Recharts):
-
-- Subscriber growth over time
-- Revenue trend
-
-### OCZEKIWANY REZULTAT:
-
-Kompleksowy widok planu z metrykami.
-
----
-
-### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
-
-- [ ] `/plans/[id]` działa
-- [ ] PlanHeader wyświetla dane
-- [ ] Overview z stats
-- [ ] Subscribers lista
-- [ ] Analytics (może być placeholder)
-- [ ] Edit plan działa
-- [ ] Git commit: `feat(plans): implement plan detail page with analytics`
+- [ ] Network tab: GET /api/Plans zwraca 200
+- [ ] Karty planów pokazują prawdziwe dane
+- [ ] Ceny formatowane przez formatCurrency()
+- [ ] Features lista wyświetla się poprawnie
+- [ ] Active/Inactive badge działa
+- [ ] Loading skeleton podczas ładowania
+- [ ] Empty state gdy brak planów
+- [ ] Error state dla błędów API
+- [ ] Git commit: `feat(plans): implement plans list with cards`
 
 <!-- BLOCK_END: 4B.1 -->
 
@@ -1809,1046 +2819,354 @@ Kompleksowy widok planu z metrykami.
 
 <!-- BLOCK_START: 4B.2 -->
 
-### 4B.2 Plan Templates & Duplication
+### 4B.2 Plan CRUD
 
-| #      | Zadanie            | Priorytet  | Status | Opis                             |
-| ------ | ------------------ | ---------- | ------ | -------------------------------- |
-| 4B.2.1 | 🟡 Duplicate plan  | Ważne      | ⬜     | Clone plan z wszystkimi settings |
-| 4B.2.2 | 🟡 Plan templates  | Ważne      | ⬜     | Pre-defined starter templates    |
-| 4B.2.3 | 🟡 Archive plan    | Ważne      | ⬜     | Soft delete (archived status)    |
-| 4B.2.4 | 🟢 Plan versioning | Opcjonalne | ⬜     | Version history, rollback        |
+| #      | Zadanie               | Priorytet | Status | Opis                                   |
+| ------ | --------------------- | --------- | ------ | -------------------------------------- |
+| 4B.2.1 | 🔴 Plan schemas       | Krytyczne | ⬜     | Zod schemas dla Plan                   |
+| 4B.2.2 | 🔴 PlanForm component | Krytyczne | ⬜     | Formularz create/edit z features array |
+| 4B.2.3 | 🔴 useFieldArray      | Krytyczne | ⬜     | Dynamic features list                  |
+| 4B.2.4 | 🔴 Create plan page   | Krytyczne | ⬜     | /dashboard/plans/new                   |
+| 4B.2.5 | 🔴 Plan detail page   | Krytyczne | ⬜     | /dashboard/plans/[id]                  |
+| 4B.2.6 | 🔴 Edit plan page     | Krytyczne | ⬜     | /dashboard/plans/[id]/edit             |
+| 4B.2.7 | 🔴 Delete plan        | Krytyczne | ⬜     | Dialog z potwierdzeniem                |
 
-**Blok 4B.2 - Wymagania wejściowe**: Blok 4B.1 (Plan Detail)  
-**Blok 4B.2 - Rezultat**: Zaawansowane zarządzanie planami
+**Blok 4B.2 - Wymagania wejściowe**: Blok 4B.1  
+**Blok 4B.2 - Rezultat**: Pełny CRUD dla planów
 
-**📦 DEPENDENCIES:**
+**🚨 API ENDPOINTS (z feature_list.json):**
 
-- ✅ Blok 3.2 (Plans CRUD)
-- ✅ Blok 4B.1 (Plan Detail)
+```
+POST /api/Plans → PlanDto
+GET /api/Plans/{id} → PlanDto
+PUT /api/Plans/{id} → PlanDto
+DELETE /api/Plans/{id} → void
+```
 
-**⬅️ BLOKUJE:**
+**🚨 REQUIRED HOOKS:**
 
-- Brak (opcjonalne features)
+```typescript
+usePostApiPlans();
+useGetApiPlansId(id);
+usePutApiPlansId();
+useDeleteApiPlansId();
+```
 
 ---
 
 ### 🤖 PROMPT
 
 Działaj jako Senior Frontend Developer.
-Przechodzimy do Fazy 4B.2: **Plan Templates & Duplication**.
+Twoim zadaniem jest wykonanie Fazy 4B.2 (Plan CRUD).
 
 ### CEL GŁÓWNY:
 
-Ułatwić zarządzanie planami przez templates i klonowanie.
+Zaimplementować pełny CRUD dla planów z dynamic features list używając useFieldArray.
 
 ### KROKI DO WYKONANIA:
 
-**KROK 1: Duplicate Feature (Zadanie 4B.2.1)**
-W PlanCard/PlanDetail:
+**KROK 1: Schemas (Zadanie 4B.2.1)**
+Utwórz `src/features/plans/schemas/plan.schemas.ts`:
 
-- Action "Duplicate"
-- Kopiuje wszystkie dane planu
-- Otwiera PlanForm z skopiowanymi danymi
-- Prefix name z "Copy of"
+```typescript
+import { z } from "zod";
 
-**KROK 2: Templates (Zadanie 4B.2.2)**
-Utwórz `src/features/plans/templates/planTemplates.ts`:
+export const PlanSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  description: z.string().optional(),
+  price: z.number().min(0, "Price must be positive"),
+  currency: z.string().default("PLN"),
+  interval: z.enum(["Monthly", "Quarterly", "Yearly"]),
+  features: z
+    .array(
+      z.object({
+        value: z.string().min(1, "Feature cannot be empty"),
+      })
+    )
+    .min(1, "At least one feature required"),
+  isActive: z.boolean().default(true),
+});
 
-- Array gotowych templatek (Basic, Pro, Enterprise)
-- Button "Use Template" w PlansPage
-- Wypełnia form templatem
+export type PlanInput = z.infer<typeof PlanSchema>;
+```
 
-**KROK 3: Archive (Zadanie 4B.2.3)**
-Zamiast delete → archive:
+**KROK 2: Plan mutations hook**
+Utwórz `src/features/plans/hooks/usePlanMutations.ts` analogicznie do klientów.
 
-- Soft delete (isArchived flag)
-- Archived plans nie pokazują się na głównej liście
-- Osobna zakładka "Archived Plans"
+**KROK 3: PlanForm with useFieldArray (Zadanie 4B.2.2, 4B.2.3)**
+Utwórz `src/features/plans/components/PlanForm.tsx`:
 
-**KROK 4: Versioning (Zadanie 4B.2.4)**
-Opcjonalnie: historia zmian planu
+```typescript
+"use client";
 
-- Zapisywanie snapshota przy każdej edycji
-- View/Restore previous versions
+import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { PlanSchema, PlanInput } from "../schemas/plan.schemas";
+import { Button } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
+import { Textarea } from "@/shared/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select";
+import { Switch } from "@/shared/ui/switch";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/shared/ui/form";
+import { Plus, Trash2 } from "lucide-react";
+
+interface Props {
+  defaultValues?: Partial<PlanInput>;
+  onSubmit: (data: PlanInput) => void;
+  isSubmitting?: boolean;
+}
+
+export function PlanForm({ defaultValues, onSubmit, isSubmitting }: Props) {
+  const form = useForm<PlanInput>({
+    resolver: zodResolver(PlanSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      price: 0,
+      currency: "PLN",
+      interval: "Monthly",
+      features: [{ value: "" }],
+      isActive: true,
+      ...defaultValues,
+    },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "features",
+  });
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Basic fields */}
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Name</FormLabel>
+              <FormControl>
+                <Input placeholder="Basic Plan" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <FormField
+            control={form.control}
+            name="price"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Price</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    {...field}
+                    onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="currency"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Currency</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="PLN">PLN</SelectItem>
+                    <SelectItem value="EUR">EUR</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="interval"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Billing Interval</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="Monthly">Monthly</SelectItem>
+                    <SelectItem value="Quarterly">Quarterly</SelectItem>
+                    <SelectItem value="Yearly">Yearly</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        {/* Features with useFieldArray */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <FormLabel>Features</FormLabel>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => append({ value: "" })}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Feature
+            </Button>
+          </div>
+
+          {fields.map((field, index) => (
+            <div key={field.id} className="flex gap-2">
+              <FormField
+                control={form.control}
+                name={`features.${index}.value`}
+                render={({ field }) => (
+                  <FormItem className="flex-1">
+                    <FormControl>
+                      <Input placeholder="Feature description" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {fields.length > 1 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => remove(index)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <FormField
+          control={form.control}
+          name="isActive"
+          render={({ field }) => (
+            <FormItem className="flex items-center gap-2">
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+              <FormLabel className="!mt-0">Active</FormLabel>
+            </FormItem>
+          )}
+        />
+
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Saving..." : "Save Plan"}
+        </Button>
+      </form>
+    </Form>
+  );
+}
+```
+
+**KROK 4: Create/Edit/Detail pages**
+Utwórz odpowiednie strony w `src/app/(dashboard)/dashboard/plans/`.
 
 ### OCZEKIWANY REZULTAT:
 
-Zaawansowane features zarządzania planami.
+Pełny CRUD dla planów z dynamic features list.
 
 ---
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [ ] Duplicate plan działa
-- [ ] Templates dostępne
-- [ ] Archive zamiast delete
-- [ ] Archived plans w osobnej zakładce
-- [ ] Versioning (jeśli zaimplementowane)
-- [ ] Git commit: `feat(plans): add duplication, templates, and archiving`
+- [ ] Utworzenie planu z features działa
+- [ ] Edycja planu: GET → formularz → PUT
+- [ ] useFieldArray dodaje/usuwa features
+- [ ] Delete plan z dialogiem
+- [ ] Zod validation działa
+- [ ] Toast notifications
+- [ ] Loading states
+- [ ] Git commit: `feat(plans): implement full CRUD with dynamic features`
 
 <!-- BLOCK_END: 4B.2 -->
 
 ---
 
-<!-- BLOCK_START: 5.1 -->
-
-## 🔵 FAZA 5: Subscriptions Core (Tydzień 6-7)
-
-### 5.1 Subscription Lifecycle
-
-| #     | Zadanie                         | Priorytet | Status | Opis                                                    |
-| ----- | ------------------------------- | --------- | ------ | ------------------------------------------------------- |
-| 5.1.1 | 🔴 Subscription types & schemas | Krytyczne | ⬜     | Zod schemas dla Subscription CRUD                       |
-| 5.1.2 | 🔴 useSubscriptions hooks       | Krytyczne | ⬜     | useQuery + mutations                                    |
-| 5.1.3 | 🔴 SubscriptionsTable           | Krytyczne | ⬜     | Tabela z filtrowaniem po status, plan, client           |
-| 5.1.4 | 🔴 SubscriptionForm             | Krytyczne | ⬜     | Wizard: wybór klienta, planu, daty rozpoczęcia          |
-| 5.1.5 | 🔴 Subscription status badges   | Krytyczne | ⬜     | Active, Paused, Cancelled, PendingCancellation, Expired |
-| 5.1.6 | 🔴 Subscriptions list page      | Krytyczne | ⬜     | /dashboard/subscriptions                                |
-
-**Blok 5.1 - Wymagania wejściowe**: Faza 4 (Clients & Plans gotowe)  
-**Blok 5.1 - Rezultat**: Podstawowy CRUD subskrypcji
-
-**📦 DEPENDENCIES:**
-
-- ✅ Blok 3.1 (Clients)
-- ✅ Blok 3.2 (Plans)
-- ✅ Blok 4A.1 (Client Detail)
-- ✅ Blok 4B.1 (Plan Detail)
-
-**⬅️ BLOKUJE:**
-
-- Blok 5.2 (Subscription Detail)
-- Blok 6.1 (Payments)
-
----
-
-### 🤖 PROMPT
-
-Działaj jako Senior Frontend Developer / Business Logic Specialist.
-Przechodzimy do Fazy 5.1: **Subscription Lifecycle**.
-
-### CEL GŁÓWNY:
-
-Zaimplementować kompletny system zarządzania subskrypcjami - serce aplikacji.
-
-### ARCHITEKTURA:
-
-```
-src/features/subscriptions/
-├── components/
-│   ├── SubscriptionsTable.tsx
-│   ├── SubscriptionForm.tsx
-│   ├── SubscriptionStatusBadge.tsx
-│   └── SubscriptionWizard.tsx
-├── hooks/
-│   └── useSubscriptions.ts
-├── schemas/
-│   └── subscription.schemas.ts
-└── types/
-    └── subscription.types.ts
-```
-
-### KROKI DO WYKONANIA:
-
-**KROK 1: Schemas (Zadanie 5.1.1)**
-
-```typescript
-export const SubscriptionSchema = z.object({
-  clientId: z.string().uuid(),
-  planId: z.string().uuid(),
-  startDate: z.date(),
-  nextBillingDate: z.date().optional(),
-  status: z.enum([
-    "Active",
-    "Paused",
-    "Cancelled",
-    "PendingCancellation",
-    "Expired",
-  ]),
-  autoRenew: z.boolean().default(true),
-});
-```
-
-**KROK 2: API Hooks (Zadanie 5.1.2)**
-`useSubscriptions.ts`:
-
-- List, Create, Update, Cancel, Pause, Resume
-
-**KROK 3: Status Badges (Zadanie 5.1.5)**
-Component wyświetlający kolorowy badge:
-
-- Active → green
-- Paused → yellow
-- Cancelled → red
-- PendingCancellation → orange
-- Expired → gray
-
-**KROK 4: SubscriptionForm/Wizard (Zadanie 5.1.4)**
-Multi-step:
-
-1. Wybór klienta (searchable select)
-2. Wybór planu (cards)
-3. Konfiguracja (start date, auto-renew)
-4. Review & Create
-
-**KROK 5: SubscriptionsTable (Zadanie 5.1.3)**
-Kolumny:
-
-- Client Name
-- Plan Name
-- Status
-- Next Billing
-- Amount
-- Actions (View, Cancel, Pause)
-
-**KROK 6: Subscriptions Page (Zadanie 5.1.6)**
-`/dashboard/subscriptions`
-
-- Stats: Total, Active, MRR
-- Filters: Status, Plan, Client
-- Table
-
-### OCZEKIWANY REZULTAT:
-
-Działający CRUD subskrypcji z lifecycle management.
-
----
-
-### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
-
-- [ ] Subscription schemas
-- [ ] useSubscriptions hooks
-- [ ] Status badges z kolorami
-- [ ] SubscriptionWizard tworzy subskrypcje
-- [ ] SubscriptionsTable wyświetla dane
-- [ ] Filters działają
-- [ ] Cancel/Pause/Resume działają
-- [ ] Toast notifications
-- [ ] Git commit: `feat(subscriptions): implement subscription lifecycle management`
-
-<!-- BLOCK_END: 5.1 -->
-
----
-
-<!-- BLOCK_START: 5.2 -->
-
-### 5.2 Subscription Detail & Actions
-
-| #     | Zadanie                       | Priorytet | Status | Opis                             |
-| ----- | ----------------------------- | --------- | ------ | -------------------------------- |
-| 5.2.1 | 🔴 Subscription detail page   | Krytyczne | ⬜     | /subscriptions/[id]              |
-| 5.2.2 | 🔴 SubscriptionHeader         | Krytyczne | ⬜     | Client, Plan, Status, Actions    |
-| 5.2.3 | 🔴 Billing history tab        | Krytyczne | ⬜     | Lista wszystkich płatności       |
-| 5.2.4 | 🔴 Cancel subscription dialog | Krytyczne | ⬜     | Reason, immediate/end of period  |
-| 5.2.5 | 🟡 Change plan flow           | Ważne     | ⬜     | Upgrade/Downgrade z proration    |
-| 5.2.6 | 🟡 Pause/Resume subscription  | Ważne     | ⬜     | Temporary pause with resume date |
-
-**Blok 5.2 - Wymagania wejściowe**: Blok 5.1 (Subscriptions List)  
-**Blok 5.2 - Rezultat**: Szczegółowy widok subskrypcji z akcjami
-
-**📦 DEPENDENCIES:**
-
-- ✅ Blok 5.1 (Subscription Lifecycle)
-
-**⬅️ BLOKUJE:**
-
-- Blok 6.1 (Payments - korzysta z billing history)
-
----
-
-### 🤖 PROMPT
-
-Działaj jako Senior Frontend Developer.
-Przechodzimy do Fazy 5.2: **Subscription Detail & Actions**.
-
-### CEL GŁÓWNY:
-
-Stworzyć szczegółowy widok subskrypcji z możliwością zarządzania lifecycle.
-
-### ARCHITEKTURA:
-
-```
-src/features/subscriptions/
-└── components/
-    └── detail/
-        ├── SubscriptionHeader.tsx
-        ├── BillingHistory.tsx
-        ├── CancelDialog.tsx
-        ├── ChangePlanDialog.tsx
-        └── PauseDialog.tsx
-```
-
-### KROKI DO WYKONANIA:
-
-**KROK 1: Detail Page (Zadanie 5.2.1)**
-`/dashboard/subscriptions/[id]/page.tsx`
-Tabs:
-
-- Overview
-- Billing History
-- Activity Log
-
-**KROK 2: SubscriptionHeader (Zadanie 5.2.2)**
-
-- Client info (link do client detail)
-- Plan info (link do plan detail)
-- Status badge
-- Actions dropdown: Cancel, Pause, Change Plan
-
-**KROK 3: Billing History (Zadanie 5.2.3)**
-Tabela płatności:
-
-- Date, Amount, Status, Invoice Link
-- Download Invoice button
-
-**KROK 4: Cancel Dialog (Zadanie 5.2.4)**
-Dialog z:
-
-- Reason select/textarea
-- Radio: Cancel immediately / End of billing period
-- Confirmation checkbox
-- Submit → wywołanie cancelSubscription mutation
-
-**KROK 5: Change Plan (Zadanie 5.2.5)**
-Dialog:
-
-- Lista dostępnych planów
-- Pokazanie różnicy w cenie
-- Proration calculation (backend)
-- Effective date
-
-**KROK 6: Pause/Resume (Zadanie 5.2.6)**
-Dialog:
-
-- Pause until date picker
-- Resume button (jeśli paused)
-
-### OCZEKIWANY REZULTAT:
-
-Pełny lifecycle management dla pojedynczej subskrypcji.
-
----
-
-### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
-
-- [ ] `/subscriptions/[id]` działa
-- [ ] Header z info i actions
-- [ ] Billing history wyświetla płatności
-- [ ] Cancel dialog działa
-- [ ] Change plan działa
-- [ ] Pause/Resume działa
-- [ ] Wszystkie mutacje z toast
-- [ ] Git commit: `feat(subscriptions): implement detail page and lifecycle actions`
-
-<!-- BLOCK_END: 5.2 -->
-
----
-
-<!-- BLOCK_START: 6.1 -->
-
-## 🔵 FAZA 6: Payments Integration (Tydzień 7-8)
-
-### 6.1 Stripe Integration
-
-| #     | Zadanie                       | Priorytet | Status | Opis                                |
-| ----- | ----------------------------- | --------- | ------ | ----------------------------------- |
-| 6.1.1 | 🔴 Stripe client setup        | Krytyczne | ⬜     | loadStripe, Elements provider       |
-| 6.1.2 | 🔴 Payment method form        | Krytyczne | ⬜     | CardElement z Stripe Elements       |
-| 6.1.3 | 🔴 Setup Intent flow          | Krytyczne | ⬜     | Dodawanie karty bez płatności       |
-| 6.1.4 | 🔴 Payment Intent flow        | Krytyczne | ⬜     | One-time payment                    |
-| 6.1.5 | 🔴 Saved payment methods list | Krytyczne | ⬜     | Lista kart klienta, default, delete |
-| 6.1.6 | 🟡 3D Secure handling         | Ważne     | ⬜     | Obsługa requires_action             |
-
-**Blok 6.1 - Wymagania wejściowe**: Faza 5 (Subscriptions)  
-**Blok 6.1 - Rezultat**: Integracja z Stripe dla płatności
-
-**📦 DEPENDENCIES:**
-
-- ✅ Blok 5.1 (Subscriptions)
-- ✅ Backend Stripe integration
-
-**⬅️ BLOKUJE:**
-
-- Blok 6.2 (Payment History)
-- Blok 7.1 (Invoices)
-
----
-
-### 🤖 PROMPT
-
-Działaj jako Senior Frontend Developer / Payments Specialist.
-Przechodzimy do Fazy 6.1: **Stripe Integration**.
-
-### CEL GŁÓWNY:
-
-Zintegrować Stripe Elements do przyjmowania płatności i zarządzania metodami płatności.
-
-### KONTEKST:
-
-Backend dostarcza endpointy:
-
-- POST /payments/setup-intent → clientSecret
-- POST /payments/payment-intent → clientSecret
-- GET /payments/methods → lista saved cards
-- DELETE /payments/methods/{id}
-
-### KROKI DO WYKONANIA:
-
-**KROK 1: Stripe Setup (Zadanie 6.1.1)**
-
-```bash
-npm install @stripe/stripe-js @stripe/react-stripe-js
-```
-
-Utwórz `src/core/providers/StripeProvider.tsx`:
-
-```typescript
-import { loadStripe } from "@stripe/stripe-js";
-import { Elements } from "@stripe/react-stripe-js";
-
-const stripePromise = loadStripe(
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
-);
-
-export function StripeProvider({ children }: { children: React.ReactNode }) {
-  return <Elements stripe={stripePromise}>{children}</Elements>;
-}
-```
-
-Dodaj do layout.
-
-**KROK 2: Payment Method Form (Zadanie 6.1.2)**
-Utwórz `src/features/payments/components/PaymentMethodForm.tsx`.
-Wymagania:
-
-- Use `CardElement` from Stripe
-- Submit → wywołanie backend `/setup-intent`
-- Confirmation ze Stripe
-
-**KROK 3: Setup Intent Flow (Zadanie 6.1.3)**
-Hook `useSetupIntent()`:
-
-- Pobiera clientSecret z backendu
-- Używa `stripe.confirmCardSetup()`
-- Obsługuje sukces/błąd
-
-**KROK 4: Payment Intent (Zadanie 6.1.4)**
-Analogicznie dla one-time payments.
-
-**KROK 5: Saved Methods List (Zadanie 6.1.5)**
-Component `PaymentMethodsList.tsx`:
-
-- Wyświetla listę kart (last4, brand, exp)
-- Default badge
-- Delete button
-
-**KROK 6: 3DS Handling (Zadanie 6.1.6)**
-Obsługa `requires_action`:
-
-- `stripe.confirmCardPayment()` z redirect
-
-### OCZEKIWANY REZULTAT:
-
-Działająca integracja Stripe do płatności.
-
----
-
-### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
-
-- [ ] Stripe Elements załadowane
-- [ ] PaymentMethodForm działa
-- [ ] Można dodać kartę
-- [ ] Lista saved methods
-- [ ] Delete payment method działa
-- [ ] 3DS redirect działa
-- [ ] Error handling
-- [ ] Git commit: `feat(payments): integrate Stripe payment processing`
-
-<!-- BLOCK_END: 6.1 -->
-
----
-
-<!-- BLOCK_START: 6.2 -->
-
-### 6.2 Payment History & Invoices
-
-| #     | Zadanie                  | Priorytet | Status | Opis                                 |
-| ----- | ------------------------ | --------- | ------ | ------------------------------------ |
-| 6.2.1 | 🔴 Payments table        | Krytyczne | ⬜     | Historia wszystkich płatności        |
-| 6.2.2 | 🔴 Payment detail modal  | Krytyczne | ⬜     | Szczegóły transakcji                 |
-| 6.2.3 | 🔴 Payment status badges | Krytyczne | ⬜     | Succeeded, Failed, Pending, Refunded |
-| 6.2.4 | 🟡 Refund dialog         | Ważne     | ⬜     | Partial/Full refund                  |
-| 6.2.5 | 🟡 Failed payments retry | Ważne     | ⬜     | Retry failed payment                 |
-
-**Blok 6.2 - Wymagania wejściowe**: Blok 6.1 (Stripe Integration)  
-**Blok 6.2 - Rezultat**: Historia i zarządzanie płatnościami
-
-**📦 DEPENDENCIES:**
-
-- ✅ Blok 6.1 (Stripe Integration)
-
-**⬅️ BLOKUJE:**
-
-- Blok 7.1 (Invoices)
-
----
-
-### 🤖 PROMPT
-
-Działaj jako Senior Frontend Developer.
-Przechodzimy do Fazy 6.2: **Payment History & Invoices**.
-
-### CEL GŁÓWNY:
-
-Stworzyć kompletny moduł historii płatności z możliwością zwrotów i retry.
-
-### KROKI DO WYKONANIA:
-
-**KROK 1: Payments Table (Zadanie 6.2.1)**
-`src/features/payments/components/PaymentsTable.tsx`
-Kolumny:
-
-- Date, Client, Subscription, Amount, Status, Actions
-
-**KROK 2: Payment Detail (Zadanie 6.2.2)**
-Modal/Drawer z szczegółami:
-
-- Transaction ID (Stripe)
-- Payment method details
-- Timeline (Attempted, Succeeded/Failed)
-- Refund history
-
-**KROK 3: Status Badges (Zadanie 6.2.3)**
-Component z kolorami dla każdego statusu.
-
-**KROK 4: Refund Dialog (Zadanie 6.2.4)**
-Dialog:
-
-- Reason
-- Amount (full/partial)
-- Confirmation
-- Wywołanie `/payments/refund`
-
-**KROK 5: Retry Failed (Zadanie 6.2.5)**
-Button "Retry Payment":
-
-- Tworzy nowy payment intent
-- Próbuje z saved payment method
-
-### OCZEKIWANY REZULTAT:
-
-Pełne zarządzanie historią płatności.
-
----
-
-### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
-
-- [ ] PaymentsTable wyświetla wszystkie płatności
-- [ ] Payment detail modal działa
-- [ ] Status badges
-- [ ] Refund działa
-- [ ] Retry failed payments
-- [ ] Filters (date range, status)
-- [ ] Git commit: `feat(payments): implement payment history and refunds`
-
-<!-- BLOCK_END: 6.2 -->
-
----
-
-<!-- BLOCK_START: 7.1 -->
-
-## 🔵 FAZA 7: Invoicing & Reporting (Tydzień 8)
-
-### 7.1 Invoice Generation
-
-| #     | Zadanie                  | Priorytet | Status | Opis                                 |
-| ----- | ------------------------ | --------- | ------ | ------------------------------------ |
-| 7.1.1 | 🔴 Invoice types         | Krytyczne | ⬜     | Generated types z backendu           |
-| 7.1.2 | 🔴 Invoices table        | Krytyczne | ⬜     | Lista faktur z filtrowaniem          |
-| 7.1.3 | 🔴 Invoice preview       | Krytyczne | ⬜     | Modal z podglądem faktury (PDF/HTML) |
-| 7.1.4 | 🔴 Download PDF          | Krytyczne | ⬜     | Generowanie i download z backendu    |
-| 7.1.5 | 🟡 Send invoice by email | Ważne     | ⬜     | Wysyłka na email klienta             |
-| 7.1.6 | 🟡 Invoice templates     | Ważne     | ⬜     | Customizacja wyglądu faktury         |
-
-**Blok 7.1 - Wymagania wejściowe**: Blok 6.2 (Payments)  
-**Blok 7.1 - Rezultat**: System generowania i wysyłki faktur
-
-**📦 DEPENDENCIES:**
-
-- ✅ Blok 6.2 (Payment History)
-- ✅ Backend Invoice generation
-
-**⬅️ BLOKUJE:**
-
-- Blok 8.1 (Analytics)
-
----
-
-### 🤖 PROMPT
-
-Działaj jako Senior Frontend Developer.
-Przechodzimy do Fazy 7.1: **Invoice Generation**.
-
-### CEL GŁÓWNY:
-
-Zaimplementować system faktur - podgląd, download, wysyłka email.
-
-### KROKI DO WYKONANIA:
-
-**KROK 1: Invoices Table (Zadanie 7.1.2)**
-`src/features/invoices/components/InvoicesTable.tsx`
-Kolumny:
-
-- Invoice Number, Client, Date, Amount, Status, Actions
-
-**KROK 2: Invoice Preview (Zadanie 7.1.3)**
-Dialog/Modal:
-
-- Embed PDF viewer lub render HTML preview
-- Backend endpoint: GET `/invoices/{id}/preview`
-
-**KROK 3: Download PDF (Zadanie 7.1.4)**
-Button "Download":
-
-- Wywołanie GET `/invoices/{id}/pdf`
-- Trigger file download
-
-**KROK 4: Send Email (Zadanie 7.1.5)**
-Dialog:
-
-- Recipient email (pre-filled from client)
-- Subject, Message
-- POST `/invoices/{id}/send`
-
-**KROK 5: Templates (Zadanie 7.1.6)**
-Opcjonalnie: wybór template dla faktury.
-
-### OCZEKIWANY REZULTAT:
-
-Kompletny system fakturowania.
-
----
-
-### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
-
-- [ ] InvoicesTable wyświetla faktury
-- [ ] Preview działa (PDF lub HTML)
-- [ ] Download PDF działa
-- [ ] Send email działa
-- [ ] Filters (date, status, client)
-- [ ] Git commit: `feat(invoices): implement invoice generation and delivery`
-
-<!-- BLOCK_END: 7.1 -->
-
----
-
-<!-- BLOCK_START: 8.1 -->
-
-## 🔵 FAZA 8: Testing & Polish (Tydzień 9)
-
-### 8.1 Testing Infrastructure
-
-| #     | Zadanie                   | Priorytet | Status | Opis                                     |
-| ----- | ------------------------- | --------- | ------ | ---------------------------------------- |
-| 8.1.1 | 🔴 Vitest setup           | Krytyczne | ⬜     | Konfiguracja test runnera                |
-| 8.1.2 | 🔴 React Testing Library  | Krytyczne | ⬜     | Setup dla komponentów                    |
-| 8.1.3 | 🔴 Unit tests - hooks     | Krytyczne | ⬜     | Testy dla custom hooks                   |
-| 8.1.4 | 🔴 Unit tests - utils     | Krytyczne | ⬜     | Testy dla formatters, helpers            |
-| 8.1.5 | 🟡 Component tests        | Ważne     | ⬜     | Testy dla kluczowych komponentów         |
-| 8.1.6 | 🟡 E2E setup (Playwright) | Ważne     | ⬜     | Happy paths (login, create subscription) |
-
-**Blok 8.1 - Wymagania wejściowe**: Wszystkie features zakończone  
-**Blok 8.1 - Rezultat**: Kompleksowe testy
-
-**📦 DEPENDENCIES:**
-
-- ✅ Wszystkie poprzednie bloki (features gotowe)
-
-**⬅️ BLOKUJE:**
-
-- Blok 8.2 (Polish)
-
----
-
-### 🤖 PROMPT
-
-Działaj jako Senior Frontend Developer / QA Engineer.
-Przechodzimy do Fazy 8.1: **Testing Infrastructure**.
-
-### CEL GŁÓWNY:
-
-Skonfigurować narzędzia testowe i napisać testy dla krytycznych części aplikacji.
-
-### KROKI DO WYKONANIA:
-
-**KROK 1: Vitest Setup (Zadanie 8.1.1)**
-
-```bash
-npm install -D vitest @vitejs/plugin-react jsdom
-```
-
-Konfiguracja `vitest.config.ts`:
-
-```typescript
-import { defineConfig } from "vitest/config";
-import react from "@vitejs/plugin-react";
-
-export default defineConfig({
-  plugins: [react()],
-  test: {
-    environment: "jsdom",
-    globals: true,
-  },
-});
-```
-
-**KROK 2: React Testing Library (Zadanie 8.1.2)**
-
-```bash
-npm install -D @testing-library/react @testing-library/jest-dom @testing-library/user-event
-```
-
-**KROK 3: Hook Tests (Zadanie 8.1.3)**
-Testy dla:
-
-- `useAuth()`
-- `useTenant()`
-- `useClients()`
-
-**KROK 4: Utils Tests (Zadanie 8.1.4)**
-Testy dla:
-
-- `formatCurrency()`
-- `formatDate()`
-- `cn()`
-
-**KROK 5: Component Tests (Zadanie 8.1.5)**
-Testy dla:
-
-- LoginForm
-- ClientsTable
-- SubscriptionForm
-
-**KROK 6: E2E Setup (Zadanie 8.1.6)**
-
-```bash
-npm install -D @playwright/test
-```
-
-Napisz testy dla:
-
-- Login flow
-- Create subscription flow
-
-### OCZEKIWANY REZULTAT:
-
-Działające testy dla krytycznych części.
-
----
-
-### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
-
-- [ ] Vitest działa
-- [ ] Hook tests przechodzą
-- [ ] Utils tests przechodzą
-- [ ] Component tests przechodzą
-- [ ] E2E tests przechodzą
-- [ ] CI/CD integration (opcjonalne)
-- [ ] Git commit: `test: setup testing infrastructure and core tests`
-
-<!-- BLOCK_END: 8.1 -->
-
----
-
-<!-- BLOCK_START: 8.2 -->
-
-### 8.2 Polish & Optimization
-
-| #     | Zadanie                | Priorytet  | Status | Opis                                    |
-| ----- | ---------------------- | ---------- | ------ | --------------------------------------- |
-| 8.2.1 | 🔴 TypeScript audit    | Krytyczne  | ⬜     | Weryfikacja brak any, pełne typy        |
-| 8.2.2 | 🔴 Accessibility audit | Krytyczne  | ⬜     | Keyboard nav, aria labels, focus states |
-| 8.2.3 | 🟡 Performance audit   | Ważne      | ⬜     | Lighthouse, bundle analysis             |
-| 8.2.4 | 🟡 Mobile responsive   | Ważne      | ⬜     | Testowanie na różnych rozdzielczościach |
-| 8.2.5 | 🟢 Documentation       | Opcjonalne | ⬜     | README, component docs                  |
-
-**Blok 8.2 - Wymagania wejściowe**: Blok 8.1 (Testy)  
-**Blok 8.2 - Rezultat**: Aplikacja gotowa do wdrożenia (Production Ready)
-
-**📦 DEPENDENCIES:**
-
-- ✅ Blok 8.1 (Testing)
-
-**⬅️ BLOKUJE:**
-
-- Production deployment
-
----
-
-### 🤖 PROMPT
-
-Działaj jako Senior Frontend Developer / Tech Lead.
-Aplikacja jest funkcjonalna i przetestowana. Przechodzimy do Fazy 8.2: **Polish & Optimization**.
-Naszym celem jest upewnienie się, że kod jest najwyższej jakości, aplikacja jest dostępna dla wszystkich użytkowników (A11y) i zoptymalizowana pod kątem wydajności.
-
-### CEL GŁÓWNY:
-
-Przeprowadzić audyt kodu, skonfigurować narzędzia do analizy wydajności oraz przygotować dokumentację projektu.
-
-### KROKI DO WYKONANIA:
-
-**KROK 1: TypeScript & Linting Strictness (Zadanie 8.2.1)**
-
-1. Sprawdź plik `tsconfig.json`. Upewnij się, że `noImplicitAny` jest na `true`.
-2. Dodaj skrypt do `package.json`: `"type-check": "tsc --noEmit"`.
-3. Skonfiguruj ESLint, aby wyłapywał typy `any`. W pliku `eslint.config.mjs` (lub .rc) dodaj regułę:
-   - `@typescript-eslint/no-explicit-any`: "warn" (lub "error" dla strict mode).
-   - `@typescript-eslint/no-unused-vars`: "error".
-
-**KROK 2: Accessibility (A11y) Setup (Zadanie 8.2.2)**
-
-1. Zainstaluj plugin `eslint-plugin-jsx-a11y`.
-2. Dodaj go do konfiguracji ESLint, aby automatycznie wykrywał brakujące `alt` w obrazkach, brakujące `aria-label` w przyciskach (szczególnie tych z samą ikoną, np. w `Sidebar` czy `ActionsDropdown`).
-3. Stwórz prosty dokument `A11Y_CHECKLIST.md` z punktami do ręcznego sprawdzenia:
-   - Czy wszystkie formularze mają etykiety (`label`) powiązane z inputami?
-   - Czy można poruszać się po stronie używając tylko klawisza TAB?
-   - Czy focus jest widoczny na elementach aktywnych?
-
-**KROK 3: Performance Optimization (Zadanie 8.2.3)**
-
-1. Zainstaluj `@next/bundle-analyzer`.
-2. Skonfiguruj `next.config.ts`, aby włączał analyzer zmienną środowiskową (np. `ANALYZE=true`).
-3. Dodaj skrypt do `package.json`: `"analyze": "cross-env ANALYZE=true npm run build"`.
-4. Stwórz komponent `Image` wrapper (opcjonalnie), który wymusza używanie `next/image` zamiast `<img>` w celu optymalizacji obrazów.
-
-**KROK 4: Documentation (Zadanie 8.2.5)**
-Napisz profesjonalny plik `README.md` dla projektu.
-Struktura:
-
-- **Title & Badges** (Status, Tech Stack).
-- **Prerequisites** (Node.js version, npm/pnpm).
-- **Getting Started** (instrukcja krok po kroku: install, env setup, run dev).
-- **Project Structure** (wyjaśnienie architektury Features/Core/Shared).
-- **Scripts** (wyjaśnienie komend: dev, build, start, lint, test, api:generate).
-- **Environment Variables** (lista wymaganych zmiennych w `.env` - bez wartości, tylko klucze i opis).
-
-### WYMAGANIA TECHNICZNE:
-
-- **Next.js Config**: Upewnij się, że konfiguracja bundle analyzera nie psuje standardowego buildu (powinna działać tylko warunkowo).
-- **ESLint**: Konfiguracja powinna być kompatybilna z "Flat Config" (nowy standard ESLint w 2024/2025).
-
-### OCZEKIWANY REZULTAT:
-
-Zaktualizowane pliki konfiguracyjne (`package.json`, `next.config.ts`, `eslint.config.mjs`), checklista dostępności oraz gotowy plik `README.md`.
-
----
-
-### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
-
-- [ ] TypeScript strict mode bez błędów
-- [ ] ESLint bez warnings
-- [ ] A11y checklist przeprowadzona
-- [ ] Bundle analyzer skonfigurowany
-- [ ] Lighthouse score > 90
-- [ ] Responsive na mobile/tablet/desktop
-- [ ] README.md kompletny
-- [ ] Git commit: `chore: polish codebase and add documentation`
-
-<!-- BLOCK_END: 8.2 -->
-
----
-
-<!-- BLOCK_START: 9.1 -->
-
-## 🔵 FAZA 9: Client Portal (Tydzień 10 - Opcjonalne)
-
-### 9.1 Client Portal Foundation
-
-| #     | Zadanie             | Priorytet | Status | Opis                                       |
-| ----- | ------------------- | --------- | ------ | ------------------------------------------ |
-| 9.1.1 | 🔴 Portal Layout    | Krytyczne | ⬜     | Osobny layout dla /portal (bez sidebara)   |
-| 9.1.2 | 🔴 Portal Guard     | Krytyczne | ⬜     | Ochrona tras tylko dla roli 'Client'       |
-| 9.1.3 | 🔴 Portal Dashboard | Krytyczne | ⬜     | /portal - podsumowanie subskrypcji         |
-| 9.1.4 | 🟡 Invoices list    | Ważne     | ⬜     | Lista faktur do pobrania (PDF)             |
-| 9.1.5 | 🟡 Billing Settings | Ważne     | ⬜     | Zarządzanie kartą i anulowanie subskrypcji |
-
-**Blok 9.1 - Wymagania wejściowe**: Faza 1 (Auth), Faza 5 (Subskrypcje)  
-**Blok 9.1 - Rezultat**: Działający portal samoobsługowy dla końcowego klienta
-
-**📦 DEPENDENCIES:**
-
-- ✅ Blok 1.1, 1.2 (Auth)
-- ✅ Blok 5.1 (Subscriptions)
-
-**⬅️ BLOKUJE:**
-
-- Brak (ostatnia faza, opcjonalna)
-
----
-
-### 🤖 PROMPT
-
-Działaj jako Senior Frontend Developer / System Architect.
-Realizujemy Fazę 9: **Client Portal**.
-Jest to osobna część aplikacji przeznaczona dla klientów końcowych (nie dla Providerów). Musi być prosta, przejrzysta i skupiona na samoobsłudze płatności.
-
-### CEL GŁÓWNY:
-
-Stworzyć wydzieloną strefę `/portal` z własnym layoutem, dostępną tylko dla użytkowników o roli `Client`. Użytkownik ma tam widzieć swoje aktywne subskrypcje, historię faktur i móc zarządzać metodami płatności.
-
-### ARCHITEKTURA I LOKALIZACJA PLIKÓW:
-
-Używamy **Route Groups** do separacji layoutów, aby panel klienta nie dziedziczył Dashboard Layoutu providera:
-
-- Routing: `src/app/(portal)/layout.tsx`, `src/app/(portal)/portal/page.tsx`
-- Feature: `src/features/client-portal/` (nowy vertical slice)
-- Komponenty: `src/features/client-portal/components/`
-- Hooki: `src/features/client-portal/hooks/`
-
-### KROKI DO WYKONANIA:
-
-**KROK 1: Portal Layout & Guard (Zadania 9.1.1, 9.1.2)**
-
-1. Utwórz `src/features/client-portal/components/PortalGuard.tsx`.
-   - Działa analogicznie do `TenantGuard`, ale wymaga roli `Client`.
-   - Jeśli user ma rolę `Provider` -> przekieruj na `/dashboard`.
-   - Jeśli user nie jest zalogowany -> `/login`.
-2. Utwórz `src/app/(portal)/layout.tsx`.
-   - Prosty layout: Navbar na górze (Logo + UserMenu), wycentrowana zawartość (max-w-4xl).
-   - Brak bocznego Sidebara.
-   - Owiń `children` w `PortalGuard`.
-
-**KROK 2: Portal Hooks (Zadanie 9.1.3)**
-Utwórz `src/features/client-portal/hooks/usePortal.ts`.
-Wymagania:
-
-- `useMySubscriptions()`: Pobiera subskrypcje zalogowanego klienta (filtrowanie po stronie API dla zalogowanego usera).
-- `useMyInvoices()`: Pobiera historię faktur.
-- `usePortalAction()`: Wrapper na mutacje (np. `cancelSubscription`, `updatePaymentMethod`).
-
-**KROK 3: Client Dashboard (Zadanie 9.1.3)**
-Utwórz `src/app/(portal)/portal/page.tsx`.
-Wymagania:
-
-- **Sekcja "Current Plan"**: Wyświetla dużą kartę z aktywną subskrypcją (Plan Name, Price, Renewal Date, Status Badge).
-- **Action Buttons**:
-  - "Update Payment Method" (otwiera dialog - użyj placeholdera lub komponentu PaymentMethodForm z Fazy 6, ale dostosowanego do kontekstu klienta).
-  - "Cancel Subscription" (otwiera dialog potwierdzenia).
-
-**KROK 4: Invoices List (Zadanie 9.1.4)**
-Utwórz `src/features/client-portal/components/ClientInvoicesList.tsx`.
-Wymagania:
-
-- Prosta tabela lub lista: Data, Kwota, Status, "Download PDF" (ikona).
-- Dodaj ten komponent na dole Dashboardu (`page.tsx`).
-
-### WYMAGANIA TECHNICZNE:
-
-- **Next.js 15 Async Params**: Pamiętaj, że w plikach `page.tsx` propsy `params` i `searchParams` są asynchroniczne (Promise). Jeśli będziesz ich potrzebować, użyj `await`.
-- **Reużywalność**: Możesz importować komponenty UI (Button, Card, Badge) z `shared/ui`.
-
-### OCZEKIWANY REZULTAT:
-
-Kod layoutu portalu, Guarda, hooków oraz strony głównej portalu z listą faktur.
-
----
-
-### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
-
-- [ ] Portal layout osobny od dashboard
-- [ ] PortalGuard blokuje Provider/TeamMember
-- [ ] `/portal` wyświetla dashboard klienta
-- [ ] Current Plan card z informacjami
-- [ ] Update payment method dialog
-- [ ] Cancel subscription dialog
-- [ ] Invoices list wyświetla faktury
-- [ ] Download PDF działa
-- [ ] Responsywność
-- [ ] Git commit: `feat(portal): implement client self-service portal`
-
-<!-- BLOCK_END: 9.1 -->
-
----
-
-## 📝 SZABLON DLA NOWYCH BLOKÓW
-
-Użyj tego szablonu przy dodawaniu nowych bloków:
-
-```markdown
-<!-- BLOCK_START: X.X -->
-
-### X.X Nazwa Bloku
-
-| #     | Zadanie      | Priorytet | Status | Opis |
-| ----- | ------------ | --------- | ------ | ---- |
-| X.X.1 | 🔴 Zadanie 1 | Krytyczne | ⬜     | Opis |
-
-**Blok X.X - Wymagania wejściowe**: [poprzednie bloki]  
-**Blok X.X - Rezultat**: [co będzie gotowe]
-
-**📦 DEPENDENCIES:**
-
-- ✅ Blok Y.Y (nazwa)
-
-**⬅️ BLOKUJE:**
-
-- Blok Z.Z (nazwa)
-
----
-
-### 🤖 PROMPT
-
-[Szczegółowy prompt dla agenta]
-
----
-
-### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
-
-- [ ] Punkt 1
-- [ ] Punkt 2
-- [ ] Git commit: `feat(scope): description`
-
-<!-- BLOCK_END: X.X -->
-```
-
----
-
 ## 📊 PODSUMOWANIE BLOKÓW
 
-> **🚀 FRESH START** - Wszystkie bloki do wykonania od nowa
+> **🚀 AKTUALIZACJA 2025-12-10** - Struktura zgodna z feature_list.json v7.0
 
-| Blok | Faza    | Status | Dependencies |
-| ---- | ------- | ------ | ------------ |
-| 0.1  | FAZA 0  | ⬜     | -            |
-| 0.2  | FAZA 0  | ⬜     | 0.1          |
-| 0.3  | FAZA 0  | ⬜     | 0.1          |
-| 1.1  | FAZA 1  | ⬜     | 0.x          |
-| 1.2  | FAZA 1  | ⬜     | 1.1          |
-| 1.3  | FAZA 1  | ⬜     | 1.1          |
-| 1.4  | FAZA 1  | ⬜     | 1.1, 1.3     |
-| 2.1  | FAZA 2  | ⬜     | 1.x          |
-| 2.2  | FAZA 2  | ⬜     | 2.1          |
-| 3.1  | FAZA 3  | ⬜     | 2.x          |
-| 3.2  | FAZA 3  | ⬜     | 3.1          |
-| 4A.1 | FAZA 4A | ⬜     | 3.x          |
-| 4A.2 | FAZA 4A | ⬜     | 4A.1         |
-| 4A.3 | FAZA 4A | ⬜     | 4A.1         |
-| 4B.1 | FAZA 4B | ⬜     | 3.x          |
-| 4B.2 | FAZA 4B | ⬜     | 4B.1         |
-| 5.1  | FAZA 5  | ⬜     | 4A.x, 4B.x   |
-| 5.2  | FAZA 5  | ⬜     | 5.1          |
-| 6.1  | FAZA 6  | ⬜     | 5.x          |
-| 6.2  | FAZA 6  | ⬜     | 6.1          |
-| 7.1  | FAZA 7  | ⬜     | 6.x          |
-| 8.1  | FAZA 8  | ⬜     | 7.1          |
-| 8.2  | FAZA 8  | ⬜     | 8.1          |
-| 9.1  | FAZA 9  | ⬜     | 1.1, 5.x     |
+| Blok | Faza    | Nazwa                        | Status | Dependencies |
+| ---- | ------- | ---------------------------- | ------ | ------------ |
+| 0.1  | FAZA 0  | Inicjalizacja Projektu       | ✅     | -            |
+| 0.2  | FAZA 0  | Stylowanie i UI Kit          | ✅     | 0.1          |
+| 0.3  | FAZA 0  | API Layer Setup              | ✅     | 0.1          |
+| 1.1  | FAZA 1  | NextAuth Configuration       | ✅     | 0.x          |
+| 1.2  | FAZA 1  | Tenant Context               | ✅     | 1.1          |
+| 1.3  | FAZA 1  | Auth Store & Middleware      | ✅     | 1.1          |
+| 1.4  | FAZA 1  | Auth UI Pages                | ✅     | 1.1, 1.3     |
+| 2.1  | FAZA 2  | Layout Components            | ✅     | 1.x          |
+| 2.2  | FAZA 2  | Global State & Feedback      | ✅     | 2.1          |
+| 3.1  | FAZA 3  | **Team List & CRUD**         | ✅     | 2.x          |
+| 3.2  | FAZA 3  | **Invitations**              | ⬜     | 3.1          |
+| 4A.1 | FAZA 4A | **Clients List**             | ⬜     | 3.x          |
+| 4A.2 | FAZA 4A | **Clients Search & Filters** | ⬜     | 4A.1         |
+| 4A.3 | FAZA 4A | **Client CRUD**              | ⬜     | 4A.1         |
+| 4B.1 | FAZA 4B | **Plans List**               | ⬜     | 3.x          |
+| 4B.2 | FAZA 4B | **Plan CRUD**                | ⬜     | 4B.1         |
+| 5.1  | FAZA 5  | Subscriptions List           | ⬜     | 4A.x, 4B.x   |
+| 5.2  | FAZA 5  | Subscription Actions         | ⬜     | 5.1          |
+| 6.1  | FAZA 6  | Payment History              | ⬜     | 5.x          |
+| 6.2  | FAZA 6  | Payment Methods              | ⬜     | 6.1          |
+| 7.1  | FAZA 7  | Analytics Dashboard          | ⬜     | 6.x          |
+| 8.1  | FAZA 8  | Testing                      | ⬜     | 7.1          |
+| 8.2  | FAZA 8  | Polish & Optimization        | ⬜     | 8.1          |
+| 9.1  | FAZA 9  | Client Portal Foundation     | ⬜     | 1.1, 5.x     |
 
 ---
 
-_Ostatnia aktualizacja: 2025-12-06_  
-_Wersja: 6.1 (z markerami dla agentów AI)_
-
+_Ostatnia aktualizacja: 2025-12-10_  
+_Wersja: 7.0 (zsynchronizowana z feature_list.json)_
 
 ---
 
@@ -2859,6 +3177,7 @@ _Wersja: 6.1 (z markerami dla agentów AI)_
 ### 🚨 PRZED ustawieniem `"passes": true`:
 
 #### 1. Code Review
+
 - [ ] Komponent importuje hooki z `@/core/api/generated/` (NIE mock data)
 - [ ] ZERO hardcoded wartości: `0`, `"$0"`, `[]`, `"placeholder"`, `{ test: true }`
 - [ ] ZERO komentarzy TODO dotyczących API
@@ -2867,6 +3186,7 @@ _Wersja: 6.1 (z markerami dla agentów AI)_
 - [ ] Wszystkie hooki z `requiredHooks` są zaimplementowane
 
 #### 2. DevTools Network Verification (KRYTYCZNE!)
+
 **To jest NAJWAŻNIEJSZY krok - bez tego wprowadzasz bugi!**
 
 ```bash
@@ -2882,6 +3202,7 @@ npm run dev
 **Sprawdź dla KAŻDEGO endpointu z `apiEndpoints`:**
 
 ✅ **MUSI BYĆ:**
+
 ```
 Request URL: http://localhost:5211/api/[endpoint]
 Request Method: GET/POST/PUT/DELETE
@@ -2892,18 +3213,21 @@ Response: { ... } (prawdziwe dane z backendu)
 ```
 
 ❌ **FAIL jeśli:**
+
 - Status: `401 Unauthorized` → Brak tokena JWT lub auth interceptor nie działa!
 - Brak requestów do `/api/*` → Komponent nie wywołuje API!
 - Response: `null` lub `undefined` → Endpoint nie istnieje!
 - Hardcoded dane w UI → Nie używasz `data` z hooka!
 
 #### 3. TypeScript & Linting
+
 ```bash
 npm run typecheck  # MUSI: zero błędów
 npm run lint       # MUSI: zero warnings
 ```
 
 #### 4. Visual Testing
+
 - [ ] Loading spinner pojawia się przy pierwszym ładowaniu
 - [ ] Dane wyświetlają się po załadowaniu (NIE "0" ani puste listy)
 - [ ] Error state działa (wyłącz backend na chwilę i sprawdź)
@@ -2913,6 +3237,7 @@ npm run lint       # MUSI: zero warnings
   - [ ] Statusy: Badge z odpowiednim wariantem
 
 #### 5. Git Commit
+
 ```bash
 git add .
 git commit -m "feat(scope): description
@@ -2923,107 +3248,7 @@ git commit -m "feat(scope): description
 - TypeScript strict: zero błędów
 
 🤖 Generated with Claude Code
-Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
-```
-
----
-
-## ⚠️ COMMON MISTAKES - Don't Do This!
-
-### ❌ Mistake 1: Hardcoded Data
-```typescript
-// BAD
-const totalClients = 0;
-const clients = [];
-
-// GOOD
-const { data } = useGetApiClients();
-const totalClients = data?.totalCount ?? 0;
-```
-
-### ❌ Mistake 2: Mock Functions
-```typescript
-// BAD
-function getClients() {
-  console.log('TODO: implement');
-  return [];
-}
-
-// GOOD
-const { data } = useGetApiClients();
-```
-
-### ❌ Mistake 3: Skipping Error Handling
-```typescript
-// BAD
-const { data } = useGetApiClients();
-return <List data={data.items} />;
-
-// GOOD
-const { data, isLoading, error } = useGetApiClients();
-if (error) return <ErrorMessage />;
-if (isLoading) return <Skeleton />;
-return <List data={data?.items ?? []} />;
-```
-
-### ❌ Mistake 4: Type Assertions Abuse
-```typescript
-// BAD - ukrywanie prawdziwych błędów
-const data = response as any;
-
-// GOOD - tylko dla Orval bug workaround
-const { data } = useGetApiClients() as {
-  data: ClientDtoPaginatedList | undefined;
-};
-```
-
----
-
-## 🎯 Quick Verification Script
-
-Użyj tego przed ustawieniem `passes: true`:
-
-```bash
-#!/bin/bash
-
-echo "🔍 API Verification Checklist"
-echo ""
-
-# 1. TypeScript
-echo "1️⃣ TypeScript Check..."
-npm run typecheck
-if [ $? -ne 0 ]; then
-  echo "❌ FAIL: TypeScript errors found!"
-  exit 1
-fi
-
-# 2. Linting
-echo "2️⃣ Linting Check..."
-npm run lint
-if [ $? -ne 0 ]; then
-  echo "❌ FAIL: Lint warnings found!"
-  exit 1
-fi
-
-# 3. Check for hardcoded data
-echo "3️⃣ Checking for hardcoded data..."
-grep -r "const.*= 0" src/app/(dashboard) && echo "⚠️  WARNING: Found hardcoded '0'"
-grep -r "const.*= \[\]" src/app/(dashboard) && echo "⚠️  WARNING: Found hardcoded '[]'"
-
-# 4. Check for TODO comments
-echo "4️⃣ Checking for TODO comments..."
-grep -r "TODO.*API" src/app/(dashboard) && echo "⚠️  WARNING: Found TODO API comments"
-
-echo ""
-echo "✅ Automated checks passed!"
-echo "📝 NOW: Check DevTools Network tab manually!"
-echo "    1. Open http://localhost:3000"
-echo "    2. Login to app"
-echo "    3. Navigate to your feature"
-echo "    4. Check Network tab for:"
-echo "       - Requests to /api/*"
-echo "       - Authorization header"
-echo "       - 200 OK status"
+Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
 
 ---

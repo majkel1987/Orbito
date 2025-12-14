@@ -64,20 +64,41 @@ Zaktualizuj wszystkie pliki z planem po zakończeniu tej implenentacji
 ---
 
 Pracujesz nad projektem Orbito Frontend.
-
 PRZED rozpoczęciem pracy:
 
-1. Przeczytaj orbito-frontend\.agent\feature_list.json - znajdź pierwszy blok z "passes": false
-2. Przeczytaj orbito-frontend\.agent\claude-progress.txt - kontekst poprzednich sesji
-3. Otwórz Frontend_Prompts.md i znajdź sekcję dla tego bloku (szukaj BLOCK_START: X.X)
-4. Wykonaj DOKŁADNIE kroki z promptu
+🚨 Przeczytaj .agent/API_RULES.md - KRYTYCZNE reguły dotyczące API (OBOWIĄZKOWE!)
+Przeczytaj .agent/feature_list.json - znajdź pierwszy blok z "passes": false
+Przeczytaj .agent/claude-progress.txt - kontekst poprzednich sesji i KNOWN BUGS
+Sprawdź apiEndpoints i requiredHooks dla tego bloku w feature_list.json
+Otwórz Frontend_Prompts.md i znajdź sekcję dla tego bloku (szukaj BLOCK_START: X.X)
+Wykonaj DOKŁADNIE kroki z promptu
+
+PODCZAS pracy:
+
+🚫 NIGDY nie używaj hardcoded data (0, [], "placeholder")
+🚫 NIGDY nie twórz mock funkcji z console.log("TODO")
+✅ ZAWSZE używaj hooków z @/core/api/generated/
+✅ ZAWSZE obsługuj isLoading, error, empty states
 
 PO zakończeniu bloku:
 
-1. npm run typecheck && npm run lint
-2. Zmień "passes": true w feature_list.json dla ukończonego bloku
-3. Dodaj wpis do claude-progress.txt
-4. Zaktualizuj checklistę w pliku Frontend_Prompts.md
-5. Git commit
+npm run typecheck && npm run lint
+🔍 WERYFIKACJA W DEVTOOLS:
 
-Zacznij od sprawdzenia stanu projektu.
+Network tab: Czy widzę requesty do /api/? Status 200? Header Authorization: Bearer?
+Console: Brak TypeError, brak 401
+UI: Dane są PRAWDZIWE (nie "0", nie puste listy)
+
+Zmień "passes": true w feature_list.json dla ukończonego bloku
+Dodaj wpis do claude-progress.txt
+Zaktualizuj checklistę w pliku Frontend_Prompts.md
+Git commit: feat(scope): description
+
+Jeśli endpoint nie istnieje:
+NIE MOCKUJ! Zamiast tego:
+
+Powiedz że endpoint nie istnieje w Swagger
+Zaproponuj opcje (dodać backend, użyć innego endpointu, pominąć)
+Poczekaj na decyzję
+
+Zacznij od sprawdzenia stanu projektu i przeczytania API_RULES.md.

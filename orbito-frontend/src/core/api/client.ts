@@ -1,5 +1,4 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
-import { getSession } from "next-auth/react";
 
 // Backend Result<T> type definition
 interface Result<T> {
@@ -18,22 +17,7 @@ const axiosInstance = axios.create({
   },
 });
 
-// Request interceptor: Add JWT token from NextAuth session
-axiosInstance.interceptors.request.use(
-  async (config) => {
-    // Only run on client-side (browser)
-    if (typeof window !== "undefined") {
-      const session = await getSession();
-      if (session?.accessToken) {
-        config.headers.Authorization = `Bearer ${session.accessToken}`;
-      }
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+// Auth interceptor is now handled by AuthInterceptorProvider component
 
 // Response interceptor: Handle Result<T> and map errors
 axiosInstance.interceptors.response.use(
@@ -45,8 +29,24 @@ axiosInstance.interceptors.response.use(
       const result = data as Result<unknown>;
 
       if (result.isSuccess) {
+        let unwrappedData = result.value;
+
+        // Fix backend inconsistency: map 'clients' to 'items' for ClientDtoPaginatedList
+        if (
+          unwrappedData &&
+          typeof unwrappedData === "object" &&
+          "clients" in unwrappedData &&
+          Array.isArray((unwrappedData as { clients: unknown }).clients)
+        ) {
+          const { clients, ...rest } = unwrappedData as {
+            clients: unknown[];
+            [key: string]: unknown;
+          };
+          unwrappedData = { ...rest, items: clients };
+        }
+
         // Success: return unwrapped value
-        return { ...response, data: result.value };
+        return { ...response, data: unwrappedData };
       } else {
         // Failure: throw error with backend message
         const errorMessage =

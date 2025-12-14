@@ -31,9 +31,9 @@ export enum TeamMemberStatus {
 export function getTeamMemberRoleName(role: TeamMemberRole): string {
   switch (role) {
     case 1:
-      return "Admin";
+      return "Owner";
     case 2:
-      return "Manager";
+      return "Admin";
     case 3:
       return "Member";
     default:
@@ -49,9 +49,9 @@ export function getTeamMemberRoleVariant(
 ): "default" | "secondary" | "outline" {
   switch (role) {
     case 1:
-      return "default"; // Admin
+      return "default"; // Owner
     case 2:
-      return "secondary"; // Manager
+      return "secondary"; // Admin
     case 3:
       return "outline"; // Member
     default:

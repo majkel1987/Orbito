@@ -81,8 +81,8 @@ export function InviteForm() {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value={TeamMemberRole.NUMBER_1.toString()}>
-                    {getTeamMemberRoleName(TeamMemberRole.NUMBER_1)}
+                  <SelectItem value={TeamMemberRole.NUMBER_2.toString()}>
+                    {getTeamMemberRoleName(TeamMemberRole.NUMBER_2)}
                   </SelectItem>
                   <SelectItem value={TeamMemberRole.NUMBER_3.toString()}>
                     {getTeamMemberRoleName(TeamMemberRole.NUMBER_3)}

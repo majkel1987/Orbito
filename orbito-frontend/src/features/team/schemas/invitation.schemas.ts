@@ -4,7 +4,7 @@ import { TeamMemberRole } from "@/core/api/generated/models";
 export const InviteSchema = z.object({
   email: z.string().email("Invalid email address"),
   role: z.union([
-    z.literal(TeamMemberRole.NUMBER_1), // Admin
+    z.literal(TeamMemberRole.NUMBER_2), // Admin
     z.literal(TeamMemberRole.NUMBER_3), // Member
   ]),
 });

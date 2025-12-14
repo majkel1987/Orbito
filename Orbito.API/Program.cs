@@ -231,6 +231,22 @@ app.MapHealthChecks("/health");
 
 app.MapHealthChecksUI();
 
+// Seed database with test data in development
+if (app.Environment.IsDevelopment())
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        try
+        {
+            await Orbito.Infrastructure.Data.SeedData.SeedDevelopmentDataAsync(scope.ServiceProvider);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "An error occurred while seeding the database");
+        }
+    }
+}
+
 try
 {
     Log.Information("Starting Orbito API");

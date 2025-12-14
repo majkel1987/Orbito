@@ -12,6 +12,7 @@
 ### 🚫 NIGDY nie używaj:
 
 #### 1. Hardcoded Data
+
 ```typescript
 // ❌ ŹLE - hardcoded wartości
 const totalClients = 0;
@@ -25,10 +26,11 @@ const totalClients = data?.totalCount ?? 0;
 ```
 
 #### 2. Mock Functions
+
 ```typescript
 // ❌ ŹLE - mock funkcja
 function getClients() {
-  console.log('TODO: call API');
+  console.log("TODO: call API");
   return [];
 }
 
@@ -37,6 +39,7 @@ const { data } = useGetApiClients();
 ```
 
 #### 3. Placeholder Components
+
 ```typescript
 // ❌ ŹLE - pusty komponent
 export default function ClientsPage() {
@@ -51,6 +54,7 @@ export default function ClientsPage() {
 ```
 
 #### 4. TODO Comments (bez implementacji)
+
 ```typescript
 // ❌ ŹLE - TODO zostawione
 // TODO: add auth interceptor
@@ -124,6 +128,7 @@ import { formatCurrency, formatDate } from "@/shared/lib/formatters";
 Przed ustawieniem `"passes": true` w `feature_list.json`:
 
 #### 1. Code Review
+
 - [ ] Komponent importuje hooki z `@/core/api/generated` (sprawdź imports)
 - [ ] ZERO hardcoded wartości: szukaj `0`, `"$0"`, `[]`, `"placeholder"`
 - [ ] ZERO komentarzy TODO związanych z API
@@ -190,7 +195,7 @@ axiosInstance.interceptors.request.use(async (config) => {
 });
 ```
 
-**Weryfikacja**: Po implementacji, KAŻDY request do /api/* MUSI mieć header `Authorization: Bearer ...`
+**Weryfikacja**: Po implementacji, KAŻDY request do /api/\* MUSI mieć header `Authorization: Bearer ...`
 
 ### Brakujący Endpoint
 
@@ -298,14 +303,14 @@ export default function ClientsPage() {
 
 ## 🎯 Quick Reference
 
-| Pytanie | Odpowiedź |
-|---------|-----------|
-| Czy mogę użyć `const data = []`? | ❌ NIE - tylko API |
-| Czy mogę zostawić TODO? | ❌ NIE - implementuj lub pytaj |
-| Endpoint nie istnieje - co robić? | ✅ PYTAJ - nie mockuj |
-| Orval wygenerował `void` - co robić? | ✅ Type assertion + zgłoś backend issue |
-| Jak sprawdzić czy API działa? | ✅ DevTools Network → 200 OK + Authorization header |
-| Czy mogę pominąć error handling? | ❌ NIE - zawsze obsługuj error |
+| Pytanie                              | Odpowiedź                                           |
+| ------------------------------------ | --------------------------------------------------- |
+| Czy mogę użyć `const data = []`?     | ❌ NIE - tylko API                                  |
+| Czy mogę zostawić TODO?              | ❌ NIE - implementuj lub pytaj                      |
+| Endpoint nie istnieje - co robić?    | ✅ PYTAJ - nie mockuj                               |
+| Orval wygenerował `void` - co robić? | ✅ Type assertion + zgłoś backend issue             |
+| Jak sprawdzić czy API działa?        | ✅ DevTools Network → 200 OK + Authorization header |
+| Czy mogę pominąć error handling?     | ❌ NIE - zawsze obsługuj error                      |
 
 ---
 

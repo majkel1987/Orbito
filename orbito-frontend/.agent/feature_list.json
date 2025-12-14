@@ -240,7 +240,7 @@
         "Paginacja zmienia pageNumber w URL",
         "ZERO hardcoded '0' lub pustych list"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "4A.2",
@@ -258,7 +258,10 @@
         "Filtry zmieniają query params",
         "URL persistence - odświeżenie strony zachowuje filtry"
       ],
-      "passes": false
+      "passes": true,
+      "knownIssues": [
+        "Backend bug: filter 'inactive' (activeOnly=false) zwraca klientów 'active' zamiast 'inactive'"
+      ]
     },
     {
       "id": "4A.3",
@@ -504,9 +507,9 @@
   ],
   "stats": {
     "totalBlocks": 24,
-    "completedBlocks": 8,
-    "remainingBlocks": 16,
-    "completionPercentage": 33.33
+    "completedBlocks": 9,
+    "remainingBlocks": 15,
+    "completionPercentage": 37.5
   },
   "nextPriority": "2.2",
   "agentInstructions": {

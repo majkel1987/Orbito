@@ -447,3 +447,88 @@ Issues encountered:
 - TeamMemberRole generowany jako NUMBER_1, NUMBER_2, NUMBER_3 - używamy helper functions z team.types.ts
 - Orval wygenerował customInstance<void> dla GET /invitations - używamy type assertion do TeamMemberDto[]
 Next priority: 4A.1 (Clients List) - lista klientów z prawdziwymi danymi z API
+
+--- Session 2025-12-11 20:00 UTC ---
+Agent: Claude Sonnet 4.5
+Duration: ~30 min
+Block worked on: 4A.1 (Clients List)
+Status: COMPLETED
+Changes:
+FRONTEND:
+- Utworzono src/features/clients/hooks/useClients.ts z paginacją (useState dla page)
+- Utworzono src/features/clients/components/ClientsTable.tsx z loading/error/empty states
+- Utworzono src/shared/components/Pagination.tsx (reusable component)
+- Utworzono stronę /dashboard/clients/page.tsx z ClientsTable i Add Client button
+- Używamy useGetApiClients({ pageNumber, pageSize }) z wygenerowanych hooków
+- Type assertion dla ClientDtoPaginatedList (Orval bug: customInstance<void>)
+- Loading state: ClientsTableSkeleton z 5x Skeleton components
+- Error state: czerwony komunikat z error.message
+- Empty state: "No clients yet" message
+- Tabela pokazuje: Name (fullName), Email (email || directEmail), Company (companyName), Status (Badge), Actions (View link)
+Git commits:
+- (pending) feat(clients): implement clients list with pagination
+Issues encountered:
+- Orval wygenerował customInstance<void> dla GET /api/Clients - rozwiązane przez type assertion do ClientDtoPaginatedList
+- ClientDto ma opcjonalne pola (fullName, email, companyName) - używamy fallbacków (|| "-")
+Verification:
+- npm run typecheck: PASSED (zero błędów)
+- npm run lint: PASSED (zero warnings)
+- ZERO hardcoded data (wszystko z useGetApiClients hook)
+- Wszystkie loading/error/empty states zaimplementowane
+Next priority: 4A.2 (Clients Search & Filters) - wyszukiwanie i filtry z query params
+
+--- Session 2025-12-14 22:00 UTC ---
+Agent: Claude Sonnet 4.5
+Duration: ~2 hours
+Block worked on: 4A.2 (Clients Search & Filters)
+Status: COMPLETED
+Changes:
+FRONTEND:
+- Utworzono src/features/clients/components/ClientsFilters.tsx z search input i status dropdown
+- Zaktualizowano src/features/clients/hooks/useClients.ts:
+  - Zmieniono useState na useSearchParams + useRouter dla URL persistence
+  - Dodano mapping: status string → activeOnly boolean (active=true, inactive=false, all=undefined)
+  - Dodano mapping: search → searchTerm (backend używa searchTerm, nie search)
+  - Dodano debounced search (500ms) z lokalnym state (zapobiega utracie focus)
+  - Dodano clearFilters function
+- Zaktualizowano src/features/clients/components/ClientsTable.tsx - dodano ClientsFilters
+- Dodano Clear button (pojawia się gdy są aktywne filtry)
+- URL synchronization: ?search=query&status=active&page=1
+- Zaimplementowano smooth search experience:
+  - Lokalny state dla input (instant UI update)
+  - useRef<NodeJS.Timeout> dla debounce
+  - 500ms delay przed update URL i API call
+  - Brak utraty focus podczas wpisywania
+FIXES:
+- Naprawiono race condition w AuthInterceptorProvider:
+  - Dodano `if (status === "loading") return null;` - czeka na załadowanie session
+  - Zapobiega 401 errors na initial load
+- Naprawiono backend inconsistency w response:
+  - Backend zwraca `{ clients: [...] }` zamiast `{ items: [...] }`
+  - Dodano mapping w response interceptor (client.ts) - transformuje clients → items
+- Usunięto useDeferredValue (konfliktował z debounce)
+Git commits:
+- (pending) feat(clients): add search and filters with URL sync
+Issues encountered:
+- Auth interceptor race condition - getSession() w axios interceptor nie działa w Next.js 15 + NextAuth v5
+  - Rozwiązanie: AuthInterceptorProvider z useSession() hook + useEffect
+- Focus loss podczas wpisywania w search input
+  - Rozwiązanie: lokalny state + debounce (500ms) + useRef dla timeout
+- Backend bug: filter "inactive" (activeOnly=false) zwraca klientów "active" zamiast "inactive"
+  - Frontend wysyła poprawnie activeOnly: false
+  - Backend ignoruje ten parametr
+  - WYMAGA naprawy w backendzie
+- Backend inconsistency: zwraca `clients` zamiast `items` w PaginatedList
+  - Rozwiązanie: mapping w response interceptor
+Verification:
+- npm run typecheck: PASSED
+- npm run lint: PASSED
+- Search działa (debounce 500ms, brak utraty focus)
+- Filter "Active" działa ✅
+- Filter "Inactive" NIE DZIAŁA (backend bug) ❌
+- Clear button działa ✅
+- Pagination działa ✅
+- URL persistence działa ✅ (F5 zachowuje filtry)
+Known Issues:
+- Backend bug: GET /api/Clients?activeOnly=false zwraca klientów active zamiast inactive
+Next priority: 4A.3 (Client CRUD) - tworzenie/edycja/usuwanie klientów
