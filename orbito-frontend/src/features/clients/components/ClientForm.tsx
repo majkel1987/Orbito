@@ -66,9 +66,11 @@ export function ClientForm({
         ? {
             companyName: defaultValues.companyName || "",
             phone: defaultValues.phone || "",
-            directEmail: defaultValues.directEmail || "",
-            directFirstName: defaultValues.directFirstName || "",
-            directLastName: defaultValues.directLastName || "",
+            // For clients with User: use email/firstName/lastName from User
+            // For direct clients: use directEmail/directFirstName/directLastName
+            directEmail: defaultValues.directEmail || defaultValues.email || "",
+            directFirstName: defaultValues.directFirstName || defaultValues.firstName || "",
+            directLastName: defaultValues.directLastName || defaultValues.lastName || "",
           }
         : mode === "create"
           ? {
