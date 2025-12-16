@@ -75,7 +75,7 @@ namespace Orbito.API.Controllers
         /// </summary>
         /// <param name="pageNumber">Numer strony (domyślnie 1)</param>
         /// <param name="pageSize">Rozmiar strony (domyślnie 10)</param>
-        /// <param name="activeOnly">Czy pokazać tylko aktywnych klientów</param>
+        /// <param name="status">Filtr statusu: 'active', 'inactive', lub null/pusty dla wszystkich</param>
         /// <param name="searchTerm">Termin wyszukiwania</param>
         /// <returns>Lista klientów</returns>
         [HttpGet]
@@ -83,10 +83,10 @@ namespace Orbito.API.Controllers
         public async Task<IActionResult> GetClients(
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10,
-            [FromQuery] bool activeOnly = false,
+            [FromQuery] string? status = null,
             [FromQuery] string? searchTerm = null)
         {
-            var query = new GetClientsByProviderQuery(pageNumber, pageSize, activeOnly, searchTerm);
+            var query = new GetClientsByProviderQuery(pageNumber, pageSize, status, searchTerm);
             var result = await Mediator.Send(query);
 
             // Convert Result<PaginatedList<ClientDto>> to standard Result wrapper format for frontend

@@ -12,16 +12,12 @@ export function useClients() {
   const search = searchParams.get("search") || "";
   const status = searchParams.get("status") || "";
 
-  // Convert status string to activeOnly boolean
-  const activeOnly =
-    status === "active" ? true : status === "inactive" ? false : undefined;
-
   // Type assertion needed due to Orval bug (customInstance<void> instead of ClientDtoPaginatedList)
   const { data, isLoading, error } = useGetApiClients({
     pageNumber: page,
     pageSize: 10,
     searchTerm: search || undefined,
-    activeOnly,
+    status: status || undefined,
   }) as {
     data: ClientDtoPaginatedList | undefined;
     isLoading: boolean;

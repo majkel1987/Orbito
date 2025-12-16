@@ -97,7 +97,7 @@ namespace Orbito.Infrastructure.Persistance
                 .AsNoTracking()
                 .Include(s => s.Client)
                 .Include(s => s.Plan)
-                .Where(s => s.ClientId == clientId && EF.Property<string>(s, "Status") == "Active")
+                .Where(s => s.ClientId == clientId && s.Status == SubscriptionStatus.Active)
                 .OrderByDescending(s => s.CreatedAt)
                 .ToListAsync(cancellationToken);
         }
@@ -111,7 +111,7 @@ namespace Orbito.Infrastructure.Persistance
                 .Include(s => s.Client)
                 .Include(s => s.Plan)
                 .Where(s => s.ClientId == clientId &&
-                           EF.Property<string>(s, "Status") == "Active" &&
+                           s.Status == SubscriptionStatus.Active &&
                            s.NextBillingDate != default(DateTime) &&
                            s.NextBillingDate <= expirationThreshold)
                 .OrderBy(s => s.NextBillingDate)
@@ -125,21 +125,19 @@ namespace Orbito.Infrastructure.Persistance
                 .Include(s => s.Client)
                 .Include(s => s.Plan)
                 .Where(s => s.ClientId == clientId &&
-                           (EF.Property<string>(s, "Status") == "Expired" ||
-                            (EF.Property<string>(s, "Status") == "Active" && s.NextBillingDate != default(DateTime) && s.NextBillingDate < checkDate)))
+                           (s.Status == SubscriptionStatus.Expired ||
+                            (s.Status == SubscriptionStatus.Active && s.NextBillingDate != default(DateTime) && s.NextBillingDate < checkDate)))
                 .OrderByDescending(s => s.NextBillingDate)
                 .ToListAsync(cancellationToken);
         }
 
         public async Task<IEnumerable<Subscription>> GetSubscriptionsByStatusForClientAsync(SubscriptionStatus status, Guid clientId, CancellationToken cancellationToken = default)
         {
-            // IMPORTANT: Convert enum to string for EF Core ValueConverter compatibility
-            var statusString = status.ToString();
             return await _context.Subscriptions
                 .AsNoTracking()
                 .Include(s => s.Client)
                 .Include(s => s.Plan)
-                .Where(s => s.ClientId == clientId && EF.Property<string>(s, "Status") == statusString)
+                .Where(s => s.ClientId == clientId && s.Status == status)
                 .OrderByDescending(s => s.CreatedAt)
                 .ToListAsync(cancellationToken);
         }
@@ -182,13 +180,13 @@ namespace Orbito.Infrastructure.Persistance
         public async Task<bool> HasActiveSubscriptionAsync(Guid clientId, CancellationToken cancellationToken = default)
         {
             return await _context.Subscriptions
-                .AnyAsync(s => s.ClientId == clientId && EF.Property<string>(s, "Status") == "Active", cancellationToken);
+                .AnyAsync(s => s.ClientId == clientId && s.Status == SubscriptionStatus.Active, cancellationToken);
         }
 
         public async Task<bool> CanClientSubscribeToPlanAsync(Guid clientId, Guid planId, CancellationToken cancellationToken = default)
         {
             var existingSubscription = await _context.Subscriptions
-                .AnyAsync(s => s.ClientId == clientId && s.PlanId == planId && EF.Property<string>(s, "Status") == "Active", cancellationToken);
+                .AnyAsync(s => s.ClientId == clientId && s.PlanId == planId && s.Status == SubscriptionStatus.Active, cancellationToken);
 
             return !existingSubscription;
         }
@@ -196,7 +194,7 @@ namespace Orbito.Infrastructure.Persistance
         public async Task<int> GetActiveSubscriptionsCountByClientAsync(Guid clientId, CancellationToken cancellationToken = default)
         {
             return await _context.Subscriptions
-                .CountAsync(s => s.ClientId == clientId && EF.Property<string>(s, "Status") == "Active", cancellationToken);
+                .CountAsync(s => s.ClientId == clientId && s.Status == SubscriptionStatus.Active, cancellationToken);
         }
 
         public async Task<decimal> GetTotalRevenueByClientAsync(Guid clientId, CancellationToken cancellationToken = default)
@@ -213,7 +211,7 @@ namespace Orbito.Infrastructure.Persistance
                 .Include(s => s.Client)
                 .Include(s => s.Plan)
                 .Where(s => s.ClientId == clientId &&
-                           EF.Property<string>(s, "Status") == "Active" &&
+                           s.Status == SubscriptionStatus.Active &&
                            s.NextBillingDate != default(DateTime) &&
                            s.NextBillingDate <= billingDate)
                 .OrderBy(s => s.NextBillingDate)
@@ -227,7 +225,7 @@ namespace Orbito.Infrastructure.Persistance
                 .AsNoTracking()
                 .Include(s => s.Client)
                 .Include(s => s.Plan)
-                .Where(s => EF.Property<string>(s, "Status") == "Active")
+                .Where(s => s.Status == SubscriptionStatus.Active)
                 .OrderByDescending(s => s.CreatedAt)
                 .ToListAsync(cancellationToken);
         }
@@ -242,7 +240,7 @@ namespace Orbito.Infrastructure.Persistance
                 .AsNoTracking()
                 .Include(s => s.Client)
                 .Include(s => s.Plan)
-                .Where(s => EF.Property<string>(s, "Status") == "Active" &&
+                .Where(s => s.Status == SubscriptionStatus.Active &&
                            s.NextBillingDate != default(DateTime) &&
                            s.NextBillingDate <= expirationThreshold)
                 .OrderBy(s => s.NextBillingDate)
@@ -257,21 +255,19 @@ namespace Orbito.Infrastructure.Persistance
                 .AsNoTracking()
                 .Include(s => s.Client)
                 .Include(s => s.Plan)
-                .Where(s => EF.Property<string>(s, "Status") == "Expired" ||
-                           (EF.Property<string>(s, "Status") == "Active" && s.NextBillingDate != default(DateTime) && s.NextBillingDate < checkDate))
+                .Where(s => s.Status == SubscriptionStatus.Expired ||
+                           (s.Status == SubscriptionStatus.Active && s.NextBillingDate != default(DateTime) && s.NextBillingDate < checkDate))
                 .OrderByDescending(s => s.NextBillingDate)
                 .ToListAsync(cancellationToken);
         }
 
         public async Task<IEnumerable<Subscription>> GetSubscriptionsByStatusAsync(SubscriptionStatus status, CancellationToken cancellationToken = default)
         {
-            // IMPORTANT: Convert enum to string for EF Core ValueConverter compatibility
-            var statusString = status.ToString();
             return await _context.Subscriptions
                 .AsNoTracking()
                 .Include(s => s.Client)
                 .Include(s => s.Plan)
-                .Where(s => EF.Property<string>(s, "Status") == statusString)
+                .Where(s => s.Status == status)
                 .OrderByDescending(s => s.CreatedAt)
                 .ToListAsync(cancellationToken);
         }
@@ -279,7 +275,7 @@ namespace Orbito.Infrastructure.Persistance
         public async Task<int> GetActiveSubscriptionsCountAsync(CancellationToken cancellationToken = default)
         {
             return await _context.Subscriptions
-                .CountAsync(s => EF.Property<string>(s, "Status") == "Active", cancellationToken);
+                .CountAsync(s => s.Status == SubscriptionStatus.Active, cancellationToken);
         }
 
         public async Task<decimal> GetTotalRevenueAsync(CancellationToken cancellationToken = default)
@@ -297,7 +293,7 @@ namespace Orbito.Infrastructure.Persistance
                 .AsNoTracking()
                 .Include(s => s.Client)
                 .Include(s => s.Plan)
-                .Where(s => EF.Property<string>(s, "Status") == "Active" &&
+                .Where(s => s.Status == SubscriptionStatus.Active &&
                            s.NextBillingDate != default(DateTime) &&
                            s.NextBillingDate <= billingDate)
                 .OrderBy(s => s.NextBillingDate)
@@ -332,7 +328,7 @@ namespace Orbito.Infrastructure.Persistance
                 .AsNoTracking()
                 .Include(s => s.Client)
                 .Include(s => s.Plan)
-                .Where(s => s.TenantId == tenantId && EF.Property<string>(s, "Status") == "Active")
+                .Where(s => s.TenantId == tenantId && s.Status == SubscriptionStatus.Active)
                 .OrderBy(s => s.NextBillingDate)
                 .ToListAsync(cancellationToken);
         }
@@ -351,7 +347,7 @@ namespace Orbito.Infrastructure.Persistance
                 .Include(s => s.Client)
                 .Include(s => s.Plan)
                 .Where(s => s.TenantId == tenantId &&
-                           EF.Property<string>(s, "Status") == "Active" &&
+                           s.Status == SubscriptionStatus.Active &&
                            s.NextBillingDate != default(DateTime) &&
                            s.NextBillingDate >= checkDate &&
                            s.NextBillingDate <= expirationDate)
@@ -371,7 +367,7 @@ namespace Orbito.Infrastructure.Persistance
                 .Include(s => s.Client)
                 .Include(s => s.Plan)
                 .Where(s => s.TenantId == tenantId &&
-                           EF.Property<string>(s, "Status") == "Active" &&
+                           s.Status == SubscriptionStatus.Active &&
                            s.NextBillingDate != default(DateTime) &&
                            s.NextBillingDate < checkDate)
                 .OrderBy(s => s.NextBillingDate)
@@ -390,7 +386,7 @@ namespace Orbito.Infrastructure.Persistance
                 .Include(s => s.Client)
                 .Include(s => s.Plan)
                 .Where(s => s.TenantId == tenantId &&
-                           EF.Property<string>(s, "Status") == "Active" &&
+                           s.Status == SubscriptionStatus.Active &&
                            s.NextBillingDate != default(DateTime) &&
                            s.NextBillingDate <= billingDate)
                 .OrderBy(s => s.NextBillingDate)

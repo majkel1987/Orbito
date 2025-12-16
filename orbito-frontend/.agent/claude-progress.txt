@@ -532,3 +532,53 @@ Verification:
 Known Issues:
 - Backend bug: GET /api/Clients?activeOnly=false zwraca klientów active zamiast inactive
 Next priority: 4A.3 (Client CRUD) - tworzenie/edycja/usuwanie klientów
+
+--- Session 2025-12-16 20:00 UTC ---
+Agent: Claude Sonnet 4.5
+Duration: ~1 hour
+Block worked on: 4A.3 (Client CRUD)
+Status: COMPLETED
+Changes:
+FRONTEND:
+- Utworzono src/features/clients/schemas/client.schemas.ts:
+  - CreateClientSchema z discriminated union (user vs direct client)
+  - UpdateClientSchema dla edycji
+  - Full Zod validation
+- Utworzono src/features/clients/hooks/useClientMutations.ts:
+  - usePostApiClients() - create mutation
+  - usePutApiClientsId() - update mutation
+  - useDeleteApiClientsId() - delete mutation
+  - Toast notifications (success/error)
+  - Query invalidation po mutacjach
+  - Router redirects po operacjach
+- Utworzono src/features/clients/components/ClientForm.tsx:
+  - React Hook Form z zodResolver
+  - Support dla create/edit modes
+  - Conditional rendering dla client types (user vs direct)
+  - Loading states (isSubmitting)
+  - Error messages
+- Utworzono strony CRUD:
+  - /dashboard/clients/new - create page z ClientForm
+  - /dashboard/clients/[id] - detail page z pełnymi informacjami
+  - /dashboard/clients/[id]/edit - edit page z pre-filled form
+  - /dashboard/clients/[id]/delete - delete page z AlertDialog confirmation
+- Dodano shadcn/ui component: alert-dialog.tsx
+Git commits:
+- feat(clients): implement full CRUD operations
+Issues encountered:
+- Żadnych! Implementacja zgodna z wymaganiami API_RULES.md
+- Wszystkie hooki z @/core/api/generated/clients/clients
+- ZERO hardcoded data
+- Wszystkie stany obsłużone (loading, error, success, empty)
+Verification:
+- npm run typecheck: PASSED ✅
+- npm run lint: PASSED ✅
+- POST /api/Clients - create client ✅
+- GET /api/Clients/{id} - fetch details ✅
+- PUT /api/Clients/{id} - update client ✅
+- DELETE /api/Clients/{id} - delete client ✅
+- Toast notifications działają ✅
+- Redirects po operacjach ✅
+- Loading states na buttonach ✅
+- Zod validation działa ✅
+Next priority: 4B.1 (Plans List) - lista planów subskrypcyjnych

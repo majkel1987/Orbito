@@ -17,10 +17,15 @@ async function getAvailableUsers(): Promise<UserDto[]> {
   return response;
 }
 
-export function useAvailableUsers() {
+interface UseAvailableUsersOptions {
+  enabled?: boolean;
+}
+
+export function useAvailableUsers(options?: UseAvailableUsersOptions) {
   return useQuery({
     queryKey: ["/api/Users/available-for-client"],
     queryFn: getAvailableUsers,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: options?.enabled ?? true, // Default to true for backwards compatibility
   });
 }

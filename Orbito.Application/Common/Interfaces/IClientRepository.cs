@@ -10,8 +10,10 @@ namespace Orbito.Application.Common.Interfaces
         Task<Client?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
         Task<IEnumerable<Client>> GetAllAsync(int pageNumber = 1, int pageSize = 10, string? searchTerm = null, CancellationToken cancellationToken = default);
         Task<IEnumerable<Client>> GetActiveClientsAsync(int pageNumber = 1, int pageSize = 10, string? searchTerm = null, CancellationToken cancellationToken = default);
+        Task<IEnumerable<Client>> GetInactiveClientsAsync(int pageNumber = 1, int pageSize = 10, string? searchTerm = null, CancellationToken cancellationToken = default);
         Task<int> GetTotalCountAsync(string? searchTerm = null, CancellationToken cancellationToken = default);
         Task<int> GetActiveClientsCountAsync(string? searchTerm = null, CancellationToken cancellationToken = default);
+        Task<int> GetInactiveClientsCountAsync(string? searchTerm = null, CancellationToken cancellationToken = default);
 
         // Search operations
         Task<IEnumerable<Client>> SearchClientsAsync(string searchTerm, int pageNumber = 1, int pageSize = 10, bool activeOnly = false, CancellationToken cancellationToken = default);

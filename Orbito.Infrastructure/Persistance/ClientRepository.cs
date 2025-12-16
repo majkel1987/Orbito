@@ -150,6 +150,35 @@ namespace Orbito.Infrastructure.Persistance
                 .ToListAsync(cancellationToken);
         }
 
+        public async Task<IEnumerable<Client>> GetInactiveClientsAsync(int pageNumber = 1, int pageSize = 10, string? searchTerm = null, CancellationToken cancellationToken = default)
+        {
+            var query = _context.Clients
+                .Include(c => c.User)
+                .Where(c => !c.IsActive)
+                .AsQueryable();
+
+            // Apply tenant filtering
+            query = ApplyTenantFilter(query);
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(c =>
+                    c.CompanyName!.Contains(searchTerm) ||
+                    c.DirectEmail!.Contains(searchTerm) ||
+                    c.DirectFirstName!.Contains(searchTerm) ||
+                    c.DirectLastName!.Contains(searchTerm) ||
+                    c.User!.Email!.Contains(searchTerm) ||
+                    c.User!.FirstName!.Contains(searchTerm) ||
+                    c.User!.LastName!.Contains(searchTerm));
+            }
+
+            return await query
+                .OrderByDescending(c => c.CreatedAt)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+        }
+
         public async Task<int> GetTotalCountAsync(string? searchTerm = null, CancellationToken cancellationToken = default)
         {
             var query = _context.Clients.AsQueryable();
@@ -175,6 +204,28 @@ namespace Orbito.Infrastructure.Persistance
         public async Task<int> GetActiveClientsCountAsync(string? searchTerm = null, CancellationToken cancellationToken = default)
         {
             var query = _context.Clients.Where(c => c.IsActive).AsQueryable();
+
+            // Apply tenant filtering
+            query = ApplyTenantFilter(query);
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(c =>
+                    c.CompanyName!.Contains(searchTerm) ||
+                    c.DirectEmail!.Contains(searchTerm) ||
+                    c.DirectFirstName!.Contains(searchTerm) ||
+                    c.DirectLastName!.Contains(searchTerm) ||
+                    c.User!.Email!.Contains(searchTerm) ||
+                    c.User!.FirstName!.Contains(searchTerm) ||
+                    c.User!.LastName!.Contains(searchTerm));
+            }
+
+            return await query.CountAsync(cancellationToken);
+        }
+
+        public async Task<int> GetInactiveClientsCountAsync(string? searchTerm = null, CancellationToken cancellationToken = default)
+        {
+            var query = _context.Clients.Where(c => !c.IsActive).AsQueryable();
 
             // Apply tenant filtering
             query = ApplyTenantFilter(query);

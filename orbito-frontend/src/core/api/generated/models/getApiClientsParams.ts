@@ -15,9 +15,9 @@ pageNumber?: number;
  */
 pageSize?: number;
 /**
- * Czy pokazać tylko aktywnych klientów
+ * Filtr statusu: 'active', 'inactive', lub null/pusty dla wszystkich
  */
-activeOnly?: boolean;
+status?: string;
 /**
  * Termin wyszukiwania
  */

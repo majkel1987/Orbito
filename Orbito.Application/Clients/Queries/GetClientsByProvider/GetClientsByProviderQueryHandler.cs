@@ -20,12 +20,15 @@ namespace Orbito.Application.Clients.Queries.GetClientsByProvider
             // Query filters w ApplicationDbContext automatycznie obsługują filtrowanie po TenantId
             // Jeśli nie ma TenantId, query filters zwrócą puste wyniki (bezpieczne zachowanie)
 
-            // Pobierz klientów
+            // Pobierz klientów na podstawie statusu
             IEnumerable<Orbito.Domain.Entities.Client> clients;
             int totalCount;
 
-            if (request.ActiveOnly)
+            var statusFilter = request.Status?.ToLowerInvariant();
+
+            if (statusFilter == "active")
             {
+                // Only active clients
                 clients = await _clientRepository.GetActiveClientsAsync(
                     request.PageNumber,
                     request.PageSize,
@@ -33,8 +36,19 @@ namespace Orbito.Application.Clients.Queries.GetClientsByProvider
                     cancellationToken);
                 totalCount = await _clientRepository.GetActiveClientsCountAsync(request.SearchTerm, cancellationToken);
             }
+            else if (statusFilter == "inactive")
+            {
+                // Only inactive clients
+                clients = await _clientRepository.GetInactiveClientsAsync(
+                    request.PageNumber,
+                    request.PageSize,
+                    request.SearchTerm,
+                    cancellationToken);
+                totalCount = await _clientRepository.GetInactiveClientsCountAsync(request.SearchTerm, cancellationToken);
+            }
             else
             {
+                // All clients (status is null, empty, or "all")
                 clients = await _clientRepository.GetAllAsync(
                     request.PageNumber,
                     request.PageSize,

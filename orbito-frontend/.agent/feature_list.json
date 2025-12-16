@@ -290,7 +290,7 @@
         "Usunięcie: DELETE, klient znika z listy",
         "ZERO console.log('TODO')"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "4B.1",
@@ -507,11 +507,11 @@
   ],
   "stats": {
     "totalBlocks": 24,
-    "completedBlocks": 9,
-    "remainingBlocks": 15,
-    "completionPercentage": 37.5
+    "completedBlocks": 10,
+    "remainingBlocks": 14,
+    "completionPercentage": 41.67
   },
-  "nextPriority": "2.2",
+  "nextPriority": "4B.1",
   "agentInstructions": {
     "beforeStarting": [
       "🚨 1. PRZECZYTAJ API_RULES.md - to jest OBOWIĄZKOWE!",

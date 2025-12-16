@@ -21,7 +21,9 @@ export default function DashboardPage() {
   // Fetch subscriptions
   const { data: subscriptionsData, isLoading: isLoadingSubscriptions } =
     useGetApiSubscriptions() as {
-      data: Array<{ status: string }> | undefined;
+      data:
+        | { items: Array<{ status: string }>; totalCount: number }
+        | undefined;
       isLoading: boolean;
     };
 
@@ -30,16 +32,24 @@ export default function DashboardPage() {
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
-  const { data: statsData, isLoading: isLoadingStats } =
-    useGetApiPaymentMetricsStatistics({
-      startDate: startOfMonth.toISOString(),
-      endDate: endOfMonth.toISOString(),
-    }) as { data: PaymentStatistics | undefined; isLoading: boolean };
+  const {
+    data: statsData,
+    isLoading: isLoadingStats,
+    error: statsError,
+  } = useGetApiPaymentMetricsStatistics({
+    startDate: startOfMonth.toISOString(),
+    endDate: endOfMonth.toISOString(),
+  }) as {
+    data: PaymentStatistics | undefined;
+    isLoading: boolean;
+    error: Error | null;
+  };
 
   const totalClients = clientsData?.totalCount ?? 0;
   const activeSubscriptions =
-    subscriptionsData?.filter((s) => s.status === "Active").length ?? 0;
-  const monthlyRevenue = statsData?.totalRevenue ?? 0;
+    subscriptionsData?.items?.filter((s) => s.status === "Active").length ?? 0;
+  // PaymentMetrics might not be available if service is not implemented
+  const monthlyRevenue = !statsError ? statsData?.totalRevenue ?? 0 : null;
   const currency = statsData?.currency ?? "PLN";
 
   return (
@@ -85,9 +95,13 @@ export default function DashboardPage() {
           <CardContent>
             {isLoadingStats ? (
               <Skeleton className="h-10 w-32" />
+            ) : statsError ? (
+              <p className="text-sm text-muted-foreground">
+                Stats temporarily unavailable
+              </p>
             ) : (
               <p className="text-3xl font-bold">
-                {formatCurrency(monthlyRevenue, currency)}
+                {formatCurrency(monthlyRevenue ?? 0, currency)}
               </p>
             )}
           </CardContent>

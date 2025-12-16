@@ -47,9 +47,9 @@ export function ClientForm({
     defaultValues?.userId ? "user" : "direct"
   );
 
-  // Fetch available users for dropdown (only in create mode with user type)
+  // Fetch available users for dropdown (only in create mode)
   const { data: availableUsers, isLoading: isLoadingUsers } =
-    useAvailableUsers();
+    useAvailableUsers({ enabled: mode === "create" });
 
   const {
     register,
