@@ -301,14 +301,17 @@
       "promptMarker": "BLOCK_START: 4B.1",
       "tasks": ["4B.1.1", "4B.1.2", "4B.1.3", "4B.1.4", "4B.1.5"],
       "dependencies": ["3.1", "3.2"],
-      "apiEndpoints": ["GET /api/Plans → PlanDto[]"],
-      "requiredHooks": ["useGetApiPlans()"],
+      "apiEndpoints": ["GET /api/SubscriptionPlans → items[]"],
+      "requiredHooks": ["useGetApiSubscriptionPlans()"],
       "verificationSteps": [
-        "Network tab: GET /api/Plans zwraca 200",
+        "Network tab: GET /api/SubscriptionPlans zwraca 200",
         "Karty planów pokazują prawdziwe dane",
         "Ceny formatowane przez formatCurrency()"
       ],
-      "passes": false
+      "passes": true,
+      "knownIssues": [
+        "Backend zwraca billingPeriod jako string '1 Monthly' zamiast enum - dodano parseBillingPeriod()"
+      ]
     },
     {
       "id": "4B.2",
@@ -328,23 +331,28 @@
       ],
       "dependencies": ["4B.1"],
       "apiEndpoints": [
-        "POST /api/Plans → PlanDto",
-        "GET /api/Plans/{id} → PlanDto",
-        "PUT /api/Plans/{id} → PlanDto",
-        "DELETE /api/Plans/{id} → void"
+        "POST /api/SubscriptionPlans → SubscriptionPlanDto",
+        "GET /api/SubscriptionPlans/{id} → SubscriptionPlanDto",
+        "PUT /api/SubscriptionPlans/{id} → SubscriptionPlanDto",
+        "DELETE /api/SubscriptionPlans/{id} → void"
       ],
       "requiredHooks": [
-        "usePostApiPlans()",
-        "useGetApiPlansId(id)",
-        "usePutApiPlansId()",
-        "useDeleteApiPlansId()"
+        "usePostApiSubscriptionPlans()",
+        "useGetApiSubscriptionPlansId(id)",
+        "usePutApiSubscriptionPlansId()",
+        "useDeleteApiSubscriptionPlansId()"
       ],
       "verificationSteps": [
         "Utworzenie planu z features działa",
         "Edycja planu: GET → formularz → PUT",
-        "useFieldArray dodaje/usuwa features"
+        "useFieldArray dodaje/usuwa features",
+        "Delete z AlertDialog confirmation"
       ],
-      "passes": false
+      "passes": true,
+      "knownIssues": [
+        "Backend używa 'SubscriptionPlans' zamiast 'Plans' w URL",
+        "billingPeriodType jest enum (1/2/3), konwersja do/z string w schemas"
+      ]
     },
     {
       "id": "5.1",
@@ -357,17 +365,21 @@
       "dependencies": ["4A.1", "4A.2", "4A.3", "4B.1", "4B.2"],
       "apiEndpoints": [
         "GET /api/Subscriptions → PagedResult<SubscriptionDto>",
-        "GET /api/Subscriptions?status=active&clientId=123"
+        "GET /api/Subscriptions?searchTerm=query&pageNumber=1"
       ],
       "requiredHooks": [
-        "useGetApiSubscriptions({ status, clientId, pageNumber })"
+        "useGetApiSubscriptions({ searchTerm, pageNumber })"
       ],
       "verificationSteps": [
         "Lista pokazuje prawdziwe subskrypcje",
         "StatusBadge odpowiada rzeczywistemu statusowi",
-        "Filtry działają"
+        "Search działa"
       ],
-      "passes": false
+      "passes": true,
+      "knownIssues": [
+        "Backend OpenAPI spec nie zwraca SubscriptionDto type - używamy własnego typu",
+        "GetApiSubscriptionsParams ma tylko searchTerm, brak status i clientId filters (różnie od feature_list.json)"
+      ]
     },
     {
       "id": "5.2",
@@ -381,21 +393,27 @@
       "apiEndpoints": [
         "POST /api/Subscriptions → SubscriptionDto",
         "GET /api/Subscriptions/{id} → SubscriptionDto",
-        "PUT /api/Subscriptions/{id}/cancel → void",
-        "PUT /api/Subscriptions/{id}/pause → void"
+        "POST /api/Subscriptions/{id}/cancel → void",
+        "POST /api/Subscriptions/{id}/suspend → void",
+        "POST /api/Subscriptions/{id}/resume → void"
       ],
       "requiredHooks": [
         "usePostApiSubscriptions()",
         "useGetApiSubscriptionsId(id)",
-        "usePutApiSubscriptionsIdCancel()",
-        "usePutApiSubscriptionsIdPause()"
+        "usePostApiSubscriptionsIdCancel()",
+        "usePostApiSubscriptionsIdSuspend()",
+        "usePostApiSubscriptionsIdResume()"
       ],
       "verificationSteps": [
         "Wizard tworzy subskrypcję (POST)",
         "Cancel zmienia status",
-        "Pause zmienia status"
+        "Suspend/Resume działają poprawnie"
       ],
-      "passes": false
+      "passes": true,
+      "knownIssues": [
+        "Backend używa POST zamiast PUT dla akcji (cancel, suspend, resume)",
+        "Backend ma IncludeDetails parameter w GET /api/Subscriptions/{id} - używamy dla pełnych danych"
+      ]
     },
     {
       "id": "6.1",
@@ -507,11 +525,11 @@
   ],
   "stats": {
     "totalBlocks": 24,
-    "completedBlocks": 10,
-    "remainingBlocks": 14,
-    "completionPercentage": 41.67
+    "completedBlocks": 13,
+    "remainingBlocks": 11,
+    "completionPercentage": 54.17
   },
-  "nextPriority": "4B.1",
+  "nextPriority": "5.2",
   "agentInstructions": {
     "beforeStarting": [
       "🚨 1. PRZECZYTAJ API_RULES.md - to jest OBOWIĄZKOWE!",

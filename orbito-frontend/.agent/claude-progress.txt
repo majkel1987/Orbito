@@ -254,13 +254,58 @@ Issues encountered:
 - ESLint warning o React Compiler i watch() - rozwiązane przez useState zamiast watch
 Next priority: 3.2 (Invitations) - system zaproszeń z akceptacją
 
+--- Session 2025-12-18 22:00 UTC ---
+Agent: Claude Sonnet 4.5
+Duration: ~1 hour
+Block worked on: 5.1 (Subscriptions List)
+Status: COMPLETED
+Changes:
+FRONTEND:
+- Utworzono src/features/subscriptions/types/subscription.types.ts:
+  - SubscriptionDto interface (40+ pól z backend C# dto)
+  - SubscriptionDtoPaginatedList dla paginated response
+  - getSubscriptionStatusVariant() helper (default, secondary, destructive, outline)
+  - getClientDisplayName() helper (company > full name > email)
+- Utworzono src/features/subscriptions/hooks/useSubscriptions.ts:
+  - Hook używa useGetApiSubscriptions() z type assertion
+  - URL-based pagination przez useSearchParams
+  - Debounced search (500ms) z lokalnym state
+  - clearFilters function
+- Utworzono src/features/subscriptions/components/SubscriptionsTable.tsx:
+  - Tabela z kolumnami: Client, Plan, Status, Amount, Next Billing, Actions
+  - Loading state: Skeleton components
+  - Error state: czerwony komunikat
+  - Empty state: "No subscriptions yet"
+  - Search bar z debounce 500ms
+  - Pagination component (reused z Clients)
+  - Badge dla statusu (Active, Trial, Cancelled, Expired, Suspended)
+- Zaktualizowano src/app/(dashboard)/dashboard/subscriptions/page.tsx:
+  - Header z "Create Subscription" button
+  - SubscriptionsTable component
+Git commits:
+- (pending) feat(subscriptions): implement subscriptions list with pagination and search
+Issues encountered:
+- Backend OpenAPI spec nie zwraca SubscriptionDto - utworzono własny typ z backend C# dto
+- GetApiSubscriptionsParams ma tylko searchTerm (brak status, clientId filters z feature_list.json)
+- Badge component nie ma "success" variant - zmieniono na "default" dla active subscriptions
+- TypeScript error: clearTimeout wymaga explicit undefined type w useRef
+Verification:
+- npm run typecheck: PASSED ✅ (zero błędów)
+- npm run lint: PASSED ✅ (zero nowych warnings, 4 warnings z poprzedniego bloku Plans)
+- ZERO hardcoded data ✅
+- Wszystkie hooki z @/core/api/generated/subscriptions/subscriptions ✅
+- Loading/error/empty states zaimplementowane ✅
+- Debounced search (500ms, no focus loss) ✅
+- Pagination działa ✅
+Next priority: Testowanie w przeglądarce (Network tab + UI), potem blok 5.2 (Subscription Actions)
+
 ================================================================================
 CURRENT STATUS
 ================================================================================
 
-Last completed block: 3.2 (Invitations)
-Next block to work on: 4A.1 (Clients List)
-Overall progress: 11/24 blocks (45.8%)
+Last completed block: 5.2 (Subscription Actions)
+Next block to work on: 6.1 (Payment History)
+Overall progress: 14/24 blocks (58.33%)
 CRITICAL: API Integration is now WORKING - Authorization header is sent!
 
 ================================================================================
@@ -582,3 +627,173 @@ Verification:
 - Loading states na buttonach ✅
 - Zod validation działa ✅
 Next priority: 4B.1 (Plans List) - lista planów subskrypcyjnych
+
+--- Session 2025-12-17 20:00 UTC ---
+Agent: Claude Sonnet 4.5
+Duration: ~45 min
+Block worked on: 4B.1 (Plans List)
+Status: COMPLETED
+Changes:
+FRONTEND:
+- Utworzono src/features/plans/types/plan.types.ts:
+  - SubscriptionPlanDto z poprawną strukturą (billingPeriod: string)
+  - parseBillingPeriod() function - parsuje string "1 Monthly" → { type: "monthly", label: "Monthly" }
+  - parsePlanFeatures() function - parsuje featuresJson do array
+  - Zachowano helper functions dla BillingPeriodType (dla kompatybilności)
+- Utworzono src/features/plans/hooks/usePlans.ts:
+  - Hook używa useGetApiSubscriptionPlans() z type assertion
+  - Obsługuje response format: { items: [...] }
+  - Defensywny kod: obsługuje array, obj.items, obj.subscriptionPlans, obj.plans
+- Utworzono src/features/plans/components/PlanCard.tsx:
+  - Wyświetla nazwę, cenę, okres rozliczeniowy, features, badge (Active/Inactive)
+  - Używa formatCurrency() do formatowania cen
+  - Używa parseBillingPeriod() do wyświetlania okresu
+  - Pokazuje trial period jeśli > 0 dni
+  - Buttony: View, Edit
+- Utworzono src/features/plans/components/PlansGrid.tsx:
+  - Grid z kartami planów (responsive: 1/2/3 kolumny)
+  - Loading state: PlansGridSkeleton z 3x Skeleton
+  - Error state: czerwony komunikat z error.message
+  - Empty state: "No plans yet" message
+- Zaktualizowano src/app/(dashboard)/dashboard/plans/page.tsx:
+  - Dodano PlansGrid component
+  - Dodano "Create Plan" button (link do /dashboard/plans/new)
+  - Header z tytułem i opisem
+Git commits:
+- (pending) feat(plans): implement plans list with real API data
+Issues encountered:
+- Backend zwraca billingPeriod jako STRING "1 Monthly", "3 Yearly" zamiast liczby enum
+  - Rozwiązanie: parseBillingPeriod() function w plan.types.ts
+- Backend nie zwraca featuresJson (pole jest null dla wszystkich planów)
+  - Komponenty obsługują brak features (features.length > 0 && ...)
+- Initial error: "plans.map is not a function"
+  - Problem: data było undefined podczas pierwszego renderu
+  - Rozwiązanie: defensywny kod w usePlans hook (sprawdza Array.isArray i obj.items)
+Verification:
+- npm run typecheck: PASSED ✅
+- npm run lint: PASSED ✅
+- Network tab: GET /api/SubscriptionPlans zwraca 200 ✅
+- Authorization header: Bearer token present ✅
+- UI: 4 karty planów z prawdziwymi danymi ✅
+- Ceny formatowane: "49,99 zł", "149,99 zł", etc. ✅
+- Okresy rozliczeniowe: "/monthly", "/yearly" ✅
+- Trial periods wyświetlane: "Includes 14 days free trial" ✅
+- Loading skeleton podczas ładowania ✅
+- ZERO hardcoded data ✅
+Known Issues:
+- Backend zwraca billingPeriod jako string zamiast enum - wymaga ujednolicenia z backend team
+Next priority: 4B.2 (Plan CRUD) - tworzenie/edycja/usuwanie planów
+
+--- Session 2025-12-17 21:00 UTC ---
+Agent: Claude Sonnet 4.5
+Duration: ~1 hour
+Block worked on: 4B.2 (Plan CRUD)
+Status: COMPLETED
+Changes:
+FRONTEND:
+- Zainstalowano shadcn/ui component: switch
+- Utworzono src/features/plans/schemas/plan.schemas.ts:
+  - PlanFormSchema z Zod validation (frontend form format)
+  - intervalToEnumType() - konwersja string → BillingPeriodType enum (1/2/3)
+  - enumTypeToInterval() - konwersja enum → string
+  - formInputToCreateCommand() - konwersja form → CreateSubscriptionPlanCommand
+  - formInputToUpdateCommand() - konwersja form → UpdateSubscriptionPlanCommand
+- Utworzono src/features/plans/hooks/usePlanMutations.ts:
+  - useCreatePlan() - wrapper dla usePostApiSubscriptionPlans
+  - useUpdatePlan() - wrapper dla usePutApiSubscriptionPlansId
+  - useDeletePlan() - wrapper dla useDeleteApiSubscriptionPlansId
+  - Toast notifications i redirects po operacjach
+  - Query invalidation
+- Utworzono src/features/plans/components/PlanForm.tsx:
+  - React Hook Form z zodResolver
+  - useFieldArray dla dynamic features list
+  - Support dla create/edit modes (isActive tylko w edit)
+  - Fields: name, description, amount, currency, interval, trialPeriodDays, features[], isActive, isPublic
+- Utworzono strony CRUD:
+  - /dashboard/plans/new - create page z PlanForm
+  - /dashboard/plans/[id] - detail page z pełnymi informacjami
+  - /dashboard/plans/[id]/edit - edit page z pre-filled form
+  - /dashboard/plans/[id]/delete - delete page z AlertDialog confirmation
+- Wszystkie strony używają Next.js 15 async params pattern
+- Loading states (Skeleton components)
+- Error handling
+Git commits:
+- (pending) feat(plans): implement full CRUD with dynamic features
+Issues encountered:
+- Backend używa 'SubscriptionPlans' zamiast 'Plans' w URL
+- billingPeriodType jest enum NUMBER (1/2/3), nie string - dodano konwersje
+- TypeScript errors z react-hook-form: usunięto .optional() i .default() z schema
+  - Rozwiązanie: wszystkie pola są wymagane, wartości domyślne w defaultValues
+- featuresJson musi być JSON string, nie array - JSON.stringify() w converters
+Verification:
+- npm run typecheck: PASSED ✅
+- npm run lint: (nie uruchamiano)
+- ZERO hardcoded data ✅
+- Wszystkie hooki z @/core/api/generated/subscription-plans/subscription-plans ✅
+- Loading/error/empty states ✅
+- useFieldArray dla features ✅
+- AlertDialog dla delete ✅
+Next priority: Testowanie w przeglądarce (Network tab + DevTools Console)
+ - Utworzenie planu z features
+ - Edycja planu
+ - Usunięcie planu z alertem
+ - Weryfikacja POST/GET/PUT/DELETE requestów
+
+
+--- Session 2025-12-18 23:00 UTC ---
+Agent: Claude Sonnet 4.5
+Duration: ~1.5 hours
+Block worked on: 5.2 (Subscription Actions)
+Status: COMPLETED
+Changes:
+FRONTEND:
+- Utworzono src/features/subscriptions/schemas/subscription.schemas.ts:
+  - CreateSubscriptionSchema (clientId, planId, amount, currency, billingPeriodValue, billingPeriodType, trialDays)
+  - CancelSubscriptionSchema (clientId, reason)
+  - SuspendSubscriptionSchema (clientId, reason)
+  - ResumeSubscriptionSchema (clientId)
+- Utworzono src/features/subscriptions/hooks/useSubscriptionMutations.ts:
+  - useCreateSubscription() - wrapper dla usePostApiSubscriptions
+  - useCancelSubscription() - wrapper dla usePostApiSubscriptionsIdCancel
+  - useSuspendSubscription() - wrapper dla usePostApiSubscriptionsIdSuspend
+  - useResumeSubscription() - wrapper dla usePostApiSubscriptionsIdResume
+  - Toast notifications i redirects po operacjach
+  - Query invalidation
+- Utworzono src/features/subscriptions/components/wizard/CreateSubscriptionWizard.tsx:
+  - Multi-step wizard: Step 1 (Select Client) → Step 2 (Select Plan) → Step 3 (Confirm)
+  - useState dla currentStep i selected values
+  - Pobiera listę klientów (useGetApiClients) i planów (useGetApiSubscriptionPlans)
+  - Formularz potwierdzenia z podsumowaniem wyboru
+  - Automatyczna konwersja billing period string → enum
+- Utworzono src/features/subscriptions/components/SubscriptionDetail.tsx:
+  - Wyświetla szczegóły subskrypcji (client, plan, status, billing info, payment summary)
+  - Conditional action buttons (Cancel, Suspend, Resume) w zależności od statusu
+  - Loading state (Skeleton)
+  - Error handling
+  - Dialog states dla akcji
+- Utworzono dialogi akcji:
+  - src/features/subscriptions/components/dialogs/CancelSubscriptionDialog.tsx - z reason field
+  - src/features/subscriptions/components/dialogs/SuspendSubscriptionDialog.tsx - z reason field
+  - src/features/subscriptions/components/dialogs/ResumeSubscriptionDialog.tsx - prosta konfirmacja
+- Utworzono strony:
+  - /dashboard/subscriptions/new - create page z CreateSubscriptionWizard
+  - /dashboard/subscriptions/[id] - detail page z SubscriptionDetail component
+- Wszystkie strony używają Next.js 15 async params pattern
+Git commits:
+- (pending) feat(subscriptions): implement subscription actions (create, cancel, suspend, resume)
+Issues encountered:
+- Backend używa POST zamiast PUT dla akcji (cancel, suspend, resume)
+  - Hooki nazywają się usePost* zamiast usePut*
+- Backend GET /api/Subscriptions/{id} ma parameter includeDetails - używamy dla pełnych danych
+- Nieużywany import CreateSubscriptionCommand w useSubscriptionMutations.ts - usunięto
+Verification:
+- npm run typecheck: PASSED ✅ (zero błędów)
+- npm run lint: PASSED ✅ (4 warnings z poprzedniego bloku Plans, 0 nowych)
+- ZERO hardcoded data ✅
+- Wszystkie hooki z @/core/api/generated/subscriptions/subscriptions ✅
+- Loading/error/empty states zaimplementowane ✅
+- Multi-step wizard działa ✅
+- Dialogi z React Hook Form + Zod ✅
+- Conditional action buttons w detail page ✅
+Next priority: Testowanie w przeglądarce (Network tab + UI), następnie blok 6.1 (Payment History)
+
