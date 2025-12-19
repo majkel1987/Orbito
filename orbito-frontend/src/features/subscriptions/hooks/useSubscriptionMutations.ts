@@ -17,13 +17,24 @@ export function useCreateSubscription() {
 
   return usePostApiSubscriptions({
     mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["api", "subscriptions"] });
+      onSuccess: async () => {
+        // Invalidate all subscription queries with any parameters
+        await queryClient.invalidateQueries({
+          predicate: (query) =>
+            Array.isArray(query.queryKey) && query.queryKey[0] === "/api/Subscriptions",
+        });
         toast.success("Subscription created successfully!");
         router.push("/dashboard/subscriptions");
       },
-      onError: (error: Error) => {
-        toast.error(`Failed to create subscription: ${error.message}`);
+      onError: (error: Error | any) => {
+        console.error("=== SUBSCRIPTION CREATE ERROR ===");
+        console.error("Error:", error);
+        console.error("Error message:", error.message);
+        console.error("Error response:", error.response);
+        console.error("================================");
+
+        const errorMessage = error.response?.data?.detail || error.response?.data?.title || error.message || "Unknown error";
+        toast.error(`Failed to create subscription: ${errorMessage}`);
       },
     },
   });
@@ -38,10 +49,11 @@ export function useCancelSubscription(subscriptionId: string) {
 
   return usePostApiSubscriptionsIdCancel({
     mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["api", "subscriptions"] });
-        queryClient.invalidateQueries({
-          queryKey: ["api", "subscriptions", subscriptionId],
+      onSuccess: async () => {
+        // Invalidate all subscription queries with any parameters
+        await queryClient.invalidateQueries({
+          predicate: (query) =>
+            Array.isArray(query.queryKey) && query.queryKey[0] === "/api/Subscriptions",
         });
         toast.success("Subscription canceled successfully!");
         router.push("/dashboard/subscriptions");
@@ -61,10 +73,11 @@ export function useSuspendSubscription(subscriptionId: string) {
 
   return usePostApiSubscriptionsIdSuspend({
     mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["api", "subscriptions"] });
-        queryClient.invalidateQueries({
-          queryKey: ["api", "subscriptions", subscriptionId],
+      onSuccess: async () => {
+        // Invalidate all subscription queries with any parameters
+        await queryClient.invalidateQueries({
+          predicate: (query) =>
+            Array.isArray(query.queryKey) && query.queryKey[0] === "/api/Subscriptions",
         });
         toast.success("Subscription suspended successfully!");
       },
@@ -83,10 +96,11 @@ export function useResumeSubscription(subscriptionId: string) {
 
   return usePostApiSubscriptionsIdResume({
     mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["api", "subscriptions"] });
-        queryClient.invalidateQueries({
-          queryKey: ["api", "subscriptions", subscriptionId],
+      onSuccess: async () => {
+        // Invalidate all subscription queries with any parameters
+        await queryClient.invalidateQueries({
+          predicate: (query) =>
+            Array.isArray(query.queryKey) && query.queryKey[0] === "/api/Subscriptions",
         });
         toast.success("Subscription resumed successfully!");
       },
