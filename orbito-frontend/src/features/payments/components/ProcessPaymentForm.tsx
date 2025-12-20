@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/shared/ui/button";
@@ -42,7 +43,17 @@ export function ProcessPaymentForm() {
     pageNumber: 1,
     pageSize: 100,
   }) as {
-    data: { items: Array<{ id: string; planName?: string }> } | undefined;
+    data:
+      | {
+          items: Array<{
+            id: string;
+            planName?: string;
+            amount: number;
+            currency: string;
+            clientId: string;
+          }>;
+        }
+      | undefined;
   };
 
   const { data: clientsData } = useGetApiClients({
@@ -57,6 +68,20 @@ export function ProcessPaymentForm() {
 
   const selectedSubscriptionId = watch("subscriptionId");
   const selectedClientId = watch("clientId");
+
+  // Auto-fill amount, currency, and clientId based on selected subscription
+  useEffect(() => {
+    if (selectedSubscriptionId) {
+      const selectedSubscription = subscriptions.find(
+        (sub) => sub.id === selectedSubscriptionId
+      );
+      if (selectedSubscription) {
+        setValue("amount", selectedSubscription.amount || 0);
+        setValue("currency", selectedSubscription.currency || "PLN");
+        setValue("clientId", selectedSubscription.clientId);
+      }
+    }
+  }, [selectedSubscriptionId, subscriptions, setValue]);
 
   const onSubmit = async (data: ProcessPaymentInput) => {
     await processPaymentMutation.mutateAsync({
@@ -103,6 +128,7 @@ export function ProcessPaymentForm() {
         <Select
           value={selectedClientId}
           onValueChange={(value) => setValue("clientId", value)}
+          disabled={!!selectedSubscriptionId}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select client" />
@@ -115,6 +141,11 @@ export function ProcessPaymentForm() {
             ))}
           </SelectContent>
         </Select>
+        {selectedSubscriptionId && (
+          <p className="text-xs text-gray-500">
+            Auto-filled from selected subscription
+          </p>
+        )}
         {errors.clientId && (
           <p className="text-sm text-red-500">{errors.clientId.message}</p>
         )}
@@ -129,7 +160,13 @@ export function ProcessPaymentForm() {
           step="0.01"
           {...register("amount", { valueAsNumber: true })}
           placeholder="0.00"
+          disabled={!!selectedSubscriptionId}
         />
+        {selectedSubscriptionId && (
+          <p className="text-xs text-gray-500">
+            Auto-filled from subscription plan price
+          </p>
+        )}
         {errors.amount && (
           <p className="text-sm text-red-500">{errors.amount.message}</p>
         )}
@@ -138,7 +175,17 @@ export function ProcessPaymentForm() {
       {/* Currency */}
       <div className="space-y-2">
         <Label htmlFor="currency">Currency *</Label>
-        <Input id="currency" {...register("currency")} placeholder="PLN" />
+        <Input
+          id="currency"
+          {...register("currency")}
+          placeholder="PLN"
+          disabled={!!selectedSubscriptionId}
+        />
+        {selectedSubscriptionId && (
+          <p className="text-xs text-gray-500">
+            Auto-filled from subscription plan price
+          </p>
+        )}
         {errors.currency && (
           <p className="text-sm text-red-500">{errors.currency.message}</p>
         )}

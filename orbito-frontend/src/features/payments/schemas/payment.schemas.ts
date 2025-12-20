@@ -11,10 +11,24 @@ export const processPaymentSchema = z.object({
     .number()
     .positive("Amount must be positive")
     .min(0.01, "Amount must be at least 0.01"),
-  currency: z.string().min(3).max(3),
-  externalTransactionId: z.string().optional(),
-  paymentMethod: z.string().optional(),
-  externalPaymentId: z.string().optional(),
+  currency: z
+    .string()
+    .min(3, "Currency must be 3 characters")
+    .max(3, "Currency must be 3 characters")
+    .regex(/^[A-Z]{3}$/, "Currency must be uppercase (e.g., PLN, USD, EUR)")
+    .transform((val) => val.toUpperCase()),
+  externalTransactionId: z
+    .string()
+    .transform((val) => (val?.trim() === "" ? undefined : val))
+    .optional(),
+  paymentMethod: z
+    .string()
+    .transform((val) => (val?.trim() === "" ? undefined : val))
+    .optional(),
+  externalPaymentId: z
+    .string()
+    .transform((val) => (val?.trim() === "" ? undefined : val))
+    .optional(),
 });
 
 export type ProcessPaymentInput = z.infer<typeof processPaymentSchema>;

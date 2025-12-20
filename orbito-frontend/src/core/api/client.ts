@@ -66,10 +66,28 @@ axiosInstance.interceptors.response.use(
     // Map HTTP errors to user-friendly messages
     if (error.response) {
       const status = error.response.status;
+      const data = error.response.data;
 
-      // For 400 Bad Request and 401 Unauthorized, preserve the original error
+      // For 400 Bad Request, check if response is Result<T> and extract error message
+      if (status === 400) {
+        if (data && typeof data === "object" && "isSuccess" in data) {
+          const result = data as Result<unknown>;
+          if (!result.isSuccess) {
+            const errorMessage =
+              result.error ||
+              (result.errors && result.errors.length > 0
+                ? result.errors.join(", ")
+                : "Bad request");
+            throw new Error(errorMessage);
+          }
+        }
+        // If not Result<T> format, preserve the original error
+        return Promise.reject(error);
+      }
+
+      // For 401 Unauthorized, preserve the original error
       // so that components/handlers can access error details
-      if (status === 400 || status === 401) {
+      if (status === 401) {
         return Promise.reject(error);
       }
 

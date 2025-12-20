@@ -66,9 +66,9 @@ Zaktualizuj wszystkie pliki z planem po zakończeniu tej implenentacji
 Pracujesz nad projektem Orbito Frontend.
 PRZED rozpoczęciem pracy:
 
-🚨 Przeczytaj .agent/API_RULES.md - KRYTYCZNE reguły dotyczące API (OBOWIĄZKOWE!)
-Przeczytaj .agent/feature_list.json - znajdź pierwszy blok z "passes": false
-Przeczytaj .agent/claude-progress.txt - kontekst poprzednich sesji i KNOWN BUGS
+🚨 Przeczytaj C:\Users\Michał\source\repos\Orbito\orbito-frontend\.agent\api-rules.md - KRYTYCZNE reguły dotyczące API (OBOWIĄZKOWE!)
+Przeczytaj C:\Users\Michał\source\repos\Orbito\orbito-frontend\.agent\feature_list.json - znajdź pierwszy blok z "passes": false
+Przeczytaj C:\Users\Michał\source\repos\Orbito\orbito-frontend\.agent\claude-progress.txt - kontekst poprzednich sesji i KNOWN BUGS
 Sprawdź apiEndpoints i requiredHooks dla tego bloku w feature_list.json
 Otwórz Frontend_Prompts.md i znajdź sekcję dla tego bloku (szukaj BLOCK_START: X.X)
 Wykonaj DOKŁADNIE kroki z promptu

@@ -1,13 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Read(//c/Users/Michał/source/repos/orbito-frontend/**)"
+      "Read(//c/Users/Michał/source/repos/orbito-frontend/**)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "MCP_DOCKER"
-  ],
-  "enableAllProjectMcpServers": true
+  ]
 }

@@ -3130,43 +3130,957 @@ Pełny CRUD dla planów z dynamic features list.
 
 <!-- BLOCK_END: 4B.2 -->
 
----
+# BRAKUJĄCE BLOKI DO DODANIA DO Frontend_Prompts.md
 
-## 📊 PODSUMOWANIE BLOKÓW
-
-> **🚀 AKTUALIZACJA 2025-12-10** - Struktura zgodna z feature_list.json v7.0
-
-| Blok | Faza    | Nazwa                        | Status | Dependencies |
-| ---- | ------- | ---------------------------- | ------ | ------------ |
-| 0.1  | FAZA 0  | Inicjalizacja Projektu       | ✅     | -            |
-| 0.2  | FAZA 0  | Stylowanie i UI Kit          | ✅     | 0.1          |
-| 0.3  | FAZA 0  | API Layer Setup              | ✅     | 0.1          |
-| 1.1  | FAZA 1  | NextAuth Configuration       | ✅     | 0.x          |
-| 1.2  | FAZA 1  | Tenant Context               | ✅     | 1.1          |
-| 1.3  | FAZA 1  | Auth Store & Middleware      | ✅     | 1.1          |
-| 1.4  | FAZA 1  | Auth UI Pages                | ✅     | 1.1, 1.3     |
-| 2.1  | FAZA 2  | Layout Components            | ✅     | 1.x          |
-| 2.2  | FAZA 2  | Global State & Feedback      | ✅     | 2.1          |
-| 3.1  | FAZA 3  | **Team List & CRUD**         | ✅     | 2.x          |
-| 3.2  | FAZA 3  | **Invitations**              | ⬜     | 3.1          |
-| 4A.1 | FAZA 4A | **Clients List**             | ⬜     | 3.x          |
-| 4A.2 | FAZA 4A | **Clients Search & Filters** | ⬜     | 4A.1         |
-| 4A.3 | FAZA 4A | **Client CRUD**              | ⬜     | 4A.1         |
-| 4B.1 | FAZA 4B | **Plans List**               | ⬜     | 3.x          |
-| 4B.2 | FAZA 4B | **Plan CRUD**                | ⬜     | 4B.1         |
-| 5.1  | FAZA 5  | Subscriptions List           | ⬜     | 4A.x, 4B.x   |
-| 5.2  | FAZA 5  | Subscription Actions         | ⬜     | 5.1          |
-| 6.1  | FAZA 6  | Payment History              | ⬜     | 5.x          |
-| 6.2  | FAZA 6  | Payment Methods              | ⬜     | 6.1          |
-| 7.1  | FAZA 7  | Analytics Dashboard          | ⬜     | 6.x          |
-| 8.1  | FAZA 8  | Testing                      | ⬜     | 7.1          |
-| 8.2  | FAZA 8  | Polish & Optimization        | ⬜     | 8.1          |
-| 9.1  | FAZA 9  | Client Portal Foundation     | ⬜     | 1.1, 5.x     |
+> **INSTRUKCJA**: Poniższe bloki należy dodać do pliku `Frontend_Prompts.md`
+> bezpośrednio PO bloku `<!-- BLOCK_END: 4B.2 -->` i PRZED sekcją `## 📊 PODSUMOWANIE BLOKÓW`.
 
 ---
 
-_Ostatnia aktualizacja: 2025-12-10_  
-_Wersja: 7.0 (zsynchronizowana z feature_list.json)_
+<!-- BLOCK_START: 5.1 -->
+
+## 🔵 FAZA 5: Subscriptions Management (Tydzień 6)
+
+### 5.1 Subscriptions List
+
+| #     | Zadanie                        | Priorytet | Status | Opis                                          |
+| ----- | ------------------------------ | --------- | ------ | --------------------------------------------- |
+| 5.1.1 | 🔴 Subscriptions page          | Krytyczne | ⬜     | /subscriptions - lista wszystkich subskrypcji |
+| 5.1.2 | 🔴 SubscriptionTable component | Krytyczne | ⬜     | Tabela z client, plan, status, actions        |
+| 5.1.3 | 🔴 SubscriptionStatusBadge     | Krytyczne | ⬜     | Badge z kolorami dla statusów                 |
+| 5.1.4 | 🔴 Subscription filters        | Krytyczne | ⬜     | Filtrowanie po status, plan, date             |
+| 5.1.5 | 🔴 Subscriptions hooks         | Krytyczne | ⬜     | useSubscriptions, useSubscription             |
+
+**Blok 5.1 - Wymagania wejściowe**: Faza 4A (Klienci) i 4B (Plany) - zakończone  
+**Blok 5.1 - Rezultat**: Centralny widok zarządzania subskrypcjami
+
+**📦 DEPENDENCIES:**
+
+- ✅ Blok 4A.x (Clients Management)
+- ✅ Blok 4B.x (Plans Management)
+
+**⬅️ BLOKUJE:**
+
+- Blok 5.2 (Subscription Actions)
+- Blok 6.x (Payments)
+
+**🚨 API ENDPOINTS:**
+
+```
+GET /api/Subscriptions - lista subskrypcji z paginacją i filtrami
+GET /api/Subscriptions/{id} - szczegóły subskrypcji
+```
+
+---
+
+### 🤖 PROMPT
+
+Działaj jako Senior Frontend Developer.
+Rozpoczynamy Fazę 5: **Subscriptions Management**.
+Jest to moduł łączący domeny Klientów i Planów.
+
+### CEL GŁÓWNY:
+
+Stworzyć widok listy subskrypcji (`/subscriptions`), który pozwala monitorować przychody, statusy płatności i cykle rozliczeniowe klientów.
+
+### STRUKTURA PLIKÓW:
+
+- Feature: `src/features/subscriptions/`
+- Komponenty: `src/features/subscriptions/components/`
+- Hooki: `src/features/subscriptions/hooks/`
+- Strona: `src/app/(dashboard)/subscriptions/page.tsx`
+
+### KROKI DO WYKONANIA:
+
+**KROK 1: Subscriptions Hooks (Zadanie 5.1.5)**
+Utwórz `src/features/subscriptions/hooks/useSubscriptions.ts`.
+Wymagania:
+
+- Zaimportuj `useGetSubscriptions` z API.
+- Stwórz wrapper obsługujący parametry: `page`, `pageSize`, `status`, `planId`, `search` (szukanie po nazwisku klienta).
+- Upewnij się, że typ zwracany (DTO) zawiera zagnieżdżone dane o Kliencie (`clientName`, `clientEmail`) i Planie (`planName`, `price`).
+
+**KROK 2: SubscriptionStatusBadge (Zadanie 5.1.3)**
+Utwórz `src/features/subscriptions/components/SubscriptionStatusBadge.tsx`.
+Wymagania:
+
+- Props: `status` (Enum: Active, Canceled, PastDue, Trialing, Paused).
+- UI: Komponent `Badge` z shadcn.
+- Mapowanie kolorów:
+  - Active -> Green (Success)
+  - PastDue -> Red (Destructive)
+  - Canceled -> Gray (Secondary)
+  - Trialing -> Blue (Info)
+  - Paused -> Orange/Yellow (Warning)
+
+**KROK 3: SubscriptionFilters (Zadanie 5.1.4)**
+Utwórz `src/features/subscriptions/components/SubscriptionFilters.tsx`.
+Wymagania:
+
+- Komponent "use client" zintegrowany z URL.
+- Filtry: Status (Multi-select), Plan (Select - dane z `usePlans`).
+
+**KROK 4: SubscriptionTable (Zadanie 5.1.2)**
+Utwórz `src/features/subscriptions/components/SubscriptionTable.tsx`.
+Wymagania:
+
+- Kolumny: Client (Avatar + Name + Email), Plan (Name + Price + Interval), Status (StatusBadge), Next Billing Date, Actions (Dropdown).
+- Wiersz klikalny -> przenosi do `/subscriptions/[id]`.
+
+**KROK 5: Subscriptions Page (Zadanie 5.1.1)**
+Utwórz `src/app/(dashboard)/subscriptions/page.tsx`.
+Wymagania:
+
+- Header: Title "Subscriptions" + Button "Create Subscription".
+- Toolbar: `SubscriptionFilters` + Search.
+- Content: `SubscriptionTable`.
+- Pagination.
+
+### OCZEKIWANY REZULTAT:
+
+Kod dla hooków, komponentu Badge, Tabeli, Filtrów oraz głównej strony subskrypcji.
+
+---
+
+### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
+
+- [ ] useSubscriptions hook importuje z @/core/api/generated
+- [ ] SubscriptionStatusBadge mapuje wszystkie statusy
+- [ ] Filtry działają z URL params
+- [ ] Tabela wyświetla dane z API (nie hardcoded!)
+- [ ] Paginacja działa
+- [ ] Loading states z Skeleton
+- [ ] Network tab: GET /api/Subscriptions z Authorization header
+- [ ] TypeScript: zero błędów
+- [ ] Git commit: `feat(subscriptions): implement subscriptions list with filters`
+
+<!-- BLOCK_END: 5.1 -->
+
+---
+
+<!-- BLOCK_START: 5.2 -->
+
+### 5.2 Subscription Actions
+
+| #     | Zadanie                      | Priorytet | Status | Opis                                     |
+| ----- | ---------------------------- | --------- | ------ | ---------------------------------------- |
+| 5.2.1 | 🔴 Create subscription flow  | Krytyczne | ⬜     | Wizard: wybór client → plan → confirm    |
+| 5.2.2 | 🔴 Subscription detail page  | Krytyczne | ⬜     | /subscriptions/[id]                      |
+| 5.2.3 | 🔴 Cancel subscription       | Krytyczne | ⬜     | Dialog z reason, immediate/end-of-period |
+| 5.2.4 | 🟡 Pause/Resume subscription | Ważne     | ⬜     | Zawieszanie subskrypcji                  |
+| 5.2.5 | 🟡 Change plan               | Ważne     | ⬜     | Upgrade/downgrade planu                  |
+
+**Blok 5.2 - Wymagania wejściowe**: Blok 5.1 (Lista Subskrypcji)  
+**Blok 5.2 - Rezultat**: Możliwość tworzenia, edycji i anulowania subskrypcji
+
+**📦 DEPENDENCIES:**
+
+- ✅ Blok 5.1 (Subscriptions List)
+
+**⬅️ BLOKUJE:**
+
+- Blok 6.x (Payments)
+
+**🚨 API ENDPOINTS:**
+
+```
+POST /api/Subscriptions - tworzenie subskrypcji
+PUT /api/Subscriptions/{id} - aktualizacja
+POST /api/Subscriptions/{id}/cancel - anulowanie
+POST /api/Subscriptions/{id}/pause - pauza
+POST /api/Subscriptions/{id}/resume - wznowienie
+```
+
+---
+
+### 🤖 PROMPT
+
+Działaj jako Senior Frontend Developer / UX Specialist.
+Mamy listę subskrypcji. Teraz implementujemy logikę biznesową zarządzania nimi.
+
+Szczególnym wyzwaniem jest proces tworzenia subskrypcji, który zrealizujemy jako **Multi-step Wizard**.
+
+### CEL GŁÓWNY:
+
+Stworzyć kreator nowej subskrypcji (Wizard), widok szczegółów oraz okna dialogowe do akcji krytycznych (Anulowanie, Zmiana Planu).
+
+### STRUKTURA PLIKÓW:
+
+- Feature: `src/features/subscriptions/`
+- Strony:
+  - `src/app/(dashboard)/subscriptions/new/page.tsx`
+  - `src/app/(dashboard)/subscriptions/[id]/page.tsx`
+
+### KROKI DO WYKONANIA:
+
+**KROK 1: Subscription Action Hooks (Zadania 5.2.3, 5.2.4, 5.2.5)**
+Rozbuduj `src/features/subscriptions/hooks/useSubscriptions.ts`:
+
+1. `useCreateSubscription()`: Przyjmuje { clientId, planId, startDate }.
+2. `useCancelSubscription()`: Przyjmuje { subscriptionId, reason, cancelImmediately }.
+3. `usePauseSubscription()` / `useResumeSubscription()`.
+4. `useChangeSubscriptionPlan()`: Przyjmuje { subscriptionId, newPlanId }.
+
+**KROK 2: Create Subscription Wizard (Zadanie 5.2.1)**
+Utwórz komponenty w `src/features/subscriptions/components/wizard/`:
+
+1. `CreateSubscriptionWizard.tsx`: Główny kontener z stanem (`step`: 1|2|3).
+2. `StepSelectClient.tsx`: Lista klientów z wyszukiwaniem.
+3. `StepSelectPlan.tsx`: Wyświetla plany (użyj `PlanCard` z tryb "selectable").
+4. `StepConfirm.tsx`: Podsumowanie + Date Picker + przycisk "Create Subscription".
+
+**KROK 3: Subscription Detail Page (Zadanie 5.2.2)**
+Utwórz `src/app/(dashboard)/subscriptions/[id]/page.tsx`.
+Wymagania:
+
+- Header: ID Subskrypcji, StatusBadge, Data odnowienia.
+- Sekcja "Customer": Karta z danymi klienta.
+- Sekcja "Current Plan": Karta z danymi planu.
+- Sekcja "Actions": "Change Plan", "Pause Subscription", "Cancel Subscription".
+
+**KROK 4: Cancel Subscription Dialog (Zadanie 5.2.3)**
+Utwórz `src/features/subscriptions/components/CancelSubscriptionDialog.tsx`.
+Wymagania:
+
+- `Reason`: Select (Too expensive, Switching provider, No longer needed, Other).
+- `Mode`: Radio Group ("End of current period" vs "Immediately").
+- Warning alert informujący o konsekwencjach.
+
+**KROK 5: Change Plan Dialog (Zadanie 5.2.5)**
+Utwórz `src/features/subscriptions/components/ChangePlanDialog.tsx`.
+Wymagania:
+
+- Wyświetla listę planów (z wykluczeniem obecnego).
+- Informacja o zmianie ceny (proration).
+- Confirm button: "Update Subscription".
+
+### OCZEKIWANY REZULTAT:
+
+Kod wizarda (wszystkie kroki), strony szczegółów oraz dialogów akcji.
+
+---
+
+### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
+
+- [ ] Wizard: 3 kroki działają (Client → Plan → Confirm)
+- [ ] POST /api/Subscriptions tworzy subskrypcję
+- [ ] Detail page wyświetla dane z GET /api/Subscriptions/{id}
+- [ ] Cancel dialog wysyła POST /api/Subscriptions/{id}/cancel
+- [ ] Change plan dialog działa
+- [ ] Loading states na wszystkich mutacjach
+- [ ] Toast notifications po akcjach
+- [ ] Git commit: `feat(subscriptions): implement subscription wizard and actions`
+
+<!-- BLOCK_END: 5.2 -->
+
+---
+
+<!-- BLOCK_START: 6.1 -->
+
+## 🔵 FAZA 6: Payments (Tydzień 7)
+
+### 6.1 Payment History
+
+| #     | Zadanie                   | Priorytet | Status | Opis                                        |
+| ----- | ------------------------- | --------- | ------ | ------------------------------------------- |
+| 6.1.1 | 🔴 Payments page          | Krytyczne | ⬜     | /payments - historia płatności              |
+| 6.1.2 | 🔴 PaymentTable component | Krytyczne | ⬜     | Tabela z amount, status, date, client       |
+| 6.1.3 | 🔴 PaymentStatusBadge     | Krytyczne | ⬜     | Badge: Completed, Pending, Failed, Refunded |
+| 6.1.4 | 🔴 Payment detail dialog  | Krytyczne | ⬜     | Szczegóły płatności w dialogu               |
+
+**Blok 6.1 - Wymagania wejściowe**: Faza 5 (Subskrypcje)  
+**Blok 6.1 - Rezultat**: Przejrzysta historia transakcji finansowych
+
+**📦 DEPENDENCIES:**
+
+- ✅ Blok 5.x (Subscriptions)
+
+**⬅️ BLOKUJE:**
+
+- Blok 6.2 (Payment Methods)
+- Blok 7.1 (Analytics)
+
+**🚨 API ENDPOINTS:**
+
+```
+GET /api/Payments - lista płatności z paginacją
+GET /api/Payments/{id} - szczegóły płatności
+```
+
+---
+
+### 🤖 PROMPT
+
+Działaj jako Senior Frontend Developer / Fintech Specialist.
+Rozpoczynamy Fazę 6: **Payments**.
+To moduł krytyczny dla zaufania użytkownika – dane finansowe muszą być prezentowane w sposób czytelny i bezbłędny.
+
+### CEL GŁÓWNY:
+
+Stworzyć tabelę historii płatności z możliwością filtrowania po statusie oraz podglądem szczegółów transakcji w oknie modalnym.
+
+### STRUKTURA PLIKÓW:
+
+- Feature: `src/features/payments/`
+- Komponenty: `src/features/payments/components/`
+- Hooki: `src/features/payments/hooks/`
+- Strona: `src/app/(dashboard)/payments/page.tsx`
+
+### KROKI DO WYKONANIA:
+
+**KROK 1: Payment Hooks**
+Utwórz `src/features/payments/hooks/usePayments.ts`.
+Wymagania:
+
+- Zaimportuj `useGetPayments` z API.
+- Stwórz wrapper obsługujący parametry: `page`, `pageSize`, `status`, `clientId`.
+- Zwracane dane: ID, Amount, Currency, Status, Date, Client Info, Payment Method Info.
+
+**KROK 2: PaymentStatusBadge (Zadanie 6.1.3)**
+Utwórz `src/features/payments/components/PaymentStatusBadge.tsx`.
+Wymagania:
+
+- Kolory:
+  - Succeeded / Completed -> Green (Success)
+  - Pending / Processing -> Yellow/Blue
+  - Failed -> Red (Destructive) - MUSI rzucać się w oczy
+  - Refunded -> Gray/Muted
+
+**KROK 3: PaymentDetailDialog (Zadanie 6.1.4)**
+Utwórz `src/features/payments/components/PaymentDetailDialog.tsx`.
+Wymagania:
+
+- Header: Kwota (duża czcionka) + StatusBadge.
+- Content: Transaction ID (z przyciskiem "Copy"), Date & Time, Customer, Payment Method, Invoice ID, Failure Reason (tylko dla Failed).
+
+**KROK 4: PaymentTable (Zadanie 6.1.2)**
+Utwórz `src/features/payments/components/PaymentTable.tsx`.
+Wymagania:
+
+- Kolumny: Amount (formatCurrency), Status, Client, Date, Method, Actions ("View Details").
+- Kliknięcie w "View Details" otwiera `PaymentDetailDialog`.
+
+**KROK 5: Payments Page (Zadanie 6.1.1)**
+Utwórz `src/app/(dashboard)/payments/page.tsx`.
+Wymagania:
+
+- Tytuł "Payment History".
+- Toolbar: Filtr statusu + wyszukiwarka.
+- Content: `PaymentTable`.
+- Pagination.
+
+### WYMAGANIA TECHNICZNE:
+
+- **Formatowanie Walut**: Użyj `formatCurrency(amount, currency)`.
+- **Bezpieczeństwo**: Nie wyświetlaj nigdy pełnych numerów kart, tylko `last4`.
+
+### OCZEKIWANY REZULTAT:
+
+Kod dla hooków, komponentów Badge, Table, Dialog oraz strony głównej płatności.
+
+---
+
+### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
+
+- [ ] usePayments hook importuje z @/core/api/generated
+- [ ] PaymentStatusBadge: Failed status wyróżniony czerwonym
+- [ ] PaymentTable wyświetla dane z API
+- [ ] PaymentDetailDialog pokazuje szczegóły
+- [ ] Kwoty sformatowane przez formatCurrency
+- [ ] Numery kart: tylko last4 (np. \*\*\*\* 4242)
+- [ ] Network tab: GET /api/Payments z Authorization header
+- [ ] Git commit: `feat(payments): implement payment history and detail view`
+
+<!-- BLOCK_END: 6.1 -->
+
+---
+
+<!-- BLOCK_START: 6.2 -->
+
+### 6.2 Payment Methods & Manual Payments
+
+| #     | Zadanie                     | Priorytet | Status | Opis                                      |
+| ----- | --------------------------- | --------- | ------ | ----------------------------------------- |
+| 6.2.1 | 🔴 PaymentMethodForm        | Krytyczne | ⬜     | Formularz dodawania metody płatności      |
+| 6.2.2 | 🔴 PaymentMethodList        | Krytyczne | ⬜     | Lista metod płatności klienta             |
+| 6.2.3 | 🟡 Manual payment recording | Ważne     | ⬜     | Dialog do ręcznego wprowadzania płatności |
+| 6.2.4 | 🟡 Refund dialog            | Ważne     | ⬜     | Dialog zwrotu z reason                    |
+
+**Blok 6.2 - Wymagania wejściowe**: Blok 6.1 (Historia Płatności)  
+**Blok 6.2 - Rezultat**: Możliwość dodawania kart, rejestrowania przelewów i wykonywania zwrotów
+
+**📦 DEPENDENCIES:**
+
+- ✅ Blok 6.1 (Payment History)
+
+**⬅️ BLOKUJE:**
+
+- Blok 7.1 (Analytics)
+
+**⚠️ UWAGA PCI DSS:**
+Nie implementujemy formularzy zbierających numery kart kredytowych. Polegamy na Stripe Elements.
+
+---
+
+### 🤖 PROMPT
+
+Działaj jako Senior Frontend Developer / Fintech Specialist.
+Mamy historię płatności. Teraz dodajemy narzędzia operacyjne.
+
+### UWAGA DOTYCZĄCA BEZPIECZEŃSTWA (PCI DSS):
+
+**NIE implementujemy** formularzy zbierających numery kart kredytowych. Jako SaaS musimy polegać na rozwiązaniach dostawcy (Stripe Elements / Payment Links).
+
+### KROKI DO WYKONANIA:
+
+**KROK 1: Payment Operations Hooks**
+Rozbuduj `usePayments.ts` o mutacje:
+
+1. `useCreatePaymentSession()`: Backend zwróci URL do Stripe Checkout.
+2. `useDeletePaymentMethod()`.
+3. `useRecordManualPayment()`: Dla wpłat poza systemem (gotówka/przelew).
+4. `useRefundPayment()`: Dla zwrotów.
+
+**KROK 2: PaymentMethodList (Zadanie 6.2.2)**
+Utwórz `src/features/payments/components/PaymentMethodList.tsx`.
+Wyświetla zamaskowane dane kart (Brand, \*\*\*\* 4242) pobrane z API.
+Przycisk "Add Payment Method" otwiera dialog z kroku 3.
+
+**KROK 3: AddPaymentMethod Dialog (Zadanie 6.2.1)**
+Utwórz `src/features/payments/components/AddPaymentMethodDialog.tsx`.
+Wymagania:
+
+- **ZAMIAST inputów na numer karty**: Wyświetl informację "You will be redirected to our secure payment provider" i przycisk "Proceed to Secure Checkout".
+- LUB stwórz kontener `<div id="stripe-elements-placeholder" />` na iframe Stripe.
+- **NIE TWÓRZ** inputów `Card Number`, `CVC` w czystym HTML/React!
+
+**KROK 4: ManualPaymentDialog (Zadanie 6.2.3)**
+Utwórz `src/features/payments/components/ManualPaymentDialog.tsx`.
+Wymagania:
+
+- Formularz: Amount, Client (Select), Description, Payment Method (Cash, Bank Transfer, Check).
+- Submit wywołuje `useRecordManualPayment`.
+
+**KROK 5: RefundDialog (Zadanie 6.2.4)**
+Utwórz `src/features/payments/components/RefundDialog.tsx`.
+Wymagania:
+
+- Formularz: Amount (domyślnie pełna kwota), Reason (Select).
+- Warning alert o nieodwracalności.
+- Submit wywołuje `useRefundPayment`.
+
+### OCZEKIWANY REZULTAT:
+
+Bezpieczny interfejs zarządzania płatnościami, gotowy do integracji ze Stripe.
+
+---
+
+### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
+
+- [ ] PaymentMethodList wyświetla karty z API
+- [ ] AddPaymentMethod: ZERO inputów na dane karty!
+- [ ] ManualPaymentDialog wysyła POST do API
+- [ ] RefundDialog wysyła POST do API
+- [ ] Wszystkie mutacje mają loading states
+- [ ] Toast notifications po akcjach
+- [ ] Git commit: `feat(payments): implement payment methods and manual payments`
+
+<!-- BLOCK_END: 6.2 -->
+
+---
+
+<!-- BLOCK_START: 7.1 -->
+
+## 🔵 FAZA 7: Analytics Dashboard (Tydzień 8)
+
+### 7.1 Analytics Dashboard
+
+| #     | Zadanie                   | Priorytet  | Status | Opis                           |
+| ----- | ------------------------- | ---------- | ------ | ------------------------------ |
+| 7.1.1 | 🔴 Analytics page         | Krytyczne  | ⬜     | /analytics - główny dashboard  |
+| 7.1.2 | 🔴 RevenueChart component | Krytyczne  | ⬜     | Wykres przychodów (recharts)   |
+| 7.1.3 | 🔴 StatCards component    | Krytyczne  | ⬜     | Karty MRR, ARR, Churn, Clients |
+| 7.1.4 | 🔴 DateRangePicker        | Krytyczne  | ⬜     | Wybór zakresu dat              |
+| 7.1.5 | 🟡 ClientGrowthChart      | Ważne      | ⬜     | Wykres wzrostu klientów        |
+| 7.1.6 | 🟢 Export to CSV          | Opcjonalne | ⬜     | Eksport danych do CSV          |
+
+**Blok 7.1 - Wymagania wejściowe**: Faza 6 (Payments)  
+**Blok 7.1 - Rezultat**: Dashboard analityczny z wykresami i KPI
+
+**📦 DEPENDENCIES:**
+
+- ✅ Blok 6.x (Payments)
+
+**⬅️ BLOKUJE:**
+
+- Blok 8.1 (Testing)
+
+**🚨 API ENDPOINTS:**
+
+```
+GET /api/Analytics - zagregowane dane z parametrem dateRange
+GET /api/Analytics/revenue - historia przychodów
+GET /api/Analytics/clients - historia klientów
+```
+
+---
+
+### 🤖 PROMPT
+
+Działaj jako Senior Frontend Developer / Data Visualization Specialist.
+Realizujemy Fazę 7: **Analytics Dashboard**.
+To "heart of the SaaS" – miejsce, gdzie właściciel widzi, jak radzi sobie jego biznes.
+
+### CEL GŁÓWNY:
+
+Stworzyć dashboard analityczny z kartami KPI oraz interaktywnymi wykresami pokazującymi przychody i wzrost klientów w czasie.
+
+### STRUKTURA PLIKÓW:
+
+- Feature: `src/features/analytics/`
+- Komponenty: `src/features/analytics/components/`
+- Hooki: `src/features/analytics/hooks/`
+- Strona: `src/app/(dashboard)/analytics/page.tsx`
+
+### KROKI DO WYKONANIA:
+
+**KROK 1: Analytics Hooks**
+Utwórz `src/features/analytics/hooks/useAnalytics.ts`.
+Wymagania:
+
+- Przyjmuje parametr `dateRange` ({ from: Date, to: Date }).
+- Importuje `useGetAnalytics` z API.
+- Zwraca:
+  - `stats`: { mrr, arr, activeSubscriptions, churnRate, totalRevenue }
+  - `revenueHistory`: Tablica { date: string, amount: number }
+  - `clientGrowth`: Tablica { date: string, totalClients: number, newClients: number }
+
+**KROK 2: DateRangePicker (Zadanie 7.1.4)**
+Utwórz `src/features/analytics/components/DateRangePicker.tsx`.
+Wymagania:
+
+- UI: `Popover` + `Calendar` (shadcn/ui).
+- Szybkie presety: "Last 7 days", "Last 30 days", "This Month", "Last Month", "This Year".
+
+**KROK 3: StatCards Component (Zadanie 7.1.3)**
+Utwórz `src/features/analytics/components/StatCards.tsx`.
+Wymagania:
+
+- Grid 4 kart (Metric Cards).
+- Każda karta: Title, Icon (lucide-react), Value (formatCurrency lub liczba), Trend (opcjonalnie: "+12% from last month").
+
+**KROK 4: RevenueChart Component (Zadanie 7.1.2)**
+Utwórz `src/features/analytics/components/RevenueChart.tsx`.
+Wymagania:
+
+- Użyj `recharts`: `<ResponsiveContainer>`, `<AreaChart>`, `<XAxis>`, `<YAxis>`, `<Tooltip>`, `<Area>`.
+- Oś X: Daty (sformatowane krótko, np. "Jan 21").
+- Oś Y: Kwota.
+- Tooltip: formatCurrency.
+- Styl: Gradient pod linią wykresu.
+
+**KROK 5: ClientGrowthChart (Zadanie 7.1.5)**
+Utwórz `src/features/analytics/components/ClientGrowthChart.tsx`.
+Wymagania:
+
+- Użyj `recharts`: `<BarChart>` (słupkowy).
+- Pokazuje liczbę nowych klientów w danym okresie.
+
+**KROK 6: Analytics Page (Zadanie 7.1.1, 7.1.6)**
+Utwórz `src/app/(dashboard)/analytics/page.tsx`.
+Wymagania:
+
+- State: `dateRange` (domyślnie "Last 30 days").
+- Header: Title "Analytics" + `DateRangePicker` + Button "Export Report" (generuje CSV).
+- Content Layout:
+  - Top: `StatCards`
+  - Middle: Dwa wykresy obok siebie: `RevenueChart` i `ClientGrowthChart`
+- Loading State: Szkielety kart i puste kontenery wykresów.
+
+### WYMAGANIA TECHNICZNE:
+
+- **Recharts**: Wykresy muszą być responsywne (width="100%" w ResponsiveContainer).
+- **Formatowanie**: Waluty i daty spójne z resztą aplikacji.
+
+### OCZEKIWANY REZULTAT:
+
+Kod dla hooka analitycznego, komponentu wyboru daty, kart statystyk, dwóch typów wykresów oraz strony spinającej całość.
+
+---
+
+### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
+
+- [ ] useAnalytics hook importuje z @/core/api/generated
+- [ ] DateRangePicker działa z presetami
+- [ ] StatCards wyświetlają dane z API
+- [ ] RevenueChart: AreaChart z gradientem
+- [ ] ClientGrowthChart: BarChart
+- [ ] Wykresy responsywne (ResponsiveContainer)
+- [ ] Export CSV działa
+- [ ] Loading states z Skeleton
+- [ ] Network tab: GET /api/Analytics z Authorization header
+- [ ] Git commit: `feat(analytics): implement analytics dashboard with charts`
+
+<!-- BLOCK_END: 7.1 -->
+
+---
+
+<!-- BLOCK_START: 8.1 -->
+
+## 🔵 FAZA 8: Testing & Polish (Tydzień 9)
+
+### 8.1 Testing
+
+| #     | Zadanie             | Priorytet | Status | Opis                             |
+| ----- | ------------------- | --------- | ------ | -------------------------------- |
+| 8.1.1 | 🔴 Vitest setup     | Krytyczne | ⬜     | Konfiguracja unit tests          |
+| 8.1.2 | 🔴 Component tests  | Krytyczne | ⬜     | Testy dla kluczowych komponentów |
+| 8.1.3 | 🟡 Playwright setup | Ważne     | ⬜     | Konfiguracja E2E tests           |
+| 8.1.4 | 🟡 E2E auth flow    | Ważne     | ⬜     | Test login/register flow         |
+| 8.1.5 | 🟡 E2E client CRUD  | Ważne     | ⬜     | Test tworzenia/edycji klienta    |
+
+**Blok 8.1 - Wymagania wejściowe**: Wszystkie poprzednie fazy (Aplikacja funkcjonalna)  
+**Blok 8.1 - Rezultat**: Skonfigurowane środowisko testowe i pokrycie krytycznych ścieżek
+
+**📦 DEPENDENCIES:**
+
+- ✅ Blok 7.1 (Analytics)
+
+**⬅️ BLOKUJE:**
+
+- Blok 8.2 (Polish & Optimization)
+
+---
+
+### 🤖 PROMPT
+
+Działaj jako Senior QA Engineer / SDET (Software Development Engineer in Test).
+Mamy gotowe MVP aplikacji SaaS (Next.js 15). Teraz musimy wdrożyć automatyczne testy.
+
+Podzielimy prace na dwie warstwy: **Unit/Component Testing** (Vitest) oraz **End-to-End Testing** (Playwright).
+
+### STRUKTURA PLIKÓW:
+
+- Unit Tests: Obok plików źródłowych (np. `Sidebar.test.tsx`) lub w `src/__tests__/`
+- E2E Tests: `e2e/`
+- Config: `vitest.config.ts`, `playwright.config.ts`
+
+### KROKI DO WYKONANIA:
+
+**KROK 1: Vitest Setup (Zadanie 8.1.1)**
+
+1. Zainstaluj: `vitest`, `@testing-library/react`, `@vitejs/plugin-react`, `jsdom`, `@testing-library/dom`.
+2. Utwórz `vitest.config.ts`:
+   - Środowisko `jsdom`.
+   - Aliasy ścieżek (`@/*`) zgodne z `tsconfig.json`.
+   - Setup files: `src/test/setup.ts` (importuj `@testing-library/jest-dom`).
+3. Przygotuj helper `renderWithProviders` (w `src/test/utils.tsx`).
+
+**KROK 2: Component Tests (Zadanie 8.1.2)**
+Napisz przykładowe testy:
+
+1. `src/shared/utils/formatters.test.ts`: Sprawdź `formatCurrency` i `formatDate`.
+2. `src/features/payments/components/PaymentStatusBadge.test.tsx`: Sprawdź renderowanie dla różnych statusów.
+3. `src/shared/components/layout/Sidebar.test.tsx`: Sprawdź renderowanie linków nawigacyjnych.
+
+**KROK 3: Playwright Setup (Zadanie 8.1.3)**
+
+1. Wygeneruj `playwright.config.ts`.
+   - BaseURL: `http://localhost:3000`.
+   - Trace: "on-first-retry".
+2. Dodaj skrypt: `"test:e2e": "playwright test"`.
+
+**KROK 4: E2E Critical Flows (Zadania 8.1.4, 8.1.5)**
+Utwórz `e2e/core-flows.spec.ts`:
+
+1. **Auth Flow**: Wejdź na `/login` → Wpisz dane → Kliknij "Sign In" → Oczekuj `/dashboard`.
+2. **Client CRUD Flow**: Przejdź na `/clients/new` → Wypełnij formularz → Save → Sprawdź listę.
+
+### WYMAGANIA TECHNICZNE:
+
+- **Mocking Next.js**: Mockuj `useRouter`, `usePathname`, `useSearchParams` w testach Vitest.
+- **Izolacja**: Testy E2E używają unikalnych nazw (np. `Client ${Date.now()}`).
+
+### OCZEKIWANY REZULTAT:
+
+Pliki konfiguracyjne, helper `renderWithProviders` oraz kod przykładowych testów.
+
+---
+
+### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
+
+- [ ] vitest.config.ts skonfigurowany
+- [ ] renderWithProviders helper działa
+- [ ] formatters.test.ts przechodzi
+- [ ] PaymentStatusBadge.test.tsx przechodzi
+- [ ] Sidebar.test.tsx przechodzi (z mockami)
+- [ ] playwright.config.ts skonfigurowany
+- [ ] e2e/core-flows.spec.ts: Auth flow przechodzi
+- [ ] e2e/core-flows.spec.ts: Client CRUD przechodzi
+- [ ] npm run test: zero błędów
+- [ ] npm run test:e2e: zero błędów
+- [ ] Git commit: `test(setup): configure Vitest and Playwright with initial tests`
+
+<!-- BLOCK_END: 8.1 -->
+
+---
+
+<!-- BLOCK_START: 8.2 -->
+
+### 8.2 Polish & Optimization
+
+| #     | Zadanie                | Priorytet  | Status | Opis                                    |
+| ----- | ---------------------- | ---------- | ------ | --------------------------------------- |
+| 8.2.1 | 🔴 TypeScript audit    | Krytyczne  | ⬜     | Weryfikacja brak any, pełne typy        |
+| 8.2.2 | 🔴 Accessibility audit | Krytyczne  | ⬜     | Keyboard nav, aria labels, focus states |
+| 8.2.3 | 🟡 Performance audit   | Ważne      | ⬜     | Lighthouse, bundle analysis             |
+| 8.2.4 | 🟡 Mobile responsive   | Ważne      | ⬜     | Testowanie na różnych rozdzielczościach |
+| 8.2.5 | 🟢 Documentation       | Opcjonalne | ⬜     | README, component docs                  |
+
+**Blok 8.2 - Wymagania wejściowe**: Blok 8.1 (Testy)  
+**Blok 8.2 - Rezultat**: Aplikacja gotowa do wdrożenia (Production Ready)
+
+**📦 DEPENDENCIES:**
+
+- ✅ Blok 8.1 (Testing)
+
+**⬅️ BLOKUJE:**
+
+- Blok 9.1 (Client Portal)
+
+---
+
+### 🤖 PROMPT
+
+Działaj jako Senior Frontend Developer / Tech Lead.
+Aplikacja jest funkcjonalna i przetestowana. Przechodzimy do Fazy 8.2: **Polish & Optimization**.
+Naszym celem jest upewnienie się, że kod jest najwyższej jakości, aplikacja jest dostępna (A11y) i zoptymalizowana.
+
+### CEL GŁÓWNY:
+
+Przeprowadzić audyt kodu, skonfigurować narzędzia do analizy wydajności oraz przygotować dokumentację projektu.
+
+### KROKI DO WYKONANIA:
+
+**KROK 1: TypeScript & Linting Strictness (Zadanie 8.2.1)**
+
+1. Sprawdź `tsconfig.json`: `noImplicitAny: true`.
+2. Dodaj skrypt: `"type-check": "tsc --noEmit"`.
+3. Skonfiguruj ESLint:
+   - `@typescript-eslint/no-explicit-any`: "warn" (lub "error")
+   - `@typescript-eslint/no-unused-vars`: "error"
+
+**KROK 2: Accessibility (A11y) Setup (Zadanie 8.2.2)**
+
+1. Zainstaluj `eslint-plugin-jsx-a11y`.
+2. Dodaj do ESLint config.
+3. Stwórz `A11Y_CHECKLIST.md`:
+   - Czy wszystkie formularze mają etykiety (`label`) powiązane z inputami?
+   - Czy można poruszać się po stronie używając tylko klawisza TAB?
+   - Czy focus jest widoczny na elementach aktywnych?
+
+**KROK 3: Performance Optimization (Zadanie 8.2.3)**
+
+1. Zainstaluj `@next/bundle-analyzer`.
+2. Skonfiguruj `next.config.ts` z warunkowym włączaniem analyzera.
+3. Dodaj skrypt: `"analyze": "cross-env ANALYZE=true npm run build"`.
+
+**KROK 4: Documentation (Zadanie 8.2.5)**
+Napisz profesjonalny `README.md`:
+
+- **Title & Badges** (Status, Tech Stack)
+- **Prerequisites** (Node.js version, npm/pnpm)
+- **Getting Started** (install, env setup, run dev)
+- **Project Structure** (Features/Core/Shared)
+- **Scripts** (dev, build, start, lint, test, api:generate)
+- **Environment Variables** (lista kluczy z opisem)
+
+### WYMAGANIA TECHNICZNE:
+
+- **Next.js Config**: Bundle analyzer warunkowo (zmienną środowiskową).
+- **ESLint**: Kompatybilny z "Flat Config" (ESLint 2024/2025 standard).
+
+### OCZEKIWANY REZULTAT:
+
+Zaktualizowane pliki konfiguracyjne, checklista dostępności oraz gotowy README.md.
+
+---
+
+### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
+
+- [ ] npm run type-check: zero błędów
+- [ ] npm run lint: zero warnings (lub tylko akceptowalne)
+- [ ] eslint-plugin-jsx-a11y skonfigurowany
+- [ ] A11Y_CHECKLIST.md utworzony
+- [ ] Bundle analyzer działa z ANALYZE=true
+- [ ] README.md kompletny i profesjonalny
+- [ ] Wszystkie strony responsywne na mobile
+- [ ] Lighthouse score > 80 dla Performance
+- [ ] Git commit: `chore(polish): typescript audit, a11y setup, documentation`
+
+<!-- BLOCK_END: 8.2 -->
+
+---
+
+<!-- BLOCK_START: 9.1 -->
+
+## 🔵 FAZA 9: Client Portal (Tydzień 10)
+
+### 9.1 Client Portal Foundation
+
+| #     | Zadanie             | Priorytet | Status | Opis                                       |
+| ----- | ------------------- | --------- | ------ | ------------------------------------------ |
+| 9.1.1 | 🔴 Portal Layout    | Krytyczne | ⬜     | Osobny layout dla /portal (bez sidebara)   |
+| 9.1.2 | 🔴 Portal Guard     | Krytyczne | ⬜     | Ochrona tras tylko dla roli 'Client'       |
+| 9.1.3 | 🔴 Portal Dashboard | Krytyczne | ⬜     | /portal - podsumowanie subskrypcji         |
+| 9.1.4 | 🟡 Invoices list    | Ważne     | ⬜     | Lista faktur do pobrania (PDF)             |
+| 9.1.5 | 🟡 Billing Settings | Ważne     | ⬜     | Zarządzanie kartą i anulowanie subskrypcji |
+
+**Blok 9.1 - Wymagania wejściowe**: Faza 1 (Auth), Faza 5 (Subskrypcje)  
+**Blok 9.1 - Rezultat**: Działający portal samoobsługowy dla końcowego klienta
+
+**📦 DEPENDENCIES:**
+
+- ✅ Blok 1.x (Auth)
+- ✅ Blok 5.x (Subscriptions)
+- ✅ Blok 8.2 (Polish)
+
+**⬅️ BLOKUJE:**
+
+- Nic (ostatni blok)
+
+**🚨 API ENDPOINTS:**
+
+```
+GET /api/Portal/subscriptions - subskrypcje zalogowanego klienta
+GET /api/Portal/invoices - faktury zalogowanego klienta
+POST /api/Portal/cancel-subscription - anulowanie subskrypcji
+PUT /api/Portal/payment-method - aktualizacja metody płatności
+```
+
+---
+
+### 🤖 PROMPT
+
+Działaj jako Senior Frontend Developer / System Architect.
+Realizujemy Fazę 9: **Client Portal**.
+Jest to osobna część aplikacji przeznaczona dla klientów końcowych (nie dla Providerów). Musi być prosta, przejrzysta i skupiona na samoobsłudze płatności.
+
+### CEL GŁÓWNY:
+
+Stworzyć wydzieloną strefę `/portal` z własnym layoutem, dostępną tylko dla użytkowników o roli `Client`. Użytkownik ma tam widzieć swoje aktywne subskrypcje, historię faktur i móc zarządzać metodami płatności.
+
+### ARCHITEKTURA I LOKALIZACJA PLIKÓW:
+
+Używamy **Route Groups** do separacji layoutów:
+
+- Routing: `src/app/(portal)/layout.tsx`, `src/app/(portal)/portal/page.tsx`
+- Feature: `src/features/client-portal/` (nowy vertical slice)
+- Komponenty: `src/features/client-portal/components/`
+- Hooki: `src/features/client-portal/hooks/`
+
+### KROKI DO WYKONANIA:
+
+**KROK 1: Portal Layout & Guard (Zadania 9.1.1, 9.1.2)**
+
+1. Utwórz `src/features/client-portal/components/PortalGuard.tsx`:
+   - Działa analogicznie do `TenantGuard`, ale wymaga roli `Client`.
+   - Jeśli user ma rolę `Provider` -> przekieruj na `/dashboard`.
+   - Jeśli user nie jest zalogowany -> `/login`.
+2. Utwórz `src/app/(portal)/layout.tsx`:
+   - Prosty layout: Navbar na górze (Logo + UserMenu), wycentrowana zawartość (max-w-4xl).
+   - Brak bocznego Sidebara.
+   - Owiń `children` w `PortalGuard`.
+
+**KROK 2: Portal Hooks (Zadanie 9.1.3)**
+Utwórz `src/features/client-portal/hooks/usePortal.ts`.
+Wymagania:
+
+- `useMySubscriptions()`: Pobiera subskrypcje zalogowanego klienta.
+- `useMyInvoices()`: Pobiera historię faktur.
+- `usePortalAction()`: Wrapper na mutacje (cancelSubscription, updatePaymentMethod).
+
+**KROK 3: Client Dashboard (Zadanie 9.1.3)**
+Utwórz `src/app/(portal)/portal/page.tsx`.
+Wymagania:
+
+- **Sekcja "Current Plan"**: Duża karta z aktywną subskrypcją (Plan Name, Price, Renewal Date, Status Badge).
+- **Action Buttons**:
+  - "Update Payment Method" (otwiera dialog).
+  - "Cancel Subscription" (otwiera dialog potwierdzenia).
+
+**KROK 4: Invoices List (Zadanie 9.1.4)**
+Utwórz `src/features/client-portal/components/ClientInvoicesList.tsx`.
+Wymagania:
+
+- Prosta tabela lub lista: Data, Kwota, Status, "Download PDF" (ikona).
+- Dodaj komponent na dole Dashboardu.
+
+### WYMAGANIA TECHNICZNE:
+
+- **Next.js 15 Async Params**: Propsy `params` i `searchParams` są asynchroniczne (Promise).
+- **Reużywalność**: Importuj komponenty UI (Button, Card, Badge) z `shared/ui`.
+
+### OCZEKIWANY REZULTAT:
+
+Kod layoutu portalu, Guarda, hooków oraz strony głównej portalu z listą faktur.
+
+---
+
+### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
+
+- [ ] PortalGuard chroni /portal/\* dla roli Client
+- [ ] Provider przekierowany na /dashboard
+- [ ] Portal layout bez sidebara, prosty navbar
+- [ ] useMySubscriptions pobiera dane z API
+- [ ] useMyInvoices pobiera dane z API
+- [ ] Current Plan card wyświetla dane z API
+- [ ] Invoices list z akcją Download PDF
+- [ ] Cancel Subscription dialog działa
+- [ ] Update Payment Method dialog działa
+- [ ] Mobile responsive
+- [ ] Network tab: requesty z Authorization header
+- [ ] Git commit: `feat(portal): implement client portal with subscriptions and invoices`
+
+<!-- BLOCK_END: 9.1 -->
+
+---
+
+## 📊 PODSUMOWANIE BLOKÓW (ZAKTUALIZOWANE)
+
+> **🚀 AKTUALIZACJA** - Pełna struktura zgodna z feature_list.json
+
+| Blok | Faza    | Nazwa                        | Status | Dependencies  |
+| ---- | ------- | ---------------------------- | ------ | ------------- |
+| 0.1  | FAZA 0  | Inicjalizacja Projektu       | ✅     | -             |
+| 0.2  | FAZA 0  | Stylowanie i UI Kit          | ✅     | 0.1           |
+| 0.3  | FAZA 0  | API Layer Setup              | ✅     | 0.1           |
+| 1.1  | FAZA 1  | NextAuth Configuration       | ✅     | 0.x           |
+| 1.2  | FAZA 1  | Tenant Context               | ✅     | 1.1           |
+| 1.3  | FAZA 1  | Auth Store & Middleware      | ✅     | 1.1           |
+| 1.4  | FAZA 1  | Auth UI Pages                | ✅     | 1.1, 1.3      |
+| 2.1  | FAZA 2  | Layout Components            | ✅     | 1.x           |
+| 2.2  | FAZA 2  | Global State & Feedback      | ✅     | 2.1           |
+| 3.1  | FAZA 3  | Team List & CRUD             | ✅     | 2.x           |
+| 3.2  | FAZA 3  | Invitations                  | ⬜     | 3.1           |
+| 4A.1 | FAZA 4A | Clients List                 | ⬜     | 3.x           |
+| 4A.2 | FAZA 4A | Clients Search & Filters     | ⬜     | 4A.1          |
+| 4A.3 | FAZA 4A | Client CRUD                  | ⬜     | 4A.1          |
+| 4B.1 | FAZA 4B | Plans List                   | ⬜     | 3.x           |
+| 4B.2 | FAZA 4B | Plan CRUD                    | ⬜     | 4B.1          |
+| 5.1  | FAZA 5  | **Subscriptions List**       | ⬜     | 4A.x, 4B.x    |
+| 5.2  | FAZA 5  | **Subscription Actions**     | ⬜     | 5.1           |
+| 6.1  | FAZA 6  | **Payment History**          | ⬜     | 5.x           |
+| 6.2  | FAZA 6  | **Payment Methods**          | ⬜     | 6.1           |
+| 7.1  | FAZA 7  | **Analytics Dashboard**      | ⬜     | 6.x           |
+| 8.1  | FAZA 8  | **Testing**                  | ⬜     | 7.1           |
+| 8.2  | FAZA 8  | **Polish & Optimization**    | ⬜     | 8.1           |
+| 9.1  | FAZA 9  | **Client Portal Foundation** | ⬜     | 1.1, 5.x, 8.2 |
+
+---
+
+_Ostatnia aktualizacja: 2025-12-19_  
+_Wersja: 8.0 (pełna wersja ze wszystkimi blokami)_
 
 ---
 

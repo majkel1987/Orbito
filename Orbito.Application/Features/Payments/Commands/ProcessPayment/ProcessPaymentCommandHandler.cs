@@ -82,13 +82,18 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
         }
 
         // PaymentMethod validation is handled by ProcessPaymentCommandValidator through ValidationBehaviour
-        // Start transaction with ReadCommitted isolation - unique constraint handles race conditions
-        await _unitOfWork.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
+        // Use execution strategy to handle retries and transactions properly
+        var strategy = _unitOfWork.CreateExecutionStrategy();
 
-        try
+        return await strategy.ExecuteAsync(async () =>
         {
-            // Validate client exists and belongs to tenant
-            var client = await _clientRepository.GetByIdAsync(request.ClientId, cancellationToken);
+            // Start transaction with ReadCommitted isolation - unique constraint handles race conditions
+            await _unitOfWork.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
+
+            try
+            {
+                // Validate client exists and belongs to tenant
+                var client = await _clientRepository.GetByIdAsync(request.ClientId, cancellationToken);
             if (client == null)
             {
                 _logger.LogWarning("Payment processing failed: Client {ClientId} not found", request.ClientId);
@@ -226,6 +231,7 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
             }
             _logger.LogDebug("Payment processing attempt completed in {ElapsedMs}ms", stopwatch.ElapsedMilliseconds);
         }
+        });
     }
 
     private async Task<Result<PaymentDto>> FailWithRollback(Error error, CancellationToken cancellationToken)

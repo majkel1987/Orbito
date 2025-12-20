@@ -11,12 +11,30 @@ export function AuthInterceptorProvider({
 }) {
   const { data: session, status } = useSession();
 
+  // Debug logging
+  useEffect(() => {
+    console.log("=== AUTH INTERCEPTOR DEBUG ===");
+    console.log("Session status:", status);
+    console.log("Session data:", session);
+    console.log("Access token:", session?.accessToken);
+    console.log("==============================");
+  }, [session, status]);
+
   useEffect(() => {
     const interceptorId = axiosInstance.interceptors.request.use(
       (config) => {
+        console.log("=== REQUEST INTERCEPTOR ===");
+        console.log("Session accessToken:", session?.accessToken);
+        console.log("Request URL:", config.url);
+
         if (session?.accessToken) {
           config.headers.Authorization = `Bearer ${session.accessToken}`;
+          console.log("✅ Authorization header added");
+        } else {
+          console.log("❌ No accessToken in session!");
         }
+        console.log("==========================");
+
         return config;
       },
       (error) => {

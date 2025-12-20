@@ -74,22 +74,39 @@ export function CreateSubscriptionWizard() {
 
     const billingPeriod = parseBillingPeriod(selectedPlan.billingPeriod);
 
-    // Map billing period type to enum number
-    let billingPeriodTypeValue = 1; // default monthly
-    if (billingPeriod.type === "monthly") billingPeriodTypeValue = 1;
-    else if (billingPeriod.type === "quarterly") billingPeriodTypeValue = 2;
-    else if (billingPeriod.type === "yearly") billingPeriodTypeValue = 3;
-    else if (billingPeriod.type === "lifetime") billingPeriodTypeValue = 4;
+    // Map billing period type to backend string format
+    // Backend accepts: "Daily", "Weekly", "Monthly", "Yearly" (case-insensitive)
+    let billingPeriodTypeString = "Monthly"; // default
+    if (billingPeriod.type === "daily") billingPeriodTypeString = "Daily";
+    else if (billingPeriod.type === "weekly") billingPeriodTypeString = "Weekly";
+    else if (billingPeriod.type === "monthly") billingPeriodTypeString = "Monthly";
+    else if (billingPeriod.type === "quarterly") billingPeriodTypeString = "Monthly"; // Quarterly → Monthly (backend doesn't support Quarterly)
+    else if (billingPeriod.type === "yearly") billingPeriodTypeString = "Yearly";
+    else if (billingPeriod.type === "lifetime") billingPeriodTypeString = "Yearly"; // Lifetime → Yearly
+
+    // Ensure currency is 3-character code (PLN, USD, EUR, etc.)
+    let currencyCode = selectedPlan.currency;
+    if (currencyCode === "zł" || currencyCode === "zl") {
+      currencyCode = "PLN";
+    } else if (currencyCode.length !== 3) {
+      // Default to PLN if invalid
+      currencyCode = "PLN";
+    }
 
     const command: CreateSubscriptionCommand = {
       clientId: selectedClient.id,
       planId: selectedPlan.id,
       amount: selectedPlan.amount,
-      currency: selectedPlan.currency,
+      currency: currencyCode,
       billingPeriodValue: parseInt(selectedPlan.billingPeriod.split(" ")[0]) || 1,
-      billingPeriodType: billingPeriodTypeValue.toString(),
+      billingPeriodType: billingPeriodTypeString,
       trialDays: selectedPlan.trialPeriodDays,
     };
+
+    console.log("=== CREATE SUBSCRIPTION DEBUG ===");
+    console.log("Selected Plan:", selectedPlan);
+    console.log("Command to send:", command);
+    console.log("================================");
 
     await createMutation.mutateAsync({ data: command });
   };
