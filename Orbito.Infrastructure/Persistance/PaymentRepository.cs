@@ -149,6 +149,87 @@ namespace Orbito.Infrastructure.Persistance
                 .ToListAsync(cancellationToken);
         }
 
+        public async Task<IEnumerable<Payment>> GetAllForTenantAsync(
+            TenantId tenantId,
+            int pageNumber = 1,
+            int pageSize = 10,
+            string? searchTerm = null,
+            PaymentStatus? status = null,
+            Guid? clientId = null,
+            CancellationToken cancellationToken = default)
+        {
+            (pageNumber, pageSize) = ValidatePagination(pageNumber, pageSize);
+
+            var query = _context.Payments
+                .AsNoTracking()
+                .Include(p => p.Subscription)
+                .Include(p => p.Client)
+                .Where(p => p.TenantId == tenantId);
+
+            // Apply filters
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                var searchLower = searchTerm.ToLower();
+                query = query.Where(p =>
+                    (p.ExternalTransactionId != null && p.ExternalTransactionId.ToLower().Contains(searchLower)) ||
+                    (p.ExternalPaymentId != null && p.ExternalPaymentId.ToLower().Contains(searchLower)) ||
+                    (p.Client != null && p.Client.FullName != null && p.Client.FullName.ToLower().Contains(searchLower)) ||
+                    (p.Client != null && p.Client.CompanyName != null && p.Client.CompanyName.ToLower().Contains(searchLower)));
+            }
+
+            if (status.HasValue)
+            {
+                query = query.Where(p => p.Status == status.Value);
+            }
+
+            if (clientId.HasValue)
+            {
+                query = query.Where(p => p.ClientId == clientId.Value);
+            }
+
+            return await query
+                .OrderByDescending(p => p.CreatedAt)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<int> GetCountForTenantAsync(
+            TenantId tenantId,
+            string? searchTerm = null,
+            PaymentStatus? status = null,
+            Guid? clientId = null,
+            CancellationToken cancellationToken = default)
+        {
+            var query = _context.Payments
+                .AsNoTracking()
+                .Include(p => p.Client)
+                .Where(p => p.TenantId == tenantId);
+
+            // Apply same filters as GetAllForTenantAsync
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                var searchLower = searchTerm.ToLower();
+                query = query.Where(p =>
+                    (p.ExternalTransactionId != null && p.ExternalTransactionId.ToLower().Contains(searchLower)) ||
+                    (p.ExternalPaymentId != null && p.ExternalPaymentId.ToLower().Contains(searchLower)) ||
+                    (p.Client != null && p.Client.FullName != null && p.Client.FullName.ToLower().Contains(searchLower)) ||
+                    (p.Client != null && p.Client.CompanyName != null && p.Client.CompanyName.ToLower().Contains(searchLower)));
+            }
+
+            if (status.HasValue)
+            {
+                query = query.Where(p => p.Status == status.Value);
+            }
+
+            if (clientId.HasValue)
+            {
+                query = query.Where(p => p.ClientId == clientId.Value);
+            }
+
+            return await query.CountAsync(cancellationToken);
+        }
+
         [Obsolete("SECURITY RISK: This method returns payments from ALL clients without verification. Use client-specific methods instead.")]
         public async Task<IEnumerable<Payment>> GetByStatusAsync(PaymentStatus status, int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken = default)
         {

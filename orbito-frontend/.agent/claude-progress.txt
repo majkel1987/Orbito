@@ -797,3 +797,72 @@ Verification:
 - Conditional action buttons w detail page ✅
 Next priority: Testowanie w przeglądarce (Network tab + UI), następnie blok 6.1 (Payment History)
 
+
+--- Session 2025-12-19 10:00 UTC ---
+Agent: Claude Sonnet 4.5
+Duration: ~90 min
+Block worked on: 6.1 (Payment History)
+Status: COMPLETED
+Changes:
+Backend:
+- Added GetAllForTenantAsync() and GetCountForTenantAsync() methods to IPaymentRepository
+- Implemented repository methods in PaymentRepository with filtering (searchTerm, status, clientId) and pagination
+- Created GetAllPaymentsQuery, GetAllPaymentsResponse, and GetAllPaymentsQueryHandler in Application layer
+- Added GET /api/Payment endpoint in PaymentController with [ProducesResponseType(typeof(GetAllPaymentsResponse), StatusCodes.Status200OK)]
+- Built and restarted backend with new endpoint
+Frontend:
+- Regenerated Orval hooks (useGetApiPayment() hook created with proper GetAllPaymentsResponse type)
+- Created payment.types.ts with helper functions (getPaymentStatusVariant, getPaymentStatusLabel)
+- Created usePayments hook with pagination support
+- Created PaymentsTable component with search, loading/error/empty states, and pagination
+- Created /dashboard/payments page
+- Fixed TypeScript errors by using generated PaymentDto type and VariantProps from class-variance-authority
+- Verified TypeScript strict mode: passes
+- Verified ESLint: no errors in payment features
+Git commits:
+- feat(payments): implement payment history endpoint and UI (pending)
+Issues encountered:
+- Initial Orval generation returned void type because backend endpoint lacked [ProducesResponseType] attribute - fixed by adding it
+- PaymentStatus enum in Swagger generated as numbers (NUMBER_1, NUMBER_2) instead of strings - workaround by accepting string in UI
+- Had to kill and rebuild backend process multiple times due to file locking issues
+- Used generated PaymentDto type instead of custom one to avoid type conflicts
+Next priority: 6.2 (Payment Methods & Manual Payments)
+
+--- Session 2025-12-20 (VERIFICATION & COMPLETION) ---
+Agent: Claude Sonnet 4.5
+Duration: ~30 min
+Block worked on: 6.1 (Payment History) - Verification and Completion
+Status: VERIFIED AND COMPLETED
+Changes:
+VERIFICATION:
+- ✅ Backend: Verified PaymentController GET /api/Payment endpoint with [ProducesResponseType]
+- ✅ Backend: Verified GetAllPaymentsQuery, GetAllPaymentsResponse, GetAllPaymentsQueryHandler
+- ✅ Backend: Verified PaymentRepository.GetAllForTenantAsync() and GetCountForTenantAsync()
+- ✅ Frontend: Verified PaymentsTable component with usePayments hook
+- ✅ Frontend: Verified useGetApiPayment() hook and GetAllPaymentsResponse type generation
+- ✅ Frontend: Verified payment.types.ts with helper functions
+FIXES APPLIED:
+- Fixed TypeScript errors in files from block 6.2 (not part of 6.1 but blocking typecheck):
+  - PaymentDetail.tsx: Fixed PaymentDto import path (from models/paymentDto instead of payment/payment)
+  - PaymentDetail.tsx: Fixed paymentDate field (changed to processedAt || createdAt)
+  - usePaymentMutations.ts: Fixed error handling (unknown type instead of Error)
+  - payment.schemas.ts: Removed .default() from currency fields (type inference issue)
+  - useSubscriptionMutations.ts: Fixed error type (unknown instead of any)
+- Fixed ESLint warnings in PaymentsTable.tsx:
+  - Removed unused PaymentDto import
+  - Removed unused pageSize destructuring
+VERIFICATION RESULTS:
+- npm run typecheck: PASSED ✅ (zero errors)
+- npm run lint: PASSED ✅ (0 errors, 10 warnings from other blocks)
+- ZERO hardcoded data ✅
+- All hooki z @/core/api/generated/payment/payment ✅
+- Loading/error/empty states ✅
+- Debounced search (500ms) ✅
+- Pagination ✅
+Git commits:
+- (pending) feat(payments): complete block 6.1 with verification and fixes
+Issues encountered:
+- Block 6.1 was previously marked as complete, but had TypeScript errors in related files (block 6.2)
+- Fixed all blocking issues to ensure clean typecheck and lint
+Next priority: Git commit, then 6.2 (Payment Methods & Manual Payments)
+

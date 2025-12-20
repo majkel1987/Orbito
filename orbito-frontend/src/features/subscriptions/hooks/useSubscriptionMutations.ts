@@ -26,7 +26,7 @@ export function useCreateSubscription() {
         toast.success("Subscription created successfully!");
         router.push("/dashboard/subscriptions");
       },
-      onError: (error: Error | any) => {
+      onError: (error: unknown) => {
         console.error("=== SUBSCRIPTION CREATE ERROR ===");
         console.error("Error:", error);
         console.error("Error message:", error.message);

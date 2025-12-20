@@ -9,6 +9,7 @@ using Orbito.Application.Features.Payments.Commands.SavePaymentMethod;
 using Orbito.Application.Features.Payments.Queries.GetPaymentById;
 using Orbito.Application.Features.Payments.Queries.GetPaymentsBySubscription;
 using Orbito.Application.Features.Payments.Queries.GetPaymentMethodsByClient;
+using Orbito.Application.Features.Payments.Queries.GetAllPayments;
 using Orbito.Domain.Enums;
 
 namespace Orbito.API.Controllers
@@ -19,6 +20,31 @@ namespace Orbito.API.Controllers
         public PaymentController(IMediator mediator, ILogger<PaymentController> logger)
             : base(mediator, logger)
         {
+        }
+
+        /// <summary>
+        /// Pobiera listę wszystkich płatności dla tenanta z paginacją i filtrami
+        /// </summary>
+        /// <param name="pageNumber">Numer strony (domyślnie 1)</param>
+        /// <param name="pageSize">Rozmiar strony (domyślnie 10)</param>
+        /// <param name="searchTerm">Wyszukiwana fraza (opcjonalnie)</param>
+        /// <param name="status">Filtruj po statusie (opcjonalnie)</param>
+        /// <param name="clientId">Filtruj po kliencie (opcjonalnie)</param>
+        /// <returns>Lista płatności z paginacją</returns>
+        [HttpGet]
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        [ProducesResponseType(typeof(GetAllPaymentsResponse), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAllPayments(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? searchTerm = null,
+            [FromQuery] PaymentStatus? status = null,
+            [FromQuery] Guid? clientId = null)
+        {
+            var query = new GetAllPaymentsQuery(pageNumber, pageSize, searchTerm, status, clientId);
+            var result = await Mediator.Send(query);
+
+            return HandleResult(result);
         }
 
         /// <summary>

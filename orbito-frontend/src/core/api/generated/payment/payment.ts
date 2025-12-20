@@ -26,7 +26,9 @@ import type {
 import type {
   CreateStripeCustomerCommand,
   CreateStripeCustomerResult,
+  GetAllPaymentsResponse,
   GetApiPaymentIdParams,
+  GetApiPaymentParams,
   GetApiPaymentPaymentMethodsClientClientIdParams,
   GetApiPaymentSubscriptionSubscriptionIdParams,
   GetPaymentMethodsByClientResult,
@@ -44,6 +46,98 @@ import { customInstance } from '../../client';
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+
+
+/**
+ * @summary Pobiera listę wszystkich płatności dla tenanta z paginacją i filtrami
+ */
+export const getApiPayment = (
+    params?: GetApiPaymentParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<GetAllPaymentsResponse>(
+      {url: `/api/Payment`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
+  
+
+
+
+export const getGetApiPaymentQueryKey = (params?: GetApiPaymentParams,) => {
+    return [
+    `/api/Payment`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getGetApiPaymentQueryOptions = <TData = Awaited<ReturnType<typeof getApiPayment>>, TError = unknown>(params?: GetApiPaymentParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getApiPayment>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetApiPaymentQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getApiPayment>>> = ({ signal }) => getApiPayment(params, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getApiPayment>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetApiPaymentQueryResult = NonNullable<Awaited<ReturnType<typeof getApiPayment>>>
+export type GetApiPaymentQueryError = unknown
+
+
+export function useGetApiPayment<TData = Awaited<ReturnType<typeof getApiPayment>>, TError = unknown>(
+ params: undefined |  GetApiPaymentParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getApiPayment>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getApiPayment>>,
+          TError,
+          Awaited<ReturnType<typeof getApiPayment>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetApiPayment<TData = Awaited<ReturnType<typeof getApiPayment>>, TError = unknown>(
+ params?: GetApiPaymentParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getApiPayment>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getApiPayment>>,
+          TError,
+          Awaited<ReturnType<typeof getApiPayment>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetApiPayment<TData = Awaited<ReturnType<typeof getApiPayment>>, TError = unknown>(
+ params?: GetApiPaymentParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getApiPayment>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Pobiera listę wszystkich płatności dla tenanta z paginacją i filtrami
+ */
+
+export function useGetApiPayment<TData = Awaited<ReturnType<typeof getApiPayment>>, TError = unknown>(
+ params?: GetApiPaymentParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getApiPayment>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetApiPaymentQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
 
 
 

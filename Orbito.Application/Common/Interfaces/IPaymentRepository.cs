@@ -25,6 +25,22 @@ namespace Orbito.Application.Common.Interfaces
         Task<Payment?> GetByExternalTransactionIdForClientAsync(string externalTransactionId, Guid clientId, CancellationToken cancellationToken = default);
         Task<IEnumerable<Payment>> GetBySubscriptionIdAsync(Guid subscriptionId, int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken = default);
         Task<IEnumerable<Payment>> GetByClientIdAsync(Guid clientId, int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken = default);
+
+        // SECURE: Provider dashboard - list all payments for tenant with filtering
+        Task<IEnumerable<Payment>> GetAllForTenantAsync(
+            TenantId tenantId,
+            int pageNumber = 1,
+            int pageSize = 10,
+            string? searchTerm = null,
+            PaymentStatus? status = null,
+            Guid? clientId = null,
+            CancellationToken cancellationToken = default);
+        Task<int> GetCountForTenantAsync(
+            TenantId tenantId,
+            string? searchTerm = null,
+            PaymentStatus? status = null,
+            Guid? clientId = null,
+            CancellationToken cancellationToken = default);
         // ADMIN-ONLY: These methods return data across ALL tenants - use with extreme caution
         [Obsolete("ADMIN-ONLY: Returns pending payments from ALL clients. Use client-specific methods for regular operations.")]
         Task<IEnumerable<Payment>> GetPendingPaymentsAsync(CancellationToken cancellationToken = default);
