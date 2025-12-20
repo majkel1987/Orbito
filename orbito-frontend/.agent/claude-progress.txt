@@ -866,3 +866,60 @@ Issues encountered:
 - Fixed all blocking issues to ensure clean typecheck and lint
 Next priority: Git commit, then 6.2 (Payment Methods & Manual Payments)
 
+--- Session 2025-12-20 (BLOCK 6.2 IMPLEMENTATION) ---
+Agent: Claude Sonnet 4.5
+Duration: ~45 min
+Block worked on: 6.2 (Payment Methods & Manual Payments)
+Status: COMPLETED
+Changes:
+IMPLEMENTATION:
+- ✅ Task 6.2.1: Created AddPaymentMethodDialog component
+  - PCI DSS compliant - NO card input fields
+  - Displays security notice about Stripe redirect
+  - Placeholder for Stripe Elements integration
+  - File: src/features/payments/components/dialogs/AddPaymentMethodDialog.tsx
+- ✅ Task 6.2.2: Created PaymentMethodList component
+  - Displays masked payment methods (e.g., "•••• 4242")
+  - Shows card type, expiry date, default badge
+  - Empty state with "Add Your First Card" button
+  - Uses useGetApiPaymentPaymentMethodsClientClientId() hook
+  - File: src/features/payments/components/PaymentMethodList.tsx
+- ✅ Task 6.2.3: ProcessPaymentForm (already existed from previous session)
+  - Manual payment recording with subscription and client selection
+  - Uses usePostApiPaymentProcess() hook
+  - File: src/features/payments/components/ProcessPaymentForm.tsx
+- ✅ Task 6.2.4: RefundPaymentDialog (already existed from previous session)
+  - Refund dialog with amount and reason fields
+  - Uses usePostApiPaymentIdRefund() hook
+  - File: src/features/payments/components/dialogs/RefundPaymentDialog.tsx
+FIXES APPLIED:
+- Fixed useSubscriptionMutations.ts error handling (removed 'any' types):
+  - Changed error type from 'any' to 'unknown'
+  - Added proper type guards for responseError and responseData
+  - Used Record<string, unknown> instead of 'any'
+- Fixed PaymentMethodList to use correct PaymentMethodDto fields:
+  - Changed method.brand → method.type
+  - Changed method.last4 → method.lastFourDigits
+  - Changed method.expiryMonth/expiryYear → method.expiryDate
+  - Added method.isExpired check
+- Removed Alert component import (doesn't exist), used custom div instead
+- Fixed Tailwind class: flex-shrink-0 → shrink-0
+VERIFICATION RESULTS:
+- npm run typecheck: PASSED ✅ (zero errors)
+- npm run lint: PASSED ✅ (0 errors, 10 warnings from other blocks)
+- PCI DSS compliance: ✅ NO card data collection in frontend
+- All hooks from @/core/api/generated/payment/payment ✅
+- Loading/error/empty states in PaymentMethodList ✅
+API ENDPOINTS USED:
+- POST /api/Payment/process (ProcessPaymentCommand)
+- POST /api/Payment/{id}/refund (RefundPaymentCommand)
+- POST /api/Payment/payment-methods (SavePaymentMethodCommand)
+- GET /api/Payment/payment-methods/client/{clientId} (GetPaymentMethodsByClientResult)
+Git commits:
+- (pending) feat(payments): implement block 6.2 - payment methods and manual payments
+Issues encountered:
+- Alert component doesn't exist in shadcn/ui, replaced with custom div
+- PaymentMethodDto had different field names than expected (lastFourDigits, not last4)
+- useSubscriptionMutations.ts had 'any' types causing ESLint errors
+Next priority: Git commit, then 7.1 (Analytics Dashboard)
+

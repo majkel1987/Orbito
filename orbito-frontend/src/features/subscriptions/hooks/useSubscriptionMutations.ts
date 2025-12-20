@@ -29,12 +29,23 @@ export function useCreateSubscription() {
       onError: (error: unknown) => {
         console.error("=== SUBSCRIPTION CREATE ERROR ===");
         console.error("Error:", error);
-        console.error("Error message:", error.message);
-        console.error("Error response:", error.response);
+
+        // Type guard for Error objects
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+        // Type guard for response errors (Axios-like structure)
+        const responseError = error && typeof error === 'object' && 'response' in error ? error.response : null;
+        const responseData = responseError && typeof responseError === 'object' && 'data' in responseError
+          ? (responseError.data as Record<string, unknown>)
+          : null;
+        const detailMessage = responseData
+          ? (responseData.detail as string) || (responseData.title as string) || errorMessage
+          : errorMessage;
+
+        console.error("Error message:", errorMessage);
         console.error("================================");
 
-        const errorMessage = error.response?.data?.detail || error.response?.data?.title || error.message || "Unknown error";
-        toast.error(`Failed to create subscription: ${errorMessage}`);
+        toast.error(`Failed to create subscription: ${detailMessage}`);
       },
     },
   });

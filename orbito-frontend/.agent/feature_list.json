@@ -425,15 +425,26 @@
       "tasks": ["6.1.1", "6.1.2", "6.1.3", "6.1.4"],
       "dependencies": ["5.1", "5.2"],
       "apiEndpoints": [
-        "GET /api/Payments → PagedResult<PaymentDto>",
-        "GET /api/Payments/{id} → PaymentDto"
+        "GET /api/Payment → GetAllPaymentsResponse",
+        "GET /api/Payment/{id} → PaymentDto"
       ],
-      "requiredHooks": ["useGetApiPayments()", "useGetApiPaymentsId(id)"],
+      "requiredHooks": ["useGetApiPayment()", "useGetApiPaymentId(id)"],
       "verificationSteps": [
         "Lista płatności z prawdziwymi danymi",
         "Kwoty formatowane przez formatCurrency()"
       ],
-      "passes": false
+      "passes": true,
+      "completionDate": "2025-12-19",
+      "notes": [
+        "Backend endpoint created: GET /api/Payment with [ProducesResponseType(typeof(GetAllPaymentsResponse), StatusCodes.Status200OK)]",
+        "Repository methods added: GetAllForTenantAsync() and GetCountForTenantAsync()",
+        "Query and Handler created: GetAllPaymentsQuery + GetAllPaymentsQueryHandler",
+        "Frontend hook: useGetApiPayment() properly typed",
+        "PaymentsTable component created with search and pagination",
+        "Page created at /dashboard/payments",
+        "TypeScript strict mode: passes",
+        "ESLint: no errors in payment features"
+      ]
     },
     {
       "id": "6.2",
@@ -445,14 +456,34 @@
       "tasks": ["6.2.1", "6.2.2", "6.2.3", "6.2.4"],
       "dependencies": ["6.1"],
       "apiEndpoints": [
-        "POST /api/Payments/manual → PaymentDto",
-        "POST /api/Payments/{id}/refund → void"
+        "POST /api/Payment/process → PaymentDto",
+        "POST /api/Payment/{id}/refund → void",
+        "POST /api/Payment/payment-methods → SavePaymentMethodResult",
+        "GET /api/Payment/payment-methods/client/{clientId} → GetPaymentMethodsByClientResult"
+      ],
+      "requiredHooks": [
+        "usePostApiPaymentProcess()",
+        "usePostApiPaymentIdRefund()",
+        "usePostApiPaymentPaymentMethods()",
+        "useGetApiPaymentPaymentMethodsClientClientId()"
       ],
       "verificationSteps": [
         "Manual payment wywołuje POST",
-        "Refund wywołuje POST"
+        "Refund wywołuje POST",
+        "Payment methods list displays data from API",
+        "AddPaymentMethodDialog is PCI DSS compliant (no card inputs)"
       ],
-      "passes": false
+      "passes": true,
+      "completionDate": "2025-12-20",
+      "notes": [
+        "ProcessPaymentForm created with subscription and client dropdowns",
+        "RefundPaymentDialog created with amount and reason fields",
+        "PaymentMethodList created displaying masked card data",
+        "AddPaymentMethodDialog created (PCI DSS compliant - Stripe redirect)",
+        "All components use Orval-generated hooks",
+        "TypeScript strict mode: passes",
+        "ESLint: no errors in payment features"
+      ]
     },
     {
       "id": "7.1",
