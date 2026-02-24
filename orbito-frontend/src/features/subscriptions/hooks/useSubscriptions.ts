@@ -19,7 +19,7 @@ export function useSubscriptions() {
   // Fetch subscriptions with type assertion (Orval bug: returns customInstance<void>)
   const { data, isLoading, error } = useGetApiSubscriptions({
     pageNumber: currentPage,
-    pageSize: 10,
+    pageSize: 50,
     searchTerm: searchTerm || undefined,
   }) as {
     data: SubscriptionDtoPaginatedList | undefined;

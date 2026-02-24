@@ -531,7 +531,7 @@
         "npm run test przechodzi",
         "E2E testy logowania działają"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "8.2",
@@ -568,11 +568,11 @@
   ],
   "stats": {
     "totalBlocks": 24,
-    "completedBlocks": 18,
-    "remainingBlocks": 6,
-    "completionPercentage": 75
+    "completedBlocks": 19,
+    "remainingBlocks": 5,
+    "completionPercentage": 79
   },
-  "nextPriority": "8.1",
+  "nextPriority": "8.2",
   "agentInstructions": {
     "beforeStarting": [
       "🚨 1. PRZECZYTAJ API_RULES.md - to jest OBOWIĄZKOWE!",
