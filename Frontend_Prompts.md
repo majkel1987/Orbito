@@ -1470,11 +1470,11 @@ Lista członków zespołu z danymi z API i możliwością usuwania.
 
 | #     | Zadanie                     | Priorytet | Status | Opis                                          |
 | ----- | --------------------------- | --------- | ------ | --------------------------------------------- |
-| 3.2.1 | 🔴 Invitation types & hooks | Krytyczne | ⬜     | InvitationDto, usePostApiTeamInvite           |
-| 3.2.2 | 🔴 InviteForm component     | Krytyczne | ⬜     | Formularz zaproszenia (email, role)           |
-| 3.2.3 | 🔴 InvitationsList          | Krytyczne | ⬜     | Lista pending invitations                     |
-| 3.2.4 | 🔴 Invite page              | Krytyczne | ⬜     | /dashboard/team/invite                        |
-| 3.2.5 | 🟡 Accept invitation page   | Ważne     | ⬜     | /invite/[token] - publiczna strona akceptacji |
+| 3.2.1 | 🔴 Invitation types & hooks | Krytyczne | ✅     | InvitationDto, usePostApiTeamInvite           |
+| 3.2.2 | 🔴 InviteForm component     | Krytyczne | ✅     | Formularz zaproszenia (email, role)           |
+| 3.2.3 | 🔴 InvitationsList          | Krytyczne | ✅     | Lista pending invitations                     |
+| 3.2.4 | 🔴 Invite page              | Krytyczne | ✅     | /dashboard/team/invite                        |
+| 3.2.5 | 🟡 Accept invitation page   | Ważne     | ✅     | /invite/[token] - publiczna strona akceptacji |
 
 **Blok 3.2 - Wymagania wejściowe**: Blok 3.1  
 **Blok 3.2 - Rezultat**: System zaproszeń do zespołu
@@ -1903,16 +1903,16 @@ System zaproszeń z formularzem, listą pending invitations i stroną akceptacji
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [ ] Network tab: POST /api/Team/invite zwraca 200/201
-- [ ] Network tab: GET /api/Team/invitations zwraca 200
-- [ ] Formularz wysyła zaproszenie z email i role
-- [ ] Lista pokazuje pending invitations z API
-- [ ] Toast notification po wysłaniu zaproszenia
-- [ ] Strona /invite/[token] akceptuje zaproszenie
-- [ ] Loading states podczas wysyłania/akceptowania
-- [ ] Error handling dla błędów API
-- [ ] Zod validation na formularzu
-- [ ] Git commit: `feat(team): implement invitations system`
+- [x] Network tab: POST /api/Team/invite zwraca 200/201
+- [x] Network tab: GET /api/Team/invitations zwraca 200
+- [x] Formularz wysyła zaproszenie z email i role
+- [x] Lista pokazuje pending invitations z API
+- [x] Toast notification po wysłaniu zaproszenia
+- [x] Strona /invite/[token] akceptuje zaproszenie
+- [x] Loading states podczas wysyłania/akceptowania
+- [x] Error handling dla błędów API
+- [x] Zod validation na formularzu
+- [x] Git commit: `feat(team): implement invitations system`
 
 <!-- BLOCK_END: 3.2 -->
 
@@ -1926,11 +1926,11 @@ System zaproszeń z formularzem, listą pending invitations i stroną akceptacji
 
 | #      | Zadanie                   | Priorytet | Status | Opis                        |
 | ------ | ------------------------- | --------- | ------ | --------------------------- |
-| 4A.1.1 | 🔴 Client types & hooks   | Krytyczne | ⬜     | ClientDto, useGetApiClients |
-| 4A.1.2 | 🔴 ClientsTable component | Krytyczne | ⬜     | Tabela z paginacją          |
-| 4A.1.3 | 🔴 Pagination component   | Krytyczne | ⬜     | Reusable pagination         |
-| 4A.1.4 | 🔴 Clients list page      | Krytyczne | ⬜     | /dashboard/clients          |
-| 4A.1.5 | 🔴 Empty & loading states | Krytyczne | ⬜     | Skeleton, empty message     |
+| 4A.1.1 | 🔴 Client types & hooks   | Krytyczne | ✅     | ClientDto, useGetApiClients |
+| 4A.1.2 | 🔴 ClientsTable component | Krytyczne | ✅     | Tabela z paginacją          |
+| 4A.1.3 | 🔴 Pagination component   | Krytyczne | ✅     | Reusable pagination         |
+| 4A.1.4 | 🔴 Clients list page      | Krytyczne | ✅     | /dashboard/clients          |
+| 4A.1.5 | 🔴 Empty & loading states | Krytyczne | ✅     | Skeleton, empty message     |
 
 **Blok 4A.1 - Wymagania wejściowe**: Blok 3.1, 3.2  
 **Blok 4A.1 - Rezultat**: Lista klientów z paginacją
@@ -2194,14 +2194,14 @@ Lista klientów z paginacją i prawdziwymi danymi z API.
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [ ] Network tab: GET /api/Clients zwraca 200
-- [ ] Lista pokazuje PRAWDZIWE dane z bazy
-- [ ] Paginacja zmienia pageNumber w request
-- [ ] ZERO hardcoded '0' lub pustych list
-- [ ] Loading skeleton podczas ładowania
-- [ ] Empty state gdy brak klientów
-- [ ] Error state dla błędów API
-- [ ] Git commit: `feat(clients): implement clients list with pagination`
+- [x] Network tab: GET /api/Clients zwraca 200
+- [x] Lista pokazuje PRAWDZIWE dane z bazy
+- [x] Paginacja zmienia pageNumber w request
+- [x] ZERO hardcoded '0' lub pustych list
+- [x] Loading skeleton podczas ładowania
+- [x] Empty state gdy brak klientów
+- [x] Error state dla błędów API
+- [x] Git commit: `feat(clients): implement clients list with pagination`
 
 <!-- BLOCK_END: 4A.1 -->
 
@@ -2213,10 +2213,10 @@ Lista klientów z paginacją i prawdziwymi danymi z API.
 
 | #      | Zadanie          | Priorytet | Status | Opis                           |
 | ------ | ---------------- | --------- | ------ | ------------------------------ |
-| 4A.2.1 | 🔴 Search input  | Krytyczne | ⬜     | Debounced search z query param |
-| 4A.2.2 | 🔴 Status filter | Krytyczne | ⬜     | Active/Inactive/All dropdown   |
-| 4A.2.3 | 🔴 URL sync      | Krytyczne | ⬜     | Filtry zapisywane w URL        |
-| 4A.2.4 | 🔴 Clear filters | Krytyczne | ⬜     | Reset button                   |
+| 4A.2.1 | 🔴 Search input  | Krytyczne | ✅     | Debounced search z query param |
+| 4A.2.2 | 🔴 Status filter | Krytyczne | ✅     | Active/Inactive/All dropdown   |
+| 4A.2.3 | 🔴 URL sync      | Krytyczne | ✅     | Filtry zapisywane w URL        |
+| 4A.2.4 | 🔴 Clear filters | Krytyczne | ✅     | Reset button                   |
 
 **Blok 4A.2 - Wymagania wejściowe**: Blok 4A.1  
 **Blok 4A.2 - Rezultat**: Wyszukiwanie i filtry dla klientów
@@ -2383,12 +2383,12 @@ Wyszukiwanie i filtry z synchronizacją URL.
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [ ] Wpisanie w search wysyła request z ?search=
-- [ ] Zmiana status filtruje po statusie
-- [ ] URL persistence - odświeżenie strony zachowuje filtry
-- [ ] Clear filters resetuje wszystko
-- [ ] Debounced search (nie wysyła requestu przy każdym znaku)
-- [ ] Git commit: `feat(clients): add search and filters with URL sync`
+- [x] Wpisanie w search wysyła request z ?search=
+- [x] Zmiana status filtruje po statusie
+- [x] URL persistence - odświeżenie strony zachowuje filtry
+- [x] Clear filters resetuje wszystko
+- [x] Debounced search (nie wysyła requestu przy każdym znaku)
+- [x] Git commit: `feat(clients): add search and filters with URL sync`
 
 <!-- BLOCK_END: 4A.2 -->
 
@@ -2400,12 +2400,12 @@ Wyszukiwanie i filtry z synchronizacją URL.
 
 | #      | Zadanie                 | Priorytet | Status | Opis                         |
 | ------ | ----------------------- | --------- | ------ | ---------------------------- |
-| 4A.3.1 | 🔴 ClientForm component | Krytyczne | ⬜     | Formularz create/edit        |
-| 4A.3.2 | 🔴 Create client page   | Krytyczne | ⬜     | /dashboard/clients/new       |
-| 4A.3.3 | 🔴 Client detail page   | Krytyczne | ⬜     | /dashboard/clients/[id]      |
-| 4A.3.4 | 🔴 Edit client page     | Krytyczne | ⬜     | /dashboard/clients/[id]/edit |
-| 4A.3.5 | 🔴 Delete client        | Krytyczne | ⬜     | Dialog z potwierdzeniem      |
-| 4A.3.6 | 🔴 Toast notifications  | Krytyczne | ⬜     | Success/error messages       |
+| 4A.3.1 | 🔴 ClientForm component | Krytyczne | ✅     | Formularz create/edit        |
+| 4A.3.2 | 🔴 Create client page   | Krytyczne | ✅     | /dashboard/clients/new       |
+| 4A.3.3 | 🔴 Client detail page   | Krytyczne | ✅     | /dashboard/clients/[id]      |
+| 4A.3.4 | 🔴 Edit client page     | Krytyczne | ✅     | /dashboard/clients/[id]/edit |
+| 4A.3.5 | 🔴 Delete client        | Krytyczne | ✅     | Dialog z potwierdzeniem      |
+| 4A.3.6 | 🔴 Toast notifications  | Krytyczne | ✅     | Success/error messages       |
 
 **Blok 4A.3 - Wymagania wejściowe**: Blok 4A.1  
 **Blok 4A.3 - Rezultat**: Pełny CRUD dla klientów
@@ -2539,15 +2539,15 @@ Pełny CRUD dla klientów z formularzami i toastami.
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [ ] POST /api/Clients tworzy klienta
-- [ ] GET /api/Clients/{id} pobiera szczegóły
-- [ ] PUT /api/Clients/{id} aktualizuje klienta
-- [ ] DELETE /api/Clients/{id} usuwa klienta
-- [ ] Formularz z Zod validation
-- [ ] Toast notifications dla sukcesu/błędu
-- [ ] Redirect po operacjach
-- [ ] Loading states na buttonach
-- [ ] Git commit: `feat(clients): implement full CRUD operations`
+- [x] POST /api/Clients tworzy klienta
+- [x] GET /api/Clients/{id} pobiera szczegóły
+- [x] PUT /api/Clients/{id} aktualizuje klienta
+- [x] DELETE /api/Clients/{id} usuwa klienta
+- [x] Formularz z Zod validation
+- [x] Toast notifications dla sukcesu/błędu
+- [x] Redirect po operacjach
+- [x] Loading states na buttonach
+- [x] Git commit: `feat(clients): implement full CRUD operations`
 
 <!-- BLOCK_END: 4A.3 -->
 
@@ -2561,11 +2561,11 @@ Pełny CRUD dla klientów z formularzami i toastami.
 
 | #      | Zadanie                | Priorytet | Status | Opis                                    |
 | ------ | ---------------------- | --------- | ------ | --------------------------------------- |
-| 4B.1.1 | 🔴 Plan types & hooks  | Krytyczne | ⬜     | PlanDto, useGetApiPlans                 |
-| 4B.1.2 | 🔴 PlansGrid component | Krytyczne | ⬜     | Grid z kartami planów                   |
-| 4B.1.3 | 🔴 PlanCard component  | Krytyczne | ⬜     | Karta z ceną, features, status          |
-| 4B.1.4 | 🔴 Plans list page     | Krytyczne | ⬜     | /dashboard/plans                        |
-| 4B.1.5 | 🔴 formatCurrency      | Krytyczne | ⬜     | Ceny formatowane przez formatCurrency() |
+| 4B.1.1 | 🔴 Plan types & hooks  | Krytyczne | ✅     | PlanDto, useGetApiPlans                 |
+| 4B.1.2 | 🔴 PlansGrid component | Krytyczne | ✅     | Grid z kartami planów                   |
+| 4B.1.3 | 🔴 PlanCard component  | Krytyczne | ✅     | Karta z ceną, features, status          |
+| 4B.1.4 | 🔴 Plans list page     | Krytyczne | ✅     | /dashboard/plans                        |
+| 4B.1.5 | 🔴 formatCurrency      | Krytyczne | ✅     | Ceny formatowane przez formatCurrency() |
 
 **Blok 4B.1 - Wymagania wejściowe**: Blok 3.1, 3.2  
 **Blok 4B.1 - Rezultat**: Lista planów z kartami
@@ -2803,15 +2803,15 @@ Grid kart z planami subskrypcyjnymi i prawdziwymi danymi z API.
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [ ] Network tab: GET /api/Plans zwraca 200
-- [ ] Karty planów pokazują prawdziwe dane
-- [ ] Ceny formatowane przez formatCurrency()
-- [ ] Features lista wyświetla się poprawnie
-- [ ] Active/Inactive badge działa
-- [ ] Loading skeleton podczas ładowania
-- [ ] Empty state gdy brak planów
-- [ ] Error state dla błędów API
-- [ ] Git commit: `feat(plans): implement plans list with cards`
+- [x] Network tab: GET /api/Plans zwraca 200
+- [x] Karty planów pokazują prawdziwe dane
+- [x] Ceny formatowane przez formatCurrency()
+- [x] Features lista wyświetla się poprawnie
+- [x] Active/Inactive badge działa
+- [x] Loading skeleton podczas ładowania
+- [x] Empty state gdy brak planów
+- [x] Error state dla błędów API
+- [x] Git commit: `feat(plans): implement plans list with cards`
 
 <!-- BLOCK_END: 4B.1 -->
 
@@ -2823,13 +2823,13 @@ Grid kart z planami subskrypcyjnymi i prawdziwymi danymi z API.
 
 | #      | Zadanie               | Priorytet | Status | Opis                                   |
 | ------ | --------------------- | --------- | ------ | -------------------------------------- |
-| 4B.2.1 | 🔴 Plan schemas       | Krytyczne | ⬜     | Zod schemas dla Plan                   |
-| 4B.2.2 | 🔴 PlanForm component | Krytyczne | ⬜     | Formularz create/edit z features array |
-| 4B.2.3 | 🔴 useFieldArray      | Krytyczne | ⬜     | Dynamic features list                  |
-| 4B.2.4 | 🔴 Create plan page   | Krytyczne | ⬜     | /dashboard/plans/new                   |
-| 4B.2.5 | 🔴 Plan detail page   | Krytyczne | ⬜     | /dashboard/plans/[id]                  |
-| 4B.2.6 | 🔴 Edit plan page     | Krytyczne | ⬜     | /dashboard/plans/[id]/edit             |
-| 4B.2.7 | 🔴 Delete plan        | Krytyczne | ⬜     | Dialog z potwierdzeniem                |
+| 4B.2.1 | 🔴 Plan schemas       | Krytyczne | ✅     | Zod schemas dla Plan                   |
+| 4B.2.2 | 🔴 PlanForm component | Krytyczne | ✅     | Formularz create/edit z features array |
+| 4B.2.3 | 🔴 useFieldArray      | Krytyczne | ✅     | Dynamic features list                  |
+| 4B.2.4 | 🔴 Create plan page   | Krytyczne | ✅     | /dashboard/plans/new                   |
+| 4B.2.5 | 🔴 Plan detail page   | Krytyczne | ✅     | /dashboard/plans/[id]                  |
+| 4B.2.6 | 🔴 Edit plan page     | Krytyczne | ✅     | /dashboard/plans/[id]/edit             |
+| 4B.2.7 | 🔴 Delete plan        | Krytyczne | ✅     | Dialog z potwierdzeniem                |
 
 **Blok 4B.2 - Wymagania wejściowe**: Blok 4B.1  
 **Blok 4B.2 - Rezultat**: Pełny CRUD dla planów
@@ -3119,14 +3119,14 @@ Pełny CRUD dla planów z dynamic features list.
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [ ] Utworzenie planu z features działa
-- [ ] Edycja planu: GET → formularz → PUT
-- [ ] useFieldArray dodaje/usuwa features
-- [ ] Delete plan z dialogiem
-- [ ] Zod validation działa
-- [ ] Toast notifications
-- [ ] Loading states
-- [ ] Git commit: `feat(plans): implement full CRUD with dynamic features`
+- [x] Utworzenie planu z features działa
+- [x] Edycja planu: GET → formularz → PUT
+- [x] useFieldArray dodaje/usuwa features
+- [x] Delete plan z dialogiem
+- [x] Zod validation działa
+- [x] Toast notifications
+- [x] Loading states
+- [x] Git commit: `feat(plans): implement full CRUD with dynamic features`
 
 <!-- BLOCK_END: 4B.2 -->
 
@@ -3145,11 +3145,11 @@ Pełny CRUD dla planów z dynamic features list.
 
 | #     | Zadanie                        | Priorytet | Status | Opis                                          |
 | ----- | ------------------------------ | --------- | ------ | --------------------------------------------- |
-| 5.1.1 | 🔴 Subscriptions page          | Krytyczne | ⬜     | /subscriptions - lista wszystkich subskrypcji |
-| 5.1.2 | 🔴 SubscriptionTable component | Krytyczne | ⬜     | Tabela z client, plan, status, actions        |
-| 5.1.3 | 🔴 SubscriptionStatusBadge     | Krytyczne | ⬜     | Badge z kolorami dla statusów                 |
-| 5.1.4 | 🔴 Subscription filters        | Krytyczne | ⬜     | Filtrowanie po status, plan, date             |
-| 5.1.5 | 🔴 Subscriptions hooks         | Krytyczne | ⬜     | useSubscriptions, useSubscription             |
+| 5.1.1 | 🔴 Subscriptions page          | Krytyczne | ✅     | /subscriptions - lista wszystkich subskrypcji |
+| 5.1.2 | 🔴 SubscriptionTable component | Krytyczne | ✅     | Tabela z client, plan, status, actions        |
+| 5.1.3 | 🔴 SubscriptionStatusBadge     | Krytyczne | ✅     | Badge z kolorami dla statusów                 |
+| 5.1.4 | 🔴 Subscription filters        | Krytyczne | ✅     | Filtrowanie po status, plan, date             |
+| 5.1.5 | 🔴 Subscriptions hooks         | Krytyczne | ✅     | useSubscriptions, useSubscription             |
 
 **Blok 5.1 - Wymagania wejściowe**: Faza 4A (Klienci) i 4B (Plany) - zakończone  
 **Blok 5.1 - Rezultat**: Centralny widok zarządzania subskrypcjami
@@ -3244,15 +3244,15 @@ Kod dla hooków, komponentu Badge, Tabeli, Filtrów oraz głównej strony subskr
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [ ] useSubscriptions hook importuje z @/core/api/generated
-- [ ] SubscriptionStatusBadge mapuje wszystkie statusy
-- [ ] Filtry działają z URL params
-- [ ] Tabela wyświetla dane z API (nie hardcoded!)
-- [ ] Paginacja działa
-- [ ] Loading states z Skeleton
-- [ ] Network tab: GET /api/Subscriptions z Authorization header
-- [ ] TypeScript: zero błędów
-- [ ] Git commit: `feat(subscriptions): implement subscriptions list with filters`
+- [x] useSubscriptions hook importuje z @/core/api/generated
+- [x] SubscriptionStatusBadge mapuje wszystkie statusy
+- [x] Filtry działają z URL params
+- [x] Tabela wyświetla dane z API (nie hardcoded!)
+- [x] Paginacja działa
+- [x] Loading states z Skeleton
+- [x] Network tab: GET /api/Subscriptions z Authorization header
+- [x] TypeScript: zero błędów
+- [x] Git commit: `feat(subscriptions): implement subscriptions list with filters`
 
 <!-- BLOCK_END: 5.1 -->
 
@@ -3264,11 +3264,11 @@ Kod dla hooków, komponentu Badge, Tabeli, Filtrów oraz głównej strony subskr
 
 | #     | Zadanie                      | Priorytet | Status | Opis                                     |
 | ----- | ---------------------------- | --------- | ------ | ---------------------------------------- |
-| 5.2.1 | 🔴 Create subscription flow  | Krytyczne | ⬜     | Wizard: wybór client → plan → confirm    |
-| 5.2.2 | 🔴 Subscription detail page  | Krytyczne | ⬜     | /subscriptions/[id]                      |
-| 5.2.3 | 🔴 Cancel subscription       | Krytyczne | ⬜     | Dialog z reason, immediate/end-of-period |
-| 5.2.4 | 🟡 Pause/Resume subscription | Ważne     | ⬜     | Zawieszanie subskrypcji                  |
-| 5.2.5 | 🟡 Change plan               | Ważne     | ⬜     | Upgrade/downgrade planu                  |
+| 5.2.1 | 🔴 Create subscription flow  | Krytyczne | ✅     | Wizard: wybór client → plan → confirm    |
+| 5.2.2 | 🔴 Subscription detail page  | Krytyczne | ✅     | /subscriptions/[id]                      |
+| 5.2.3 | 🔴 Cancel subscription       | Krytyczne | ✅     | Dialog z reason, immediate/end-of-period |
+| 5.2.4 | 🟡 Pause/Resume subscription | Ważne     | ✅     | Zawieszanie subskrypcji                  |
+| 5.2.5 | 🟡 Change plan               | Ważne     | ✅     | Upgrade/downgrade planu                  |
 
 **Blok 5.2 - Wymagania wejściowe**: Blok 5.1 (Lista Subskrypcji)  
 **Blok 5.2 - Rezultat**: Możliwość tworzenia, edycji i anulowania subskrypcji
@@ -3362,14 +3362,14 @@ Kod wizarda (wszystkie kroki), strony szczegółów oraz dialogów akcji.
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [ ] Wizard: 3 kroki działają (Client → Plan → Confirm)
-- [ ] POST /api/Subscriptions tworzy subskrypcję
-- [ ] Detail page wyświetla dane z GET /api/Subscriptions/{id}
-- [ ] Cancel dialog wysyła POST /api/Subscriptions/{id}/cancel
-- [ ] Change plan dialog działa
-- [ ] Loading states na wszystkich mutacjach
-- [ ] Toast notifications po akcjach
-- [ ] Git commit: `feat(subscriptions): implement subscription wizard and actions`
+- [x] Wizard: 3 kroki działają (Client → Plan → Confirm)
+- [x] POST /api/Subscriptions tworzy subskrypcję
+- [x] Detail page wyświetla dane z GET /api/Subscriptions/{id}
+- [x] Cancel dialog wysyła POST /api/Subscriptions/{id}/cancel
+- [x] Change plan dialog działa
+- [x] Loading states na wszystkich mutacjach
+- [x] Toast notifications po akcjach
+- [x] Git commit: `feat(subscriptions): implement subscription wizard and actions`
 
 <!-- BLOCK_END: 5.2 -->
 
@@ -3383,10 +3383,10 @@ Kod wizarda (wszystkie kroki), strony szczegółów oraz dialogów akcji.
 
 | #     | Zadanie                   | Priorytet | Status | Opis                                        |
 | ----- | ------------------------- | --------- | ------ | ------------------------------------------- |
-| 6.1.1 | 🔴 Payments page          | Krytyczne | ⬜     | /payments - historia płatności              |
-| 6.1.2 | 🔴 PaymentTable component | Krytyczne | ⬜     | Tabela z amount, status, date, client       |
-| 6.1.3 | 🔴 PaymentStatusBadge     | Krytyczne | ⬜     | Badge: Completed, Pending, Failed, Refunded |
-| 6.1.4 | 🔴 Payment detail dialog  | Krytyczne | ⬜     | Szczegóły płatności w dialogu               |
+| 6.1.1 | 🔴 Payments page          | Krytyczne | ✅     | /payments - historia płatności              |
+| 6.1.2 | 🔴 PaymentTable component | Krytyczne | ✅     | Tabela z amount, status, date, client       |
+| 6.1.3 | 🔴 PaymentStatusBadge     | Krytyczne | ✅     | Badge: Completed, Pending, Failed, Refunded |
+| 6.1.4 | 🔴 Payment detail dialog  | Krytyczne | ✅     | Szczegóły płatności w dialogu               |
 
 **Blok 6.1 - Wymagania wejściowe**: Faza 5 (Subskrypcje)  
 **Blok 6.1 - Rezultat**: Przejrzysta historia transakcji finansowych
@@ -3482,14 +3482,14 @@ Kod dla hooków, komponentów Badge, Table, Dialog oraz strony głównej płatno
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [ ] usePayments hook importuje z @/core/api/generated
-- [ ] PaymentStatusBadge: Failed status wyróżniony czerwonym
-- [ ] PaymentTable wyświetla dane z API
-- [ ] PaymentDetailDialog pokazuje szczegóły
-- [ ] Kwoty sformatowane przez formatCurrency
-- [ ] Numery kart: tylko last4 (np. \*\*\*\* 4242)
-- [ ] Network tab: GET /api/Payments z Authorization header
-- [ ] Git commit: `feat(payments): implement payment history and detail view`
+- [x] usePayments hook importuje z @/core/api/generated
+- [x] PaymentStatusBadge: Failed status wyróżniony czerwonym
+- [x] PaymentTable wyświetla dane z API
+- [x] PaymentDetailDialog pokazuje szczegóły
+- [x] Kwoty sformatowane przez formatCurrency
+- [x] Numery kart: tylko last4 (np. \*\*\*\* 4242)
+- [x] Network tab: GET /api/Payments z Authorization header
+- [x] Git commit: `feat(payments): implement payment history and detail view`
 
 <!-- BLOCK_END: 6.1 -->
 
@@ -3501,10 +3501,10 @@ Kod dla hooków, komponentów Badge, Table, Dialog oraz strony głównej płatno
 
 | #     | Zadanie                     | Priorytet | Status | Opis                                      |
 | ----- | --------------------------- | --------- | ------ | ----------------------------------------- |
-| 6.2.1 | 🔴 PaymentMethodForm        | Krytyczne | ⬜     | Formularz dodawania metody płatności      |
-| 6.2.2 | 🔴 PaymentMethodList        | Krytyczne | ⬜     | Lista metod płatności klienta             |
-| 6.2.3 | 🟡 Manual payment recording | Ważne     | ⬜     | Dialog do ręcznego wprowadzania płatności |
-| 6.2.4 | 🟡 Refund dialog            | Ważne     | ⬜     | Dialog zwrotu z reason                    |
+| 6.2.1 | 🔴 PaymentMethodForm        | Krytyczne | ✅     | Formularz dodawania metody płatności      |
+| 6.2.2 | 🔴 PaymentMethodList        | Krytyczne | ✅     | Lista metod płatności klienta             |
+| 6.2.3 | 🟡 Manual payment recording | Ważne     | ✅     | Dialog do ręcznego wprowadzania płatności |
+| 6.2.4 | 🟡 Refund dialog            | Ważne     | ✅     | Dialog zwrotu z reason                    |
 
 **Blok 6.2 - Wymagania wejściowe**: Blok 6.1 (Historia Płatności)  
 **Blok 6.2 - Rezultat**: Możliwość dodawania kart, rejestrowania przelewów i wykonywania zwrotów
@@ -3577,13 +3577,13 @@ Bezpieczny interfejs zarządzania płatnościami, gotowy do integracji ze Stripe
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [ ] PaymentMethodList wyświetla karty z API
-- [ ] AddPaymentMethod: ZERO inputów na dane karty!
-- [ ] ManualPaymentDialog wysyła POST do API
-- [ ] RefundDialog wysyła POST do API
-- [ ] Wszystkie mutacje mają loading states
-- [ ] Toast notifications po akcjach
-- [ ] Git commit: `feat(payments): implement payment methods and manual payments`
+- [x] PaymentMethodList wyświetla karty z API
+- [x] AddPaymentMethod: ZERO inputów na dane karty!
+- [x] ManualPaymentDialog wysyła POST do API
+- [x] RefundDialog wysyła POST do API
+- [x] Wszystkie mutacje mają loading states
+- [x] Toast notifications po akcjach
+- [x] Git commit: `feat(payments): implement payment methods and manual payments`
 
 <!-- BLOCK_END: 6.2 -->
 
@@ -3597,12 +3597,12 @@ Bezpieczny interfejs zarządzania płatnościami, gotowy do integracji ze Stripe
 
 | #     | Zadanie                   | Priorytet  | Status | Opis                           |
 | ----- | ------------------------- | ---------- | ------ | ------------------------------ |
-| 7.1.1 | 🔴 Analytics page         | Krytyczne  | ⬜     | /analytics - główny dashboard  |
-| 7.1.2 | 🔴 RevenueChart component | Krytyczne  | ⬜     | Wykres przychodów (recharts)   |
-| 7.1.3 | 🔴 StatCards component    | Krytyczne  | ⬜     | Karty MRR, ARR, Churn, Clients |
-| 7.1.4 | 🔴 DateRangePicker        | Krytyczne  | ⬜     | Wybór zakresu dat              |
-| 7.1.5 | 🟡 ClientGrowthChart      | Ważne      | ⬜     | Wykres wzrostu klientów        |
-| 7.1.6 | 🟢 Export to CSV          | Opcjonalne | ⬜     | Eksport danych do CSV          |
+| 7.1.1 | 🔴 Analytics page         | Krytyczne  | ✅     | /analytics - główny dashboard  |
+| 7.1.2 | 🔴 RevenueChart component | Krytyczne  | ✅     | Wykres przychodów (recharts)   |
+| 7.1.3 | 🔴 StatCards component    | Krytyczne  | ✅     | Karty MRR, ARR, Churn, Clients |
+| 7.1.4 | 🔴 DateRangePicker        | Krytyczne  | ✅     | Wybór zakresu dat              |
+| 7.1.5 | 🟡 ClientGrowthChart      | Ważne      | ✅     | Wykres wzrostu klientów        |
+| 7.1.6 | 🟢 Export to CSV          | Opcjonalne | ✅     | Eksport danych do CSV          |
 
 **Blok 7.1 - Wymagania wejściowe**: Faza 6 (Payments)  
 **Blok 7.1 - Rezultat**: Dashboard analityczny z wykresami i KPI
@@ -3710,16 +3710,16 @@ Kod dla hooka analitycznego, komponentu wyboru daty, kart statystyk, dwóch typ�
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [ ] useAnalytics hook importuje z @/core/api/generated
-- [ ] DateRangePicker działa z presetami
-- [ ] StatCards wyświetlają dane z API
-- [ ] RevenueChart: AreaChart z gradientem
-- [ ] ClientGrowthChart: BarChart
-- [ ] Wykresy responsywne (ResponsiveContainer)
-- [ ] Export CSV działa
-- [ ] Loading states z Skeleton
-- [ ] Network tab: GET /api/Analytics z Authorization header
-- [ ] Git commit: `feat(analytics): implement analytics dashboard with charts`
+- [x] useAnalytics hook importuje z @/core/api/generated
+- [x] DateRangePicker działa z presetami
+- [x] StatCards wyświetlają dane z API
+- [x] RevenueChart: AreaChart z gradientem
+- [x] ClientGrowthChart: BarChart
+- [x] Wykresy responsywne (ResponsiveContainer)
+- [x] Export CSV działa
+- [x] Loading states z Skeleton
+- [x] Network tab: GET /api/Analytics z Authorization header
+- [x] Git commit: `feat(analytics): implement analytics dashboard with charts`
 
 <!-- BLOCK_END: 7.1 -->
 
@@ -3733,11 +3733,11 @@ Kod dla hooka analitycznego, komponentu wyboru daty, kart statystyk, dwóch typ�
 
 | #     | Zadanie             | Priorytet | Status | Opis                             |
 | ----- | ------------------- | --------- | ------ | -------------------------------- |
-| 8.1.1 | 🔴 Vitest setup     | Krytyczne | ⬜     | Konfiguracja unit tests          |
-| 8.1.2 | 🔴 Component tests  | Krytyczne | ⬜     | Testy dla kluczowych komponentów |
-| 8.1.3 | 🟡 Playwright setup | Ważne     | ⬜     | Konfiguracja E2E tests           |
-| 8.1.4 | 🟡 E2E auth flow    | Ważne     | ⬜     | Test login/register flow         |
-| 8.1.5 | 🟡 E2E client CRUD  | Ważne     | ⬜     | Test tworzenia/edycji klienta    |
+| 8.1.1 | 🔴 Vitest setup     | Krytyczne | ✅     | Konfiguracja unit tests          |
+| 8.1.2 | 🔴 Component tests  | Krytyczne | ✅     | Testy dla kluczowych komponentów |
+| 8.1.3 | 🟡 Playwright setup | Ważne     | ✅     | Konfiguracja E2E tests           |
+| 8.1.4 | 🟡 E2E auth flow    | Ważne     | ✅     | Test login/register flow         |
+| 8.1.5 | 🟡 E2E client CRUD  | Ważne     | ✅     | Test tworzenia/edycji klienta    |
 
 **Blok 8.1 - Wymagania wejściowe**: Wszystkie poprzednie fazy (Aplikacja funkcjonalna)  
 **Blok 8.1 - Rezultat**: Skonfigurowane środowisko testowe i pokrycie krytycznych ścieżek
@@ -3809,17 +3809,17 @@ Pliki konfiguracyjne, helper `renderWithProviders` oraz kod przykładowych test�
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [ ] vitest.config.ts skonfigurowany
-- [ ] renderWithProviders helper działa
-- [ ] formatters.test.ts przechodzi
-- [ ] PaymentStatusBadge.test.tsx przechodzi
-- [ ] Sidebar.test.tsx przechodzi (z mockami)
-- [ ] playwright.config.ts skonfigurowany
-- [ ] e2e/core-flows.spec.ts: Auth flow przechodzi
-- [ ] e2e/core-flows.spec.ts: Client CRUD przechodzi
-- [ ] npm run test: zero błędów
-- [ ] npm run test:e2e: zero błędów
-- [ ] Git commit: `test(setup): configure Vitest and Playwright with initial tests`
+- [x] vitest.config.ts skonfigurowany
+- [x] renderWithProviders helper działa
+- [x] formatters.test.ts przechodzi
+- [x] PaymentStatusBadge.test.tsx przechodzi
+- [x] Sidebar.test.tsx przechodzi (z mockami)
+- [x] playwright.config.ts skonfigurowany
+- [x] e2e/core-flows.spec.ts: Auth flow przechodzi
+- [x] e2e/core-flows.spec.ts: Client CRUD przechodzi
+- [x] npm run test: zero błędów
+- [x] npm run test:e2e: zero błędów
+- [x] Git commit: `test(setup): configure Vitest and Playwright with initial tests`
 
 <!-- BLOCK_END: 8.1 -->
 
@@ -3908,15 +3908,15 @@ Zaktualizowane pliki konfiguracyjne, checklista dostępności oraz gotowy README
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [ ] npm run type-check: zero błędów
-- [ ] npm run lint: zero warnings (lub tylko akceptowalne)
-- [ ] eslint-plugin-jsx-a11y skonfigurowany
-- [ ] A11Y_CHECKLIST.md utworzony
-- [ ] Bundle analyzer działa z ANALYZE=true
-- [ ] README.md kompletny i profesjonalny
-- [ ] Wszystkie strony responsywne na mobile
-- [ ] Lighthouse score > 80 dla Performance
-- [ ] Git commit: `chore(polish): typescript audit, a11y setup, documentation`
+- [x] npm run type-check: zero błędów
+- [x] npm run lint: zero warnings (lub tylko akceptowalne)
+- [x] eslint-plugin-jsx-a11y skonfigurowany
+- [x] A11Y_CHECKLIST.md utworzony
+- [x] Bundle analyzer działa z ANALYZE=true
+- [x] README.md kompletny i profesjonalny
+- [x] Wszystkie strony responsywne na mobile
+- [x] Lighthouse score > 80 dla Performance
+- [x] Git commit: `chore(polish): typescript audit, a11y setup, documentation`
 
 <!-- BLOCK_END: 8.2 -->
 

@@ -26,7 +26,7 @@ describe('PaymentsTable Component', () => {
       prevPage: vi.fn(),
     });
 
-    const { container } = renderWithProviders(<PaymentsTable />);
+    renderWithProviders(<PaymentsTable />);
     // Checking for presence of skeleton loaders (they just render divs usually, but we check empty state lack)
     expect(screen.queryByText('No payments yet')).not.toBeInTheDocument();
     expect(screen.queryByText('Transaction ID')).not.toBeInTheDocument();

@@ -7,10 +7,6 @@ import {
   usePostApiPaymentProcess,
   usePostApiPaymentIdRefund,
 } from "@/core/api/generated/payment/payment";
-import type {
-  ProcessPaymentInput,
-  RefundPaymentInput,
-} from "../schemas/payment.schemas";
 
 /**
  * Hook for processing manual payment

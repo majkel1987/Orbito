@@ -6,10 +6,6 @@ import {
   usePutApiSubscriptionPlansId,
   useDeleteApiSubscriptionPlansId,
 } from "@/core/api/generated/subscription-plans/subscription-plans";
-import type {
-  CreateSubscriptionPlanCommand,
-  UpdateSubscriptionPlanCommand,
-} from "@/core/api/generated/models";
 
 /**
  * Hook for creating a subscription plan

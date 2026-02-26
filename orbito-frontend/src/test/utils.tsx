@@ -1,7 +1,7 @@
 import { render, RenderOptions } from '@testing-library/react';
 import { ReactElement } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { SessionProvider, SessionContextValue } from 'next-auth/react';
+import { SessionProvider } from 'next-auth/react';
 import type { Session } from 'next-auth';
 
 // Common test QueryClient

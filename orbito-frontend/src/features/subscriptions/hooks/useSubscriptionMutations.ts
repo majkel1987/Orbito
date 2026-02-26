@@ -54,7 +54,7 @@ export function useCreateSubscription() {
 /**
  * Hook for canceling a subscription
  */
-export function useCancelSubscription(subscriptionId: string) {
+export function useCancelSubscription(_subscriptionId: string) {
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -79,7 +79,7 @@ export function useCancelSubscription(subscriptionId: string) {
 /**
  * Hook for suspending a subscription
  */
-export function useSuspendSubscription(subscriptionId: string) {
+export function useSuspendSubscription(_subscriptionId: string) {
   const queryClient = useQueryClient();
 
   return usePostApiSubscriptionsIdSuspend({
@@ -102,7 +102,7 @@ export function useSuspendSubscription(subscriptionId: string) {
 /**
  * Hook for resuming a subscription
  */
-export function useResumeSubscription(subscriptionId: string) {
+export function useResumeSubscription(_subscriptionId: string) {
   const queryClient = useQueryClient();
 
   return usePostApiSubscriptionsIdResume({

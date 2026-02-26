@@ -12,9 +12,7 @@ import { useUpdatePlan } from "@/features/plans/hooks/usePlanMutations";
 import {
   formInputToUpdateCommand,
   type PlanFormInput,
-  enumTypeToInterval,
 } from "@/features/plans/schemas/plan.schemas";
-import type { BillingPeriodType } from "@/core/api/generated/models/billingPeriodType";
 import { Button } from "@/shared/ui/button";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { ArrowLeft } from "lucide-react";
