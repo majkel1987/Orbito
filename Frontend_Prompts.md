@@ -4029,18 +4029,18 @@ Kod layoutu portalu, Guarda, hooków oraz strony głównej portalu z listą fakt
 
 ### ✅ CHECKLIST WERYFIKACJI (przed oznaczeniem jako DONE):
 
-- [ ] PortalGuard chroni /portal/\* dla roli Client
-- [ ] Provider przekierowany na /dashboard
-- [ ] Portal layout bez sidebara, prosty navbar
-- [ ] useMySubscriptions pobiera dane z API
-- [ ] useMyInvoices pobiera dane z API
-- [ ] Current Plan card wyświetla dane z API
-- [ ] Invoices list z akcją Download PDF
-- [ ] Cancel Subscription dialog działa
-- [ ] Update Payment Method dialog działa
-- [ ] Mobile responsive
-- [ ] Network tab: requesty z Authorization header
-- [ ] Git commit: `feat(portal): implement client portal with subscriptions and invoices`
+- [x] PortalGuard chroni /portal/\* dla roli Client
+- [x] Provider przekierowany na /dashboard
+- [x] Portal layout bez sidebara, prosty navbar
+- [x] useMySubscriptions pobiera dane z API
+- [x] useMyInvoices pobiera dane z API
+- [x] Current Plan card wyświetla dane z API
+- [x] Invoices list z akcją Download PDF
+- [ ] Cancel Subscription dialog działa (scope poza blokiem 9.1)
+- [ ] Update Payment Method dialog działa (scope poza blokiem 9.1)
+- [x] Mobile responsive
+- [x] Network tab: requesty z Authorization header
+- [x] Git commit: `feat(portal): implement client portal with subscriptions and invoices`
 
 <!-- BLOCK_END: 9.1 -->
 

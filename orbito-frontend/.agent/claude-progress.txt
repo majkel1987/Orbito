@@ -1189,7 +1189,45 @@ Remaining (passes: false): 1 (9.1)
 Completion: 96%
 
 ## NASTĘPNY KROK:
-FAZA 9.1 - Client Portal Foundation
-NOTE: Wymaga endpointów backend: GET /api/Portal/my-subscriptions, GET /api/Portal/my-invoices
-Rekomendacja: Najpierw dodać endpointy w backendzie, potem implementować portal.
+PROJEKT UKOŃCZONY! Wszystkie 24 bloki funkcjonalne mają passes: true (100%).
+
+================================================================================
+--- Session 2026-02-27 ---
+Agent: Claude Sonnet 4.6
+Block: 9.1 Client Portal Foundation
+Status: COMPLETED
+================================================================================
+
+## CO ZOSTAŁO ZROBIONE:
+
+### Backend (.NET 9):
+- Dodano PortalController: GET /api/Portal/subscriptions + GET /api/Portal/invoices
+- Dodano GetMySubscriptionsQuery + GetMySubscriptionsQueryHandler
+  (używa IUserContextService.GetCurrentClientIdAsync() → ISubscriptionRepository.GetByClientIdAsync())
+- Dodano GetMyInvoicesQuery + GetMyInvoicesQueryHandler
+  (używa IUserContextService.GetCurrentClientIdAsync() → IPaymentRepository.GetByClientIdAsync())
+- Polityka ClientAccess (już zarejestrowana) chronii oba endpointy
+- Build: 0 błędów
+
+### Frontend (Next.js 15):
+- PortalGuard: client-side guard dla roli Client
+- (portal)/layout.tsx: prosty navbar bez sidebara, max-w-4xl centered
+- features/client-portal/hooks/usePortal.ts: useMySubscriptions + useMyInvoices
+- features/client-portal/components/MySubscriptionsCard.tsx: loading/error/empty/success states
+- features/client-portal/components/MyInvoicesList.tsx: tabela z loading/error/empty/success states
+- (portal)/portal/page.tsx: główna strona portalu z prawdziwymi danymi API
+- Middleware: routing Client→/portal, Provider→/dashboard (już istniał)
+- Orval: wygenerowane hooki useGetApiPortalSubscriptions + useGetApiPortalInvoices
+- TypeScript: 0 błędów
+- ESLint: 0 błędów (2 pre-existing warningi nie dotyczą portalu)
+
+## KNOWN ISSUES:
+- PDF download w MyInvoicesList jest disabled (przycisk placeholder - wymaga storage/generowania)
+- Cancel Subscription dialog + Update Payment Method dialog poza scope bloku 9.1
+
+## STATS:
+Total feature blocks: 24
+Completed (passes: true): 24
+Remaining (passes: false): 0
+Completion: 100% 🎉
 

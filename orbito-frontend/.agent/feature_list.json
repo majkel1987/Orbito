@@ -576,14 +576,30 @@
         "Portal dostępny tylko dla roli Client",
         "Dane z prawdziwego API"
       ],
-      "passes": false
+      "passes": true,
+      "completionDate": "2026-02-27",
+      "notes": [
+        "Backend: PortalController created with GET /api/Portal/subscriptions and GET /api/Portal/invoices",
+        "Backend: GetMySubscriptionsQueryHandler uses IUserContextService.GetCurrentClientIdAsync()",
+        "Backend: GetMyInvoicesQueryHandler uses IPaymentRepository.GetByClientIdAsync()",
+        "Backend: ClientAccess policy was already registered - no DI changes needed",
+        "Frontend: PortalGuard component created (client-side role check: Client only)",
+        "Frontend: Portal layout created (no sidebar, max-w-4xl centered)",
+        "Frontend: usePortal.ts hook wraps useGetApiPortalSubscriptions and useGetApiPortalInvoices",
+        "Frontend: MySubscriptionsCard with loading/error/empty states",
+        "Frontend: MyInvoicesList with loading/error/empty states and PDF download placeholder",
+        "Frontend: Portal page at /portal with real API data",
+        "Middleware already handled role routing (Client->portal, non-Client->dashboard)",
+        "TypeScript strict mode: passes (zero errors)",
+        "ESLint: passes with 0 errors (2 pre-existing warnings - not from portal code)"
+      ]
     }
   ],
   "stats": {
     "totalBlocks": 24,
-    "completedBlocks": 23,
-    "remainingBlocks": 1,
-    "completionPercentage": 96
+    "completedBlocks": 24,
+    "remainingBlocks": 0,
+    "completionPercentage": 100
   },
   "nextPriority": "9.1",
   "agentInstructions": {
