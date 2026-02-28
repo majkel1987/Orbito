@@ -1,5 +1,122 @@
 ﻿# Orbito - Multi-Tenant SaaS Platform
 
+## 🖥️ Status Projektu Frontend (Orbito) — Audyt 2026-02-26
+
+> Audyt przeprowadzony na podstawie przeglądu kodu źródłowego w `orbito-frontend/src/`.
+
+### ✅ Zrealizowane moduły biznesowe
+
+| Moduł | Opis | Status |
+|---|---|---|
+| **Autentykacja** | NextAuth v5 (Credentials), logowanie/rejestracja, middleware, TenantGuard | ✅ Gotowe |
+| **Multi-tenancy** | TenantProvider, useTenant hook, izolacja danych per-tenant | ✅ Gotowe |
+| **Zarządzanie Zespołem** | Lista członków, zaproszenia, akceptacja invite, role (Owner/Admin/Member) | ✅ Gotowe |
+| **Klienci (CRM)** | Pełne CRUD, wyszukiwanie, filtry, paginacja, persistent URL params | ✅ Gotowe |
+| **Plany Subskrypcyjne** | Pełne CRUD, karty planów, zarządzanie features (useFieldArray), activation | ✅ Gotowe |
+| **Subskrypcje** | Wizard tworzenia, lista, szczegóły, anulowanie/zawieszanie/wznawianie | ✅ Gotowe |
+| **Płatności** | Historia płatności, szczegóły, metody płatności (PCI DSS), ręczne płatności, zwroty | ✅ Gotowe |
+| **Analytics Dashboard** | StatCards (MRR/ARR), wykresy (Revenue, Client Growth), DateRangePicker, CSV export | ✅ Gotowe |
+| **Testy Automatyczne** | Vitest (unit), Playwright (E2E), testy komponentów i formaterów | ✅ Gotowe |
+| **Polish & Optimization** | TypeScript audit, A11y (jsx-a11y), bundle analyzer, dokumentacja README | ✅ Gotowe |
+| **Client Portal** | Portal klienta (/portal), PortalGuard, subskrypcje i faktury klienta | ✅ Gotowe |
+
+### 📊 Postęp implementacji
+
+```
+FAZA 0 (Setup)         ████████████ 12/12  ✅
+FAZA 1 (Auth)          ████████████ 14/14  ✅
+FAZA 2 (Layout)        ████████████ 10/10  ✅
+FAZA 3 (Team)          ████████████  9/9   ✅
+FAZA 4A (Clients)      ████████████ 14/14  ✅
+FAZA 4B (Plans)        ████████████ 12/12  ✅
+FAZA 5 (Subscriptions) ████████████ 10/10  ✅
+FAZA 6 (Payments)      ████████████  8/8   ✅
+FAZA 7 (Analytics)     ████████████  6/6   ✅
+FAZA 8.1 (Testing)     ████████████  5/5   ✅
+FAZA 8.2 (Polish)      ████████████  5/5   ✅
+FAZA 9 (Client Portal) ████████████  4/5   ✅
+                                   100/100 (100%) 🎉
+```
+
+### 📋 Projekt ukończony — 24/24 bloków (100%) 🎉
+
+Wszystkie zaplanowane moduły zostały zaimplementowane. Poniżej znane ograniczenia:
+
+#### Znane ograniczenia (nie blokują wdrożenia)
+- **Billing Settings** (`9.1.5`) — Cancel Subscription dialog i Update Payment Method dialog w portalu klienta są poza scope'em bloku 9.1; wymagają integracji Stripe na frontendzie
+- **PDF download** — przycisk placeholder w liście faktur; wymaga storage/generowania faktur po stronie backendu
+
+### 🐛 Znane problemy (Known Issues)
+- Backend filter `activeOnly=false` zwraca klientów Active zamiast Inactive (bug w backendzie)
+- `billingPeriodType` zwracany jako string `'1 Monthly'` zamiast enum — workaround: `parseBillingPeriod()`
+- OpenAPI spec nie zawiera `SubscriptionDto` — używany własny typ w frontendzie
+
+### 🛠️ Stack technologiczny frontendu
+
+| Kategoria | Technologia |
+|---|---|
+| Framework | Next.js 15 (App Router) |
+| Język | TypeScript Strict Mode |
+| Server State | TanStack Query v5 |
+| Client State | Zustand v5 |
+| API Generation | **Orval** (z Swagger) |
+| Styling | Tailwind CSS + shadcn/ui |
+| Formularze | React Hook Form + Zod |
+| Auth | NextAuth v5 (Credentials) |
+| Wykresy | Recharts |
+| Testy Unit | Vitest + React Testing Library |
+| Testy E2E | Playwright |
+
+---
+
+## 🔧 Faza Issues Fixing & Feature Enhancements (v4.x)
+
+> Nowa faza rozpoczęta 2026-02-28 — poprawki krytyczne i nowe funkcjonalności biznesowe.
+> Szczegółowy postęp: [`issues_feature_list.json`](issues_feature_list.json) | [`issues_progress.txt`](issues_progress.txt)
+
+### 📊 Postęp bloków (1/13 — 8%)
+
+| Blok | Faza | Opis | Status |
+|---|---|---|---|
+| **ISSUE 1.1** | Admin | Singleton PlatformAdmin & Izolacja Danych | ✅ 2026-02-28 |
+| ISSUE 2.1 | Rejestracja | Auto-tworzenie Provider przy rejestracji | ⬜ |
+| ISSUE 3.1 | Zapraszanie | Backend: Token, Email Service, Endpoint | ⬜ |
+| ISSUE 3.2 | Zapraszanie | Backend: Potwierdzenie Emaila & Aktywacja | ⬜ |
+| ISSUE 3.3 | Zapraszanie | Frontend: Formularz Invite Client | ⬜ |
+| ISSUE 3.4 | Zapraszanie | Frontend: Strona potwierdzenia /portal/confirm | ⬜ |
+| ISSUE 4.1 | Płatności | Stripe Elements w Client Portal | ⬜ |
+| ISSUE 4.2 | Płatności | Webhook Sync → Provider Dashboard | ⬜ |
+| ISSUE 5.1 | Restrykcje | Hardening Client Portal (PortalGuard + API) | ⬜ |
+| ISSUE 6.1 | Trial | Domain Model Trial + Auto-create przy rejestracji | ⬜ |
+| ISSUE 6.2 | Trial | Powiadomienia 5d/3d/24h przed końcem triala | ⬜ |
+| ISSUE 6.3 | Trial | Wygaśnięcie triala, blokada dostępu, email | ⬜ |
+| ISSUE 6.4 | Trial | Wybór planu przy rejestracji + UI płatności Providera | ⬜ |
+
+---
+
+### ✅ ISSUE 1.1 — Singleton PlatformAdmin & Izolacja Danych (2026-02-28)
+
+**Problem:** PlatformAdmin miał `TenantId = null` → widział klientów WSZYSTKICH Providerów (luka bezpieczeństwa). Ponadto `ProviderTeamAccessHandler` odrzucał Admina z powodu braku `tenant_id` w JWT.
+
+**Rozwiązanie:**
+
+#### `Orbito.Domain/Errors/DomainErrors.cs`
+- Dodano klasę `Admin` z błędem `AlreadyExists` (`"Admin.AlreadyExists"`)
+
+#### `Orbito.Application/Common/Services/AdminSetupService.cs`
+- Wstrzyknięto `IUnitOfWork` i `ITeamMemberRepository`
+- Po tworzeniu konta Admina automatycznie tworzona jest encja `Provider` (dedykowany tenant)
+- `user.TenantId` przypisywany z `provider.TenantId` → izolacja danych
+- Tworzony `TeamMember(Owner)` → Admin przechodzi przez `ProviderTeamAccessHandler`
+- Cały flow wykonywany z `ITenantValidationBypass` (setup przed istnieniem tenanta)
+
+#### `Orbito.API/Controllers/AccountController.cs`
+- Próba rejestracji drugiego Admina zwraca `409 Conflict` z `DomainErrors.Admin.AlreadyExists`
+
+**Efekt:** Admin ma własny TenantId → `ClientRepository.ApplyTenantFilter()` automatycznie izoluje dane. Admin widzi TYLKO swoich klientów, nie klientów innych Providerów.
+
+---
+
 ## 🏗️ Architektura Aplikacji
 
 Orbito to nowoczesna platforma SaaS zbudowana w architekturze Clean Architecture, wykorzystująca wzorce DDD (Domain-Driven Design) i CQRS z MediatR.
@@ -947,6 +1064,6 @@ Po wdrożeniu sprawdź:
 
 **Orbito** - Nowoczesna platforma SaaS dla zarządzania subskrypcjami i płatnościami z zaawansowanymi zabezpieczeniami i systemem zarządzania zespołem.
 
-**Wersja**: v3.1.1  
-**Data aktualizacji**: 2025-11-03  
-**Główne zmiany**: Backend Logging & Authentication Refactoring + Frontend Logging & Error Handling Refactoring + Team Members Management + Removal of Client Statistics (future nice to have)
+**Wersja**: v4.0.1
+**Data aktualizacji**: 2026-02-28
+**Główne zmiany**: Issues Fixing & Feature Enhancements — ISSUE 1.1: Singleton PlatformAdmin z pełną izolacją tenanta (Provider + TeamMember tworzony podczas admin setup)
