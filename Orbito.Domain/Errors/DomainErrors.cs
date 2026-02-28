@@ -379,6 +379,16 @@ public static class DomainErrors
     }
 
     /// <summary>
+    /// PlatformAdmin-related errors
+    /// </summary>
+    public static class Admin
+    {
+        public static Error AlreadyExists => Error.Create(
+            "Admin.AlreadyExists",
+            "Platform Admin account already exists");
+    }
+
+    /// <summary>
     /// User/Authentication-related errors
     /// </summary>
     public static class User

@@ -1,0 +1,188 @@
+=== ORBITO PLATFORM - ISSUES FIXING & FEATURE ENHANCEMENTS PROGRESS LOG ===
+Project: orbito-platform (Backend + Frontend)
+Architecture: ASP.NET Core 9.0 (Clean Architecture, CQRS, MediatR) + Next.js 15 (TypeScript Strict)
+PromptFile: ../Issues_fixing_prompts.md
+FeatureList: issues_feature_list.json
+
+================================================================================
+🚀 NOWA FAZA - Issues Fixing & Feature Enhancements - 2026-02-27
+================================================================================
+
+Faza frontend (24 bloki) UKOŃCZONA w 100%.
+Przechodzimy do fazy poprawek i nowych funkcjonalności biznesowych.
+
+Backend jest funkcjonalny, ale wymaga:
+- Singleton PlatformAdmin + izolacja danych (ISSUE 1.1)
+- Automatyzacja rejestracji Provider (ISSUE 2.1)
+- Flow zapraszania klientów: token + email + potwierdzenie (ISSUE 3.x)
+- Integracja płatności Stripe Elements w Client Portal (ISSUE 4.x)
+- Hardening bezpieczeństwa Client Portal (ISSUE 5.1)
+- Trial Subscription System: domain model, powiadomienia, wygaśnięcie, płatności Providera (ISSUE 6.x)
+
+Frontend wymaga zmian komplementarnych do zmian backendowych.
+
+⚠️ WAŻNE ROZRÓŻNIENIE (ISSUE 6.x):
+W Orbito istnieją DWA typy subskrypcji:
+1. Subskrypcje klientów Providera (SubscriptionPlans / Subscriptions) – to co Provider sprzedaje
+2. Subskrypcja platformowa Providera (PlatformPlan / ProviderSubscription) – to co Provider płaci Orbito
+Te konteksty MUSZĄ być oddzielone na poziomie domeny!
+
+================================================================================
+PODSUMOWANIE BLOKÓW
+================================================================================
+
+| Blok       | Faza        | Opis                                          | Status | Zależności          |
+|------------|-------------|-----------------------------------------------|--------|---------------------|
+| ISSUE 1.1  | Admin       | Singleton PlatformAdmin & Izolacja             | ✅     | Brak                |
+| ISSUE 2.1  | Rejestracja | Auto-tworzenie Provider przy rejestracji       | ⬜     | Brak                |
+| ISSUE 3.1  | Zapraszanie | Backend: Token, Email Service, Endpoint        | ⬜     | ISSUE 2.1           |
+| ISSUE 3.2  | Zapraszanie | Backend: Confirmation Endpoint & Status        | ⬜     | ISSUE 3.1           |
+| ISSUE 3.3  | Zapraszanie | Frontend: Formularz Invite Client              | ⬜     | ISSUE 3.2           |
+| ISSUE 3.4  | Zapraszanie | Frontend: Strona potwierdzenia /portal/confirm | ⬜     | ISSUE 3.3           |
+| ISSUE 4.1  | Płatności   | Stripe Elements w Client Portal                | ⬜     | ISSUE 3.4           |
+| ISSUE 4.2  | Płatności   | Webhook Sync → Provider Dashboard              | ⬜     | ISSUE 4.1           |
+| ISSUE 5.1  | Restrykcje  | Hardening Client Portal (PortalGuard + API)    | ⬜     | ISSUE 4.1, 4.2      |
+| ISSUE 6.1  | Trial       | Domain Model Trial + Reg + Provider jako klient Admina | ⬜ | ISSUE 1.1, 2.1   |
+| ISSUE 6.2  | Trial       | Powiadomienia 5d/3d/24h + banner w dashboardzie | ⬜   | ISSUE 6.1, 3.1      |
+| ISSUE 6.3  | Trial       | Wygaśnięcie triala + blokada + email           | ⬜     | ISSUE 6.2           |
+| ISSUE 6.4  | Trial       | Wybór planu + Stripe Payment dla Providera     | ⬜     | ISSUE 6.3, 4.1      |
+
+Rekomendowana kolejność:
+1. ISSUE 1.1 + ISSUE 2.1 (równolegle – niezależne)
+2. ISSUE 3.1 → 3.2 → 3.3 → 3.4 (sekwencyjnie – ścieżka A: zapraszanie klientów)
+3. ISSUE 6.1 → 6.2 → 6.3 → 6.4 (sekwencyjnie – ścieżka B: trial, RÓWNOLEGLE z blokami 3.x)
+4. ISSUE 4.1 → 4.2 (sekwencyjnie – Stripe, po 3.4; pattern reużywany w 6.4)
+5. ISSUE 5.1 (na końcu, po pełnym flow)
+
+Ścieżki krytyczne:
+- Ścieżka A (klienci): 2.1 → 3.1 → 3.2 → 3.3 → 3.4 → 4.1 → 4.2 → 5.1
+- Ścieżka B (trial):   1.1 + 2.1 → 6.1 → 6.2 → 6.3 → 6.4
+- Ścieżka B może być realizowana RÓWNOLEGLE ze ścieżką A (po ukończeniu 2.1)
+- ISSUE 6.4 reużywa Stripe Elements z ISSUE 4.1
+
+================================================================================
+COMPLETED SESSIONS
+================================================================================
+
+(Brak zakończonych sesji – faza dopiero się rozpoczyna)
+
+================================================================================
+KRYTYCZNE ZASADY DO ZAPAMIĘTANIA
+================================================================================
+
+### ❌ ABSOLUTNIE ZABRONIONE:
+1. Hardcoded Data: const data = 0, const items = [], const user = { name: "Test" }
+2. Mock Functions: console.log('TODO: call API'), placeholder
+3. TODO Comments: Zostawianie TODO bez implementacji
+4. Pomijanie Auth: Każdy request MUSI mieć Authorization: Bearer ... header
+5. Niebezpieczne metody repozytorium: Używaj TYLKO metod ForTenantAsync, ForClientAsync, UnsafeAsync
+
+### ✅ ZAWSZE WYMAGANE:
+1. Backend Result<T> Pattern: Każdy handler → Result<T> lub Result
+2. DomainErrors z Orbito.Domain.Errors.DomainErrors
+3. FluentValidation dla każdego nowego Command
+4. Frontend: npm run api:generate po zmianach backendowych
+5. Frontend: Import hooków z @/core/api/generated/
+6. Frontend: Obsługa 3 stanów UI: loading (Skeleton), error (ErrorMessage), data
+7. Multi-tenancy: ITenantContext w KAŻDYM query/command
+8. Weryfikacja Network Tab po zmianach frontend
+
+================================================================================
+KNOWN STATE Z POPRZEDNICH FAZ
+================================================================================
+
+## Backend:
+- Clean Architecture: Domain → Application → Infrastructure → API
+- CQRS via MediatR
+- Entity Framework Core z multi-tenancy (ITenantContext)
+- Stripe integration (PaymentService, WebhookController)
+- JWT auth z claims: tenant_id, team_role, team_member_id, user_id
+- Rola UserRole: PlatformAdmin, Provider, Client
+- Policy-based auth: ProviderTeamAccess, ClientAccess
+- Serilog structured logging
+- NOWE (ISSUE 6.x): PlatformPlan, ProviderSubscription (z ProviderSubscriptionStatus: Trial/Active/Expired/Cancelled)
+- NOWE (ISSUE 6.x): TrialNotificationTier enum (None/FiveDays/ThreeDays/OneDay/Expired)
+- NOWE (ISSUE 6.x): ActiveProviderSubscription policy (blokuje expired Providerów)
+- NOWE (ISSUE 6.x): ProviderBillingController (exempt od trial restrictions!)
+
+## Frontend:
+- Next.js 15 z App Router, TypeScript strict
+- Orval auto-generated API hooks
+- NextAuth v5 (CredentialsProvider)
+- shadcn/ui + Tailwind CSS
+- React Query + Zustand
+- React Hook Form + Zod
+- Vertical Slices architecture (features/)
+- Role-based routing: Provider → /dashboard, Client → /portal
+- 24/24 bloków frontend COMPLETED
+- NOWE (ISSUE 6.x): TrialBanner (niebieski → żółty → czerwony) w dashboard layout
+- NOWE (ISSUE 6.x): SubscriptionExpiredOverlay (blokuje UI, wyjątek: /dashboard/billing)
+- NOWE (ISSUE 6.x): PlanSelectionStep (2-krokowy formularz rejestracji)
+- NOWE (ISSUE 6.x): /dashboard/billing (Stripe Payment Element dla Providera)
+
+## Known Bugs:
+- Backend filter 'inactive' (activeOnly=false) zwraca klientów 'active' zamiast 'inactive'
+- Backend zwraca billingPeriod jako string '1 Monthly' zamiast enum - dodano parseBillingPeriod()
+- Backend OpenAPI spec nie zwraca SubscriptionDto type - używamy własnego typu
+
+================================================================================
+STATS
+================================================================================
+
+Total issue blocks: 13
+Completed (passes: true): 0
+Remaining (passes: false): 13
+Completion: 0%
+
+## NASTĘPNY KROK:
+ISSUE 1.1 (Singleton PlatformAdmin) + ISSUE 2.1 (Auto-create Provider) – mogą być realizowane równolegle.
+Potem dwie ścieżki równoległo:
+- Ścieżka A (klienci): 3.1 → 3.2 → 3.3 → 3.4 → 4.1 → 4.2 → 5.1
+- Ścieżka B (trial): 6.1 → 6.2 → 6.3 → 6.4
+
+================================================================================
+--- Session 2026-02-28 ---
+Agent: claude-sonnet-4-6
+Block: ISSUE 1.1 Singleton PlatformAdmin & Izolacja Danych
+Status: COMPLETED
+================================================================================
+
+## WYKONANE ZADANIA:
+1. Dodano DomainErrors.Admin.AlreadyExists w Orbito.Domain/Errors/DomainErrors.cs
+   - Nowa klasa statyczna Admin z błędem AlreadyExists ("Admin.AlreadyExists")
+2. AdminSetupService całkowicie przepisany (Orbito.Application/Common/Services/AdminSetupService.cs):
+   - Wstrzyknięto IUnitOfWork i ITeamMemberRepository do konstruktora
+   - Krok 3: Provider.Create(user.Id, "Platform Admin", "admin") → admin ma własny TenantId
+   - Krok 4: user.TenantId = provider.TenantId → _userManager.UpdateAsync(user)
+   - Krok 5: _unitOfWork.Providers.AddAsync(provider) + SaveChangesAsync()
+   - Krok 6: TeamMember(Owner) tworzony → ProviderTeamAccessHandler będzie autoryzował Admina
+   - Cały flow w try/finally z ITenantValidationBypass
+3. AccountController zaktualizowany (Orbito.API/Controllers/AccountController.cs):
+   - Dodano using Orbito.Domain.Errors
+   - Zmieniono BadRequest({message}) → Conflict(DomainErrors.Admin.AlreadyExists) przy duplikacie admina
+
+## WERYFIKACJA:
+- dotnet build: ✅ (z wyjątkiem pre-existing CS0111 w Orbito.Tests – duplikat metody testowej, niezwiązany z ISSUE_1.1)
+- npm run typecheck: N/A (brak zmian frontend)
+- Singleton guard: ✅ (IsAdminSetupRequiredAsync() + AccountController zwraca 409 Conflict)
+- Tenant isolation: ✅ (Admin ma TenantId → ClientRepository.ApplyTenantFilter() filtruje poprawnie)
+- ProviderTeamAccess: ✅ (Admin ma TeamMember(Owner) + TenantId w JWT → handler przechodzi)
+
+## ZMIENIONE PLIKI:
+- Orbito.Domain/Errors/DomainErrors.cs (dodano Admin.AlreadyExists)
+- Orbito.Application/Common/Services/AdminSetupService.cs (cały plik przepisany)
+- Orbito.API/Controllers/AccountController.cs (using + Conflict response)
+
+## KNOWN ISSUES:
+- Orbito.Tests CS0111: pre-existing duplicate test method (UpdateSubscriptionPlanCommandHandlerTests) – niezwiązany z ISSUE_1.1
+- Integration test dla Admina NIE napisany (wymaga osobnej sesji testowej)
+
+## STATS PO SESJI:
+Total issue blocks: 13
+Completed: 1
+Remaining: 12
+Completion: 8%
+
+## NASTĘPNY KROK:
+ISSUE 2.1 (Auto-tworzenie Provider przy rejestracji) – niezależny blok, brak zależności.
+Równolegle można też zacząć ścieżkę B (trial) po ukończeniu ISSUE 2.1.

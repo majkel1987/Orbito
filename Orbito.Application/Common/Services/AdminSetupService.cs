@@ -2,8 +2,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
+using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
 using Orbito.Domain.Identity;
+using Orbito.Domain.Interfaces;
 
 namespace Orbito.Application.Common.Services
 {
@@ -15,26 +17,31 @@ namespace Orbito.Application.Common.Services
         private readonly ITenantValidationBypass _tenantValidationBypass;
         private readonly IConfiguration _configuration;
         private readonly ILogger<AdminSetupService> _logger;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly ITeamMemberRepository _teamMemberRepository;
 
         public AdminSetupService(
             UserManager<ApplicationUser> userManager,
             RoleManager<ApplicationRole> roleManager,
             ITenantValidationBypass tenantValidationBypass,
             IConfiguration configuration,
-            ILogger<AdminSetupService> logger)
+            ILogger<AdminSetupService> logger,
+            IUnitOfWork unitOfWork,
+            ITeamMemberRepository teamMemberRepository)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _tenantValidationBypass = tenantValidationBypass;
             _configuration = configuration;
             _logger = logger;
+            _unitOfWork = unitOfWork;
+            _teamMemberRepository = teamMemberRepository;
         }
 
         public async Task<bool> IsAdminSetupRequiredAsync()
         {
             try
             {
-                // Sprawdź czy istnieje jakikolwiek użytkownik z rolą PlatformAdmin
                 var adminUsers = await _userManager.GetUsersInRoleAsync(UserRole.PlatformAdmin.ToString());
                 return !adminUsers.Any();
             }
@@ -49,21 +56,18 @@ namespace Orbito.Application.Common.Services
         {
             try
             {
-                // Sprawdź czy setup jest włączony
                 if (!await IsAdminSetupEnabledAsync())
                 {
                     _logger.LogWarning("Próba utworzenia admina gdy setup jest wyłączony");
                     return false;
                 }
 
-                // Sprawdź czy admin już istnieje
                 if (!await IsAdminSetupRequiredAsync())
                 {
                     _logger.LogWarning("Próba utworzenia admina gdy już istnieje");
                     return false;
                 }
 
-                // Sprawdź czy użytkownik już istnieje
                 var existingUser = await _userManager.FindByEmailAsync(email);
                 if (existingUser != null)
                 {
@@ -73,12 +77,11 @@ namespace Orbito.Application.Common.Services
 
                 // CRITICAL: Disable tenant validation for admin setup operations
                 // This is necessary because admin setup happens before any tenant context exists
-                // UserManager uses the same ApplicationDbContext instance, so this flag will be respected
                 _tenantValidationBypass.SkipTenantValidation();
 
                 try
                 {
-                    // Utwórz nowego użytkownika
+                    // Step 1: Create the admin user (TenantId will be assigned after Provider creation)
                     var user = new ApplicationUser
                     {
                         Id = Guid.NewGuid(),
@@ -86,32 +89,71 @@ namespace Orbito.Application.Common.Services
                         Email = email,
                         FirstName = firstName,
                         LastName = lastName,
-                        TenantId = null, // PlatformAdmin nie ma TenantId
+                        TenantId = null,
                         IsActive = true,
                         CreatedAt = DateTime.UtcNow
                     };
 
-                    var result = await _userManager.CreateAsync(user, password);
-                    if (!result.Succeeded)
+                    var createResult = await _userManager.CreateAsync(user, password);
+                    if (!createResult.Succeeded)
                     {
                         _logger.LogError("Błąd podczas tworzenia użytkownika admina: {Errors}",
-                            string.Join(", ", result.Errors.Select(e => e.Description)));
+                            string.Join(", ", createResult.Errors.Select(e => e.Description)));
                         return false;
                     }
 
-                    // Dodaj rolę PlatformAdmin
+                    // Step 2: Assign PlatformAdmin role
                     await _userManager.AddToRoleAsync(user, UserRole.PlatformAdmin.ToString());
+
+                    // Step 3: Create a dedicated Provider (tenant) for PlatformAdmin
+                    // PlatformAdmin has their own isolated tenant - they see ONLY their own clients,
+                    // NOT clients belonging to other Providers. Tenant isolation is enforced automatically
+                    // by ClientRepository.ApplyTenantFilter() via TenantId.
+                    var provider = Provider.Create(user.Id, "Platform Admin", "admin");
+
+                    // Step 4: Assign TenantId to user and persist
+                    user.TenantId = provider.TenantId;
+                    var updateResult = await _userManager.UpdateAsync(user);
+                    if (!updateResult.Succeeded)
+                    {
+                        await _userManager.DeleteAsync(user);
+                        _logger.LogError("Błąd podczas aktualizacji TenantId admina: {Errors}",
+                            string.Join(", ", updateResult.Errors.Select(e => e.Description)));
+                        return false;
+                    }
+
+                    // Step 5: Save Provider to DB
+                    await _unitOfWork.Providers.AddAsync(provider);
+                    var saveProviderResult = await _unitOfWork.SaveChangesAsync();
+                    if (!saveProviderResult.IsSuccess)
+                    {
+                        await _userManager.DeleteAsync(user);
+                        _logger.LogError("Błąd podczas zapisu Provider dla admina");
+                        return false;
+                    }
+
+                    // Step 6: Create TeamMember (Owner) so ProviderTeamAccessHandler grants access
+                    var teamMember = new TeamMember(
+                        provider.TenantId,
+                        user.Id,
+                        TeamMemberRole.Owner,
+                        email,
+                        firstName,
+                        lastName);
+
+                    await _teamMemberRepository.AddAsync(teamMember);
+
+                    _logger.LogInformation(
+                        "Początkowy administrator został utworzony: {Email} (TenantId: {TenantId})",
+                        email, provider.TenantId.Value);
+
+                    return true;
                 }
                 finally
                 {
                     // Re-enable tenant validation after admin setup operations
-                    // This ensures security checks are restored even if an error occurs
                     _tenantValidationBypass.ResetTenantValidation();
                 }
-
-                _logger.LogInformation("Początkowy administrator został utworzony: {Email}", email);
-
-                return true;
             }
             catch (Exception ex)
             {
@@ -124,17 +166,14 @@ namespace Orbito.Application.Common.Services
         {
             try
             {
-                // Sprawdź zmienną środowiskową lub konfigurację
                 var setupEnabled = _configuration.GetValue<bool>("AdminSetup:Enabled", false);
                 var environment = _configuration.GetValue<string>("ASPNETCORE_ENVIRONMENT", "Production");
 
-                // W Development zawsze pozwól na setup
                 if (environment == "Development")
                 {
                     return Task.FromResult(true);
                 }
 
-                // W Production tylko jeśli jest włączone w konfiguracji
                 return Task.FromResult(setupEnabled);
             }
             catch (Exception ex)

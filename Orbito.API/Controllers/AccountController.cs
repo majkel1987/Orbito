@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.Providers.Commands.RegisterProvider;
 using Orbito.Domain.Enums;
+using Orbito.Domain.Errors;
 using Orbito.Domain.Identity;
 using Orbito.Domain.ValueObjects;
 using System.IdentityModel.Tokens.Jwt;
@@ -87,7 +88,11 @@ namespace Orbito.API.Controllers
                 var isSetupRequired = await _adminSetupService.IsAdminSetupRequiredAsync();
                 if (!isSetupRequired)
                 {
-                    return BadRequest(new { message = "Administrator już istnieje. Setup nie jest wymagany." });
+                    return Conflict(new
+                    {
+                        error = DomainErrors.Admin.AlreadyExists.Code,
+                        message = DomainErrors.Admin.AlreadyExists.Message
+                    });
                 }
 
                 // Utwórz administratora
