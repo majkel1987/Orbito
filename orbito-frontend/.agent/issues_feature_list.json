@@ -1,0 +1,563 @@
+{
+  "project": "Orbito Platform - Issues Fixing & Feature Enhancements",
+  "version": "1.0",
+  "lastUpdated": "2026-02-27",
+  "note": "Bloki naprawcze i nowe funkcjonalności biznesowe po ukończeniu fazy frontend. Backend + Frontend.",
+  "promptsFile": "../Issues_fixing_prompts.md",
+  "apiRulesFile": "../API_RULES.md",
+  "criticalRules": {
+    "readFirst": "ZAWSZE przeczytaj API_RULES.md PRZED rozpoczęciem bloku!",
+    "noMocks": "ZERO mockowanych funkcji - tylko prawdziwe API",
+    "noHardcode": "ZERO hardcoded data - zawsze hooki Orval (frontend) lub Result<T> (backend)",
+    "verifyNetwork": "ZAWSZE sprawdź Network tab po zakończeniu bloku frontend",
+    "resultPattern": "Backend: Każdy handler MUSI zwracać Result<T> lub Result. Używaj DomainErrors.",
+    "multiTenancy": "Każde zapytanie MUSI przechodzić przez ITenantContext. NIGDY bez filtra tenanta.",
+    "fluentValidation": "Każdy nowy Command MUSI mieć odpowiedni Validator (FluentValidation).",
+    "askIfMissing": "Endpoint nie istnieje? PYTAJ, nie mockuj"
+  },
+  "features": [
+    {
+      "id": "ISSUE_1.1",
+      "phase": "Admin",
+      "block": "ISSUE 1.1 Singleton PlatformAdmin & Izolacja Danych",
+      "description": "Backend: Walidacja że tylko 1 Admin może istnieć. Admin widzi TYLKO swoich klientów, NIE klientów Providerów. Seed PlatformAdmin.",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: ISSUE_1.1",
+      "tasks": [
+        "ISSUE_1.1.1 - Singleton PlatformAdmin Guard (Backend)",
+        "ISSUE_1.1.2 - Admin Tenant Isolation (Backend)",
+        "ISSUE_1.1.3 - Admin Dashboard Scope (Frontend)",
+        "ISSUE_1.1.4 - Seed PlatformAdmin (Backend)"
+      ],
+      "dependencies": [],
+      "apiEndpoints": [
+        "GET /api/Admin/status (opcjonalny)",
+        "GET /api/Clients (filtrowany przez ITenantContext)"
+      ],
+      "verificationSteps": [
+        "W bazie danych istnieje dokładnie 1 rekord z rolą PlatformAdmin",
+        "Próba rejestracji drugiego PlatformAdmin → błąd Admin.AlreadyExists (400/409)",
+        "Admin zalogowany widzi TYLKO swoich klientów (GET /api/Clients → tenant Admina)",
+        "Admin NIE widzi klientów przypisanych do innych Providerów",
+        "Integration test: Admin GET /api/Clients/{idKlientaInnegoProvdera} → 404",
+        "npm run typecheck → ZERO błędów",
+        "dotnet build → ZERO błędów"
+      ],
+      "passes": true,
+      "completionDate": "2026-02-28",
+      "notes": [
+        "Dodano DomainErrors.Admin.AlreadyExists w Orbito.Domain/Errors/DomainErrors.cs",
+        "AdminSetupService przepisany: tworzy Provider + TeamMember (Owner) dla Admina podczas setupu",
+        "AdminSetupService wstrzykuje IUnitOfWork i ITeamMemberRepository",
+        "Admin ma własny TenantId (izolacja od klientów innych Providerów)",
+        "AccountController: odpowiedź na duplikat admina zwraca Conflict(DomainErrors.Admin.AlreadyExists)",
+        "Wyjątek: dotnet build ma pre-existing error w Orbito.Tests (duplikat metody testowej CS0111 – niezwiązany z ISSUE_1.1)"
+      ]
+    },
+    {
+      "id": "ISSUE_2.1",
+      "phase": "Rejestracja",
+      "block": "ISSUE 2.1 Automatyzacja Rejestracji – Auto-tworzenie Provider",
+      "description": "Backend: RegisterCommandHandler tworzy encję Provider, przypisuje TenantId, dodaje TeamMember (Owner). Cały flow w jednej transakcji. Frontend: aktualizacja RegisterForm.",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: ISSUE_2.1",
+      "tasks": [
+        "ISSUE_2.1.1 - Auto-create Provider entity (Backend)",
+        "ISSUE_2.1.2 - Auto-assign TenantId (Backend)",
+        "ISSUE_2.1.3 - Auto-create TeamMember Owner (Backend)",
+        "ISSUE_2.1.4 - Transakcyjność (Backend)",
+        "ISSUE_2.1.5 - Walidacja duplikatów (Backend)"
+      ],
+      "dependencies": [],
+      "apiEndpoints": [
+        "POST /api/Account/register → { token, user }"
+      ],
+      "verificationSteps": [
+        "POST /api/Account/register → 201 Created (Network Tab)",
+        "W bazie: nowy AspNetUsers + Providers + TeamMembers (rola Owner)",
+        "TenantId w Providers jest unikalne i niepuste",
+        "JWT zawiera claims: tenant_id, team_role, team_member_id",
+        "Frontend: po rejestracji user ląduje na /dashboard",
+        "Rejestracja z istniejącym emailem → 400 Bad Request",
+        "npm run typecheck → ZERO błędów",
+        "dotnet build → ZERO błędów"
+      ],
+      "passes": true,
+      "completionDate": "2026-03-01",
+      "notes": [
+        "Dodano ITeamMemberRepository do IUnitOfWork interface",
+        "UnitOfWork.cs: lazy-init TeamMemberRepository via property TeamMembers",
+        "CreateProviderCommandHandler: atomowo tworzy TeamMember(Owner) razem z Provider (jeden SaveChangesAsync)",
+        "Użyto _unitOfWork.GetRepository<TeamMember>().AddAsync() - generic repo bez osobnego SaveChanges",
+        "AccountController.GenerateJwtTokenAsync: lookup TeamMember przy logowaniu, dodaje claims team_role i team_member_id do JWT",
+        "Utworzono RegisterProviderCommandValidator (FluentValidation): email, password complexity, nazwy, subdomain slug",
+        "dotnet build Orbito.API: Build succeeded. 0 Error(s)"
+      ]
+    },
+    {
+      "id": "ISSUE_3.1",
+      "phase": "Zapraszanie",
+      "block": "ISSUE 3.1 Zapraszanie Klienta – Backend: Token & Email Service",
+      "description": "Domain: ClientInvitationToken ValueObject. Application: IEmailService + InviteClientCommand. Infrastructure: EmailService (SMTP/SendGrid), migracja EF Core.",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: ISSUE_3.1",
+      "tasks": [
+        "ISSUE_3.1.1 - ClientInvitationToken ValueObject (Domain)",
+        "ISSUE_3.1.2 - IEmailService interface (Application)",
+        "ISSUE_3.1.3 - EmailService implementation (Infrastructure)",
+        "ISSUE_3.1.4 - InviteClientCommand & Handler (Application)",
+        "ISSUE_3.1.5 - Email Template (Infrastructure)"
+      ],
+      "dependencies": ["ISSUE_2.1"],
+      "apiEndpoints": [
+        "POST /api/Clients/invite → Result<Guid>"
+      ],
+      "verificationSteps": [
+        "ClientInvitationToken ValueObject w Domain/ValueObjects/",
+        "IEmailService zdefiniowany w Application/Common/Interfaces/",
+        "EmailService zaimplementowany w Infrastructure/Services/",
+        "InviteClientCommand + Handler + Validator w Application/Features/Clients/Commands/",
+        "Handler zwraca Result<Guid> (nie rzuca wyjątków!)",
+        "Migracja EF Core: AddClientInvitationFields → sukces",
+        "dotnet build → ZERO błędów",
+        "Unit test: InviteClientCommandHandler tworzy klienta Inactive + generuje token + wywołuje EmailService"
+      ],
+      "passes": false,
+      "completionDate": null,
+      "notes": []
+    },
+    {
+      "id": "ISSUE_3.2",
+      "phase": "Zapraszanie",
+      "block": "ISSUE 3.2 Zapraszanie Klienta – Backend: Potwierdzenie Emaila & Aktywacja",
+      "description": "Backend: POST /api/Clients/confirm-email weryfikuje token, tworzy konto Identity (rola Client), zmienia status Client na Active. Obsługa wygasłych tokenów.",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: ISSUE_3.2",
+      "tasks": [
+        "ISSUE_3.2.1 - ConfirmClientEmailCommand & Handler (Application)",
+        "ISSUE_3.2.2 - Client.ConfirmEmail() domain method",
+        "ISSUE_3.2.3 - Auto-create User account (Identity, rola Client)",
+        "ISSUE_3.2.4 - Token expiration guard",
+        "ISSUE_3.2.5 - Resend invitation (opcjonalny)"
+      ],
+      "dependencies": ["ISSUE_3.1"],
+      "apiEndpoints": [
+        "POST /api/Clients/confirm-email → Result",
+        "POST /api/Clients/{id}/resend-invitation → Result (opcjonalny)"
+      ],
+      "verificationSteps": [
+        "POST /api/Clients/confirm-email z prawidłowym tokenem → 200 OK",
+        "Client.Status = Active, ConfirmedAt != null, InvitationToken = null",
+        "W AspNetUsers: nowy user z rolą Client powiązany z Client entity",
+        "Token wygasły → 400 Client.InvitationExpired",
+        "Token nieprawidłowy → 400 Client.InvalidToken",
+        "Ponowne użycie tokena → 400 Client.AlreadyConfirmed",
+        "Klient może się zalogować (POST /api/Account/login)",
+        "dotnet build → ZERO błędów"
+      ],
+      "passes": false,
+      "completionDate": null,
+      "notes": []
+    },
+    {
+      "id": "ISSUE_3.3",
+      "phase": "Zapraszanie",
+      "block": "ISSUE 3.3 Zapraszanie Klienta – Frontend: Formularz Invite Client",
+      "description": "Frontend: InviteClientForm + InviteClientDialog, status badge (Inactive/Active) w ClientsTable, resend invitation button.",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: ISSUE_3.3",
+      "tasks": [
+        "ISSUE_3.3.1 - Orval regeneration (npm run api:generate)",
+        "ISSUE_3.3.2 - InviteClientForm component (RHF + Zod)",
+        "ISSUE_3.3.3 - useInviteClient hook (Orval mutation)",
+        "ISSUE_3.3.4 - Client status badge w ClientsTable",
+        "ISSUE_3.3.5 - Resend invitation button"
+      ],
+      "dependencies": ["ISSUE_3.1", "ISSUE_3.2"],
+      "apiEndpoints": [
+        "POST /api/Clients/invite",
+        "POST /api/Clients/{id}/resend-invitation"
+      ],
+      "requiredHooks": [
+        "usePostApiClientsInvite()",
+        "usePostApiClientsIdResendInvitation()"
+      ],
+      "verificationSteps": [
+        "npm run api:generate → hooki dla invite i resend-invitation",
+        "InviteClientForm renderuje się w dialogu",
+        "Submit → POST /api/Clients/invite z Authorization header → 200/201",
+        "Toast: Zaproszenie wysłane, lista klientów odświeża się",
+        "Nowy klient ma Badge Inactive (szary)",
+        "Resend → POST /api/Clients/{id}/resend-invitation → 200",
+        "Walidacja Zod: pusty email → komunikat błędu",
+        "npm run typecheck → ZERO błędów"
+      ],
+      "passes": false,
+      "completionDate": null,
+      "notes": []
+    },
+    {
+      "id": "ISSUE_3.4",
+      "phase": "Zapraszanie",
+      "block": "ISSUE 3.4 Zapraszanie Klienta – Frontend: Strona Potwierdzenia Tokena",
+      "description": "Frontend: Publiczna strona /portal/confirm?token=... z formularzem ustawiania hasła. Po potwierdzeniu konto Active, klient może się zalogować.",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: ISSUE_3.4",
+      "tasks": [
+        "ISSUE_3.4.1 - Strona /portal/confirm (publiczna)",
+        "ISSUE_3.4.2 - Token validation UI",
+        "ISSUE_3.4.3 - Password form + submit (POST /api/Clients/confirm-email)",
+        "ISSUE_3.4.4 - Success state (Konto aktywowane + Zaloguj się)",
+        "ISSUE_3.4.5 - Error states (wygasły/nieprawidłowy token)"
+      ],
+      "dependencies": ["ISSUE_3.2", "ISSUE_3.3"],
+      "apiEndpoints": [
+        "POST /api/Clients/confirm-email"
+      ],
+      "requiredHooks": [
+        "usePostApiClientsConfirmEmail()"
+      ],
+      "verificationSteps": [
+        "/portal/confirm?token=validToken → formularz hasła",
+        "/portal/confirm (bez tokena) → komunikat Brak tokena",
+        "Submit → POST /api/Clients/confirm-email → 200 OK",
+        "Po sukcesie: ekran Konto aktywowane + przycisk Zaloguj się",
+        "Wygasły token → komunikat Link wygasł",
+        "Nieprawidłowy token → komunikat Nieprawidłowy token",
+        "Walidacja hasła: <8 znaków, brak dużej litery, cyfry → błędy",
+        "Klient po potwierdzeniu loguje się → ląduje na /portal",
+        "npm run typecheck → ZERO błędów"
+      ],
+      "passes": false,
+      "completionDate": null,
+      "notes": []
+    },
+    {
+      "id": "ISSUE_4.1",
+      "phase": "Płatności",
+      "block": "ISSUE 4.1 Stripe Elements w Client Portal",
+      "description": "Backend: CreatePaymentIntent endpoint. Frontend: Stripe Payment Element (PCI DSS compliant), PaymentForm, PaySubscriptionDialog. Dane karty NIGDY przez serwer Orbito.",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: ISSUE_4.1",
+      "tasks": [
+        "ISSUE_4.1.1 - Stripe Elements integration (Frontend)",
+        "ISSUE_4.1.2 - CreatePaymentIntent endpoint (Backend)",
+        "ISSUE_4.1.3 - PaymentForm component (Frontend)",
+        "ISSUE_4.1.4 - Payment success/failure UI (Frontend)",
+        "ISSUE_4.1.5 - Subscription-Payment linking (Backend)"
+      ],
+      "dependencies": ["ISSUE_3.4"],
+      "apiEndpoints": [
+        "POST /api/Portal/payments/create-intent → CreatePaymentIntentResponse"
+      ],
+      "requiredHooks": [
+        "usePostApiPortalPaymentsCreateIntent()"
+      ],
+      "criticalNote": "⚠️ PCI DSS: Dane karty NIGDY nie przechodzą przez serwer Orbito. Używaj WYŁĄCZNIE <PaymentElement /> ze Stripe.",
+      "verificationSteps": [
+        "POST /api/Portal/payments/create-intent → 200 OK z clientSecret",
+        "Stripe Payment Element renderuje się poprawnie (widoczne pola karty)",
+        "⚠️ PCI DSS: W Network Tab BRAK requestów z numerem karty do backendu Orbito",
+        "Po opłaceniu: Stripe redirect na /portal?payment=success",
+        "Payment w bazie: status Processing, ExternalPaymentId = pi_...",
+        "npm run typecheck → ZERO błędów",
+        "dotnet build → ZERO błędów"
+      ],
+      "passes": false,
+      "completionDate": null,
+      "notes": []
+    },
+    {
+      "id": "ISSUE_4.2",
+      "phase": "Płatności",
+      "block": "ISSUE 4.2 Webhook Sync → Provider Dashboard",
+      "description": "Backend: Obsługa Stripe Webhook payment_intent.succeeded/failed, automatyczna aktualizacja Payment + MRR. Frontend: weryfikacja odświeżania danych.",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: ISSUE_4.2",
+      "tasks": [
+        "ISSUE_4.2.1 - Stripe Webhook Handler update (Backend)",
+        "ISSUE_4.2.2 - Payment status sync (Backend)",
+        "ISSUE_4.2.3 - MRR recalculation trigger (Backend)",
+        "ISSUE_4.2.4 - Real-time notification (Frontend, opcjonalny)",
+        "ISSUE_4.2.5 - Payment confirmation email (Backend)"
+      ],
+      "dependencies": ["ISSUE_4.1"],
+      "apiEndpoints": [
+        "POST /api/Webhook/stripe (AllowAnonymous, Stripe-Signature)"
+      ],
+      "verificationSteps": [
+        "Webhook payment_intent.succeeded → Payment.Status = Completed w bazie",
+        "Webhook payment_intent.payment_failed → Payment.Status = Failed w bazie",
+        "/dashboard/payments: opłacona płatność widoczna po refresh (max 30s)",
+        "/dashboard/analytics: MRR zaktualizowany po opłaceniu",
+        "Webhook waliduje Stripe-Signature (nieprawidłowa → 400)",
+        "Webhook idempotentny: duplikat eventu nie tworzy duplikatu",
+        "dotnet build → ZERO błędów"
+      ],
+      "passes": false,
+      "completionDate": null,
+      "notes": []
+    },
+    {
+      "id": "ISSUE_5.1",
+      "phase": "Restrykcje",
+      "block": "ISSUE 5.1 Restrykcje Client Portal – Hardening PortalGuard & API",
+      "description": "Backend: Klient NIE MOŻE wywoływać endpointów Provider. Frontend: PortalGuard blokuje /dashboard/*, menu portalu TYLKO subskrypcje + płatności.",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: ISSUE_5.1",
+      "tasks": [
+        "ISSUE_5.1.1 - API-level restrictions (Backend)",
+        "ISSUE_5.1.2 - PortalGuard hardening (Frontend)",
+        "ISSUE_5.1.3 - Navigation restrictions (Frontend)",
+        "ISSUE_5.1.4 - Direct URL protection (Frontend)",
+        "ISSUE_5.1.5 - API authorization audit (Backend)"
+      ],
+      "dependencies": ["ISSUE_4.1", "ISSUE_4.2"],
+      "apiEndpoints": [
+        "GET /api/Portal/subscriptions (ClientAccess ✅)",
+        "GET /api/Portal/invoices (ClientAccess ✅)",
+        "GET /api/Clients (ProviderTeamAccess ❌ Client)",
+        "GET /api/Plans (ProviderTeamAccess ❌ Client)",
+        "GET /api/Team (ProviderTeamAccess ❌ Client)",
+        "GET /api/Analytics/dashboard (ProviderTeamAccess ❌ Client)"
+      ],
+      "verificationSteps": [
+        "Client → GET /api/Clients → 403 Forbidden",
+        "Client → GET /api/Plans → 403 Forbidden",
+        "Client → GET /api/Team → 403 Forbidden",
+        "Client → GET /api/Analytics/dashboard → 403 Forbidden",
+        "Client → GET /api/Portal/subscriptions → 200 OK ✅",
+        "Client → GET /api/Portal/invoices → 200 OK ✅",
+        "UI: Klient na /portal widzi TYLKO subskrypcje i płatności",
+        "UI: Klient /dashboard → redirect /portal",
+        "UI: Provider /portal → redirect /dashboard",
+        "Portal NIE ma Sidebar, linków do Dashboard/Clients/Plans/Team/Analytics",
+        "npm run typecheck → ZERO błędów",
+        "dotnet build → ZERO błędów"
+      ],
+      "passes": false,
+      "completionDate": null,
+      "notes": []
+    },
+    {
+      "id": "ISSUE_6.1",
+      "phase": "Trial",
+      "block": "ISSUE 6.1 Trial Subscription – Domain Model, Auto-create przy rejestracji, Provider jako klient Admina",
+      "description": "Nowe encje PlatformPlan + ProviderSubscription (z ProviderSubscriptionStatus). Rozszerzenie RegisterCommand o SelectedPlatformPlanId. Auto-tworzenie Client w tenancie PlatformAdmin. Seed 3 planów (Starter/Pro/Enterprise). Publiczny GET /api/PlatformPlans.",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: ISSUE_6.1",
+      "tasks": [
+        "ISSUE_6.1.1 - PlatformPlan seed data (Starter, Pro, Enterprise z cenami PLN)",
+        "ISSUE_6.1.2 - ProviderSubscription entity + ProviderSubscriptionStatus enum (Trial/Active/Expired/Cancelled)",
+        "ISSUE_6.1.3 - RegisterCommand + SelectedPlatformPlanId + auto-trial 14 dni",
+        "ISSUE_6.1.4 - Provider jako Client w tenancie PlatformAdmin (auto-create przy rejestracji)",
+        "ISSUE_6.1.5 - IPlatformPlanRepository + IProviderSubscriptionRepository",
+        "ISSUE_6.1.6 - Admin widzi Providerów jako swoich klientów z statusem triala"
+      ],
+      "dependencies": ["ISSUE_1.1", "ISSUE_2.1"],
+      "apiEndpoints": [
+        "GET /api/PlatformPlans (AllowAnonymous – lista planów do wyboru przy rejestracji)",
+        "POST /api/Account/register (rozszerzony o selectedPlatformPlanId)"
+      ],
+      "criticalNote": "⚠️ ROZRÓŻNIENIE: PlatformPlan/ProviderSubscription (Provider płaci Orbito) vs SubscriptionPlans/Subscriptions (klient płaci Providerowi). Te dwa konteksty MUSZĄ być oddzielone na poziomie domeny!",
+      "verificationSteps": [
+        "Tabele PlatformPlans i ProviderSubscriptions istnieją w bazie po migracji",
+        "Seed data: min. 3 plany platformowe (Starter, Pro, Enterprise) z cenami w PLN",
+        "POST /api/Account/register z selectedPlatformPlanId → 201 Created",
+        "Po rejestracji w bazie: ProviderSubscriptions z Status = Trial, TrialEndDate = +14 dni",
+        "Po rejestracji w bazie: nowy rekord Clients z TenantId = TenantId PlatformAdmin",
+        "Admin zalogowany → GET /api/Clients → widzi nowego Providera na liście swoich klientów",
+        "GET /api/PlatformPlans (bez auth) → zwraca listę planów z cenami",
+        "dotnet build → ZERO błędów"
+      ],
+      "passes": false,
+      "completionDate": null,
+      "notes": []
+    },
+    {
+      "id": "ISSUE_6.2",
+      "phase": "Trial",
+      "block": "ISSUE 6.2 Trial Subscription – Powiadomienia o zbliżającym się końcu triala (5d / 3d / 24h)",
+      "description": "TrialExpirationNotificationJob (Background Job co 1h). TrialNotificationTier enum z deduplikacją. 3 warianty emaila z rosnącym tonem pilności. TrialBanner komponent w dashboard layout (niebieski → żółty → czerwony).",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: ISSUE_6.2",
+      "tasks": [
+        "ISSUE_6.2.1 - TrialExpirationNotificationJob (Background Job co 1h)",
+        "ISSUE_6.2.2 - Email templates (5d, 3d, 24h) z rosnącym tonem pilności",
+        "ISSUE_6.2.3 - Notification deduplication (LastNotificationTier + MarkNotificationSent)",
+        "ISSUE_6.2.4 - TrialBanner komponent (niebieski → żółty → czerwony)",
+        "ISSUE_6.2.5 - TrialNotificationTier enum + tracking w ProviderSubscription"
+      ],
+      "dependencies": ["ISSUE_6.1", "ISSUE_3.1"],
+      "apiEndpoints": [
+        "GET /api/ProviderSubscription/my (ProviderTeamAccess – status, daysRemaining, planName)"
+      ],
+      "requiredHooks": [
+        "useGetApiProviderSubscriptionMy()"
+      ],
+      "verificationSteps": [
+        "Migracja dodaje LastNotificationTier do ProviderSubscriptions",
+        "TrialExpirationNotificationJob zarejestrowany, uruchamia się co godzinę (logi Serilog)",
+        "Provider z trialem ≤5 dni → email '5 dni', LastNotificationTier = FiveDays",
+        "Ten sam Provider nie dostaje emaila '5 dni' ponownie (deduplikacja)",
+        "Provider z trialem ≤3 dni → email '3 dni', LastNotificationTier = ThreeDays",
+        "Provider z trialem ≤1 dzień → email '24h', LastNotificationTier = OneDay",
+        "GET /api/ProviderSubscription/my → 200 OK z danymi triala (Network Tab)",
+        "Dashboard: Banner 'Okres próbny: X dni pozostało' widoczny na górze",
+        "Banner zmienia kolor (niebieski → żółty → czerwony) wg daysRemaining",
+        "dotnet build → ZERO błędów, npm run typecheck → ZERO błędów"
+      ],
+      "passes": false,
+      "completionDate": null,
+      "notes": []
+    },
+    {
+      "id": "ISSUE_6.3",
+      "phase": "Trial",
+      "block": "ISSUE 6.3 Trial Subscription – Wygaśnięcie triala, blokada dostępu, email z instrukcjami",
+      "description": "ExpireTrialSubscriptionsCommand zmienia status Trial → Expired. ActiveProviderSubscriptionHandler (authorization policy) blokuje dostęp do danych. SubscriptionExpiredOverlay na frontendzie z wyjątkiem /dashboard/billing. Email z linkiem do strony płatności.",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: ISSUE_6.3",
+      "tasks": [
+        "ISSUE_6.3.1 - ExpireTrialSubscriptionsCommand + Handler (Trial → Expired)",
+        "ISSUE_6.3.2 - Email 'Trial wygasł' z linkiem do /dashboard/billing",
+        "ISSUE_6.3.3 - ActiveProviderSubscriptionHandler (authorization policy)",
+        "ISSUE_6.3.4 - Grace period (opcjonalny, 3 dni)",
+        "ISSUE_6.3.5 - SubscriptionExpiredOverlay (Frontend, z wyjątkiem /dashboard/billing)"
+      ],
+      "dependencies": ["ISSUE_6.2"],
+      "apiEndpoints": [
+        "GET /api/ProviderSubscription/my (z ISSUE 6.2, zwraca status Expired)",
+        "GET /api/Clients → 403/402 dla expired Provider",
+        "GET /api/Plans → 403/402 dla expired Provider"
+      ],
+      "criticalNote": "⚠️ PlatformAdmin NIE podlega restrykcji triala! ProviderBillingController / ProviderSubscriptionController MUSZĄ działać nawet z expired trial!",
+      "verificationSteps": [
+        "Background Job zmienia Status = Expired gdy TrialEndDate < now (sprawdź SQL)",
+        "Email 'Trial wygasł' wysłany z linkiem do /dashboard/billing",
+        "Provider z Expired → GET /api/Clients → 403 (lub 402 Payment Required)",
+        "Provider z Expired → GET /api/ProviderSubscription/my → 200 OK (dostęp do billing!)",
+        "Frontend: Expired Provider widzi overlay 'Twój okres próbny się zakończył'",
+        "Frontend: Expired Provider może przejść na /dashboard/billing (nie blokowany)",
+        "Frontend: Expired Provider NIE może przejść na /dashboard/clients, /dashboard/plans etc.",
+        "PlatformAdmin NIE jest blokowany przez trial restrictions",
+        "dotnet build → ZERO błędów, npm run typecheck → ZERO błędów"
+      ],
+      "passes": false,
+      "completionDate": null,
+      "notes": []
+    },
+    {
+      "id": "ISSUE_6.4",
+      "phase": "Trial",
+      "block": "ISSUE 6.4 Trial Subscription – Wybór planu przy rejestracji + UI płatności Providera",
+      "description": "2-krokowy formularz rejestracji (karty planów → dane konta). Strona /dashboard/billing z aktualnym planem i Stripe Payment Element (PCI DSS). CreateProviderPaymentIntentCommand z metadata subscription_type=platform. Webhook obsługuje płatności Providerów oddzielnie. Po płatności: ProviderSubscription.Activate() → overlay znika.",
+      "priority": "critical",
+      "promptMarker": "BLOCK_START: ISSUE_6.4",
+      "tasks": [
+        "ISSUE_6.4.1 - PlanSelectionStep (2-krokowy formularz rejestracji, karty planów)",
+        "ISSUE_6.4.2 - /dashboard/billing page (aktualny plan, status, Stripe Payment)",
+        "ISSUE_6.4.3 - CreateProviderPaymentIntentCommand (Backend, metadata subscription_type=platform)",
+        "ISSUE_6.4.4 - Stripe Payment Element for Provider (PCI DSS, reuse z ISSUE 4.1)",
+        "ISSUE_6.4.5 - PlanComparisonCard + CurrentPlanCard components",
+        "ISSUE_6.4.6 - Webhook update: metadata subscription_type=platform → ProviderSubscription.Activate()",
+        "ISSUE_6.4.7 - Change plan flow (opcjonalny)"
+      ],
+      "dependencies": ["ISSUE_6.3", "ISSUE_4.1"],
+      "apiEndpoints": [
+        "GET /api/PlatformPlans (AllowAnonymous, z ISSUE 6.1)",
+        "POST /api/ProviderBilling/create-payment-intent → CreateProviderPaymentIntentResponse",
+        "POST /api/Webhook/stripe (rozszerzony o obsługę subscription_type=platform)"
+      ],
+      "requiredHooks": [
+        "useGetApiPlatformPlans()",
+        "usePostApiProviderBillingCreatePaymentIntent()"
+      ],
+      "criticalNote": "⚠️ PCI DSS: Dane karty NIGDY przez serwer Orbito. Reuse StripeProvider + PaymentForm z ISSUE 4.1. ProviderBillingController MUSI działać nawet z expired trial!",
+      "verificationSteps": [
+        "Rejestracja: strona register pokazuje karty planów → po wybraniu → formularz danych",
+        "POST /api/Account/register zawiera selectedPlatformPlanId (Network Tab)",
+        "/dashboard/billing wyświetla aktualny plan, status, cenę",
+        "Button 'Opłać' → POST /api/ProviderBilling/create-payment-intent → 200 z clientSecret",
+        "Stripe Payment Element renderuje się poprawnie (pola karty widoczne)",
+        "⚠️ PCI DSS: W Network Tab BRAK requestów z danymi karty do backendu Orbito",
+        "Webhook: po udanej płatności → ProviderSubscription.Status = Active, PaidUntil ustawiony",
+        "UI po płatności: Success state 'Subskrypcja aktywowana' + przycisk 'Przejdź do dashboardu'",
+        "Expired Provider ma dostęp do /dashboard/billing (nie blokowany!)",
+        "Expired Provider po płatności: overlay znika, pełny dostęp odzyskany",
+        "Sidebar: link 'Subskrypcja' widoczny w menu nawigacji",
+        "npm run typecheck → ZERO błędów, dotnet build → ZERO błędów"
+      ],
+      "passes": false,
+      "completionDate": null,
+      "notes": []
+    }
+  ],
+  "stats": {
+    "totalBlocks": 13,
+    "completedBlocks": 2,
+    "remainingBlocks": 11,
+    "completionPercentage": 15
+  },
+  "nextPriority": "ISSUE_3.1",
+  "dependencyGraph": {
+    "description": "Wizualizacja zależności między blokami. Dwie równoległe ścieżki po ISSUE 2.1.",
+    "independent": ["ISSUE_1.1", "ISSUE_2.1"],
+    "path_A_clients": ["ISSUE_2.1", "ISSUE_3.1", "ISSUE_3.2", "ISSUE_3.3", "ISSUE_3.4", "ISSUE_4.1", "ISSUE_4.2", "ISSUE_5.1"],
+    "path_B_trial": ["ISSUE_1.1 + ISSUE_2.1", "ISSUE_6.1", "ISSUE_6.2", "ISSUE_6.3", "ISSUE_6.4"],
+    "cross_dependencies": {
+      "ISSUE_6.2": "wymaga ISSUE_3.1 (IEmailService)",
+      "ISSUE_6.4": "wymaga ISSUE_4.1 (Stripe Elements pattern, reuse)"
+    },
+    "note": "Ścieżka B (trial) może być realizowana RÓWNOLEGLE ze ścieżką A (klienci) po ukończeniu ISSUE 2.1"
+  },
+  "recommendedOrder": [
+    { "step": 1, "blocks": ["ISSUE_1.1", "ISSUE_2.1"], "note": "Równolegle – niezależne bloki" },
+    { "step": 2, "blocks": ["ISSUE_3.1"], "note": "Sekwencyjnie po ISSUE_2.1 (ścieżka A)" },
+    { "step": 3, "blocks": ["ISSUE_3.2", "ISSUE_6.1"], "note": "3.2 sekwencyjnie po 3.1 | 6.1 po 1.1+2.1 (równolegle ze ścieżką A)" },
+    { "step": 4, "blocks": ["ISSUE_3.3", "ISSUE_3.4", "ISSUE_6.2"], "note": "Frontend invite + confirm | 6.2 po 6.1+3.1" },
+    { "step": 5, "blocks": ["ISSUE_4.1", "ISSUE_6.3"], "note": "Stripe Elements | Trial expiration (równolegle)" },
+    { "step": 6, "blocks": ["ISSUE_4.2", "ISSUE_6.4"], "note": "Webhook sync | Provider billing UI (6.4 reużywa Stripe z 4.1)" },
+    { "step": 7, "blocks": ["ISSUE_5.1"], "note": "Hardening – na samym końcu" }
+  ],
+  "criticalPaths": {
+    "path_A": "2.1 → 3.1 → 3.2 → 3.3 → 3.4 → 4.1 → 4.2 → 5.1",
+    "path_B": "1.1 + 2.1 → 6.1 → 6.2 → 6.3 → 6.4",
+    "note": "Ścieżka B może być realizowana równolegle ze ścieżką A (po ukończeniu 2.1). ISSUE 6.4 reużywa Stripe Elements z ISSUE 4.1."
+  },
+  "agentInstructions": {
+    "beforeStarting": [
+      "🚨 1. PRZECZYTAJ API_RULES.md - to jest OBOWIĄZKOWE!",
+      "2. Sprawdź issues_progress.txt",
+      "3. Znajdź w tym pliku pierwszy blok z passes: false",
+      "4. Sprawdź dependencies – czy wymagane bloki mają passes: true",
+      "5. Otwórz Issues_fixing_prompts.md i znajdź sekcję z promptMarker",
+      "6. Przeczytaj CAŁY prompt przed rozpoczęciem pracy"
+    ],
+    "duringWork": [
+      "🚫 NIGDY nie używaj hardcoded data (0, [], 'placeholder')",
+      "🚫 NIGDY nie twórz mock funkcji z console.log('TODO')",
+      "✅ ZAWSZE używaj Result<T> pattern w backendzie",
+      "✅ ZAWSZE używaj DomainErrors z Orbito.Domain.Errors.DomainErrors",
+      "✅ ZAWSZE hooków z @/core/api/generated/ (frontend)",
+      "✅ ZAWSZE obsługuj loading, error, empty states (frontend)",
+      "✅ ZAWSZE FluentValidation dla nowych Commands",
+      "✅ ZAWSZE multi-tenancy: ITenantContext w każdym query/command",
+      "✅ Testuj w przeglądarce po każdej zmianie frontend"
+    ],
+    "afterCompletion": [
+      "1. dotnet build → ZERO błędów (backend)",
+      "2. npm run typecheck && npm run lint → ZERO błędów (frontend)",
+      "3. 🔍 SPRAWDŹ NETWORK TAB w DevTools (jeśli frontend):",
+      "   - Czy widzę requesty do /api/?",
+      "   - Czy mają status 200 (nie 401)?",
+      "   - Czy mają header Authorization?",
+      "4. 🔍 SPRAWDŹ dane w bazie (jeśli backend):",
+      "   - Czy encje zostały poprawnie utworzone?",
+      "   - Czy relacje FK są prawidłowe?",
+      "5. Zmień passes: true w issues_feature_list.json",
+      "6. Dodaj wpis do issues_progress.txt",
+      "7. Git commit z konwencją: feat/fix/security(scope): description"
+    ]
+  }
+}
