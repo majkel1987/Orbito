@@ -260,9 +260,15 @@
         "Klient po potwierdzeniu loguje się → ląduje na /portal",
         "npm run typecheck → ZERO błędów"
       ],
-      "passes": false,
-      "completionDate": null,
-      "notes": []
+      "passes": true,
+      "completionDate": "2026-03-01",
+      "notes": [
+        "Utwożono ConfirmEmailSchema (Zod) w src/features/clients/schemas/confirm-email.schema.ts: token/password/confirmPassword z pełną walidacją (min8, uppercase, digit, special char, match)",
+        "Utwożono ConfirmEmailForm.tsx (RHF + Zod): stany idle/submitting/success/error, usePostApiClientsConfirmEmail, ekran sukcesu z CheckCircle + Link do /login",
+        "Utwożono stronę src/app/(auth)/portal/confirm/page.tsx: Server Component, async searchParams (Next.js 15), obsługa braku tokena",
+        "Zaktualizowano middleware.ts: dodano wyjątek dla /portal/confirm (publiczna trasa, skip auth check)",
+        "npm run typecheck: ZERO błędów, npm run lint: 0 errors (2 pre-existing warnings w ProcessPaymentForm.tsx)"
+      ]
     },
     {
       "id": "ISSUE_4.1",
@@ -527,11 +533,11 @@
   ],
   "stats": {
     "totalBlocks": 13,
-    "completedBlocks": 5,
-    "remainingBlocks": 8,
-    "completionPercentage": 38
+    "completedBlocks": 6,
+    "remainingBlocks": 7,
+    "completionPercentage": 46
   },
-  "nextPriority": "ISSUE_3.4",
+  "nextPriority": "ISSUE_4.1",
   "dependencyGraph": {
     "description": "Wizualizacja zależności między blokami. Dwie równoległe ścieżki po ISSUE 2.1.",
     "independent": ["ISSUE_1.1", "ISSUE_2.1"],

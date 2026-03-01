@@ -38,7 +38,7 @@ PODSUMOWANIE BLOKÓW
 | ISSUE 3.1  | Zapraszanie | Backend: Token, Email Service, Endpoint        | ✅     | ISSUE 2.1           |
 | ISSUE 3.2  | Zapraszanie | Backend: Confirmation Endpoint & Status        | ✅     | ISSUE 3.1           |
 | ISSUE 3.3  | Zapraszanie | Frontend: Formularz Invite Client              | ✅     | ISSUE 3.2           |
-| ISSUE 3.4  | Zapraszanie | Frontend: Strona potwierdzenia /portal/confirm | ⬜     | ISSUE 3.3           |
+| ISSUE 3.4  | Zapraszanie | Frontend: Strona potwierdzenia /portal/confirm | ✅     | ISSUE 3.3           |
 | ISSUE 4.1  | Płatności   | Stripe Elements w Client Portal                | ⬜     | ISSUE 3.4           |
 | ISSUE 4.2  | Płatności   | Webhook Sync → Provider Dashboard              | ⬜     | ISSUE 4.1           |
 | ISSUE 5.1  | Restrykcje  | Hardening Client Portal (PortalGuard + API)    | ⬜     | ISSUE 4.1, 4.2      |
@@ -472,3 +472,60 @@ Completion: 38%
 ISSUE 3.4 (Zapraszanie Klienta – Frontend: Strona Potwierdzenia Tokena)
 Zależności: ISSUE 3.2 ✅ + ISSUE 3.3 ✅
 Wymaga: usePostApiClientsConfirmEmail (już wygenerowany), strona /portal/confirm?token=...
+
+================================================================================
+--- Session 2026-03-01 ---
+Agent: Claude Sonnet 4.6
+Block: ISSUE 3.4 Zapraszanie Klienta – Frontend: Strona Potwierdzenia Tokena
+Status: COMPLETED
+================================================================================
+
+## WYKONANE ZADANIA:
+1. src/features/clients/schemas/confirm-email.schema.ts (NOWY):
+   - ConfirmEmailSchema (Zod): token/password/confirmPassword
+   - Password: min8, uppercase, digit, special char, match validation
+   - Eksport: ConfirmEmailFormData
+2. src/features/clients/components/ConfirmEmailForm.tsx (NOWY):
+   - Props: token: string
+   - RHF + Zod resolver
+   - usePostApiClientsConfirmEmail (Orval hook)
+   - Stan sukcesu: CheckCircle icon + "Konto aktywowane!" + Button → /login
+   - Stan błędu: div z komunikatem (error instanceof Error guard + ProblemDetails fallback)
+   - Stan loading: Loader2 spinner na przycisku
+3. src/app/(auth)/portal/confirm/page.tsx (NOWY):
+   - Server Component, async searchParams (Next.js 15 pattern)
+   - Brak tokena: komunikat "Brak tokena zaproszenia w linku."
+   - Z tokenem: nagłówek + opis + ConfirmEmailForm
+4. src/middleware.ts (zmieniony):
+   - Dodano wyjątek dla /portal/confirm (publiczna trasa): early return NextResponse.next()
+   - Bez tej zmiany niezalogowany klient byłby przekierowany do /login
+
+## WERYFIKACJA:
+- npm run typecheck: ✅ ZERO błędów
+- npm run lint: ✅ 0 errors (2 pre-existing warnings w ProcessPaymentForm.tsx)
+- Brak komponentu Alert w shared/ui → użyto div z Tailwind (bg-destructive/10)
+- Hook usePostApiClientsConfirmEmail: ✅ już wygenerowany w ISSUE 3.3
+
+## ZMIENIONE PLIKI:
+- src/features/clients/schemas/confirm-email.schema.ts (NOWY)
+- src/features/clients/components/ConfirmEmailForm.tsx (NOWY)
+- src/app/(auth)/portal/confirm/page.tsx (NOWY)
+- src/middleware.ts (zmieniony – wyjątek /portal/confirm)
+- orbito-frontend/.agent/issues_feature_list.json (passes: true, stats zaktualizowane)
+- orbito-frontend/.agent/issues_progress.txt (tabela + wpis sesji)
+- Issues_fixing_prompts.md (ISSUE 3.4 → ✅, checklist zaktualizowana)
+
+## KNOWN ISSUES:
+- Brak komponentu Alert (shadcn/ui alert.tsx) w shared/ui → zastąpiony divem z Tailwind
+- Network Tab weryfikacja (POST /api/Clients/confirm-email) wymaga uruchomienia pełnej aplikacji z prawdziwym tokenem
+
+## STATS PO SESJI:
+Total issue blocks: 13
+Completed: 6 (ISSUE 1.1, ISSUE 2.1, ISSUE 3.1, ISSUE 3.2, ISSUE 3.3, ISSUE 3.4)
+Remaining: 7
+Completion: 46%
+
+## NASTĘPNY KROK:
+ISSUE 4.1 (Stripe Elements w Client Portal)
+Zależności: ISSUE 3.4 ✅
+Wymaga: npm install @stripe/react-stripe-js @stripe/stripe-js, nowy endpoint POST /api/Portal/payments/create-intent

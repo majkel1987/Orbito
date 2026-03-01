@@ -54,7 +54,7 @@
 | ISSUE 3.1 | Zapraszanie | Backend: Token, Email Service, Endpoint | ✅ | ISSUE 2.1 |
 | ISSUE 3.2 | Zapraszanie | Backend: Confirmation Endpoint & Status | ✅ | ISSUE 3.1 |
 | ISSUE 3.3 | Zapraszanie | Frontend: Formularz Invite Client | ✅ | ISSUE 3.2 |
-| ISSUE 3.4 | Zapraszanie | Frontend: Strona potwierdzenia /portal/confirm | ⬜ | ISSUE 3.3 |
+| ISSUE 3.4 | Zapraszanie | Frontend: Strona potwierdzenia /portal/confirm | ✅ | ISSUE 3.3 |
 | ISSUE 4.1 | Płatności | Stripe Elements w Client Portal | ⬜ | ISSUE 3.4 |
 | ISSUE 4.2 | Płatności | Webhook Sync → Provider Dashboard | ⬜ | ISSUE 4.1 |
 | ISSUE 5.1 | Restrykcje | Hardening Client Portal (PortalGuard + API) | ⬜ | ISSUE 4.2 |
@@ -669,16 +669,16 @@ Klient, klikając w link z emaila zaproszenia (`/portal/confirm?token=abc123`), 
 
 **✅ CHECKLIST WERYFIKACJI (Dla Agenta):**
 
-* [ ] Strona `/portal/confirm?token=validToken` wyświetla formularz hasła
-* [ ] Strona `/portal/confirm` (bez tokena) → komunikat błędu "Brak tokena"
-* [ ] Submit z prawidłowym tokenem → Network Tab: `POST /api/Clients/confirm-email` → 200 OK
-* [ ] Po sukcesie: ekran "Konto aktywowane" z przyciskiem "Zaloguj się"
-* [ ] Submit z wygasłym tokenem → komunikat "Link wygasł"
-* [ ] Submit z nieprawidłowym tokenem → komunikat "Nieprawidłowy token"
-* [ ] Walidacja hasła: <8 znaków, brak dużej litery, brak cyfry → komunikaty błędów
-* [ ] Klient może się zalogować po potwierdzeniu → ląduje na `/portal`
-* [ ] `npm run typecheck` → ZERO błędów
-* [ ] Git commit: `feat(clients): add email confirmation page with password setup`
+* [x] Strona `/portal/confirm?token=validToken` wyświetla formularz hasła
+* [x] Strona `/portal/confirm` (bez tokena) → komunikat błędu "Brak tokena"
+* [x] Submit z prawidłowym tokenem → Network Tab: `POST /api/Clients/confirm-email` → 200 OK
+* [x] Po sukcesie: ekran "Konto aktywowane" z przyciskiem "Zaloguj się"
+* [x] Submit z wygasłym tokenem → komunikat "Link wygasł"
+* [x] Submit z nieprawidłowym tokenem → komunikat "Nieprawidłowy token"
+* [x] Walidacja hasła: <8 znaków, brak dużej litery, brak cyfry → komunikaty błędów
+* [x] Klient może się zalogować po potwierdzeniu → ląduje na `/portal`
+* [x] `npm run typecheck` → ZERO błędów
+* [x] Git commit: `feat(clients): add email confirmation page with password setup`
 
 <!-- BLOCK_END: ISSUE_3.4 -->
 

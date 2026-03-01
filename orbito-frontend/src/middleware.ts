@@ -3,11 +3,17 @@ import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Public routes - skip auth check
+  if (pathname === "/portal/confirm") {
+    return NextResponse.next();
+  }
+
   const token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
   });
-  const { pathname } = request.nextUrl;
 
   // Brak sesji - redirect do login
   if (!token) {
