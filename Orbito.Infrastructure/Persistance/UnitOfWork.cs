@@ -3,8 +3,10 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.Common.Models;
+using Orbito.Domain.Interfaces;
 using Orbito.Infrastructure.Data;
 using Orbito.Infrastructure.Persistence;
+using Orbito.Infrastructure.Repositories;
 using System.Collections.Concurrent;
 using System.Data;
 
@@ -28,6 +30,7 @@ namespace Orbito.Infrastructure.Persistance
         private IPaymentRetryRepository? _paymentRetries;
         private IWebhookLogRepository? _webhookLogs;
         private IEmailNotificationRepository? _emailNotifications;
+        private ITeamMemberRepository? _teamMembers;
 
         public UnitOfWork(
             ApplicationDbContext context,
@@ -53,6 +56,7 @@ namespace Orbito.Infrastructure.Persistance
         public IPaymentRetryRepository PaymentRetries => _paymentRetries ??= new PaymentRetryRepository(_context, _tenantProvider);
         public IWebhookLogRepository WebhookLogs => _webhookLogs ??= new WebhookLogRepository(_context, _tenantContext);
         public IEmailNotificationRepository EmailNotifications => _emailNotifications ??= new EmailNotificationRepository(_context);
+        public ITeamMemberRepository TeamMembers => _teamMembers ??= new TeamMemberRepository(_context);
 
         public bool HasActiveTransaction => _transaction != null;
 

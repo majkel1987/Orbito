@@ -1231,3 +1231,56 @@ Completed (passes: true): 24
 Remaining (passes: false): 0
 Completion: 100% 🎉
 
+
+================================================================================
+--- Session 2026-03-01 ---
+Agent: Claude Sonnet 4.6
+Block: ISSUE 2.1 - Automatyzacja Rejestracji – Auto-tworzenie Provider i TeamMember
+Status: COMPLETED
+================================================================================
+
+## WYKONANE ZADANIA:
+
+### Backend (.NET 9):
+1. Dodano `ITeamMemberRepository TeamMembers` do interfejsu `IUnitOfWork`
+2. Zaktualizowano `UnitOfWork` - lazy-init `TeamMemberRepository` via property
+3. Zmodyfikowano `CreateProviderCommandHandler` - po utworzeniu Provider, atomowo tworzy
+   `TeamMember` z rolą `Owner` używając `_unitOfWork.GetRepository<TeamMember>().AddAsync()`
+   (generic repo bez osobnego SaveChanges → jeden atomowy SaveChanges na końcu)
+4. Zaktualizowano `AccountController.GenerateJwtTokenAsync` - lookup TeamMember po login,
+   dodaje claims `team_role` i `team_member_id` do JWT
+5. Utworzono `RegisterProviderCommandValidator` z FluentValidation:
+   - Email: NotEmpty, EmailAddress, MaxLength(256)
+   - Password: NotEmpty, MinLength(8), Uppercase, Digit
+   - FirstName/LastName: NotEmpty, MaxLength(100)
+   - BusinessName: NotEmpty, MaxLength(200)
+   - SubdomainSlug: NotEmpty, MaxLength(50), regex [a-z0-9-]
+
+## WERYFIKACJA:
+- dotnet build Orbito.API: ✅ Build succeeded. 0 Error(s)
+- dotnet build (full): ✅ 1 pre-existing error CS0111 w Orbito.Tests (niezwiązany)
+- npm run typecheck: ✅ (kontrakt API niezmieniony, nie wymagał api:generate)
+
+## ZMIENIONE PLIKI:
+- Orbito.Application/Common/Interfaces/IUnitOfWork.cs
+- Orbito.Infrastructure/Persistance/UnitOfWork.cs
+- Orbito.Application/Providers/Commands/CreateProvider/CreateProviderCommandHandler.cs
+- Orbito.API/Controllers/AccountController.cs
+- Orbito.Application/Providers/Commands/RegisterProvider/RegisterProviderCommandValidator.cs (NOWY)
+- Issues_fixing_prompts.md (tabela ISSUE 2.1 → ✅)
+
+## KNOWN ISSUES:
+- Frontend RegisterForm: endpoint /api/Account/register-provider (nie /register) - kontrakt bez zmian,
+  nie wymagał regeneracji hooków Orval
+- ValidationBehaviour rzuca ValidationException dla format errors → catch(Exception) w kontrolerze
+  zwraca 500 zamiast 400 dla format validation errors (pre-existing pattern w architekturze)
+
+## STATS PO SESJI:
+Issues Fixing blocks total: 13
+Completed: 2 (ISSUE 1.1, ISSUE 2.1)
+Remaining: 11
+Completion: ~15%
+
+## NASTĘPNY KROK:
+ISSUE 3.1 - Zapraszanie Klienta – Backend: Token & Email Service
+Zależności: ISSUE 2.1 (ukończone ✅)

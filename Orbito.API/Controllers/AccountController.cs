@@ -8,6 +8,7 @@ using Orbito.Application.Providers.Commands.RegisterProvider;
 using Orbito.Domain.Enums;
 using Orbito.Domain.Errors;
 using Orbito.Domain.Identity;
+using Orbito.Domain.Interfaces;
 using Orbito.Domain.ValueObjects;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -25,6 +26,7 @@ namespace Orbito.API.Controllers
         private readonly ILogger<AccountController> _logger;
         private readonly IAdminSetupService _adminSetupService;
         private readonly IMediator _mediator;
+        private readonly ITeamMemberRepository _teamMemberRepository;
 
         public AccountController(
             UserManager<ApplicationUser> userManager,
@@ -32,7 +34,8 @@ namespace Orbito.API.Controllers
             IConfiguration configuration,
             ILogger<AccountController> logger,
             IAdminSetupService adminSetupService,
-            IMediator mediator)
+            IMediator mediator,
+            ITeamMemberRepository teamMemberRepository)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -40,6 +43,7 @@ namespace Orbito.API.Controllers
             _logger = logger;
             _adminSetupService = adminSetupService;
             _mediator = mediator;
+            _teamMemberRepository = teamMemberRepository;
         }
 
         /// <summary>
@@ -238,6 +242,16 @@ namespace Orbito.API.Controllers
                 new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
             };
+
+            if (user.TenantId != null)
+            {
+                var teamMember = await _teamMemberRepository.GetByUserIdForTenantAsync(user.Id, user.TenantId, CancellationToken.None);
+                if (teamMember != null)
+                {
+                    claims.Add(new Claim("team_role", teamMember.Role.ToString()));
+                    claims.Add(new Claim("team_member_id", teamMember.Id.ToString()));
+                }
+            }
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not found")));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

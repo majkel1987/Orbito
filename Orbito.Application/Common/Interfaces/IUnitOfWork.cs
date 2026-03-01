@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using Orbito.Application.Common.Models;
+using Orbito.Domain.Interfaces;
 
 namespace Orbito.Application.Common.Interfaces
 {
@@ -86,5 +87,6 @@ namespace Orbito.Application.Common.Interfaces
         IPaymentRetryRepository PaymentRetries { get; }
         IWebhookLogRepository WebhookLogs { get; }
         IEmailNotificationRepository EmailNotifications { get; }
+        ITeamMemberRepository TeamMembers { get; }
     }
 }

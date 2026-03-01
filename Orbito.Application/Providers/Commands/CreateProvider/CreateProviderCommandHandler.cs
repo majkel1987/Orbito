@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Domain.Common;
 using Orbito.Domain.Entities;
+using Orbito.Domain.Enums;
 using Orbito.Domain.Errors;
 using Orbito.Domain.Identity;
 
@@ -86,7 +87,18 @@ public class CreateProviderCommandHandler : IRequestHandler<CreateProviderComman
                 await _userManager.AddToRoleAsync(user, "Provider");
             }
 
-            // SaveChanges - EF Core automatycznie utworzy transakcję i zastosuje retry strategy
+            // Utwórz TeamMember z rolą Owner - śledź w kontekście bez osobnego SaveChanges
+            var ownerTeamMember = new TeamMember(
+                provider.TenantId,
+                request.UserId,
+                TeamMemberRole.Owner,
+                user.Email!,
+                user.FirstName,
+                user.LastName);
+
+            await _unitOfWork.GetRepository<TeamMember>().AddAsync(ownerTeamMember, cancellationToken);
+
+            // SaveChanges - zapisuje Provider + TeamMember atomowo w jednej transakcji
             var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             if (!saveResult.IsSuccess)

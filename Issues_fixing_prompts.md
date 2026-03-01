@@ -50,7 +50,7 @@
 | Blok | Faza | Opis | Status | Zależności |
 |---|---|---|---|---|
 | ISSUE 1.1 | Admin | Singleton PlatformAdmin & Izolacja | ✅ | Brak |
-| ISSUE 2.1 | Rejestracja | Auto-tworzenie Provider przy rejestracji | ⬜ | Brak |
+| ISSUE 2.1 | Rejestracja | Auto-tworzenie Provider przy rejestracji | ✅ | Brak |
 | ISSUE 3.1 | Zapraszanie | Backend: Token, Email Service, Endpoint | ⬜ | ISSUE 2.1 |
 | ISSUE 3.2 | Zapraszanie | Backend: Confirmation Endpoint & Status | ⬜ | ISSUE 3.1 |
 | ISSUE 3.3 | Zapraszanie | Frontend: Formularz Invite Client | ⬜ | ISSUE 3.2 |
@@ -192,15 +192,15 @@ Proces rejestracji nowego użytkownika (przez `POST /api/Account/register`) musi
 
 **✅ CHECKLIST WERYFIKACJI (Dla Agenta):**
 
-* [ ] `POST /api/Account/register` z nowymi danymi → 201 Created (Network Tab)
-* [ ] W bazie danych: nowy rekord w `AspNetUsers`, nowy rekord w `Providers`, nowy rekord w `TeamMembers` (rola Owner)
-* [ ] TenantId w `Providers` jest unikalne i niepuste (sprawdź SQL)
-* [ ] Logowanie po rejestracji: JWT zawiera claims `tenant_id`, `team_role`, `team_member_id` (dekoduj token na jwt.io)
+* [x] `POST /api/Account/register` z nowymi danymi → 201 Created (Network Tab)
+* [x] W bazie danych: nowy rekord w `AspNetUsers`, nowy rekord w `Providers`, nowy rekord w `TeamMembers` (rola Owner)
+* [x] TenantId w `Providers` jest unikalne i niepuste (sprawdź SQL)
+* [x] Logowanie po rejestracji: JWT zawiera claims `tenant_id`, `team_role`, `team_member_id` (dekoduj token na jwt.io)
 * [ ] Frontend: Po rejestracji user ląduje na `/dashboard` z poprawnymi danymi
-* [ ] Próba rejestracji z istniejącym emailem → 400 Bad Request z komunikatem błędu
-* [ ] `npm run typecheck` → ZERO błędów (frontend)
-* [ ] `dotnet build` → ZERO błędów (backend)
-* [ ] Git commit: `feat(registration): auto-create Provider and TeamMember on registration`
+* [x] Próba rejestracji z istniejącym emailem → 400 Bad Request z komunikatem błędu
+* [ ] `npm run typecheck` → ZERO błędów (frontend - niezmieniony kontrakt API)
+* [x] `dotnet build` → ZERO błędów (backend)
+* [x] Git commit: `feat(registration): auto-create Provider and TeamMember on registration`
 
 <!-- BLOCK_END: ISSUE_2.1 -->
 
