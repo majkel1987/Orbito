@@ -36,7 +36,7 @@ PODSUMOWANIE BLOKÓW
 | ISSUE 1.1  | Admin       | Singleton PlatformAdmin & Izolacja             | ✅     | Brak                |
 | ISSUE 2.1  | Rejestracja | Auto-tworzenie Provider przy rejestracji       | ✅     | Brak                |
 | ISSUE 3.1  | Zapraszanie | Backend: Token, Email Service, Endpoint        | ✅     | ISSUE 2.1           |
-| ISSUE 3.2  | Zapraszanie | Backend: Confirmation Endpoint & Status        | ⬜     | ISSUE 3.1           |
+| ISSUE 3.2  | Zapraszanie | Backend: Confirmation Endpoint & Status        | ✅     | ISSUE 3.1           |
 | ISSUE 3.3  | Zapraszanie | Frontend: Formularz Invite Client              | ⬜     | ISSUE 3.2           |
 | ISSUE 3.4  | Zapraszanie | Frontend: Strona potwierdzenia /portal/confirm | ⬜     | ISSUE 3.3           |
 | ISSUE 4.1  | Płatności   | Stripe Elements w Client Portal                | ⬜     | ISSUE 3.4           |
@@ -337,3 +337,66 @@ Completion: 23%
 ISSUE 3.2 (Zapraszanie Klienta – Backend: Potwierdzenie Emaila & Aktywacja)
 Zależności: ISSUE 3.1 ✅
 Uwaga: Client.ConfirmEmail() metoda domenowa już zaimplementowana w ISSUE 3.1!
+
+================================================================================
+--- Session 2026-03-01 ---
+Agent: Claude Sonnet 4.6
+Block: ISSUE 3.2 Zapraszanie Klienta – Backend: Potwierdzenie Emaila & Aktywacja
+Status: COMPLETED
+================================================================================
+
+## WYKONANE ZADANIA:
+1. Orbito.Application/Clients/Commands/ConfirmClientEmail/ConfirmClientEmailCommand.cs (NOWY):
+   - Record: Token (string) + Password (string) → IRequest<Result>
+2. Orbito.Application/Clients/Commands/ConfirmClientEmail/ConfirmClientEmailCommandValidator.cs (NOWY):
+   - FluentValidation: Token notEmpty, Password min8/uppercase/digit/special char
+3. Orbito.Application/Clients/Commands/ConfirmClientEmail/ConfirmClientEmailCommandHandler.cs (NOWY):
+   - GetByInvitationTokenAsync (cross-tenant) → null → DomainErrors.Client.InvalidToken
+   - client.ConfirmEmail() → jeśli Failure (AlreadyConfirmed / InvitationExpired) → zwróć błąd
+   - UserManager.CreateAsync(ApplicationUser z email+name+TenantId+EmailConfirmed=true)
+   - UserManager.AddToRoleAsync(user, "Client")
+   - client.UserId = user.Id → _clientRepository.UpdateAsync(client)
+4. Orbito.Application/Clients/Commands/ResendClientInvitation/ResendClientInvitationCommand.cs (NOWY):
+   - Record: ClientId → IRequest<Result>
+5. Orbito.Application/Clients/Commands/ResendClientInvitation/ResendClientInvitationCommandHandler.cs (NOWY):
+   - Sprawdza tenant context, pobiera klienta, sprawdza czy nie Active
+   - Generuje nowy ClientInvitationToken.Create(7 dni)
+   - Wysyła email ponownie przez IEmailService
+   - UpdateAsync (nowy token zapisany)
+6. Orbito.API/Controllers/ClientsController.cs (zmieniony):
+   - Dodano POST /api/Clients/confirm-email (AllowAnonymous)
+   - Dodano POST /api/Clients/{id}/resend-invitation (ProviderTeamAccess)
+
+## WERYFIKACJA:
+- dotnet build Orbito.API: ✅ Build succeeded. 0 Error(s)
+- npm run typecheck: N/A (brak zmian frontend)
+- Client.ConfirmEmail(): ✅ już zaimplementowana w ISSUE 3.1 (Status=Active, IsActive=true, ConfirmedAt=now, token=null)
+- DomainErrors.Client.AlreadyConfirmed/InvitationExpired/InvalidToken: ✅ już zdefiniowane
+- IClientRepository.GetByInvitationTokenAsync: ✅ już zaimplementowana cross-tenant
+- Endpoint AllowAnonymous: ✅
+
+## ZMIENIONE PLIKI:
+- Orbito.Application/Clients/Commands/ConfirmClientEmail/ConfirmClientEmailCommand.cs (NOWY)
+- Orbito.Application/Clients/Commands/ConfirmClientEmail/ConfirmClientEmailCommandValidator.cs (NOWY)
+- Orbito.Application/Clients/Commands/ConfirmClientEmail/ConfirmClientEmailCommandHandler.cs (NOWY)
+- Orbito.Application/Clients/Commands/ResendClientInvitation/ResendClientInvitationCommand.cs (NOWY)
+- Orbito.Application/Clients/Commands/ResendClientInvitation/ResendClientInvitationCommandHandler.cs (NOWY)
+- Orbito.API/Controllers/ClientsController.cs (2 nowe endpointy)
+- orbito-frontend/.agent/issues_feature_list.json (passes: true, stats zaktualizowane)
+- orbito-frontend/.agent/issues_progress.txt (tabela + stats zaktualizowane)
+- Issues_fixing_prompts.md (ISSUE 3.2 → ✅, checklist zaktualizowana)
+
+## KNOWN ISSUES:
+- Brak migracji EF Core – ISSUE 3.2 nie wymaga zmian w schemacie bazy (wszystkie pola już dodane w ISSUE 3.1)
+- Klient po potwierdzeniu nadal ma DirectEmail/DirectFirstName/DirectLastName – właściwości Email/FirstName/LastName rozwiążą User.Email priorytetowo dzięki wzorcowi: User?.Email ?? DirectEmail
+
+## STATS PO SESJI:
+Total issue blocks: 13
+Completed: 4 (ISSUE 1.1, ISSUE 2.1, ISSUE 3.1, ISSUE 3.2)
+Remaining: 9
+Completion: 31%
+
+## NASTĘPNY KROK:
+ISSUE 3.3 (Zapraszanie Klienta – Frontend: Formularz Invite Client)
+Zależności: ISSUE 3.1 ✅ + ISSUE 3.2 ✅
+Wymaga: npm run api:generate → nowe hooki usePostApiClientsInvite + usePostApiClientsIdResendInvitation + usePostApiClientsConfirmEmail

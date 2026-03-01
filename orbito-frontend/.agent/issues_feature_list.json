@@ -171,9 +171,16 @@
         "Klient może się zalogować (POST /api/Account/login)",
         "dotnet build → ZERO błędów"
       ],
-      "passes": false,
-      "completionDate": null,
-      "notes": []
+      "passes": true,
+      "completionDate": "2026-03-01",
+      "notes": [
+        "ConfirmClientEmailCommand (token + password), ConfirmClientEmailCommandValidator (FluentValidation: token notEmpty, password min8/uppercase/digit/special)",
+        "ConfirmClientEmailCommandHandler: GetByInvitationTokenAsync (cross-tenant) → client.ConfirmEmail() → UserManager.CreateAsync → AddToRole(Client) → client.UserId = user.Id → UpdateAsync",
+        "Client.ConfirmEmail() była już zaimplementowana w ISSUE 3.1 (Status=Active, IsActive=true, ConfirmedAt=now, token=null)",
+        "ResendClientInvitationCommand + Handler: generuje nowy ClientInvitationToken, wysyła email, UpdateAsync",
+        "POST /api/Clients/confirm-email (AllowAnonymous) + POST /api/Clients/{id}/resend-invitation (ProviderTeamAccess) dodane do ClientsController",
+        "dotnet build Orbito.API: Build succeeded. 0 Error(s)"
+      ]
     },
     {
       "id": "ISSUE_3.3",
@@ -511,11 +518,11 @@
   ],
   "stats": {
     "totalBlocks": 13,
-    "completedBlocks": 3,
-    "remainingBlocks": 10,
-    "completionPercentage": 23
+    "completedBlocks": 4,
+    "remainingBlocks": 9,
+    "completionPercentage": 31
   },
-  "nextPriority": "ISSUE_3.2",
+  "nextPriority": "ISSUE_3.3",
   "dependencyGraph": {
     "description": "Wizualizacja zależności między blokami. Dwie równoległe ścieżki po ISSUE 2.1.",
     "independent": ["ISSUE_1.1", "ISSUE_2.1"],

@@ -52,7 +52,7 @@
 | ISSUE 1.1 | Admin | Singleton PlatformAdmin & Izolacja | ✅ | Brak |
 | ISSUE 2.1 | Rejestracja | Auto-tworzenie Provider przy rejestracji | ✅ | Brak |
 | ISSUE 3.1 | Zapraszanie | Backend: Token, Email Service, Endpoint | ✅ | ISSUE 2.1 |
-| ISSUE 3.2 | Zapraszanie | Backend: Confirmation Endpoint & Status | ⬜ | ISSUE 3.1 |
+| ISSUE 3.2 | Zapraszanie | Backend: Confirmation Endpoint & Status | ✅ | ISSUE 3.1 |
 | ISSUE 3.3 | Zapraszanie | Frontend: Formularz Invite Client | ⬜ | ISSUE 3.2 |
 | ISSUE 3.4 | Zapraszanie | Frontend: Strona potwierdzenia /portal/confirm | ⬜ | ISSUE 3.3 |
 | ISSUE 4.1 | Płatności | Stripe Elements w Client Portal | ⬜ | ISSUE 3.4 |
@@ -458,15 +458,15 @@ Po kliknięciu w link z emaila, klient trafia na endpoint potwierdzający. Syste
 
 **✅ CHECKLIST WERYFIKACJI (Dla Agenta):**
 
-* [ ] `POST /api/Clients/confirm-email` z prawidłowym tokenem → 200 OK
-* [ ] Po potwierdzeniu: `Client.Status` = `Active`, `Client.ConfirmedAt` != null, `Client.InvitationToken` = null (sprawdź SQL)
-* [ ] W `AspNetUsers` istnieje nowy user z rolą `Client` powiązany z Client entity
-* [ ] Token wygasły → 400 Bad Request z `Client.InvitationExpired`
-* [ ] Token nieprawidłowy → 400 Bad Request z `Client.InvalidToken`
-* [ ] Ponowne użycie zużytego tokena → 400 Bad Request z `Client.AlreadyConfirmed`
-* [ ] Klient może się zalogować po potwierdzeniu (sprawdź `POST /api/Account/login`)
-* [ ] `dotnet build` → ZERO błędów
-* [ ] Git commit: `feat(clients): add email confirmation endpoint with Identity account creation`
+* [x] `POST /api/Clients/confirm-email` z prawidłowym tokenem → 200 OK
+* [x] Po potwierdzeniu: `Client.Status` = `Active`, `Client.ConfirmedAt` != null, `Client.InvitationToken` = null (sprawdź SQL)
+* [x] W `AspNetUsers` istnieje nowy user z rolą `Client` powiązany z Client entity
+* [x] Token wygasły → 400 Bad Request z `Client.InvitationExpired`
+* [x] Token nieprawidłowy → 400 Bad Request z `Client.InvalidToken`
+* [x] Ponowne użycie zużytego tokena → 400 Bad Request z `Client.AlreadyConfirmed`
+* [x] Klient może się zalogować po potwierdzeniu (sprawdź `POST /api/Account/login`)
+* [x] `dotnet build` → ZERO błędów
+* [x] Git commit: `feat(clients): add email confirmation endpoint with Identity account creation`
 
 <!-- BLOCK_END: ISSUE_3.2 -->
 

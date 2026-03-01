@@ -10,6 +10,8 @@ using Orbito.Application.Clients.Commands.UpdateClient;
 using Orbito.Application.Clients.Queries.GetClientById;
 using Orbito.Application.Clients.Queries.GetClientsByProvider;
 using Orbito.Application.Clients.Commands.InviteClient;
+using Orbito.Application.Clients.Commands.ConfirmClientEmail;
+using Orbito.Application.Clients.Commands.ResendClientInvitation;
 using Orbito.Application.Clients.Queries.SearchClients;
 using Orbito.Application.DTOs;
 
@@ -242,6 +244,44 @@ namespace Orbito.API.Controllers
                 return HandleResult(result);
 
             return StatusCode(StatusCodes.Status201Created, result.Value);
+        }
+
+        /// <summary>
+        /// Potwierdza email klienta i tworzy konto Identity z rolą Client.
+        /// Endpoint publiczny – klient nie jest jeszcze zalogowany.
+        /// </summary>
+        /// <param name="command">Token zaproszenia + nowe hasło</param>
+        /// <returns>200 OK po pomyślnej aktywacji</returns>
+        /// <response code="200">Konto aktywowane, klient może się zalogować</response>
+        /// <response code="400">Token nieprawidłowy, wygasły lub konto już aktywowane</response>
+        [AllowAnonymous]
+        [HttpPost("confirm-email")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmClientEmailCommand command)
+        {
+            var result = await Mediator.Send(command);
+            return result.IsSuccess ? Ok() : HandleResult(result);
+        }
+
+        /// <summary>
+        /// Wysyła ponownie zaproszenie do klienta (generuje nowy token)
+        /// </summary>
+        /// <param name="id">ID klienta</param>
+        /// <returns>200 OK po pomyślnym wysłaniu</returns>
+        /// <response code="200">Email zaproszenia wysłany ponownie</response>
+        /// <response code="400">Klient nieznaleziony, już aktywowany lub błąd wysyłki</response>
+        /// <response code="401">Brak autoryzacji</response>
+        [HttpPost("{id}/resend-invitation")]
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> ResendInvitation(Guid id)
+        {
+            var command = new ResendClientInvitationCommand(id);
+            var result = await Mediator.Send(command);
+            return result.IsSuccess ? Ok() : HandleResult(result);
         }
 
         /// <summary>
