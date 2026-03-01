@@ -13,7 +13,19 @@ import {
 import { Badge } from "@/shared/ui/badge";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { Pagination } from "@/shared/components/Pagination";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
+import { Button } from "@/shared/ui/button";
+import { MoreHorizontal, Eye, Send } from "lucide-react";
 import Link from "next/link";
+import { usePostApiClientsIdResendInvitation } from "@/core/api/generated/clients/clients";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 export function ClientsTable() {
   const {
@@ -29,6 +41,22 @@ export function ClientsTable() {
     setStatus,
     clearFilters,
   } = useClients();
+
+  const queryClient = useQueryClient();
+
+  const resendMutation = usePostApiClientsIdResendInvitation({
+    mutation: {
+      onSuccess: () => {
+        toast.success("Zaproszenie zostało ponownie wysłane!");
+        queryClient.invalidateQueries({ queryKey: ["/api/Clients"] });
+      },
+      onError: (error: unknown) => {
+        const message =
+          error instanceof Error ? error.message : "Nie udało się wysłać zaproszenia";
+        toast.error(message);
+      },
+    },
+  });
 
   if (error) {
     return (
@@ -95,12 +123,35 @@ export function ClientsTable() {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Link
-                    href={`/dashboard/clients/${client.id}`}
-                    className="text-sm text-primary hover:underline"
-                  >
-                    View
-                  </Link>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem asChild>
+                        <Link href={`/dashboard/clients/${client.id}`}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          View
+                        </Link>
+                      </DropdownMenuItem>
+                      {!client.isActive && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() =>
+                              resendMutation.mutate({ id: client.id! })
+                            }
+                            disabled={resendMutation.isPending}
+                          >
+                            <Send className="mr-2 h-4 w-4" />
+                            Wyślij zaproszenie ponownie
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               </TableRow>
             ))}

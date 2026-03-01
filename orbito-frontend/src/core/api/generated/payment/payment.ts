@@ -32,6 +32,7 @@ import type {
   GetApiPaymentPaymentMethodsClientClientIdParams,
   GetApiPaymentSubscriptionSubscriptionIdParams,
   GetPaymentMethodsByClientResult,
+  PaymentDto,
   PostApiPaymentIdRefundParams,
   ProcessPaymentCommand,
   PutApiPaymentIdStatusParams,
@@ -215,7 +216,7 @@ export const getApiPaymentId = (
 ) => {
       
       
-      return customInstance<void>(
+      return customInstance<PaymentDto>(
       {url: `/api/Payment/${id}`, method: 'GET',
         params, signal
     },

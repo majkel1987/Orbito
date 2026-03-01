@@ -1,7 +1,5 @@
 import { ClientsTable } from "@/features/clients/components/ClientsTable";
-import { Button } from "@/shared/ui/button";
-import { Plus } from "lucide-react";
-import Link from "next/link";
+import { InviteClientDialog } from "@/features/clients/components/InviteClientDialog";
 
 export default function ClientsPage() {
   return (
@@ -13,12 +11,7 @@ export default function ClientsPage() {
             Manage your clients and their subscriptions
           </p>
         </div>
-        <Link href="/dashboard/clients/new">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Client
-          </Button>
-        </Link>
+        <InviteClientDialog />
       </div>
 
       <ClientsTable />

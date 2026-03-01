@@ -26,10 +26,12 @@ import type {
 import type {
   ClientDto,
   ClientDtoPaginatedList,
+  ConfirmClientEmailCommand,
   CreateClientCommand,
   DeleteApiClientsIdParams,
   GetApiClientsParams,
   GetApiClientsSearchParams,
+  InviteClientCommand,
   ProblemDetails,
   UpdateClientCommand
 } from '.././models';
@@ -557,6 +559,198 @@ export const usePostApiClientsIdDeactivate = <TError = ProblemDetails | ProblemD
       > => {
 
       const mutationOptions = getPostApiClientsIdDeactivateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * @summary Zaprasza nowego klienta – tworzy klienta ze statusem Inactive i wysyła email z tokenem
+ */
+export const postApiClientsInvite = (
+    inviteClientCommand: InviteClientCommand,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<string>(
+      {url: `/api/Clients/invite`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: inviteClientCommand, signal
+    },
+      options);
+    }
+  
+
+
+export const getPostApiClientsInviteMutationOptions = <TError = ProblemDetails | ProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postApiClientsInvite>>, TError,{data: InviteClientCommand}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof postApiClientsInvite>>, TError,{data: InviteClientCommand}, TContext> => {
+
+const mutationKey = ['postApiClientsInvite'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postApiClientsInvite>>, {data: InviteClientCommand}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postApiClientsInvite(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostApiClientsInviteMutationResult = NonNullable<Awaited<ReturnType<typeof postApiClientsInvite>>>
+    export type PostApiClientsInviteMutationBody = InviteClientCommand
+    export type PostApiClientsInviteMutationError = ProblemDetails | ProblemDetails
+
+    /**
+ * @summary Zaprasza nowego klienta – tworzy klienta ze statusem Inactive i wysyła email z tokenem
+ */
+export const usePostApiClientsInvite = <TError = ProblemDetails | ProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postApiClientsInvite>>, TError,{data: InviteClientCommand}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postApiClientsInvite>>,
+        TError,
+        {data: InviteClientCommand},
+        TContext
+      > => {
+
+      const mutationOptions = getPostApiClientsInviteMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * @summary Potwierdza email klienta i tworzy konto Identity z rolą Client.
+Endpoint publiczny – klient nie jest jeszcze zalogowany.
+ */
+export const postApiClientsConfirmEmail = (
+    confirmClientEmailCommand: ConfirmClientEmailCommand,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<void>(
+      {url: `/api/Clients/confirm-email`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: confirmClientEmailCommand, signal
+    },
+      options);
+    }
+  
+
+
+export const getPostApiClientsConfirmEmailMutationOptions = <TError = ProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postApiClientsConfirmEmail>>, TError,{data: ConfirmClientEmailCommand}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof postApiClientsConfirmEmail>>, TError,{data: ConfirmClientEmailCommand}, TContext> => {
+
+const mutationKey = ['postApiClientsConfirmEmail'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postApiClientsConfirmEmail>>, {data: ConfirmClientEmailCommand}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postApiClientsConfirmEmail(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostApiClientsConfirmEmailMutationResult = NonNullable<Awaited<ReturnType<typeof postApiClientsConfirmEmail>>>
+    export type PostApiClientsConfirmEmailMutationBody = ConfirmClientEmailCommand
+    export type PostApiClientsConfirmEmailMutationError = ProblemDetails
+
+    /**
+ * @summary Potwierdza email klienta i tworzy konto Identity z rolą Client.
+Endpoint publiczny – klient nie jest jeszcze zalogowany.
+ */
+export const usePostApiClientsConfirmEmail = <TError = ProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postApiClientsConfirmEmail>>, TError,{data: ConfirmClientEmailCommand}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postApiClientsConfirmEmail>>,
+        TError,
+        {data: ConfirmClientEmailCommand},
+        TContext
+      > => {
+
+      const mutationOptions = getPostApiClientsConfirmEmailMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * @summary Wysyła ponownie zaproszenie do klienta (generuje nowy token)
+ */
+export const postApiClientsIdResendInvitation = (
+    id: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<void>(
+      {url: `/api/Clients/${id}/resend-invitation`, method: 'POST', signal
+    },
+      options);
+    }
+  
+
+
+export const getPostApiClientsIdResendInvitationMutationOptions = <TError = ProblemDetails | ProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postApiClientsIdResendInvitation>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof postApiClientsIdResendInvitation>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['postApiClientsIdResendInvitation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postApiClientsIdResendInvitation>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  postApiClientsIdResendInvitation(id,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostApiClientsIdResendInvitationMutationResult = NonNullable<Awaited<ReturnType<typeof postApiClientsIdResendInvitation>>>
+    
+    export type PostApiClientsIdResendInvitationMutationError = ProblemDetails | ProblemDetails
+
+    /**
+ * @summary Wysyła ponownie zaproszenie do klienta (generuje nowy token)
+ */
+export const usePostApiClientsIdResendInvitation = <TError = ProblemDetails | ProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postApiClientsIdResendInvitation>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postApiClientsIdResendInvitation>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+
+      const mutationOptions = getPostApiClientsIdResendInvitationMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

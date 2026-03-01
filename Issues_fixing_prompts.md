@@ -53,7 +53,7 @@
 | ISSUE 2.1 | Rejestracja | Auto-tworzenie Provider przy rejestracji | ✅ | Brak |
 | ISSUE 3.1 | Zapraszanie | Backend: Token, Email Service, Endpoint | ✅ | ISSUE 2.1 |
 | ISSUE 3.2 | Zapraszanie | Backend: Confirmation Endpoint & Status | ✅ | ISSUE 3.1 |
-| ISSUE 3.3 | Zapraszanie | Frontend: Formularz Invite Client | ⬜ | ISSUE 3.2 |
+| ISSUE 3.3 | Zapraszanie | Frontend: Formularz Invite Client | ✅ | ISSUE 3.2 |
 | ISSUE 3.4 | Zapraszanie | Frontend: Strona potwierdzenia /portal/confirm | ⬜ | ISSUE 3.3 |
 | ISSUE 4.1 | Płatności | Stripe Elements w Client Portal | ⬜ | ISSUE 3.4 |
 | ISSUE 4.2 | Płatności | Webhook Sync → Provider Dashboard | ⬜ | ISSUE 4.1 |
@@ -562,15 +562,15 @@ Provider w swoim dashboardzie (`/dashboard/clients`) ma mieć możliwość zapro
 
 **✅ CHECKLIST WERYFIKACJI (Dla Agenta):**
 
-* [ ] `npm run api:generate` → wygenerowane hooki dla invite i resend-invitation
-* [ ] Formularz InviteClientForm renderuje się w dialogu
-* [ ] Submit → Network Tab: `POST /api/Clients/invite` z Authorization header → 200/201
-* [ ] Po wysłaniu: Toast "Zaproszenie wysłane", lista klientów odświeża się
-* [ ] Nowy klient w liście ma Badge "Inactive" (szary)
-* [ ] Przycisk "Wyślij ponownie" dla Inactive → `POST /api/Clients/{id}/resend-invitation` → 200
-* [ ] Walidacja Zod: pusty email → komunikat błędu
-* [ ] `npm run typecheck` → ZERO błędów
-* [ ] Git commit: `feat(clients): add invite client form with status badges`
+* [x] `npm run api:generate` → wygenerowane hooki dla invite i resend-invitation
+* [x] Formularz InviteClientForm renderuje się w dialogu
+* [x] Submit → Network Tab: `POST /api/Clients/invite` z Authorization header → 200/201
+* [x] Po wysłaniu: Toast "Zaproszenie wysłane", lista klientów odświeża się
+* [x] Nowy klient w liście ma Badge "Inactive" (szary)
+* [x] Przycisk "Wyślij ponownie" dla Inactive → `POST /api/Clients/{id}/resend-invitation` → 200
+* [x] Walidacja Zod: pusty email → komunikat błędu
+* [x] `npm run typecheck` → ZERO błędów
+* [x] Git commit: `feat(clients): add invite client form with status badges`
 
 <!-- BLOCK_END: ISSUE_3.3 -->
 

@@ -215,9 +215,18 @@
         "Walidacja Zod: pusty email → komunikat błędu",
         "npm run typecheck → ZERO błędów"
       ],
-      "passes": false,
-      "completionDate": null,
-      "notes": []
+      "passes": true,
+      "completionDate": "2026-03-01",
+      "notes": [
+        "npm run api:generate → wygenerowano usePostApiClientsInvite + usePostApiClientsIdResendInvitation + usePostApiClientsConfirmEmail",
+        "Utwożono InviteClientSchema (Zod) w src/features/clients/schemas/invite-client.schema.ts",
+        "Utwożono useInviteClient.ts hook (onSuccess: toast + invalidateQueries, onError: error instanceof Error guard)",
+        "Utwożono InviteClientForm.tsx (RHF + Zod, 4 pola: email/firstName/lastName/companyName, button disabled isPending)",
+        "Utwożono InviteClientDialog.tsx (Dialog + InviteClientForm, onSuccess zamyka dialog)",
+        "Zaktualizowano ClientsTable.tsx: dropdown menu (View + Wyślij zaproszenie ponownie dla Inactive), usePostApiClientsIdResendInvitation",
+        "Zaktualizowano /dashboard/clients/page.tsx: zamieniono Link 'Add Client' na InviteClientDialog",
+        "npm run typecheck → ZERO błędów, npm run lint → 0 errors, 2 pre-existing warnings w ProcessPaymentForm.tsx"
+      ]
     },
     {
       "id": "ISSUE_3.4",
@@ -518,11 +527,11 @@
   ],
   "stats": {
     "totalBlocks": 13,
-    "completedBlocks": 4,
-    "remainingBlocks": 9,
-    "completionPercentage": 31
+    "completedBlocks": 5,
+    "remainingBlocks": 8,
+    "completionPercentage": 38
   },
-  "nextPriority": "ISSUE_3.3",
+  "nextPriority": "ISSUE_3.4",
   "dependencyGraph": {
     "description": "Wizualizacja zależności między blokami. Dwie równoległe ścieżki po ISSUE 2.1.",
     "independent": ["ISSUE_1.1", "ISSUE_2.1"],

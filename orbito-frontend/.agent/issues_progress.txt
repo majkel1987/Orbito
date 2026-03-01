@@ -37,7 +37,7 @@ PODSUMOWANIE BLOKÓW
 | ISSUE 2.1  | Rejestracja | Auto-tworzenie Provider przy rejestracji       | ✅     | Brak                |
 | ISSUE 3.1  | Zapraszanie | Backend: Token, Email Service, Endpoint        | ✅     | ISSUE 2.1           |
 | ISSUE 3.2  | Zapraszanie | Backend: Confirmation Endpoint & Status        | ✅     | ISSUE 3.1           |
-| ISSUE 3.3  | Zapraszanie | Frontend: Formularz Invite Client              | ⬜     | ISSUE 3.2           |
+| ISSUE 3.3  | Zapraszanie | Frontend: Formularz Invite Client              | ✅     | ISSUE 3.2           |
 | ISSUE 3.4  | Zapraszanie | Frontend: Strona potwierdzenia /portal/confirm | ⬜     | ISSUE 3.3           |
 | ISSUE 4.1  | Płatności   | Stripe Elements w Client Portal                | ⬜     | ISSUE 3.4           |
 | ISSUE 4.2  | Płatności   | Webhook Sync → Provider Dashboard              | ⬜     | ISSUE 4.1           |
@@ -400,3 +400,75 @@ Completion: 31%
 ISSUE 3.3 (Zapraszanie Klienta – Frontend: Formularz Invite Client)
 Zależności: ISSUE 3.1 ✅ + ISSUE 3.2 ✅
 Wymaga: npm run api:generate → nowe hooki usePostApiClientsInvite + usePostApiClientsIdResendInvitation + usePostApiClientsConfirmEmail
+
+================================================================================
+--- Session 2026-03-01 ---
+Agent: Claude Sonnet 4.6
+Block: ISSUE 3.3 Zapraszanie Klienta – Frontend: Formularz Invite Client
+Status: COMPLETED
+================================================================================
+
+## WYKONANE ZADANIA:
+1. npm run api:generate → wygenerowano hooki:
+   - usePostApiClientsInvite (POST /api/Clients/invite)
+   - usePostApiClientsIdResendInvitation (POST /api/Clients/{id}/resend-invitation)
+   - usePostApiClientsConfirmEmail (POST /api/Clients/confirm-email)
+2. src/features/clients/schemas/invite-client.schema.ts (NOWY):
+   - InviteClientSchema (Zod): email/firstName/lastName/companyName(optional)
+   - Eksport: InviteClientFormData
+3. src/features/clients/hooks/useInviteClient.ts (NOWY):
+   - Opakowanie usePostApiClientsInvite
+   - onSuccess: toast.success + queryClient.invalidateQueries(["/api/Clients"])
+   - onError: error instanceof Error guard → toast.error
+4. src/features/clients/components/InviteClientForm.tsx (NOWY):
+   - RHF + Zod resolver
+   - 4 pola: Email, Imię, Nazwisko, Firma (opcjonalne)
+   - Button disabled podczas isPending
+   - onSuccess: form.reset() + onSuccess callback
+5. src/features/clients/components/InviteClientDialog.tsx (NOWY):
+   - shadcn/ui Dialog + InviteClientForm
+   - Trigger: Button "Zaproś klienta" z ikoną UserPlus
+   - onSuccess zamyka dialog (setOpen(false))
+6. src/features/clients/components/ClientsTable.tsx (zmieniony):
+   - Zamieniono link "View" na DropdownMenu z opcjami
+   - Opcja "View" – link do /dashboard/clients/{id}
+   - Opcja "Wyślij zaproszenie ponownie" – tylko dla Inactive (!client.isActive)
+   - usePostApiClientsIdResendInvitation z error instanceof Error guard
+7. src/app/(dashboard)/dashboard/clients/page.tsx (zmieniony):
+   - Zamieniono Link "Add Client" na InviteClientDialog
+   - Strona jest teraz Server Component (bez "use client")
+
+## WERYFIKACJA:
+- npm run typecheck: ✅ ZERO błędów
+- npm run lint: ✅ 0 errors (2 pre-existing warnings w ProcessPaymentForm.tsx)
+- usePostApiClientsInvite hook: ✅ wygenerowany
+- usePostApiClientsIdResendInvitation hook: ✅ wygenerowany
+- InviteClientForm + InviteClientDialog: ✅ implementacja kompletna
+- Status badge (Inactive/Active): ✅ istniał już w ClientsTable (client.isActive)
+- Resend invitation button dla Inactive: ✅
+
+## ZMIENIONE PLIKI:
+- src/features/clients/schemas/invite-client.schema.ts (NOWY)
+- src/features/clients/hooks/useInviteClient.ts (NOWY)
+- src/features/clients/components/InviteClientForm.tsx (NOWY)
+- src/features/clients/components/InviteClientDialog.tsx (NOWY)
+- src/features/clients/components/ClientsTable.tsx (zmieniony – DropdownMenu + resend)
+- src/app/(dashboard)/dashboard/clients/page.tsx (zmieniony – InviteClientDialog)
+- orbito-frontend/.agent/issues_feature_list.json (passes: true, stats zaktualizowane)
+- orbito-frontend/.agent/issues_progress.txt (tabela + stats zaktualizowane)
+- Issues_fixing_prompts.md (ISSUE 3.3 → ✅, checklist zaktualizowana)
+
+## KNOWN ISSUES:
+- Status badge używa client.isActive (boolean) zamiast client.status (enum) – ClientDto nie zawiera pola status w wygenerowanym modelu, ale isActive działa poprawnie dla rozróżnienia Inactive/Active
+- Network Tab weryfikacja (POST /api/Clients/invite z Bearer) nie była wykonana ręcznie – wymaga uruchomienia aplikacji
+
+## STATS PO SESJI:
+Total issue blocks: 13
+Completed: 5 (ISSUE 1.1, ISSUE 2.1, ISSUE 3.1, ISSUE 3.2, ISSUE 3.3)
+Remaining: 8
+Completion: 38%
+
+## NASTĘPNY KROK:
+ISSUE 3.4 (Zapraszanie Klienta – Frontend: Strona Potwierdzenia Tokena)
+Zależności: ISSUE 3.2 ✅ + ISSUE 3.3 ✅
+Wymaga: usePostApiClientsConfirmEmail (już wygenerowany), strona /portal/confirm?token=...
