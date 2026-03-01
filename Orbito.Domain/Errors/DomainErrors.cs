@@ -126,6 +126,18 @@ public static class DomainErrors
         public static Error CannotDeleteWithActiveSubscriptions => Error.Create(
             "Client.CannotDeleteWithActiveSubscriptions",
             "Cannot delete client with active subscriptions");
+
+        public static Error AlreadyConfirmed => Error.Create(
+            "Client.AlreadyConfirmed",
+            "Client email has already been confirmed");
+
+        public static Error InvitationExpired => Error.Create(
+            "Client.InvitationExpired",
+            "Client invitation has expired");
+
+        public static Error InvalidToken => Error.Create(
+            "Client.InvalidToken",
+            "Invalid invitation token");
     }
 
     /// <summary>

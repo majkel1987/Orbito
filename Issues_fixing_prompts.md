@@ -51,7 +51,7 @@
 |---|---|---|---|---|
 | ISSUE 1.1 | Admin | Singleton PlatformAdmin & Izolacja | ✅ | Brak |
 | ISSUE 2.1 | Rejestracja | Auto-tworzenie Provider przy rejestracji | ✅ | Brak |
-| ISSUE 3.1 | Zapraszanie | Backend: Token, Email Service, Endpoint | ⬜ | ISSUE 2.1 |
+| ISSUE 3.1 | Zapraszanie | Backend: Token, Email Service, Endpoint | ✅ | ISSUE 2.1 |
 | ISSUE 3.2 | Zapraszanie | Backend: Confirmation Endpoint & Status | ⬜ | ISSUE 3.1 |
 | ISSUE 3.3 | Zapraszanie | Frontend: Formularz Invite Client | ⬜ | ISSUE 3.2 |
 | ISSUE 3.4 | Zapraszanie | Frontend: Strona potwierdzenia /portal/confirm | ⬜ | ISSUE 3.3 |
@@ -323,15 +323,15 @@ Dodawanie nowego klienta jest wyłącznym prawem Providera. Utworzenie klienta u
 
 **✅ CHECKLIST WERYFIKACJI (Dla Agenta):**
 
-* [ ] `ClientInvitationToken` ValueObject istnieje w `Orbito.Domain/ValueObjects/`
-* [ ] `IEmailService` zdefiniowany w `Orbito.Application/Common/Interfaces/`
-* [ ] `EmailService` zaimplementowany w `Orbito.Infrastructure/Services/`
-* [ ] `InviteClientCommand` + Handler + Validator istnieją w `Application/Features/Clients/Commands/`
-* [ ] Handler zwraca `Result<Guid>` (nie rzuca wyjątków!)
-* [ ] Migracja EF Core: `dotnet ef migrations add AddClientInvitationFields` → sukces
-* [ ] `dotnet build` → ZERO błędów
+* [x] `ClientInvitationToken` ValueObject istnieje w `Orbito.Domain/ValueObjects/`
+* [x] `IEmailService` zdefiniowany w `Orbito.Application/Common/Interfaces/`
+* [x] `EmailService` zaimplementowany w `Orbito.Infrastructure/Services/`
+* [x] `InviteClientCommand` + Handler + Validator istnieją w `Application/Clients/Commands/InviteClient/`
+* [x] Handler zwraca `Result<Guid>` (nie rzuca wyjątków!)
+* [x] Migracja EF Core: `dotnet ef migrations add AddClientInvitationFields` → sukces
+* [x] `dotnet build` → ZERO błędów
 * [ ] Unit test: InviteClientCommandHandler tworzy klienta Inactive, generuje token, wywołuje EmailService
-* [ ] Git commit: `feat(clients): add invitation token, email service, and InviteClientCommand`
+* [x] Git commit: `feat(clients): add invitation token, email service, and InviteClientCommand`
 
 <!-- BLOCK_END: ISSUE_3.1 -->
 

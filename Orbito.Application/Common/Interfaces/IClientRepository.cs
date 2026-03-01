@@ -29,6 +29,9 @@ namespace Orbito.Application.Common.Interfaces
         Task DeleteAsync(Client client, CancellationToken cancellationToken = default);
         Task SoftDeleteAsync(Client client, CancellationToken cancellationToken = default);
 
+        // Invitation operations
+        Task<Client?> GetByInvitationTokenAsync(string token, CancellationToken cancellationToken = default);
+
         // Validation operations
         Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default);
         Task<bool> ExistsAsync(string email, CancellationToken cancellationToken = default);

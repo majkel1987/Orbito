@@ -1,4 +1,6 @@
-﻿using Orbito.Domain.Enums;
+﻿using Orbito.Domain.Common;
+using Orbito.Domain.Enums;
+using Orbito.Domain.Errors;
 using Orbito.Domain.Identity;
 using Orbito.Domain.Interfaces;
 using Orbito.Domain.ValueObjects;
@@ -20,6 +22,12 @@ namespace Orbito.Domain.Entities
         public string? DirectEmail { get; set; }       // Dla klientów bez konta Identity
         public string? DirectFirstName { get; set; }   // Dla klientów bez konta Identity
         public string? DirectLastName { get; set; }    // Dla klientów bez konta Identity
+
+        // Invitation Flow
+        public ClientStatus Status { get; set; } = ClientStatus.Inactive;
+        public string? InvitationToken { get; set; }
+        public DateTime? InvitationTokenExpiresAt { get; set; }
+        public DateTime? ConfirmedAt { get; set; }
 
         // Platform Data
         public DateTime CreatedAt { get; set; }
@@ -96,6 +104,48 @@ namespace Orbito.Domain.Entities
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             };
+        }
+
+        public static Client CreateInvited(
+            TenantId tenantId,
+            string email,
+            string firstName,
+            string lastName,
+            string invitationToken,
+            DateTime invitationTokenExpiresAt,
+            string? companyName = null)
+        {
+            return new Client
+            {
+                Id = Guid.NewGuid(),
+                TenantId = tenantId,
+                DirectEmail = email,
+                DirectFirstName = firstName,
+                DirectLastName = lastName,
+                CompanyName = companyName,
+                Status = ClientStatus.Inactive,
+                IsActive = false,
+                InvitationToken = invitationToken,
+                InvitationTokenExpiresAt = invitationTokenExpiresAt,
+                CreatedAt = DateTime.UtcNow
+            };
+        }
+
+        public Result ConfirmEmail()
+        {
+            if (Status == ClientStatus.Active)
+                return Result.Failure(DomainErrors.Client.AlreadyConfirmed);
+
+            if (InvitationToken == null || InvitationTokenExpiresAt < DateTime.UtcNow)
+                return Result.Failure(DomainErrors.Client.InvitationExpired);
+
+            Status = ClientStatus.Active;
+            IsActive = true;
+            ConfirmedAt = DateTime.UtcNow;
+            InvitationToken = null;
+            InvitationTokenExpiresAt = null;
+
+            return Result.Success();
         }
 
         // Business Operations

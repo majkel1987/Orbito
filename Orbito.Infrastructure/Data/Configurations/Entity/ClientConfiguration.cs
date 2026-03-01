@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Orbito.Domain.Entities;
+using Orbito.Domain.Enums;
 using Orbito.Domain.ValueObjects;
 
 namespace Orbito.Infrastructure.Data.Configurations.Entity
@@ -35,6 +36,18 @@ namespace Orbito.Infrastructure.Data.Configurations.Entity
 
             builder.Property(c => c.DirectLastName)
                 .HasMaxLength(100);
+
+            // Invitation Flow
+            builder.Property(c => c.Status)
+                .IsRequired()
+                .HasDefaultValue(ClientStatus.Inactive);
+
+            builder.Property(c => c.InvitationToken)
+                .HasMaxLength(200);
+
+            builder.Property(c => c.InvitationTokenExpiresAt);
+
+            builder.Property(c => c.ConfirmedAt);
 
             // Timestamps
             builder.Property(c => c.CreatedAt)

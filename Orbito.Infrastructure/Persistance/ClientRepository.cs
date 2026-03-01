@@ -349,6 +349,14 @@ namespace Orbito.Infrastructure.Persistance
             return await query.AnyAsync(cancellationToken);
         }
 
+        public async Task<Client?> GetByInvitationTokenAsync(string token, CancellationToken cancellationToken = default)
+        {
+            // Invitation token lookup is cross-tenant (token is globally unique)
+            return await _context.Clients
+                .Include(c => c.User)
+                .FirstOrDefaultAsync(c => c.InvitationToken == token, cancellationToken);
+        }
+
         public async Task<bool> CanClientBeDeletedAsync(Guid clientId, CancellationToken cancellationToken = default)
         {
             var query = _context.Clients

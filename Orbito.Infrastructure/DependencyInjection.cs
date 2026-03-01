@@ -163,6 +163,7 @@ namespace Orbito.Infrastructure
             services.AddScoped<IReconciliationRepository, ReconciliationRepository>();
             services.AddScoped<ITeamMemberRepository, TeamMemberRepository>();
             services.AddScoped<IEmailSender, Services.EmailSender>();
+            services.AddScoped<IEmailService, Services.EmailService>();
             services.AddScoped<IUserContextService, Services.UserContextService>();
             services.AddScoped<IPaymentReconciliationService, Services.PaymentReconciliationService>();
             services.AddScoped<ITransactionService, Services.TransactionService>();

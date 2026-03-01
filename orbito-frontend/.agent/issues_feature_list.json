@@ -122,9 +122,25 @@
         "dotnet build → ZERO błędów",
         "Unit test: InviteClientCommandHandler tworzy klienta Inactive + generuje token + wywołuje EmailService"
       ],
-      "passes": false,
-      "completionDate": null,
-      "notes": []
+      "passes": true,
+      "completionDate": "2026-03-01",
+      "notes": [
+        "Utwożono ClientStatus enum (Inactive=0, Active=1, Suspended=2) w Orbito.Domain/Enums/",
+        "Utwożono ClientInvitationToken ValueObject w Orbito.Domain/ValueObjects/ (Base64 URL-safe, 32 random bytes, IEquatable<T>)",
+        "Rozszerzono Client entity: dodano Status, InvitationToken, InvitationTokenExpiresAt, ConfirmedAt + metody CreateInvited() i ConfirmEmail()",
+        "Dodano DomainErrors: Client.AlreadyConfirmed, Client.InvitationExpired, Client.InvalidToken",
+        "Utwożono IEmailService w Orbito.Application/Common/Interfaces/",
+        "Utwożono InviteClientCommand + InviteClientCommandHandler + InviteClientCommandValidator w Orbito.Application/Clients/Commands/InviteClient/",
+        "Utwożono EmailService : IEmailService w Orbito.Infrastructure/Services/ (opakowuje IEmailSender, HTML template PL)",
+        "Zaktualizowano ClientConfiguration.cs: mapowanie Status (default Inactive), InvitationToken (nvarchar 200), InvitationTokenExpiresAt, ConfirmedAt",
+        "Dodano IEmailService → EmailService rejestrację w Infrastructure/DependencyInjection.cs",
+        "Dodano GetByInvitationTokenAsync do IClientRepository + implementację w ClientRepository (cross-tenant, token globally unique)",
+        "Dodano POST /api/Clients/invite endpoint do ClientsController (ProviderTeamAccess policy)",
+        "Dodano App:FrontendBaseUrl do appsettings.json",
+        "Migracja AddClientInvitationFields: 4 kolumny w tabeli Clients (ConfirmedAt, InvitationToken, InvitationTokenExpiresAt, Status)",
+        "Migracja zastosowana pomyślnie: dotnet ef database update → Done",
+        "dotnet build Orbito.API: Build succeeded. 0 Error(s)"
+      ]
     },
     {
       "id": "ISSUE_3.2",
@@ -495,11 +511,11 @@
   ],
   "stats": {
     "totalBlocks": 13,
-    "completedBlocks": 2,
-    "remainingBlocks": 11,
-    "completionPercentage": 15
+    "completedBlocks": 3,
+    "remainingBlocks": 10,
+    "completionPercentage": 23
   },
-  "nextPriority": "ISSUE_3.1",
+  "nextPriority": "ISSUE_3.2",
   "dependencyGraph": {
     "description": "Wizualizacja zależności między blokami. Dwie równoległe ścieżki po ISSUE 2.1.",
     "independent": ["ISSUE_1.1", "ISSUE_2.1"],

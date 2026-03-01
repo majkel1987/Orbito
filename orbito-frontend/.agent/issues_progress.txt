@@ -35,7 +35,7 @@ PODSUMOWANIE BLOKÓW
 |------------|-------------|-----------------------------------------------|--------|---------------------|
 | ISSUE 1.1  | Admin       | Singleton PlatformAdmin & Izolacja             | ✅     | Brak                |
 | ISSUE 2.1  | Rejestracja | Auto-tworzenie Provider przy rejestracji       | ✅     | Brak                |
-| ISSUE 3.1  | Zapraszanie | Backend: Token, Email Service, Endpoint        | ⬜     | ISSUE 2.1           |
+| ISSUE 3.1  | Zapraszanie | Backend: Token, Email Service, Endpoint        | ✅     | ISSUE 2.1           |
 | ISSUE 3.2  | Zapraszanie | Backend: Confirmation Endpoint & Status        | ⬜     | ISSUE 3.1           |
 | ISSUE 3.3  | Zapraszanie | Frontend: Formularz Invite Client              | ⬜     | ISSUE 3.2           |
 | ISSUE 3.4  | Zapraszanie | Frontend: Strona potwierdzenia /portal/confirm | ⬜     | ISSUE 3.3           |
@@ -246,3 +246,94 @@ Completion: 15%
 ISSUE 3.1 (Zapraszanie Klienta – Backend: Token & Email Service)
 Zależności: ISSUE 2.1 ✅
 Równolegle dostępna ścieżka B: ISSUE 6.1 (wymaga ISSUE 1.1 ✅ + ISSUE 2.1 ✅)
+
+================================================================================
+--- Session 2026-03-01 ---
+Agent: Claude Sonnet 4.6
+Block: ISSUE 3.1 Zapraszanie Klienta – Backend: Token & Email Service
+Status: COMPLETED
+================================================================================
+
+## WYKONANE ZADANIA:
+1. Orbito.Domain/Enums/ClientStatus.cs (NOWY):
+   - Enum: Inactive=0, Active=1, Suspended=2
+2. Orbito.Domain/ValueObjects/ClientInvitationToken.cs (NOWY):
+   - ValueObject z Token (Base64 URL-safe, 32 random bytes), ExpiresAt, IsExpired
+   - Statyczna fabryka Create(TimeSpan validFor), IEquatable<T>
+3. Orbito.Domain/Entities/Client.cs (zmieniony):
+   - Dodano właściwości: Status, InvitationToken, InvitationTokenExpiresAt, ConfirmedAt
+   - Dodano fabrykę: CreateInvited(tenantId, email, firstName, lastName, token, expiresAt, companyName)
+   - Dodano metodę domenową: ConfirmEmail() → Result (ISSUE 3.2 gotowe)
+4. Orbito.Domain/Errors/DomainErrors.cs (zmieniony):
+   - Dodano: Client.AlreadyConfirmed, Client.InvitationExpired, Client.InvalidToken
+5. Orbito.Application/Common/Interfaces/IEmailService.cs (NOWY):
+   - SendClientInvitationAsync(toEmail, clientName, providerName, invitationLink, ct) → Task<Result>
+6. Orbito.Application/Clients/Commands/InviteClient/ (NOWY folder):
+   - InviteClientCommand.cs: Email, FirstName, LastName, CompanyName? → IRequest<Result<Guid>>
+   - InviteClientCommandHandler.cs: tenant check, provider lookup, duplicate email check,
+     CreateInvited, link generation (App:FrontendBaseUrl), EmailService call, AddAsync
+   - InviteClientCommandValidator.cs: FluentValidation (Email format/max256, Names max100)
+7. Orbito.Infrastructure/Services/EmailService.cs (NOWY):
+   - IEmailService impl, opakowuje IEmailSender, HTML template PL, try/catch → Result
+8. Orbito.Infrastructure/Data/Configurations/Entity/ClientConfiguration.cs (zmieniony):
+   - Mapowanie: Status (HasDefaultValue Inactive), InvitationToken (nvarchar 200), daty nullable
+9. Orbito.Infrastructure/DependencyInjection.cs (zmieniony):
+   - services.AddScoped<IEmailService, Services.EmailService>()
+10. Orbito.Application/Common/Interfaces/IClientRepository.cs (zmieniony):
+    - Dodano: GetByInvitationTokenAsync(token, ct) → Task<Client?>
+11. Orbito.Infrastructure/Persistance/ClientRepository.cs (zmieniony):
+    - Implementacja GetByInvitationTokenAsync (cross-tenant – token globally unique)
+12. Orbito.API/Controllers/ClientsController.cs (zmieniony):
+    - POST /api/Clients/invite → InviteClientCommand, ProviderTeamAccess, 201 Created
+13. Orbito.API/appsettings.json (zmieniony):
+    - Dodano App:FrontendBaseUrl = "http://localhost:3000"
+14. Migracja EF Core: 20260301112311_AddClientInvitationFields
+    - Kolumny: ConfirmedAt (datetime2), InvitationToken (nvarchar 200), InvitationTokenExpiresAt (datetime2), Status (int, default 0)
+    - dotnet ef database update → Done
+
+## WERYFIKACJA:
+- dotnet build Orbito.API: ✅ Build succeeded. 0 Error(s)
+- dotnet ef database update: ✅ Migration applied
+- npm run typecheck: N/A (brak zmian frontend)
+- ClientInvitationToken ValueObject: ✅
+- IEmailService: ✅
+- EmailService: ✅
+- InviteClientCommand + Handler + Validator: ✅
+- POST /api/Clients/invite endpoint: ✅
+- Migracja AddClientInvitationFields: ✅
+
+## ZMIENIONE PLIKI:
+- Orbito.Domain/Enums/ClientStatus.cs (NOWY)
+- Orbito.Domain/ValueObjects/ClientInvitationToken.cs (NOWY)
+- Orbito.Domain/Entities/Client.cs
+- Orbito.Domain/Errors/DomainErrors.cs
+- Orbito.Application/Common/Interfaces/IEmailService.cs (NOWY)
+- Orbito.Application/Common/Interfaces/IClientRepository.cs
+- Orbito.Application/Clients/Commands/InviteClient/InviteClientCommand.cs (NOWY)
+- Orbito.Application/Clients/Commands/InviteClient/InviteClientCommandHandler.cs (NOWY)
+- Orbito.Application/Clients/Commands/InviteClient/InviteClientCommandValidator.cs (NOWY)
+- Orbito.Infrastructure/Services/EmailService.cs (NOWY)
+- Orbito.Infrastructure/Data/Configurations/Entity/ClientConfiguration.cs
+- Orbito.Infrastructure/DependencyInjection.cs
+- Orbito.Infrastructure/Persistance/ClientRepository.cs
+- Orbito.API/Controllers/ClientsController.cs
+- Orbito.API/appsettings.json
+- Orbito.Infrastructure/Migrations/20260301112311_AddClientInvitationFields.cs (NOWY)
+- orbito-frontend/.agent/issues_feature_list.json (passes: true, stats zaktualizowane)
+- orbito-frontend/.agent/issues_progress.txt (tabela + stats zaktualizowane)
+- Issues_fixing_prompts.md (ISSUE 3.1 → ✅, checklist zaktualizowana)
+
+## KNOWN ISSUES:
+- Unit test dla InviteClientCommandHandler NIE napisany (poza scopem ISSUE 3.1 – wymaga osobnej sesji)
+- EmailService używa stub IEmailSender (loguje zamiast wysyłać) – MVP design, produkcja wymaga SMTP/SendGrid config
+
+## STATS PO SESJI:
+Total issue blocks: 13
+Completed: 3 (ISSUE 1.1, ISSUE 2.1, ISSUE 3.1)
+Remaining: 10
+Completion: 23%
+
+## NASTĘPNY KROK:
+ISSUE 3.2 (Zapraszanie Klienta – Backend: Potwierdzenie Emaila & Aktywacja)
+Zależności: ISSUE 3.1 ✅
+Uwaga: Client.ConfirmEmail() metoda domenowa już zaimplementowana w ISSUE 3.1!

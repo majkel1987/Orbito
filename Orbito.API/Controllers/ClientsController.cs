@@ -9,6 +9,7 @@ using Orbito.Application.Clients.Commands.DeleteClient;
 using Orbito.Application.Clients.Commands.UpdateClient;
 using Orbito.Application.Clients.Queries.GetClientById;
 using Orbito.Application.Clients.Queries.GetClientsByProvider;
+using Orbito.Application.Clients.Commands.InviteClient;
 using Orbito.Application.Clients.Queries.SearchClients;
 using Orbito.Application.DTOs;
 
@@ -218,6 +219,29 @@ namespace Orbito.API.Controllers
             var command = new DeactivateClientCommand(id);
             var result = await Mediator.Send(command);
             return HandleResult(result);
+        }
+
+        /// <summary>
+        /// Zaprasza nowego klienta – tworzy klienta ze statusem Inactive i wysyła email z tokenem
+        /// </summary>
+        /// <param name="command">Dane klienta do zaproszenia</param>
+        /// <returns>ID nowo utworzonego klienta</returns>
+        /// <response code="201">Klient zaproszony, email wysłany</response>
+        /// <response code="400">Błąd walidacji lub klient z tym emailem już istnieje</response>
+        /// <response code="401">Brak autoryzacji</response>
+        [HttpPost("invite")]
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> InviteClient([FromBody] InviteClientCommand command)
+        {
+            var result = await Mediator.Send(command);
+
+            if (!result.IsSuccess)
+                return HandleResult(result);
+
+            return StatusCode(StatusCodes.Status201Created, result.Value);
         }
 
         /// <summary>
