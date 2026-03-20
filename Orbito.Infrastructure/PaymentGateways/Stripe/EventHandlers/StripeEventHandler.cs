@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.Common.Models;
 using Orbito.Application.Services;
+using Orbito.Domain.Enums;
 using Orbito.Domain.ValueObjects;
 using Orbito.Infrastructure.PaymentGateways.Stripe.Models;
 using Orbito.Infrastructure.Persistance;
@@ -17,15 +18,18 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
         private readonly ILogger<StripeEventHandler> _logger;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IPaymentProcessingService _paymentProcessingService;
+        private readonly IEmailService _emailService;
 
         public StripeEventHandler(
             ILogger<StripeEventHandler> logger,
             IUnitOfWork unitOfWork,
-            IPaymentProcessingService paymentProcessingService)
+            IPaymentProcessingService paymentProcessingService,
+            IEmailService emailService)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _paymentProcessingService = paymentProcessingService ?? throw new ArgumentNullException(nameof(paymentProcessingService));
+            _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
         }
 
         /// <summary>
@@ -103,10 +107,44 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
                 // Update payment status
                 payment.MarkAsCompleted();
                 await _unitOfWork.Payments.UpdateAsync(payment, cancellationToken);
+
+                // Activate subscription if it was pending payment or suspended
+                var subscription = payment.Subscription;
+                if (subscription != null)
+                {
+                    if (subscription.Status == SubscriptionStatus.Pending ||
+                        subscription.Status == SubscriptionStatus.Suspended)
+                    {
+                        subscription.Activate();
+                        await _unitOfWork.Subscriptions.UpdateAsync(subscription, cancellationToken);
+                        _logger.LogInformation("Subscription {SubscriptionId} activated after successful payment", subscription.Id);
+                    }
+                }
+
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 // Handle payment success (e.g., fulfill order, send confirmation)
                 await _paymentProcessingService.HandlePaymentSuccessAsync(payment.Id, cancellationToken);
+
+                // Send payment confirmation email to client
+                if (payment.Client != null && !string.IsNullOrEmpty(payment.Client.Email))
+                {
+                    var subscriptionName = subscription?.Plan?.Name ?? "Subskrypcja";
+                    var clientName = payment.Client.FullName ?? payment.Client.Email;
+
+                    await _emailService.SendPaymentConfirmationAsync(
+                        toEmail: payment.Client.Email,
+                        clientName: clientName,
+                        subscriptionName: subscriptionName,
+                        amount: payment.Amount?.Amount ?? 0,
+                        currency: payment.Amount?.CurrencyCode ?? "PLN",
+                        paymentId: payment.ExternalPaymentId ?? payment.Id.ToString(),
+                        paymentDate: DateTime.UtcNow,
+                        cancellationToken: cancellationToken);
+
+                    _logger.LogInformation("Payment confirmation email sent to {Email} for payment {PaymentId}",
+                        payment.Client.Email, payment.Id);
+                }
 
                 _logger.LogInformation("Successfully processed payment intent succeeded for payment {PaymentId}", payment.Id);
                 return Result.Success();
@@ -152,6 +190,25 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
 
                 // Handle payment failure (e.g., notify user, retry logic)
                 await _paymentProcessingService.HandlePaymentFailureAsync(payment.Id, failureReason, cancellationToken);
+
+                // Send payment failed email to client
+                if (payment.Client != null && !string.IsNullOrEmpty(payment.Client.Email))
+                {
+                    var subscriptionName = payment.Subscription?.Plan?.Name ?? "Subskrypcja";
+                    var clientName = payment.Client.FullName ?? payment.Client.Email;
+
+                    await _emailService.SendPaymentFailedAsync(
+                        toEmail: payment.Client.Email,
+                        clientName: clientName,
+                        subscriptionName: subscriptionName,
+                        amount: payment.Amount?.Amount ?? 0,
+                        currency: payment.Amount?.CurrencyCode ?? "PLN",
+                        failureReason: failureReason,
+                        cancellationToken: cancellationToken);
+
+                    _logger.LogInformation("Payment failed email sent to {Email} for payment {PaymentId}",
+                        payment.Client.Email, payment.Id);
+                }
 
                 _logger.LogInformation("Successfully processed payment intent failed for payment {PaymentId}: {Reason}",
                     payment.Id, failureReason);

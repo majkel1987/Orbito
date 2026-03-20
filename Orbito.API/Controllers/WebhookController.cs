@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Logging;
@@ -14,6 +15,7 @@ namespace Orbito.API.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [EnableRateLimiting("webhook")]
+    [AllowAnonymous] // Webhooks from payment gateways do not include JWT tokens
     public class WebhookController : ControllerBase
     {
         private readonly ILogger<WebhookController> _logger;

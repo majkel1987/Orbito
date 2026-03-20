@@ -301,9 +301,24 @@
         "npm run typecheck → ZERO błędów",
         "dotnet build → ZERO błędów"
       ],
-      "passes": false,
-      "completionDate": null,
-      "notes": []
+      "passes": true,
+      "completionDate": "2026-03-20",
+      "notes": [
+        "Backend: CreatePaymentIntentRequest/Result modele w Application/Common/Models/PaymentGateway/",
+        "Backend: IPaymentGateway rozszerzony o CreatePaymentIntentAsync (Application/Common/Interfaces/)",
+        "Backend: StripePaymentGateway.CreatePaymentIntentAsync w Infrastructure/PaymentGateways/Stripe/ + API/Services/",
+        "Backend: CreatePaymentIntentCommand + Handler + Validator w Application/Features/Payments/Commands/CreatePaymentIntent/",
+        "Backend: DomainErrors.Payment.CustomerCreationFailed + IntentCreationFailed dodane",
+        "Backend: POST /api/Portal/payments/create-intent endpoint w PortalController (ClientAccess policy)",
+        "Frontend: StripeProvider.tsx w core/providers/ (lazy-load Stripe, locale pl)",
+        "Frontend: PaymentForm.tsx w features/client-portal/components/ (PaymentElement + error handling)",
+        "Frontend: PaySubscriptionDialog.tsx w features/client-portal/components/ (tworzy PaymentIntent, wyświetla formularz)",
+        "Frontend: MySubscriptionsCard.tsx zaktualizowany - przycisk Opłać dla Active/Suspended subskrypcji",
+        "Frontend: /portal/payment-success page z obsługą redirect_status (success/processing/error)",
+        "Frontend: Alert component (shadcn/ui) dodany do shared/ui/",
+        "Frontend: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY dodany do .env.local",
+        "npm run typecheck: ZERO błędów, npm run lint: 0 errors (2 pre-existing warnings)"
+      ]
     },
     {
       "id": "ISSUE_4.2",
@@ -332,9 +347,18 @@
         "Webhook idempotentny: duplikat eventu nie tworzy duplikatu",
         "dotnet build → ZERO błędów"
       ],
-      "passes": false,
-      "completionDate": null,
-      "notes": []
+      "passes": true,
+      "completionDate": "2026-03-20",
+      "notes": [
+        "WebhookController: dodano [AllowAnonymous] - Stripe webhooks nie wysyłają JWT",
+        "IEmailService: rozszerzony o SendPaymentConfirmationAsync + SendPaymentFailedAsync",
+        "EmailService: zaimplementowano oba emaile z HTML templates (PL) - potwierdzenie (zielony checkmark) + niepowodzenie (czerwony X)",
+        "StripeEventHandler: HandlePaymentIntentSucceededAsync - aktualizuje Payment.Status, aktywuje Subscription (Pending/Suspended → Active), wysyła email",
+        "StripeEventHandler: HandlePaymentIntentFailedAsync - aktualizuje Payment.Status, wysyła email z failureReason",
+        "MRR: automatycznie przeliczany przez GetDashboardStatsQueryHandler na podstawie aktywnych subskrypcji (bez zmian, działa out-of-the-box)",
+        "Idempotentność: webhook już obsługuje duplikaty (payment.IsCompleted check)",
+        "dotnet build Orbito.API: Build succeeded. 0 Error(s)"
+      ]
     },
     {
       "id": "ISSUE_5.1",
@@ -533,11 +557,11 @@
   ],
   "stats": {
     "totalBlocks": 13,
-    "completedBlocks": 6,
-    "remainingBlocks": 7,
-    "completionPercentage": 46
+    "completedBlocks": 8,
+    "remainingBlocks": 5,
+    "completionPercentage": 62
   },
-  "nextPriority": "ISSUE_4.1",
+  "nextPriority": "ISSUE_5.1",
   "dependencyGraph": {
     "description": "Wizualizacja zależności między blokami. Dwie równoległe ścieżki po ISSUE 2.1.",
     "independent": ["ISSUE_1.1", "ISSUE_2.1"],
