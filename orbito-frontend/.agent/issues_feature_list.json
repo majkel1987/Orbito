@@ -442,9 +442,17 @@
         "GET /api/PlatformPlans (bez auth) → zwraca listę planów z cenami",
         "dotnet build → ZERO błędów"
       ],
-      "passes": false,
-      "completionDate": null,
-      "notes": []
+      "passes": true,
+      "completionDate": "2026-03-21",
+      "notes": [
+        "PlatformPlan entity z Money i BillingPeriod Value Objects",
+        "ProviderSubscription entity z ProviderSubscriptionStatus i TrialNotificationTier enum",
+        "IPlatformPlanRepository + IProviderSubscriptionRepository + implementacje",
+        "CreateProviderCommandHandler rozszerzony o SelectedPlatformPlanId, auto-trial, Provider jako Client w PlatformAdmin",
+        "SeedData: 3 plany (Starter 49 PLN, Pro 149 PLN, Enterprise 399 PLN) + PlatformAdmin provider",
+        "GET /api/PlatformPlans endpoint [AllowAnonymous]",
+        "Migracja: AddPlatformPlansAndProviderSubscriptions"
+      ]
     },
     {
       "id": "ISSUE_6.2",
@@ -567,11 +575,11 @@
   ],
   "stats": {
     "totalBlocks": 13,
-    "completedBlocks": 9,
-    "remainingBlocks": 4,
-    "completionPercentage": 69
+    "completedBlocks": 10,
+    "remainingBlocks": 3,
+    "completionPercentage": 77
   },
-  "nextPriority": "ISSUE_6.1",
+  "nextPriority": "ISSUE_6.2",
   "dependencyGraph": {
     "description": "Wizualizacja zależności między blokami. Dwie równoległe ścieżki po ISSUE 2.1.",
     "independent": ["ISSUE_1.1", "ISSUE_2.1"],

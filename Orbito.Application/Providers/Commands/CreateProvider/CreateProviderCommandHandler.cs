@@ -8,6 +8,7 @@ using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
 using Orbito.Domain.Errors;
 using Orbito.Domain.Identity;
+using Orbito.Domain.ValueObjects;
 
 namespace Orbito.Application.Providers.Commands.CreateProvider;
 
@@ -15,17 +16,26 @@ public class CreateProviderCommandHandler : IRequestHandler<CreateProviderComman
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IProviderRepository _providerRepository;
+    private readonly IPlatformPlanRepository _platformPlanRepository;
+    private readonly IProviderSubscriptionRepository _providerSubscriptionRepository;
+    private readonly IClientRepository _clientRepository;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<CreateProviderCommandHandler> _logger;
 
     public CreateProviderCommandHandler(
         IUnitOfWork unitOfWork,
         IProviderRepository providerRepository,
+        IPlatformPlanRepository platformPlanRepository,
+        IProviderSubscriptionRepository providerSubscriptionRepository,
+        IClientRepository clientRepository,
         UserManager<ApplicationUser> userManager,
         ILogger<CreateProviderCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _providerRepository = providerRepository;
+        _platformPlanRepository = platformPlanRepository;
+        _providerSubscriptionRepository = providerSubscriptionRepository;
+        _clientRepository = clientRepository;
         _userManager = userManager;
         _logger = logger;
     }
@@ -53,6 +63,21 @@ public class CreateProviderCommandHandler : IRequestHandler<CreateProviderComman
             if (existingProvider != null)
             {
                 return Result.Failure<CreateProviderResult>(DomainErrors.Provider.SubdomainAlreadyExists);
+            }
+
+            // Waliduj wybrany plan platformowy (jeśli podany)
+            PlatformPlan? selectedPlan = null;
+            if (request.SelectedPlatformPlanId.HasValue)
+            {
+                selectedPlan = await _platformPlanRepository.GetByIdAsync(request.SelectedPlatformPlanId.Value, cancellationToken);
+                if (selectedPlan == null)
+                {
+                    return Result.Failure<CreateProviderResult>(DomainErrors.ProviderSubscription.PlanNotFound);
+                }
+                if (!selectedPlan.IsActive)
+                {
+                    return Result.Failure<CreateProviderResult>(DomainErrors.PlatformPlan.Inactive);
+                }
             }
 
             // Sprawdź czy użytkownik już ma rolę Provider
@@ -98,7 +123,49 @@ public class CreateProviderCommandHandler : IRequestHandler<CreateProviderComman
 
             await _unitOfWork.GetRepository<TeamMember>().AddAsync(ownerTeamMember, cancellationToken);
 
-            // SaveChanges - zapisuje Provider + TeamMember atomowo w jednej transakcji
+            // Utwórz ProviderSubscription (trial) jeśli plan został wybrany
+            if (selectedPlan != null)
+            {
+                var providerSubscription = ProviderSubscription.CreateTrial(
+                    provider.Id,
+                    selectedPlan.Id,
+                    selectedPlan.TrialDays);
+
+                await _providerSubscriptionRepository.AddAsync(providerSubscription, cancellationToken);
+
+                _logger.LogInformation(
+                    "Created trial subscription for Provider {ProviderId}: Plan={PlanName}, TrialDays={TrialDays}, TrialEndDate={TrialEndDate}",
+                    provider.Id, selectedPlan.Name, selectedPlan.TrialDays, providerSubscription.TrialEndDate);
+            }
+
+            // Utwórz Provider jako Client w tenancie PlatformAdmin
+            var adminTenantId = await _providerRepository.GetPlatformAdminTenantIdAsync(cancellationToken);
+            if (adminTenantId.HasValue)
+            {
+                var providerAsClient = Client.CreateDirect(
+                    TenantId.Create(adminTenantId.Value),
+                    request.Email,
+                    request.FirstName,
+                    request.LastName,
+                    request.BusinessName);
+
+                // Provider jako klient Admina jest od razu aktywny (sam się zarejestrował)
+                providerAsClient.Activate();
+
+                await _clientRepository.AddAsync(providerAsClient, cancellationToken);
+
+                _logger.LogInformation(
+                    "Created Provider {ProviderId} as Client in PlatformAdmin tenant {AdminTenantId}",
+                    provider.Id, adminTenantId.Value);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "PlatformAdmin tenant not found - Provider {ProviderId} will not be added as Admin's client",
+                    provider.Id);
+            }
+
+            // SaveChanges - zapisuje Provider + TeamMember + ProviderSubscription + Client atomowo
             var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             if (!saveResult.IsSuccess)
@@ -134,23 +201,23 @@ public class CreateProviderCommandHandler : IRequestHandler<CreateProviderComman
         // Remove any HTML/script tags and their content (including script tags)
         var sanitized = Regex.Replace(subdomain, @"<script[^>]*>.*?</script>", string.Empty, RegexOptions.IgnoreCase | RegexOptions.Singleline);
         sanitized = Regex.Replace(sanitized, @"<[^>]+>", string.Empty, RegexOptions.IgnoreCase);
-        
+
         // Remove common XSS keywords and dangerous words
         var dangerousWords = new[] { "alert", "script", "javascript", "onerror", "onload", "onclick", "eval", "expression" };
         foreach (var word in dangerousWords)
         {
             sanitized = Regex.Replace(sanitized, word, string.Empty, RegexOptions.IgnoreCase);
         }
-        
+
         // Keep only lowercase letters, numbers, and hyphens
         sanitized = Regex.Replace(sanitized, @"[^a-z0-9-]", string.Empty, RegexOptions.IgnoreCase);
-        
+
         // Remove consecutive hyphens
         sanitized = Regex.Replace(sanitized, @"-+", "-");
-        
+
         // Remove leading and trailing hyphens
         sanitized = sanitized.Trim('-');
-        
+
         return sanitized.ToLowerInvariant();
     }
 }

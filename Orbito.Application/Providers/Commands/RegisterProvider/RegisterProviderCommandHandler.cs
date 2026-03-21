@@ -82,6 +82,10 @@ namespace Orbito.Application.Providers.Commands.RegisterProvider
                     user.Id,
                     request.BusinessName,
                     request.SubdomainSlug,
+                    request.Email,
+                    request.FirstName,
+                    request.LastName,
+                    request.SelectedPlatformPlanId,
                     request.Description,
                     request.Avatar,
                     request.CustomDomain);

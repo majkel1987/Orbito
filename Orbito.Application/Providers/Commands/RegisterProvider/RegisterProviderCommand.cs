@@ -9,6 +9,7 @@ namespace Orbito.Application.Providers.Commands.RegisterProvider
         string LastName,
         string BusinessName,
         string SubdomainSlug,
+        Guid? SelectedPlatformPlanId = null,
         string? Description = null,
         string? Avatar = null,
         string? CustomDomain = null

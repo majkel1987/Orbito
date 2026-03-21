@@ -38,6 +38,12 @@ public static class SeedData
                 tenantBypass.SkipTenantValidation();
             }
 
+            // Seed platform plans (Orbito's subscription plans for Providers) - global, no tenant
+            await SeedPlatformPlansAsync(context, logger);
+
+            // Seed PlatformAdmin provider (required for Provider-as-Client feature)
+            await SeedPlatformAdminAsync(context, userManager, logger);
+
             // Seed test users and providers
             var provider = await SeedProviderWithTeamAsync(context, userManager, logger);
             if (provider == null) return; // Data already exists
@@ -69,15 +75,135 @@ public static class SeedData
         }
     }
 
+    private static async Task SeedPlatformPlansAsync(
+        ApplicationDbContext context,
+        ILogger logger)
+    {
+        // Check if platform plans already exist
+        if (await context.PlatformPlans.AnyAsync())
+        {
+            logger.LogInformation("Platform plans already seeded. Skipping...");
+            return;
+        }
+
+        logger.LogInformation("Seeding platform plans (Orbito's subscription plans for Providers)...");
+
+        var plans = new List<PlatformPlan>
+        {
+            PlatformPlan.Create(
+                name: "Starter",
+                price: Money.Create(49m, "PLN"),
+                trialDays: 14,
+                description: "Plan dla początkujących - idealna opcja na start z Orbito",
+                featuresJson: "[\"Do 10 klientów\",\"Email support\",\"Podstawowa analityka\",\"1 użytkownik\"]",
+                sortOrder: 1
+            ),
+            PlatformPlan.Create(
+                name: "Pro",
+                price: Money.Create(149m, "PLN"),
+                trialDays: 14,
+                description: "Plan dla rozwijających się firm - większe możliwości",
+                featuresJson: "[\"Do 50 klientów\",\"Priority support\",\"Zaawansowana analityka\",\"Do 5 użytkowników\",\"Integracje API\"]",
+                sortOrder: 2
+            ),
+            PlatformPlan.Create(
+                name: "Enterprise",
+                price: Money.Create(399m, "PLN"),
+                trialDays: 14,
+                description: "Plan dla dużych organizacji - pełna elastyczność",
+                featuresJson: "[\"Nieograniczona liczba klientów\",\"Dedykowany support 24/7\",\"Custom integracje\",\"Nieograniczona liczba użytkowników\",\"SLA guarantee\",\"White-label\"]",
+                sortOrder: 3
+            )
+        };
+
+        context.PlatformPlans.AddRange(plans);
+        await context.SaveChangesAsync();
+
+        logger.LogInformation("Created {Count} platform plans", plans.Count);
+    }
+
+    private static async Task SeedPlatformAdminAsync(
+        ApplicationDbContext context,
+        UserManager<ApplicationUser> userManager,
+        ILogger logger)
+    {
+        // Check if PlatformAdmin already exists
+        var existingAdmin = await context.Providers
+            .FirstOrDefaultAsync(p => p.SubdomainSlug == "admin");
+
+        if (existingAdmin != null)
+        {
+            logger.LogInformation("PlatformAdmin already exists. Skipping...");
+            return;
+        }
+
+        logger.LogInformation("Creating PlatformAdmin provider...");
+
+        // Create PlatformAdmin user
+        var adminUser = new ApplicationUser
+        {
+            Id = Guid.NewGuid(),
+            UserName = "platform@orbito.pl",
+            Email = "platform@orbito.pl",
+            FirstName = "Platform",
+            LastName = "Admin",
+            EmailConfirmed = true
+        };
+
+        var result = await userManager.CreateAsync(adminUser, "PlatformAdmin123!");
+        if (!result.Succeeded)
+        {
+            logger.LogError("Failed to create PlatformAdmin user: {Errors}",
+                string.Join(", ", result.Errors.Select(e => e.Description)));
+            throw new Exception("Failed to create PlatformAdmin user");
+        }
+
+        // Assign both Provider and PlatformAdmin roles
+        await userManager.AddToRoleAsync(adminUser, "Provider");
+        await userManager.AddToRoleAsync(adminUser, "PlatformAdmin");
+
+        // Create PlatformAdmin provider with subdomain "admin"
+        var platformAdmin = Provider.Create(
+            adminUser.Id,
+            "Orbito Platform",
+            "admin"
+        );
+
+        adminUser.TenantId = platformAdmin.TenantId;
+        await userManager.UpdateAsync(adminUser);
+
+        context.Providers.Add(platformAdmin);
+        await context.SaveChangesAsync();
+
+        // Create owner team member
+        var ownerMember = new TeamMember(
+            platformAdmin.TenantId,
+            adminUser.Id,
+            TeamMemberRole.Owner,
+            adminUser.Email!,
+            adminUser.FirstName,
+            adminUser.LastName
+        );
+
+        context.TeamMembers.Add(ownerMember);
+        await context.SaveChangesAsync();
+
+        logger.LogInformation("Created PlatformAdmin provider with TenantId: {TenantId}",
+            platformAdmin.TenantId.Value);
+    }
+
     private static async Task<Provider?> SeedProviderWithTeamAsync(
         ApplicationDbContext context,
         UserManager<ApplicationUser> userManager,
         ILogger logger)
     {
-        // Check if data already exists
-        if (await context.Providers.AnyAsync())
+        // Check if test provider already exists (skip PlatformAdmin which has subdomain "admin")
+        var existingTestProvider = await context.Providers
+            .FirstOrDefaultAsync(p => p.SubdomainSlug == "demo");
+
+        if (existingTestProvider != null)
         {
-            logger.LogInformation("Database already seeded. Skipping...");
+            logger.LogInformation("Test provider already seeded. Skipping...");
             return null;
         }
 

@@ -42,7 +42,7 @@ PODSUMOWANIE BLOKÓW
 | ISSUE 4.1  | Płatności   | Stripe Elements w Client Portal                | ✅     | ISSUE 3.4           |
 | ISSUE 4.2  | Płatności   | Webhook Sync → Provider Dashboard              | ✅     | ISSUE 4.1           |
 | ISSUE 5.1  | Restrykcje  | Hardening Client Portal (PortalGuard + API)    | ✅     | ISSUE 4.1, 4.2      |
-| ISSUE 6.1  | Trial       | Domain Model Trial + Reg + Provider jako klient Admina | ⬜ | ISSUE 1.1, 2.1   |
+| ISSUE 6.1  | Trial       | Domain Model Trial + Reg + Provider jako klient Admina | ✅ | ISSUE 1.1, 2.1   |
 | ISSUE 6.2  | Trial       | Powiadomienia 5d/3d/24h + banner w dashboardzie | ⬜   | ISSUE 6.1, 3.1      |
 | ISSUE 6.3  | Trial       | Wygaśnięcie triala + blokada + email           | ⬜     | ISSUE 6.2           |
 | ISSUE 6.4  | Trial       | Wybór planu + Stripe Payment dla Providera     | ⬜     | ISSUE 6.3, 4.1      |
@@ -130,14 +130,14 @@ STATS
 ================================================================================
 
 Total issue blocks: 13
-Completed (passes: true): 9 (ISSUE 1.1, ISSUE 2.1, ISSUE 3.1, ISSUE 3.2, ISSUE 3.3, ISSUE 3.4, ISSUE 4.1, ISSUE 4.2, ISSUE 5.1)
-Remaining (passes: false): 4
-Completion: 69%
+Completed (passes: true): 10 (ISSUE 1.1, ISSUE 2.1, ISSUE 3.1, ISSUE 3.2, ISSUE 3.3, ISSUE 3.4, ISSUE 4.1, ISSUE 4.2, ISSUE 5.1, ISSUE 6.1)
+Remaining (passes: false): 3
+Completion: 77%
 
 ## NASTĘPNY KROK:
-ISSUE 6.1 (Trial Domain Model – PlatformPlan + ProviderSubscription)
-Zależności: ISSUE 1.1 ✅ + ISSUE 2.1 ✅
-Ścieżka B (trial): 6.1 → 6.2 → 6.3 → 6.4
+ISSUE 6.2 (Trial Notifications – 5d/3d/24h email + TrialBanner)
+Zależności: ISSUE 6.1 ✅ + ISSUE 3.1 ✅
+Ścieżka B (trial): 6.1 ✅ → 6.2 → 6.3 → 6.4
 
 ================================================================================
 --- Session 2026-02-28 ---
@@ -748,6 +748,146 @@ Remaining: 4
 Completion: 69%
 
 ## NASTĘPNY KROK:
-ISSUE 6.1 (Trial Domain Model – PlatformPlan + ProviderSubscription)
-Zależności: ISSUE 1.1 ✅ + ISSUE 2.1 ✅
-Ścieżka B (trial): 6.1 → 6.2 → 6.3 → 6.4
+ISSUE 6.2 (Trial Notifications – 5d/3d/24h email + TrialBanner)
+Zależności: ISSUE 6.1 ✅ + ISSUE 3.1 ✅
+Ścieżka B (trial): 6.1 ✅ → 6.2 → 6.3 → 6.4
+
+================================================================================
+--- Session 2026-03-21 ---
+Agent: Claude Opus 4.5
+Block: ISSUE 6.1 Trial Subscription – Domain Model, Auto-create przy rejestracji, Provider jako klient Admina
+Status: COMPLETED
+================================================================================
+
+## WYKONANE ZADANIA:
+
+### Domain Layer:
+1. **Orbito.Domain/Enums/ProviderSubscriptionStatus.cs** (NOWY):
+   - Enum: Trial=0, Active=1, Expired=2, Cancelled=3
+2. **Orbito.Domain/Enums/TrialNotificationTier.cs** (NOWY):
+   - Enum: None=0, FiveDays=1, ThreeDays=2, OneDay=3, Expired=4 (deduplikacja powiadomień)
+3. **Orbito.Domain/Entities/PlatformPlan.cs** (NOWY):
+   - Encja planu platformowego Orbito (Starter/Pro/Enterprise)
+   - Właściwości: Id, Name, Description, Price (Money), BillingPeriod (domyślnie Monthly), TrialDays, IsActive, FeaturesJson, SortOrder
+   - Factory method: Create(name, price, trialDays, description, featuresJson, sortOrder)
+4. **Orbito.Domain/Entities/ProviderSubscription.cs** (NOWY):
+   - Subskrypcja platformowa Providera z trial support
+   - Właściwości: ProviderId, PlatformPlanId, Status, StartDate, TrialEndDate, PaidUntil, LastNotificationTier
+   - Computed: IsTrialActive, DaysRemaining, IsExpired
+   - Metody: CreateTrial(), Activate(), Expire(), Cancel(), MarkNotificationSent()
+5. **Orbito.Domain/Errors/DomainErrors.cs** (zmieniony):
+   - ProviderSubscription: NotFound, StillActive, TrialExpired, PlanNotFound, AlreadyExists, AlreadyCancelled, NotificationAlreadySent
+   - PlatformPlan: NotFound, NameAlreadyExists, Inactive
+
+### Application Layer:
+1. **Orbito.Application/Common/Interfaces/IPlatformPlanRepository.cs** (NOWY):
+   - GetByIdAsync, GetActiveAsync, GetByNameAsync, AddAsync, UpdateAsync
+2. **Orbito.Application/Common/Interfaces/IProviderSubscriptionRepository.cs** (NOWY):
+   - GetByIdAsync, GetByProviderIdAsync, GetExpiringTrialsAsync, GetExpiredTrialsAsync, AddAsync, UpdateAsync
+3. **Orbito.Application/Common/Interfaces/IProviderRepository.cs** (zmieniony):
+   - Dodano: GetPlatformAdminTenantIdAsync(ct) → Task<Guid?>
+4. **Orbito.Application/Features/PlatformPlans/Queries/GetPlatformPlans/** (NOWY):
+   - GetPlatformPlansQuery, GetPlatformPlansQueryHandler, PlatformPlanDto
+5. **Orbito.Application/Providers/Commands/CreateProvider/** (zmieniony):
+   - CreateProviderCommand rozszerzony o: Email, FirstName, LastName, SelectedPlatformPlanId
+   - CreateProviderCommandHandler: walidacja planu, tworzenie ProviderSubscription.CreateTrial(), tworzenie Provider jako Client w PlatformAdmin tenant
+6. **Orbito.Application/Providers/Commands/RegisterProvider/** (zmieniony):
+   - RegisterProviderCommand rozszerzony o: SelectedPlatformPlanId
+
+### Infrastructure Layer:
+1. **Orbito.Infrastructure/Persistance/PlatformPlanRepository.cs** (NOWY):
+   - Implementacja IPlatformPlanRepository
+2. **Orbito.Infrastructure/Persistance/ProviderSubscriptionRepository.cs** (NOWY):
+   - Implementacja IProviderSubscriptionRepository z GetExpiringTrialsAsync, GetExpiredTrialsAsync
+3. **Orbito.Infrastructure/Persistance/ProviderRepository.cs** (zmieniony):
+   - Implementacja GetPlatformAdminTenantIdAsync (SubdomainSlug == "admin")
+4. **Orbito.Infrastructure/Data/ApplicationDbContext.cs** (zmieniony):
+   - Dodano DbSet<PlatformPlan> PlatformPlans, DbSet<ProviderSubscription> ProviderSubscriptions
+5. **Orbito.Infrastructure/Data/Configurations/Entity/PlatformPlanConfiguration.cs** (NOWY):
+   - EF Core configuration z Money i BillingPeriod owned types
+6. **Orbito.Infrastructure/Data/Configurations/Entity/ProviderSubscriptionConfiguration.cs** (NOWY):
+   - EF Core configuration z FK do Provider i PlatformPlan
+7. **Orbito.Infrastructure/DependencyInjection.cs** (zmieniony):
+   - Dodano: IPlatformPlanRepository, IProviderSubscriptionRepository rejestracje
+8. **Orbito.Infrastructure/Data/SeedData.cs** (zmieniony):
+   - SeedPlatformPlansAsync: 3 plany (Starter 49 PLN, Pro 149 PLN, Enterprise 399 PLN) z 14-dniowym trialem
+   - SeedPlatformAdminAsync: Provider z subdomain "admin" (wymagany dla Provider-as-Client feature)
+
+### API Layer:
+1. **Orbito.API/Controllers/PlatformPlansController.cs** (NOWY):
+   - GET /api/PlatformPlans [AllowAnonymous] – lista aktywnych planów dla strony rejestracji
+2. **Orbito.API/Controllers/AccountController.cs** (zmieniony):
+   - RegisterProviderRequest rozszerzony o SelectedPlatformPlanId
+3. **Orbito.API/Controllers/ProvidersController.cs** (zmieniony):
+   - CreateProviderRequest rozszerzony o Email, FirstName, LastName, SelectedPlatformPlanId
+
+### Migracja EF Core:
+- 20260321163344_AddPlatformPlansAndProviderSubscriptions
+- Tabele: PlatformPlans, ProviderSubscriptions
+- Indeksy: PlatformPlans_Name (unique), PlatformPlans_IsActive, PlatformPlans_SortOrder
+- Indeksy: ProviderSubscriptions_ProviderId (unique), ProviderSubscriptions_PlatformPlanId, ProviderSubscriptions_Status, ProviderSubscriptions_TrialEndDate, ProviderSubscriptions_Status_TrialEndDate
+
+## WERYFIKACJA:
+- dotnet build Orbito.API: ✅ Build succeeded. 0 Error(s)
+- dotnet ef migrations add: ✅ Migracja utworzona
+- Tabele PlatformPlans i ProviderSubscriptions: ✅ w migracji
+- Seed data: ✅ 3 plany (Starter/Pro/Enterprise) + PlatformAdmin provider
+- GET /api/PlatformPlans endpoint: ✅ [AllowAnonymous]
+- SelectedPlatformPlanId w RegisterCommand: ✅
+- ProviderSubscription.CreateTrial(): ✅ Status=Trial, TrialEndDate=+14 dni
+- Provider jako Client w PlatformAdmin: ✅ CreateDirect + Activate
+
+## ZMIENIONE PLIKI:
+### Domain:
+- Orbito.Domain/Enums/ProviderSubscriptionStatus.cs (NOWY)
+- Orbito.Domain/Enums/TrialNotificationTier.cs (NOWY)
+- Orbito.Domain/Entities/PlatformPlan.cs (NOWY)
+- Orbito.Domain/Entities/ProviderSubscription.cs (NOWY)
+- Orbito.Domain/Errors/DomainErrors.cs
+
+### Application:
+- Orbito.Application/Common/Interfaces/IPlatformPlanRepository.cs (NOWY)
+- Orbito.Application/Common/Interfaces/IProviderSubscriptionRepository.cs (NOWY)
+- Orbito.Application/Common/Interfaces/IProviderRepository.cs
+- Orbito.Application/Features/PlatformPlans/Queries/GetPlatformPlans/GetPlatformPlansQuery.cs (NOWY)
+- Orbito.Application/Features/PlatformPlans/Queries/GetPlatformPlans/GetPlatformPlansQueryHandler.cs (NOWY)
+- Orbito.Application/Providers/Commands/CreateProvider/CreateProviderCommand.cs
+- Orbito.Application/Providers/Commands/CreateProvider/CreateProviderCommandHandler.cs
+- Orbito.Application/Providers/Commands/RegisterProvider/RegisterProviderCommand.cs
+- Orbito.Application/Providers/Commands/RegisterProvider/RegisterProviderCommandHandler.cs
+
+### Infrastructure:
+- Orbito.Infrastructure/Persistance/PlatformPlanRepository.cs (NOWY)
+- Orbito.Infrastructure/Persistance/ProviderSubscriptionRepository.cs (NOWY)
+- Orbito.Infrastructure/Persistance/ProviderRepository.cs
+- Orbito.Infrastructure/Data/ApplicationDbContext.cs
+- Orbito.Infrastructure/Data/Configurations/Entity/PlatformPlanConfiguration.cs (NOWY)
+- Orbito.Infrastructure/Data/Configurations/Entity/ProviderSubscriptionConfiguration.cs (NOWY)
+- Orbito.Infrastructure/DependencyInjection.cs
+- Orbito.Infrastructure/Data/SeedData.cs
+- Orbito.Infrastructure/Data/Migrations/20260321163344_AddPlatformPlansAndProviderSubscriptions.cs (NOWY)
+
+### API:
+- Orbito.API/Controllers/PlatformPlansController.cs (NOWY)
+- Orbito.API/Controllers/AccountController.cs
+- Orbito.API/Controllers/ProvidersController.cs
+
+### Progress files:
+- orbito-frontend/.agent/issues_feature_list.json
+- orbito-frontend/.agent/issues_progress.txt
+
+## KNOWN ISSUES:
+- Orbito.Tests CS0535 + CS0111: pre-existing test project errors (MockPaymentGateway, duplicate test method) – niezwiązane z ISSUE 6.1
+- PlatformAdmin musi istnieć w bazie przed pierwszą rejestracją Providera (seed data zapewnia to)
+- Frontend wymaga npm run api:generate dla nowego hooka useGetApiPlatformPlans
+
+## STATS PO SESJI:
+Total issue blocks: 13
+Completed: 10 (ISSUE 1.1, ISSUE 2.1, ISSUE 3.1, ISSUE 3.2, ISSUE 3.3, ISSUE 3.4, ISSUE 4.1, ISSUE 4.2, ISSUE 5.1, ISSUE 6.1)
+Remaining: 3
+Completion: 77%
+
+## NASTĘPNY KROK:
+ISSUE 6.2 (Trial Notifications – 5d/3d/24h email + TrialBanner)
+Zależności: ISSUE 6.1 ✅ + ISSUE 3.1 ✅
+Ścieżka B (trial): 6.1 ✅ → 6.2 → 6.3 → 6.4

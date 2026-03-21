@@ -126,5 +126,18 @@ namespace Orbito.Infrastructure.Persistance
 
             return !await query.AnyAsync(cancellationToken);
         }
+
+        // Platform Admin operations
+        public async Task<Guid?> GetPlatformAdminTenantIdAsync(CancellationToken cancellationToken = default)
+        {
+            // PlatformAdmin's Provider has subdomain "admin"
+            var adminProvider = await _context.Providers
+                .IgnoreQueryFilters()
+                .Where(p => p.SubdomainSlug == "admin")
+                .Select(p => new { p.TenantId })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            return adminProvider?.TenantId.Value;
+        }
     }
 }

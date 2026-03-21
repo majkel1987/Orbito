@@ -83,6 +83,10 @@ namespace Orbito.Infrastructure.Data
         public DbSet<PaymentDiscrepancy> PaymentDiscrepancies { get; set; } = null!;
         public DbSet<TeamMember> TeamMembers { get; set; } = null!;
 
+        // Platform subscription entities (Provider pays Orbito)
+        public DbSet<PlatformPlan> PlatformPlans { get; set; } = null!;
+        public DbSet<ProviderSubscription> ProviderSubscriptions { get; set; } = null!;
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);

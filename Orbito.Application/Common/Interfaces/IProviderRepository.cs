@@ -28,5 +28,8 @@ namespace Orbito.Application.Common.Interfaces
         Task<bool> ExistsAsync(string subdomainSlug, CancellationToken cancellationToken = default);
         Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default);
         Task<bool> IsSubdomainAvailableAsync(string subdomainSlug, Guid? excludeProviderId = null, CancellationToken cancellationToken = default);
+
+        // Platform Admin operations
+        Task<Guid?> GetPlatformAdminTenantIdAsync(CancellationToken cancellationToken = default);
     }
 }

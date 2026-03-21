@@ -141,6 +141,7 @@ namespace Orbito.API.Controllers
                     request.LastName,
                     request.BusinessName,
                     request.SubdomainSlug,
+                    request.SelectedPlatformPlanId,
                     request.Description,
                     request.Avatar,
                     request.CustomDomain);
@@ -283,6 +284,7 @@ namespace Orbito.API.Controllers
         public string LastName { get; set; } = string.Empty;
         public string BusinessName { get; set; } = string.Empty;
         public string SubdomainSlug { get; set; } = string.Empty;
+        public Guid? SelectedPlatformPlanId { get; set; }
         public string? Description { get; set; }
         public string? Avatar { get; set; }
         public string? CustomDomain { get; set; }

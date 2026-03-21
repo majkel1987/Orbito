@@ -320,6 +320,14 @@ public static class DomainErrors
         public static Error UnsupportedStatus => Error.Create(
             "Payment.UnsupportedStatus",
             "Unsupported payment status");
+
+        public static Error CustomerCreationFailed(string reason) => Error.Create(
+            "Payment.CustomerCreationFailed",
+            $"Failed to create payment customer: {reason}");
+
+        public static Error IntentCreationFailed(string reason) => Error.Create(
+            "Payment.IntentCreationFailed",
+            $"Failed to create payment intent: {reason}");
     }
 
     /// <summary>
@@ -398,6 +406,58 @@ public static class DomainErrors
         public static Error AlreadyExists => Error.Create(
             "Admin.AlreadyExists",
             "Platform Admin account already exists");
+    }
+
+    /// <summary>
+    /// ProviderSubscription-related errors (Provider's platform subscription to Orbito)
+    /// </summary>
+    public static class ProviderSubscription
+    {
+        public static Error NotFound => Error.Create(
+            "ProviderSubscription.NotFound",
+            "Provider subscription was not found");
+
+        public static Error StillActive => Error.Create(
+            "ProviderSubscription.StillActive",
+            "Subscription is still active and cannot be expired");
+
+        public static Error TrialExpired => Error.Create(
+            "ProviderSubscription.TrialExpired",
+            "Your trial period has expired. Please subscribe to continue");
+
+        public static Error PlanNotFound => Error.Create(
+            "ProviderSubscription.PlanNotFound",
+            "Selected platform plan does not exist");
+
+        public static Error AlreadyExists => Error.Create(
+            "ProviderSubscription.AlreadyExists",
+            "Provider already has an active subscription");
+
+        public static Error AlreadyCancelled => Error.Create(
+            "ProviderSubscription.AlreadyCancelled",
+            "Subscription is already cancelled");
+
+        public static Error NotificationAlreadySent => Error.Create(
+            "ProviderSubscription.NotificationAlreadySent",
+            "This notification tier has already been sent");
+    }
+
+    /// <summary>
+    /// PlatformPlan-related errors
+    /// </summary>
+    public static class PlatformPlan
+    {
+        public static Error NotFound => Error.Create(
+            "PlatformPlan.NotFound",
+            "Platform plan was not found");
+
+        public static Error NameAlreadyExists => Error.Create(
+            "PlatformPlan.NameAlreadyExists",
+            "A platform plan with this name already exists");
+
+        public static Error Inactive => Error.Create(
+            "PlatformPlan.Inactive",
+            "Platform plan is not active");
     }
 
     /// <summary>
