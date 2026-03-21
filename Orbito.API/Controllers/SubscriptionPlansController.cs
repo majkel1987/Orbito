@@ -13,6 +13,7 @@ using Orbito.Application.SubscriptionPlans.Queries.GetSubscriptionPlansByProvide
 namespace Orbito.API.Controllers
 {
     [Route("api/[controller]")]
+    [Authorize(Policy = PolicyNames.ActiveProviderSubscription)]
     public class SubscriptionPlansController : BaseController
     {
         public SubscriptionPlansController(IMediator mediator, ILogger<SubscriptionPlansController> logger)

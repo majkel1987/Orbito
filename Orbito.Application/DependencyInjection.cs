@@ -56,6 +56,7 @@ namespace Orbito.Application
             services.AddScoped<IAuthorizationHandler, ProviderTeamAccessHandler>();
             services.AddScoped<IAuthorizationHandler, ProviderOwnerOnlyHandler>();
             services.AddScoped<IAuthorizationHandler, ClientAccessHandler>();
+            services.AddScoped<IAuthorizationHandler, ActiveProviderSubscriptionHandler>();
 
             return services;
         }

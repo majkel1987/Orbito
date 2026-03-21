@@ -18,6 +18,7 @@ using Orbito.Application.DTOs;
 namespace Orbito.API.Controllers
 {
     [Route("api/[controller]")]
+    [Authorize(Policy = PolicyNames.ActiveProviderSubscription)]
     public class ClientsController : BaseController
     {
         public ClientsController(IMediator mediator, ILogger<ClientsController> logger)

@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Sidebar } from "@/shared/components/layout/Sidebar";
 import { Header } from "@/shared/components/layout/Header";
 import { TrialBanner } from "@/features/billing/components/TrialBanner";
+import { SubscriptionExpiredOverlay } from "@/features/billing/components/SubscriptionExpiredOverlay";
+import { useProviderSubscription } from "@/features/billing/hooks/useProviderSubscription";
 
 interface DashboardShellProps {
   children: React.ReactNode;
@@ -11,6 +13,13 @@ interface DashboardShellProps {
 
 export function DashboardShell({ children }: DashboardShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { shouldBlock, isLoading } = useProviderSubscription();
+
+  // Show overlay for expired subscription (except on billing page)
+  // Don't show during initial loading to avoid flash
+  if (shouldBlock && !isLoading) {
+    return <SubscriptionExpiredOverlay />;
+  }
 
   return (
     <div className="relative min-h-screen">

@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Orbito.Application.Features.ProviderSubscriptions.Commands.ExpireTrialSubscriptions;
 using Orbito.Application.Features.ProviderSubscriptions.Commands.SendTrialExpirationNotifications;
 
 namespace Orbito.Infrastructure.BackgroundJobs;
@@ -64,7 +65,7 @@ public class TrialExpirationNotificationJob : BackgroundService
 
     private async Task SendNotificationsAsync(CancellationToken stoppingToken)
     {
-        _logger.LogDebug("Running trial expiration notification check...");
+        _logger.LogDebug("Running trial expiration job...");
 
         using var scope = _serviceScopeFactory.CreateScope();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
@@ -74,26 +75,45 @@ public class TrialExpirationNotificationJob : BackgroundService
 
         try
         {
-            var result = await mediator.Send(
+            // Step 1: Expire trial subscriptions that have passed their end date
+            var expireResult = await mediator.Send(
+                new ExpireTrialSubscriptionsCommand(),
+                cts.Token);
+
+            if (expireResult.IsSuccess)
+            {
+                _logger.LogInformation(
+                    "Trial expiration check completed. Expired {ExpiredCount} subscriptions.",
+                    expireResult.Value);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "Trial expiration check failed: {Error}",
+                    expireResult.Error);
+            }
+
+            // Step 2: Send notifications for trials approaching expiration
+            var notifyResult = await mediator.Send(
                 new SendTrialExpirationNotificationsCommand(),
                 cts.Token);
 
-            if (result.IsSuccess)
+            if (notifyResult.IsSuccess)
             {
                 _logger.LogInformation(
                     "Trial expiration notification check completed. Sent {NotificationCount} notifications.",
-                    result.Value);
+                    notifyResult.Value);
             }
             else
             {
                 _logger.LogWarning(
                     "Trial expiration notification check failed: {Error}",
-                    result.Error);
+                    notifyResult.Error);
             }
         }
         catch (OperationCanceledException) when (cts.IsCancellationRequested && !stoppingToken.IsCancellationRequested)
         {
-            _logger.LogWarning("Trial expiration notification check timed out");
+            _logger.LogWarning("Trial expiration job timed out");
         }
     }
 }

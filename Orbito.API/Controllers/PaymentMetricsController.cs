@@ -17,6 +17,7 @@ namespace Orbito.API.Controllers;
 /// </summary>
 [Route("api/[controller]")]
 [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+[Authorize(Policy = PolicyNames.ActiveProviderSubscription)]
 public class PaymentMetricsController : BaseController
 {
     public PaymentMetricsController(IMediator mediator, ILogger<PaymentMetricsController> logger) 

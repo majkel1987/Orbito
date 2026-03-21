@@ -537,9 +537,21 @@
         "PlatformAdmin NIE jest blokowany przez trial restrictions",
         "dotnet build → ZERO błędów, npm run typecheck → ZERO błędów"
       ],
-      "passes": false,
-      "completionDate": null,
-      "notes": []
+      "passes": true,
+      "completionDate": "2026-03-21",
+      "notes": [
+        "ExpireTrialSubscriptionsCommand + Handler: zmienia status Trial → Expired, wysyła email z instrukcjami płatności",
+        "TrialExpirationNotificationJob rozszerzony: wywołuje ExpireTrialSubscriptionsCommand (wygaśnięcie) + SendTrialExpirationNotificationsCommand (powiadomienia)",
+        "ActiveProviderSubscriptionRequirement + Handler: authorization policy blokująca expired Providerów",
+        "PolicyNames.ActiveProviderSubscription zarejestrowany w Infrastructure/DependencyInjection.cs",
+        "Handler bypass dla PlatformAdmin i Client (nie podlegają trial restrictions)",
+        "Kontrolery Provider-only z ActiveProviderSubscription: AnalyticsController, PaymentMetricsController, ReconciliationController, PaymentRetryController, ClientsController, SubscriptionsController, SubscriptionPlansController, TeamMembersController, PaymentController, ProvidersController, UsersController",
+        "Kontrolery bez restriction (muszą działać z expired): ProviderSubscriptionController, AccountController, PortalController, WebhookController, PlatformPlansController, PaymentMethodController",
+        "Frontend: SubscriptionExpiredOverlay.tsx - full-screen overlay z CTA do płatności",
+        "Frontend: useProviderSubscription hook - dodano shouldBlock i isBillingPage",
+        "Frontend: DashboardShell.tsx - renderuje overlay gdy shouldBlock (z wyjątkiem /dashboard/billing)",
+        "dotnet build: 0 Error(s), npm run typecheck: 0 Error(s), npm run lint: 0 errors (2 pre-existing warnings)"
+      ]
     },
     {
       "id": "ISSUE_6.4",
@@ -589,11 +601,11 @@
   ],
   "stats": {
     "totalBlocks": 13,
-    "completedBlocks": 10,
-    "remainingBlocks": 3,
-    "completionPercentage": 77
+    "completedBlocks": 12,
+    "remainingBlocks": 1,
+    "completionPercentage": 92
   },
-  "nextPriority": "ISSUE_6.2",
+  "nextPriority": "ISSUE_6.4",
   "dependencyGraph": {
     "description": "Wizualizacja zależności między blokami. Dwie równoległe ścieżki po ISSUE 2.1.",
     "independent": ["ISSUE_1.1", "ISSUE_2.1"],

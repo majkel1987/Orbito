@@ -14,6 +14,7 @@ namespace Orbito.API.Controllers;
 /// Controller for payment reconciliation operations
 /// </summary>
 [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+[Authorize(Policy = PolicyNames.ActiveProviderSubscription)]
 [Route("api/reconciliation")]
 public class ReconciliationController : BaseController
 {

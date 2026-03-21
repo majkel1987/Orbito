@@ -14,6 +14,7 @@ namespace Orbito.API.Controllers
     /// Controller for managing payment retry operations
     /// </summary>
     [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+    [Authorize(Policy = PolicyNames.ActiveProviderSubscription)]
     [Route("api/payments/retry")]
     public class PaymentRetryController : BaseController
     {

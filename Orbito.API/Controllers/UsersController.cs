@@ -9,6 +9,7 @@ namespace Orbito.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Policy = PolicyNames.ActiveProviderSubscription)]
     public class UsersController : ControllerBase
     {
         private readonly UserManager<ApplicationUser> _userManager;

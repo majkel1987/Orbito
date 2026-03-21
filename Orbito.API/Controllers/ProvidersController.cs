@@ -17,6 +17,7 @@ namespace Orbito.API.Controllers
     /// Clients have NO access to any endpoints in this controller.
     /// </summary>
     [Route("api/[controller]")]
+    [Authorize(Policy = PolicyNames.ActiveProviderSubscription)]
     public class ProvidersController : BaseController
     {
         public ProvidersController(IMediator mediator, ILogger<ProvidersController> logger)

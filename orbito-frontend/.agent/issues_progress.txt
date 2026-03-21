@@ -44,7 +44,7 @@ PODSUMOWANIE BLOKÓW
 | ISSUE 5.1  | Restrykcje  | Hardening Client Portal (PortalGuard + API)    | ✅     | ISSUE 4.1, 4.2      |
 | ISSUE 6.1  | Trial       | Domain Model Trial + Reg + Provider jako klient Admina | ✅ | ISSUE 1.1, 2.1   |
 | ISSUE 6.2  | Trial       | Powiadomienia 5d/3d/24h + banner w dashboardzie | ✅   | ISSUE 6.1, 3.1      |
-| ISSUE 6.3  | Trial       | Wygaśnięcie triala + blokada + email           | ⬜     | ISSUE 6.2           |
+| ISSUE 6.3  | Trial       | Wygaśnięcie triala + blokada + email           | ✅     | ISSUE 6.2           |
 | ISSUE 6.4  | Trial       | Wybór planu + Stripe Payment dla Providera     | ⬜     | ISSUE 6.3, 4.1      |
 
 Rekomendowana kolejność:
@@ -130,14 +130,123 @@ STATS
 ================================================================================
 
 Total issue blocks: 13
-Completed (passes: true): 11 (ISSUE 1.1, ISSUE 2.1, ISSUE 3.1, ISSUE 3.2, ISSUE 3.3, ISSUE 3.4, ISSUE 4.1, ISSUE 4.2, ISSUE 5.1, ISSUE 6.1, ISSUE 6.2)
-Remaining (passes: false): 2
-Completion: 85%
+Completed (passes: true): 12 (ISSUE 1.1, ISSUE 2.1, ISSUE 3.1, ISSUE 3.2, ISSUE 3.3, ISSUE 3.4, ISSUE 4.1, ISSUE 4.2, ISSUE 5.1, ISSUE 6.1, ISSUE 6.2, ISSUE 6.3)
+Remaining (passes: false): 1
+Completion: 92%
 
 ## NASTĘPNY KROK:
-ISSUE 6.3 (Trial Expiration – Wygaśnięcie + Blokada + Email)
-Zależności: ISSUE 6.2 ✅
-Ścieżka B (trial): 6.1 ✅ → 6.2 ✅ → 6.3 → 6.4
+ISSUE 6.4 (Trial Subscription – Wybór planu przy rejestracji + UI płatności Providera)
+Zależności: ISSUE 6.3 ✅, ISSUE 4.1 ✅
+Ścieżka B (trial): 6.1 ✅ → 6.2 ✅ → 6.3 ✅ → 6.4
+
+================================================================================
+--- Session 2026-03-21 ---
+Agent: Claude Opus 4.5
+Block: ISSUE 6.3 Trial Subscription – Wygaśnięcie triala, blokada dostępu, email z instrukcjami
+Status: COMPLETED
+================================================================================
+
+## WYKONANE ZADANIA:
+
+### Backend:
+1. **ExpireTrialSubscriptionsCommand + Handler** (Orbito.Application/Features/ProviderSubscriptions/Commands/ExpireTrialSubscriptions/):
+   - Pobiera wszystkie ProviderSubscriptions gdzie Status == Trial AND TrialEndDate < now
+   - Zmienia status na Expired via subscription.Expire()
+   - Wysyła email z instrukcjami płatności (link do /dashboard/billing)
+   - MarkNotificationSent(TrialNotificationTier.Expired)
+
+2. **TrialExpirationNotificationJob rozszerzony** (Orbito.Infrastructure/BackgroundJobs/):
+   - Teraz wywołuje DWIE komendy w SendNotificationsAsync():
+     - ExpireTrialSubscriptionsCommand (wygaśnięcie triali)
+     - SendTrialExpirationNotificationsCommand (powiadomienia o zbliżającym się końcu)
+
+3. **ActiveProviderSubscriptionRequirement + Handler** (Orbito.Application/Common/Authorization/):
+   - Nowa authorization policy blokująca expired Providerów
+   - PlatformAdmin bypass (nie podlega trial restrictions)
+   - Client bypass (nie mają provider subscriptions)
+   - Sprawdza IsTrialActive || Status == Active → dostęp OK
+   - Expired/Cancelled → brak dostępu (403)
+
+4. **PolicyNames.ActiveProviderSubscription** zarejestrowany w Infrastructure/DependencyInjection.cs
+
+5. **Kontrolery z ActiveProviderSubscription policy** (class-level):
+   - AnalyticsController, PaymentMetricsController, ReconciliationController, PaymentRetryController
+   - ClientsController, SubscriptionsController, SubscriptionPlansController, TeamMembersController
+   - PaymentController, ProvidersController, UsersController
+
+6. **Kontrolery BEZ restriction** (muszą działać z expired):
+   - ProviderSubscriptionController (billing info)
+   - AccountController (login/profil)
+   - PortalController (Client, nie Provider)
+   - WebhookController (zewnętrzne)
+   - PlatformPlansController (AllowAnonymous)
+   - PaymentMethodController (Client + Provider mixed)
+
+### Frontend:
+1. **SubscriptionExpiredOverlay.tsx** (src/features/billing/components/):
+   - Full-screen overlay z warning icon
+   - Tekst: "Twój okres próbny się zakończył"
+   - CTA: "Opłać teraz – {price}/mies." → /dashboard/billing
+   - Link: "Zmień plan" → /dashboard/billing?change=true
+
+2. **useProviderSubscription hook** rozszerzony:
+   - Dodano shouldBlock (isExpired && !isBillingPage)
+   - Dodano isBillingPage (pathname.startsWith("/dashboard/billing"))
+
+3. **DashboardShell.tsx** zmodyfikowany:
+   - Importuje SubscriptionExpiredOverlay i useProviderSubscription
+   - Renderuje overlay gdy shouldBlock && !isLoading
+   - Billing page (/dashboard/billing) jest dostępna nawet z expired
+
+## WERYFIKACJA:
+- dotnet build: ✅ 0 Error(s)
+- npm run typecheck: ✅ 0 Error(s)
+- npm run lint: ✅ 0 errors (2 pre-existing warnings w ProcessPaymentForm.tsx)
+
+## ZMIENIONE PLIKI:
+
+### Backend:
+- Orbito.Application/Features/ProviderSubscriptions/Commands/ExpireTrialSubscriptions/ExpireTrialSubscriptionsCommand.cs (NOWY)
+- Orbito.Application/Features/ProviderSubscriptions/Commands/ExpireTrialSubscriptions/ExpireTrialSubscriptionsCommandHandler.cs (NOWY)
+- Orbito.Infrastructure/BackgroundJobs/TrialExpirationNotificationJob.cs (rozszerzony)
+- Orbito.Application/Common/Authorization/ActiveProviderSubscriptionHandler.cs (NOWY)
+- Orbito.Application/Common/Authorization/PolicyNames.cs (dodano ActiveProviderSubscription)
+- Orbito.Application/DependencyInjection.cs (rejestracja handlera)
+- Orbito.Infrastructure/DependencyInjection.cs (rejestracja policy)
+- Orbito.API/Controllers/AnalyticsController.cs
+- Orbito.API/Controllers/PaymentMetricsController.cs
+- Orbito.API/Controllers/ReconciliationController.cs
+- Orbito.API/Controllers/PaymentRetryController.cs
+- Orbito.API/Controllers/ClientsController.cs
+- Orbito.API/Controllers/SubscriptionsController.cs
+- Orbito.API/Controllers/SubscriptionPlansController.cs
+- Orbito.API/Controllers/TeamMembersController.cs
+- Orbito.API/Controllers/PaymentController.cs
+- Orbito.API/Controllers/ProvidersController.cs
+- Orbito.API/Controllers/UsersController.cs
+
+### Frontend:
+- src/features/billing/components/SubscriptionExpiredOverlay.tsx (NOWY)
+- src/features/billing/hooks/useProviderSubscription.ts (rozszerzony)
+- src/shared/components/layout/DashboardShell.tsx (rozszerzony)
+
+### Progress files:
+- orbito-frontend/.agent/issues_feature_list.json (passes: true, notes, stats)
+- orbito-frontend/.agent/issues_progress.txt (tabela + wpis sesji)
+
+## KNOWN ISSUES:
+- Brak - wszystkie kontrolery prawidłowo zabezpieczone
+
+## STATS PO SESJI:
+Total issue blocks: 13
+Completed: 12 (ISSUE 1.1, ISSUE 2.1, ISSUE 3.1, ISSUE 3.2, ISSUE 3.3, ISSUE 3.4, ISSUE 4.1, ISSUE 4.2, ISSUE 5.1, ISSUE 6.1, ISSUE 6.2, ISSUE 6.3)
+Remaining: 1
+Completion: 92%
+
+## NASTĘPNY KROK:
+ISSUE 6.4 (Trial Subscription – Wybór planu przy rejestracji + UI płatności Providera)
+Zależności: ISSUE 6.3 ✅, ISSUE 4.1 ✅
+Ścieżka B (trial): 6.1 ✅ → 6.2 ✅ → 6.3 ✅ → 6.4
 
 ================================================================================
 --- Session 2026-02-28 ---

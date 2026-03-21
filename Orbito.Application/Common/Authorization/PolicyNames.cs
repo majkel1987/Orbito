@@ -40,4 +40,11 @@ public static class PolicyNames
     /// This includes both Owner and Admin roles within provider teams.
     /// </summary>
     public const string ProviderAdminAccess = "ProviderAdminAccess";
+
+    /// <summary>
+    /// Policy for active provider subscription - requires provider to have an active trial or paid subscription.
+    /// Providers with expired trial or cancelled subscription are blocked from accessing protected resources.
+    /// PlatformAdmin is exempt from this restriction.
+    /// </summary>
+    public const string ActiveProviderSubscription = "ActiveProviderSubscription";
 }

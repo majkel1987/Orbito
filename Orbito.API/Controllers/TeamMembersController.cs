@@ -22,6 +22,7 @@ namespace Orbito.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
+[Authorize(Policy = PolicyNames.ActiveProviderSubscription)]
 public class TeamMembersController : BaseController
 {
     private readonly IMediator _mediator;

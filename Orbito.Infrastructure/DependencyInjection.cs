@@ -133,6 +133,13 @@ namespace Orbito.Infrastructure
                 {
                     policy.Requirements.Add(new ClientAccessRequirement());
                 });
+
+                // ActiveProviderSubscription policy - requires active trial or paid subscription
+                // Providers with expired trial or cancelled subscription are blocked
+                options.AddPolicy(PolicyNames.ActiveProviderSubscription, policy =>
+                {
+                    policy.Requirements.Add(new ActiveProviderSubscriptionRequirement());
+                });
             });
 
             // NOTE: Rate Limiting, CORS, and Response Compression are configured in Program.cs

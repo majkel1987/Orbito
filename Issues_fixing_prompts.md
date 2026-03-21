@@ -60,7 +60,7 @@
 | ISSUE 5.1 | Restrykcje | Hardening Client Portal (PortalGuard + API) | ✅ | ISSUE 4.2 |
 | ISSUE 6.1 | Trial | Backend: Domain Model Trial + Auto-create przy rejestracji + Provider jako klient Admina | ✅ | ISSUE 1.1, ISSUE 2.1 |
 | ISSUE 6.2 | Trial | Backend: Background Job – powiadomienia 5d/3d/24h przed końcem triala | ✅ | ISSUE 6.1, ISSUE 3.1 |
-| ISSUE 6.3 | Trial | Backend: Wygaśnięcie triala, email z instrukcjami płatności | ⬜ | ISSUE 6.2 |
+| ISSUE 6.3 | Trial | Backend: Wygaśnięcie triala, email z instrukcjami płatności | ✅ | ISSUE 6.2 |
 | ISSUE 6.4 | Trial | Frontend: Wybór planu przy rejestracji + UI płatności za subskrypcję Providera | ⬜ | ISSUE 6.3, ISSUE 4.1 |
 
 ---
@@ -1569,15 +1569,15 @@ Po upływie okresu próbnego (14 dni) Provider musi zapłacić za subskrypcję. 
 
 **✅ CHECKLIST WERYFIKACJI (Dla Agenta):**
 
-* [ ] Background Job zmienia `Status = Expired` gdy `TrialEndDate < now` (sprawdź SQL)
-* [ ] Email "Trial wygasł" wysłany z linkiem do `/dashboard/billing`
-* [ ] Provider z Expired subscription → `GET /api/Clients` → 403 (lub 402 Payment Required)
-* [ ] Provider z Expired subscription → `GET /api/ProviderSubscription/my` → 200 OK (dostęp do billing!)
-* [ ] Frontend: Expired Provider widzi overlay "Twój okres próbny się zakończył" na dashboardzie
-* [ ] Frontend: Expired Provider może przejść na `/dashboard/billing` (nie jest blokowany)
-* [ ] Frontend: Expired Provider NIE może przejść na `/dashboard/clients`, `/dashboard/plans` etc.
-* [ ] PlatformAdmin NIE jest blokowany przez trial restrictions
-* [ ] `dotnet build` → ZERO błędów, `npm run typecheck` → ZERO błędów
+* [x] Background Job zmienia `Status = Expired` gdy `TrialEndDate < now` (sprawdź SQL)
+* [x] Email "Trial wygasł" wysłany z linkiem do `/dashboard/billing`
+* [x] Provider z Expired subscription → `GET /api/Clients` → 403 (lub 402 Payment Required)
+* [x] Provider z Expired subscription → `GET /api/ProviderSubscription/my` → 200 OK (dostęp do billing!)
+* [x] Frontend: Expired Provider widzi overlay "Twój okres próbny się zakończył" na dashboardzie
+* [x] Frontend: Expired Provider może przejść na `/dashboard/billing` (nie jest blokowany)
+* [x] Frontend: Expired Provider NIE może przejść na `/dashboard/clients`, `/dashboard/plans` etc.
+* [x] PlatformAdmin NIE jest blokowany przez trial restrictions
+* [x] `dotnet build` → ZERO błędów, `npm run typecheck` → ZERO błędów
 * [ ] Git commit: `feat(trial): add trial expiration, access restriction, and expired state UI`
 
 <!-- BLOCK_END: ISSUE_6.3 -->

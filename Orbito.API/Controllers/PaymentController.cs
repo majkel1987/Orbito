@@ -10,11 +10,13 @@ using Orbito.Application.Features.Payments.Queries.GetPaymentById;
 using Orbito.Application.Features.Payments.Queries.GetPaymentsBySubscription;
 using Orbito.Application.Features.Payments.Queries.GetPaymentMethodsByClient;
 using Orbito.Application.Features.Payments.Queries.GetAllPayments;
+using Orbito.Application.DTOs;
 using Orbito.Domain.Enums;
 
 namespace Orbito.API.Controllers
 {
     [Route("api/[controller]")]
+    [Authorize(Policy = PolicyNames.ActiveProviderSubscription)]
     public class PaymentController : BaseController
     {
         public PaymentController(IMediator mediator, ILogger<PaymentController> logger)
@@ -74,6 +76,7 @@ namespace Orbito.API.Controllers
         /// <returns>Szczegóły płatności</returns>
         [HttpGet("{id}")]
         [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
+        [ProducesResponseType(typeof(PaymentDto), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetPaymentById(Guid id, [FromQuery] Guid clientId)
         {
             var query = new GetPaymentByIdQuery(id, clientId);
