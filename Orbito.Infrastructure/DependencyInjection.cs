@@ -186,6 +186,7 @@ namespace Orbito.Infrastructure
             services.AddHostedService<CheckPendingPaymentsJob>();
             services.AddHostedService<PaymentStatusSyncJob>();
             services.AddHostedService<DailyReconciliationJob>();
+            services.AddHostedService<TrialExpirationNotificationJob>();
 
             // FIXED: Validate Stripe configuration at startup with proper validation
             services.AddOptions<StripeConfiguration>()

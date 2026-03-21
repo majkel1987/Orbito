@@ -55,11 +55,11 @@
 | ISSUE 3.2 | Zapraszanie | Backend: Confirmation Endpoint & Status | ✅ | ISSUE 3.1 |
 | ISSUE 3.3 | Zapraszanie | Frontend: Formularz Invite Client | ✅ | ISSUE 3.2 |
 | ISSUE 3.4 | Zapraszanie | Frontend: Strona potwierdzenia /portal/confirm | ✅ | ISSUE 3.3 |
-| ISSUE 4.1 | Płatności | Stripe Elements w Client Portal | ⬜ | ISSUE 3.4 |
-| ISSUE 4.2 | Płatności | Webhook Sync → Provider Dashboard | ⬜ | ISSUE 4.1 |
-| ISSUE 5.1 | Restrykcje | Hardening Client Portal (PortalGuard + API) | ⬜ | ISSUE 4.2 |
-| ISSUE 6.1 | Trial | Backend: Domain Model Trial + Auto-create przy rejestracji + Provider jako klient Admina | ⬜ | ISSUE 1.1, ISSUE 2.1 |
-| ISSUE 6.2 | Trial | Backend: Background Job – powiadomienia 5d/3d/24h przed końcem triala | ⬜ | ISSUE 6.1, ISSUE 3.1 |
+| ISSUE 4.1 | Płatności | Stripe Elements w Client Portal | ✅ | ISSUE 3.4 |
+| ISSUE 4.2 | Płatności | Webhook Sync → Provider Dashboard | ✅ | ISSUE 4.1 |
+| ISSUE 5.1 | Restrykcje | Hardening Client Portal (PortalGuard + API) | ✅ | ISSUE 4.2 |
+| ISSUE 6.1 | Trial | Backend: Domain Model Trial + Auto-create przy rejestracji + Provider jako klient Admina | ✅ | ISSUE 1.1, ISSUE 2.1 |
+| ISSUE 6.2 | Trial | Backend: Background Job – powiadomienia 5d/3d/24h przed końcem triala | ✅ | ISSUE 6.1, ISSUE 3.1 |
 | ISSUE 6.3 | Trial | Backend: Wygaśnięcie triala, email z instrukcjami płatności | ⬜ | ISSUE 6.2 |
 | ISSUE 6.4 | Trial | Frontend: Wybór planu przy rejestracji + UI płatności za subskrypcję Providera | ⬜ | ISSUE 6.3, ISSUE 4.1 |
 
@@ -1240,11 +1240,11 @@ Upewnij się, że te dwa konteksty są **oddzielone** na poziomie domeny, aby ni
 
 | # | Zadanie | Priorytet | Status | Opis |
 |---|---|---|---|---|
-| 1 | 🔴 TrialExpirationNotificationJob | Krytyczne | ⬜ | Backend: Background Job sprawdzający daty wygasania triali |
-| 2 | 🔴 Email templates (5d, 3d, 24h) | Krytyczne | ⬜ | Backend: 3 warianty emaila z odpowiednim tonem pilności |
-| 3 | 🔴 Notification deduplication | Krytyczne | ⬜ | Backend: Zabezpieczenie przed wysyłaniem duplikatów (LastNotificationSentAt + NotificationTier) |
-| 4 | 🟡 In-app banner | Ważne | ⬜ | Frontend: Banner ostrzegawczy w dashboardzie Providera |
-| 5 | 🟡 NotificationTier tracking | Ważne | ⬜ | Domain: Śledzenie który poziom powiadomienia został wysłany (5d/3d/24h) |
+| 1 | 🔴 TrialExpirationNotificationJob | Krytyczne | ✅ | Backend: Background Job sprawdzający daty wygasania triali |
+| 2 | 🔴 Email templates (5d, 3d, 24h) | Krytyczne | ✅ | Backend: 3 warianty emaila z odpowiednim tonem pilności |
+| 3 | 🔴 Notification deduplication | Krytyczne | ✅ | Backend: Zabezpieczenie przed wysyłaniem duplikatów (LastNotificationSentAt + NotificationTier) |
+| 4 | 🟡 In-app banner | Ważne | ✅ | Frontend: Banner ostrzegawczy w dashboardzie Providera |
+| 5 | 🟡 NotificationTier tracking | Ważne | ✅ | Domain: Śledzenie który poziom powiadomienia został wysłany (5d/3d/24h) |
 
 **Blok 6.2 - Wymagania wejściowe**: ISSUE 6.1 (ProviderSubscription z TrialEndDate), ISSUE 3.1 (IEmailService)
 **Blok 6.2 - Rezultat**: System automatycznie wysyła powiadomienia email do Providera na 5 dni, 3 dni i 24 godziny przed końcem triala. Każde powiadomienie jest wysyłane dokładnie raz. W dashboardzie Providera wyświetla się banner z informacją o zbliżającym się końcu triala.

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Sidebar } from "@/shared/components/layout/Sidebar";
 import { Header } from "@/shared/components/layout/Header";
+import { TrialBanner } from "@/features/billing/components/TrialBanner";
 
 interface DashboardShellProps {
   children: React.ReactNode;
@@ -41,6 +42,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
 
       {/* Main content area */}
       <div className="flex min-h-screen flex-col md:pl-64">
+        <TrialBanner />
         <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
         <main className="flex-1 p-4 sm:p-6">{children}</main>
       </div>

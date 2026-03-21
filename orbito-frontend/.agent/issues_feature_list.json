@@ -487,9 +487,23 @@
         "Banner zmienia kolor (niebieski → żółty → czerwony) wg daysRemaining",
         "dotnet build → ZERO błędów, npm run typecheck → ZERO błędów"
       ],
-      "passes": false,
-      "completionDate": null,
-      "notes": []
+      "passes": true,
+      "completionDate": "2026-03-21",
+      "notes": [
+        "IEmailService rozszerzony o SendTrialExpiringAsync + SendTrialExpiredAsync",
+        "EmailService: 3 warianty emaila (info/warning/critical) z kolorami i rosnącym tonem pilności",
+        "SendTrialExpirationNotificationsCommand + Handler w Application/Features/ProviderSubscriptions/Commands/",
+        "TrialExpirationNotificationJob (BackgroundService co 1h) w Infrastructure/BackgroundJobs/",
+        "GetMyProviderSubscriptionQuery + Handler + ProviderSubscriptionDto w Application/Features/ProviderSubscriptions/Queries/",
+        "ProviderSubscriptionController z GET /api/ProviderSubscription/my (ProviderTeamAccess policy)",
+        "IProviderSubscriptionRepository rozszerzony o GetByTenantIdAsync",
+        "Frontend: useGetApiProviderSubscriptionMy hook (manual, do regeneracji gdy backend uruchomiony)",
+        "Frontend: useProviderSubscription hook w features/billing/hooks/",
+        "Frontend: TrialBanner component (niebieski → żółty → czerwony) w features/billing/components/",
+        "Frontend: DashboardShell.tsx zaktualizowany - TrialBanner na górze layoutu",
+        "Frontend: /dashboard/billing placeholder page z informacją o planie i statusie triala",
+        "dotnet build: 0 Error(s), npm run typecheck: 0 Error(s), npm run lint: 0 errors (2 pre-existing warnings)"
+      ]
     },
     {
       "id": "ISSUE_6.3",

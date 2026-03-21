@@ -10,6 +10,7 @@ public interface IProviderSubscriptionRepository
 {
     Task<ProviderSubscription?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<ProviderSubscription?> GetByProviderIdAsync(Guid providerId, CancellationToken cancellationToken = default);
+    Task<ProviderSubscription?> GetByTenantIdAsync(Guid tenantId, CancellationToken cancellationToken = default);
     Task<IEnumerable<ProviderSubscription>> GetByStatusAsync(ProviderSubscriptionStatus status, CancellationToken cancellationToken = default);
     Task<IEnumerable<ProviderSubscription>> GetExpiringTrialsAsync(int daysUntilExpiration, CancellationToken cancellationToken = default);
     Task<IEnumerable<ProviderSubscription>> GetExpiredTrialsAsync(CancellationToken cancellationToken = default);

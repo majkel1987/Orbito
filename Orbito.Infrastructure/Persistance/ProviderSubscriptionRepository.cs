@@ -35,6 +35,14 @@ public class ProviderSubscriptionRepository : IProviderSubscriptionRepository
             .FirstOrDefaultAsync(ps => ps.ProviderId == providerId, cancellationToken);
     }
 
+    public async Task<ProviderSubscription?> GetByTenantIdAsync(Guid tenantId, CancellationToken cancellationToken = default)
+    {
+        return await _context.ProviderSubscriptions
+            .Include(ps => ps.Provider)
+            .Include(ps => ps.PlatformPlan)
+            .FirstOrDefaultAsync(ps => ps.Provider.TenantId.Value == tenantId, cancellationToken);
+    }
+
     public async Task<IEnumerable<ProviderSubscription>> GetByStatusAsync(ProviderSubscriptionStatus status, CancellationToken cancellationToken = default)
     {
         return await _context.ProviderSubscriptions

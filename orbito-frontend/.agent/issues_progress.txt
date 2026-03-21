@@ -43,7 +43,7 @@ PODSUMOWANIE BLOKÓW
 | ISSUE 4.2  | Płatności   | Webhook Sync → Provider Dashboard              | ✅     | ISSUE 4.1           |
 | ISSUE 5.1  | Restrykcje  | Hardening Client Portal (PortalGuard + API)    | ✅     | ISSUE 4.1, 4.2      |
 | ISSUE 6.1  | Trial       | Domain Model Trial + Reg + Provider jako klient Admina | ✅ | ISSUE 1.1, 2.1   |
-| ISSUE 6.2  | Trial       | Powiadomienia 5d/3d/24h + banner w dashboardzie | ⬜   | ISSUE 6.1, 3.1      |
+| ISSUE 6.2  | Trial       | Powiadomienia 5d/3d/24h + banner w dashboardzie | ✅   | ISSUE 6.1, 3.1      |
 | ISSUE 6.3  | Trial       | Wygaśnięcie triala + blokada + email           | ⬜     | ISSUE 6.2           |
 | ISSUE 6.4  | Trial       | Wybór planu + Stripe Payment dla Providera     | ⬜     | ISSUE 6.3, 4.1      |
 
@@ -130,14 +130,14 @@ STATS
 ================================================================================
 
 Total issue blocks: 13
-Completed (passes: true): 10 (ISSUE 1.1, ISSUE 2.1, ISSUE 3.1, ISSUE 3.2, ISSUE 3.3, ISSUE 3.4, ISSUE 4.1, ISSUE 4.2, ISSUE 5.1, ISSUE 6.1)
-Remaining (passes: false): 3
-Completion: 77%
+Completed (passes: true): 11 (ISSUE 1.1, ISSUE 2.1, ISSUE 3.1, ISSUE 3.2, ISSUE 3.3, ISSUE 3.4, ISSUE 4.1, ISSUE 4.2, ISSUE 5.1, ISSUE 6.1, ISSUE 6.2)
+Remaining (passes: false): 2
+Completion: 85%
 
 ## NASTĘPNY KROK:
-ISSUE 6.2 (Trial Notifications – 5d/3d/24h email + TrialBanner)
-Zależności: ISSUE 6.1 ✅ + ISSUE 3.1 ✅
-Ścieżka B (trial): 6.1 ✅ → 6.2 → 6.3 → 6.4
+ISSUE 6.3 (Trial Expiration – Wygaśnięcie + Blokada + Email)
+Zależności: ISSUE 6.2 ✅
+Ścieżka B (trial): 6.1 ✅ → 6.2 ✅ → 6.3 → 6.4
 
 ================================================================================
 --- Session 2026-02-28 ---
@@ -891,3 +891,106 @@ Completion: 77%
 ISSUE 6.2 (Trial Notifications – 5d/3d/24h email + TrialBanner)
 Zależności: ISSUE 6.1 ✅ + ISSUE 3.1 ✅
 Ścieżka B (trial): 6.1 ✅ → 6.2 → 6.3 → 6.4
+
+================================================================================
+--- Session 2026-03-21 ---
+Agent: Claude Opus 4.5
+Block: ISSUE 6.2 Trial Subscription – Powiadomienia o zbliżającym się końcu triala (5d/3d/24h)
+Status: COMPLETED
+================================================================================
+
+## WYKONANE ZADANIA:
+
+### Backend:
+1. **Orbito.Application/Common/Interfaces/IEmailService.cs** (zmieniony):
+   - Dodano SendTrialExpiringAsync(toEmail, providerName, daysRemaining, planName, billingLink, ct)
+   - Dodano SendTrialExpiredAsync(toEmail, providerName, planName, billingLink, ct)
+2. **Orbito.Infrastructure/Services/EmailService.cs** (zmieniony):
+   - Implementacja z HTML templates PL (3 urgency levels: critical/warning/info)
+   - Color-coded styling: czerwony (1d), żółty (3d), niebieski (5d)
+3. **Orbito.Application/Subscriptions/Commands/SendTrialExpirationNotifications/** (NOWY folder):
+   - SendTrialExpirationNotificationsCommand.cs: IRequest<Result<int>>
+   - SendTrialExpirationNotificationsCommandHandler.cs: iteruje Trial subscriptions, określa tier, wysyła email, oznacza jako wysłane
+   - Helper GetRequiredNotificationTier(): <=1 day → OneDay, <=3 days → ThreeDays, <=5 days → FiveDays
+4. **Orbito.Infrastructure/BackgroundJobs/TrialExpirationNotificationJob.cs** (NOWY):
+   - BackgroundService co godzinę z 5-minutowym opóźnieniem startowym
+   - Wywołuje SendTrialExpirationNotificationsCommand przez MediatR
+5. **Orbito.Application/Common/Interfaces/IProviderSubscriptionRepository.cs** (zmieniony):
+   - Dodano GetByTenantIdAsync(Guid tenantId, CancellationToken)
+6. **Orbito.Infrastructure/Persistance/ProviderSubscriptionRepository.cs** (zmieniony):
+   - Implementacja GetByTenantIdAsync (query przez Provider.TenantId.Value)
+7. **Orbito.Application/Subscriptions/Queries/GetMyProviderSubscription/** (NOWY folder):
+   - GetMyProviderSubscriptionQuery.cs + Handler
+   - ProviderSubscriptionDto: Id, Status, PlanName, PlanPrice, PlanCurrency, DaysRemaining, TrialEndDate, PaidUntil, IsTrialActive, IsExpired
+8. **Orbito.API/Controllers/ProviderSubscriptionController.cs** (NOWY):
+   - GET /api/ProviderSubscription/my (ProviderTeamAccess policy)
+9. **Orbito.Infrastructure/DependencyInjection.cs** (zmieniony):
+   - Dodano services.AddHostedService<TrialExpirationNotificationJob>()
+
+### Frontend:
+1. **src/core/api/generated/provider-subscription/providerSubscriptionDto.ts** (NOWY):
+   - Manual DTO matching backend ProviderSubscriptionDto
+2. **src/core/api/generated/provider-subscription/provider-subscription.ts** (NOWY):
+   - Manual Orval-style hook useGetApiProviderSubscriptionMy (backend nie był uruchomiony)
+3. **src/features/billing/hooks/useProviderSubscription.ts** (NOWY):
+   - Custom hook z convenience properties: isTrial, isActive, isExpired, daysRemaining, planName, trialEndDate
+4. **src/features/billing/components/TrialBanner.tsx** (NOWY):
+   - 3 urgency levels z color-coded styling (niebieski/żółty/czerwony)
+   - Button CTA → /dashboard/billing
+   - Polish text messages
+5. **src/shared/components/layout/DashboardShell.tsx** (zmieniony):
+   - Dodano <TrialBanner /> na górze layoutu przed Header
+6. **src/app/(dashboard)/dashboard/billing/page.tsx** (NOWY):
+   - Strona subskrypcji z aktualnym planem, statusem, dniami pozostałymi
+   - Placeholder dla Stripe Payment (ISSUE 6.4)
+   - Responsive design z loading/error states
+
+## WERYFIKACJA:
+- dotnet build: ✅ 0 Error(s)
+- npm run typecheck: ✅ 0 błędów
+- npm run lint: ✅ 0 errors
+- TrialExpirationNotificationJob: ✅ BackgroundService registered
+- TrialBanner: ✅ 3 urgency levels
+- /dashboard/billing: ✅ placeholder page
+
+## ZMIENIONE PLIKI:
+### Backend:
+- Orbito.Application/Common/Interfaces/IEmailService.cs
+- Orbito.Infrastructure/Services/EmailService.cs
+- Orbito.Application/Subscriptions/Commands/SendTrialExpirationNotifications/SendTrialExpirationNotificationsCommand.cs (NOWY)
+- Orbito.Application/Subscriptions/Commands/SendTrialExpirationNotifications/SendTrialExpirationNotificationsCommandHandler.cs (NOWY)
+- Orbito.Infrastructure/BackgroundJobs/TrialExpirationNotificationJob.cs (NOWY)
+- Orbito.Application/Common/Interfaces/IProviderSubscriptionRepository.cs
+- Orbito.Infrastructure/Persistance/ProviderSubscriptionRepository.cs
+- Orbito.Application/Subscriptions/Queries/GetMyProviderSubscription/GetMyProviderSubscriptionQuery.cs (NOWY)
+- Orbito.Application/Subscriptions/Queries/GetMyProviderSubscription/GetMyProviderSubscriptionQueryHandler.cs (NOWY)
+- Orbito.API/Controllers/ProviderSubscriptionController.cs (NOWY)
+- Orbito.Infrastructure/DependencyInjection.cs
+
+### Frontend:
+- src/core/api/generated/provider-subscription/providerSubscriptionDto.ts (NOWY)
+- src/core/api/generated/provider-subscription/provider-subscription.ts (NOWY)
+- src/features/billing/hooks/useProviderSubscription.ts (NOWY)
+- src/features/billing/components/TrialBanner.tsx (NOWY)
+- src/shared/components/layout/DashboardShell.tsx
+- src/app/(dashboard)/dashboard/billing/page.tsx (NOWY)
+
+### Progress files:
+- orbito-frontend/.agent/issues_feature_list.json (passes: true, notes, stats)
+- orbito-frontend/.agent/issues_progress.txt (tabela + wpis sesji)
+
+## KNOWN ISSUES:
+- Manual hooks zamiast Orval-generated (backend nie był uruchomiony podczas npm run api:generate)
+- Po uruchomieniu backendu należy: npm run api:generate → usunąć manualne pliki provider-subscription
+- Payment placeholder na stronie billing (ISSUE 6.4)
+
+## STATS PO SESJI:
+Total issue blocks: 13
+Completed: 11 (ISSUE 1.1, ISSUE 2.1, ISSUE 3.1, ISSUE 3.2, ISSUE 3.3, ISSUE 3.4, ISSUE 4.1, ISSUE 4.2, ISSUE 5.1, ISSUE 6.1, ISSUE 6.2)
+Remaining: 2
+Completion: 85%
+
+## NASTĘPNY KROK:
+ISSUE 6.3 (Trial Expiration – Wygaśnięcie + Blokada + Email)
+Zależności: ISSUE 6.2 ✅
+Ścieżka B (trial): 6.1 ✅ → 6.2 ✅ → 6.3 → 6.4

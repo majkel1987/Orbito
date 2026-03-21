@@ -29,4 +29,19 @@ public interface IEmailService
         string currency,
         string failureReason,
         CancellationToken cancellationToken = default);
+
+    Task<Result> SendTrialExpiringAsync(
+        string toEmail,
+        string providerName,
+        int daysRemaining,
+        string planName,
+        string billingLink,
+        CancellationToken cancellationToken = default);
+
+    Task<Result> SendTrialExpiredAsync(
+        string toEmail,
+        string providerName,
+        string planName,
+        string billingLink,
+        CancellationToken cancellationToken = default);
 }
