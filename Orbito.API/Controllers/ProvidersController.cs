@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Orbito.Application.Common.Authorization;
 using Orbito.Application.Providers.Commands.CreateProvider;
 using Orbito.Application.Providers.Commands.UpdateProvider;
 using Orbito.Application.Providers.Commands.DeleteProvider;
@@ -11,6 +12,10 @@ using Orbito.Domain.Enums;
 
 namespace Orbito.API.Controllers
 {
+    /// <summary>
+    /// Controller for Provider management. Restricted to PlatformAdmin and ProviderTeam.
+    /// Clients have NO access to any endpoints in this controller.
+    /// </summary>
     [Route("api/[controller]")]
     public class ProvidersController : BaseController
     {
@@ -55,7 +60,7 @@ namespace Orbito.API.Controllers
         /// Pobiera providera po ID
         /// </summary>
         [HttpGet("{id}")]
-        [Authorize]
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
         public async Task<IActionResult> GetProviderById(Guid id)
         {
             var query = new GetProviderByIdQuery(id);
@@ -67,7 +72,7 @@ namespace Orbito.API.Controllers
         /// Pobiera providera po ID użytkownika
         /// </summary>
         [HttpGet("by-user/{userId}")]
-        [Authorize]
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
         public async Task<IActionResult> GetProviderByUserId(Guid userId)
         {
             var query = new GetProviderByUserIdQuery(userId);
@@ -111,7 +116,7 @@ namespace Orbito.API.Controllers
         /// Aktualizuje informacje providera
         /// </summary>
         [HttpPut("{id}")]
-        [Authorize]
+        [Authorize(Policy = PolicyNames.ProviderTeamAccess)]
         [ProducesResponseType(typeof(Orbito.Application.DTOs.ProviderDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]

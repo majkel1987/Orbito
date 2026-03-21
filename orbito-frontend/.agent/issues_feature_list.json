@@ -397,9 +397,19 @@
         "npm run typecheck → ZERO błędów",
         "dotnet build → ZERO błędów"
       ],
-      "passes": false,
-      "completionDate": null,
-      "notes": []
+      "passes": true,
+      "completionDate": "2026-03-21",
+      "notes": [
+        "Security audit: wszystkie 16 kontrolerów przejrzane",
+        "ProvidersController: naprawiono 3 endpointy (GetProviderById, GetProviderByUserId, UpdateProvider) - zmieniono [Authorize] → [Authorize(Policy = PolicyNames.ProviderTeamAccess)]",
+        "Wszystkie Provider-only endpointy używają ProviderTeamAccess policy",
+        "Wszystkie Client-only endpointy (PortalController) używają ClientAccess policy",
+        "WebhookController: AllowAnonymous (prawidłowo - Stripe webhooks)",
+        "Frontend middleware.ts: Client → /portal, non-Client → /dashboard",
+        "PortalGuard.tsx: blokuje dostęp non-Client do /portal/*",
+        "Portal layout: prosty navbar bez sidebar, brak linków do Dashboard/Clients/Plans/Team/Analytics",
+        "dotnet build: 0 Error(s), npm run typecheck: 0 Error(s), npm run lint: 0 errors"
+      ]
     },
     {
       "id": "ISSUE_6.1",
@@ -557,11 +567,11 @@
   ],
   "stats": {
     "totalBlocks": 13,
-    "completedBlocks": 8,
-    "remainingBlocks": 5,
-    "completionPercentage": 62
+    "completedBlocks": 9,
+    "remainingBlocks": 4,
+    "completionPercentage": 69
   },
-  "nextPriority": "ISSUE_5.1",
+  "nextPriority": "ISSUE_6.1",
   "dependencyGraph": {
     "description": "Wizualizacja zależności między blokami. Dwie równoległe ścieżki po ISSUE 2.1.",
     "independent": ["ISSUE_1.1", "ISSUE_2.1"],
