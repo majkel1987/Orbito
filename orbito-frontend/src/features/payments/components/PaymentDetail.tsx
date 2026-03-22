@@ -17,12 +17,13 @@ import { RefundPaymentDialog } from "./dialogs/RefundPaymentDialog";
 
 interface PaymentDetailProps {
   paymentId: string;
+  clientId?: string;
 }
 
-export function PaymentDetail({ paymentId }: PaymentDetailProps) {
+export function PaymentDetail({ paymentId, clientId }: PaymentDetailProps) {
   const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
 
-  const { data, isLoading, error } = useGetApiPaymentId(paymentId) as {
+  const { data, isLoading, error } = useGetApiPaymentId(paymentId, clientId ? { clientId } : undefined) as {
     data: PaymentDto | undefined;
     isLoading: boolean;
     error: Error | null;

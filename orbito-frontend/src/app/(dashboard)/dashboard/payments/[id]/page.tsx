@@ -2,12 +2,15 @@ import { PaymentDetail } from "@/features/payments/components/PaymentDetail";
 
 interface PaymentDetailPageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ clientId?: string }>;
 }
 
 export default async function PaymentDetailPage({
   params,
+  searchParams,
 }: PaymentDetailPageProps) {
   const { id } = await params;
+  const { clientId } = await searchParams;
 
   return (
     <div className="container mx-auto py-8">
@@ -18,7 +21,7 @@ export default async function PaymentDetailPage({
         </p>
       </div>
 
-      <PaymentDetail paymentId={id} />
+      <PaymentDetail paymentId={id} clientId={clientId} />
     </div>
   );
 }

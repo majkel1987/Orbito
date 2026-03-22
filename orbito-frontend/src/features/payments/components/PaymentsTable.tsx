@@ -166,7 +166,7 @@ export function PaymentsTable() {
                   {formatDate(payment?.createdAt ?? "")}
                 </TableCell>
                 <TableCell className="text-right">
-                  <Link href={`/dashboard/payments/${payment?.id}`}>
+                  <Link href={`/dashboard/payments/${payment?.id}?clientId=${payment?.clientId}`}>
                     <Button variant="ghost" size="sm">
                       View
                     </Button>
