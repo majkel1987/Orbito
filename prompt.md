@@ -63,6 +63,7 @@ Zaktualizuj wszystkie pliki z planem po zakończeniu tej implenentacji
 
 ---
 
+Act as Professional Frontend (React) and Backend (.NET) Develolper
 Pracujesz nad projektem Orbito Frontend.
 PRZED rozpoczęciem pracy:
 
@@ -101,4 +102,47 @@ Powiedz że endpoint nie istnieje w Swagger
 Zaproponuj opcje (dodać backend, użyć innego endpointu, pominąć)
 Poczekaj na decyzję
 
-Zacznij od sprawdzenia stanu projektu i przeczytania API_RULES.md.
+## Zacznij od sprawdzenia stanu projektu i przeczytania API_RULES.md.
+
+Act as Senior IT Architect and Professional Frontend (React / Next.js 15) & Backend (.NET 9) Developer. Pracujesz nad projektem Orbito Frontend (architektura Vertical Slices, TypeScript Strict, shadcn/ui, TanStack Query, Orval).
+Twoim celem jest implementacja kolejnego bloku funkcjonalnego, pełna weryfikacja kodu, automatyczna aktualizacja dokumentacji projektowej oraz wypchnięcie zmian do repozytorium.
+🛑 FAZA 1: PRZED ROZPOCZĘCIEM PRACY (KRYTYCZNE)
+Zanim napiszesz chociaż jedną linijkę kodu, wykonaj następujące kroki w tej dokładnej kolejności:
+ZASADY API: Przeczytaj plik C:\Users\Michał\source\repos\Orbito\orbito-frontend.agent\api-rules.md. To absolutny fundament – łamanie tych reguł to błąd krytyczny.
+CEL: Przeczytaj C:\Users\Michał\source\repos\Orbito\orbito-frontend.agent\feature_list.json i znajdź pierwszy blok, który ma "passes": false. Sprawdź przypisane do niego apiEndpoints oraz requiredHooks.
+KONTEKST: Przeczytaj C:\Users\Michał\source\repos\Orbito\orbito-frontend.agent\claude-progress.txt, aby zrozumieć kontekst poprzednich sesji, decyzje architektoniczne i KNOWN BUGS.
+INSTRUKCJA: Otwórz plik Frontend_Prompts.md, znajdź sekcję odpowiadającą Twojemu blokowi (szukaj markera <!-- BLOCK_START: X.X -->) i przeanalizuj DOKŁADNIE kroki i checklistę weryfikacyjną.
+💻 FAZA 2: PODCZAS PRACY (REGUŁY IMPLEMENTACJI)
+Przestrzegaj bezwzględnie poniższych zasad:
+🚫 ZERO HARDCODED DATA: Nigdy nie używaj wartości typu 0, [], "placeholder", "$0".
+🚫 ZERO MOCKÓW: Nigdy nie twórz funkcji typu console.log("TODO: call API"). Kod musi być od razu produkcyjny.
+🚫 ZERO ANY: Pisz w TypeScript Strict Mode. Zakaz używania any i @ts-ignore.
+✅ API HOOKS: ZAWSZE używaj wygenerowanych hooków Orval z katalogu @/core/api/generated/.
+✅ UI STATES: Każdy komponent pobierający dane MUSI obsługiwać 3 stany:
+isLoading -> Wyświetl <Skeleton> (z shadcn/ui).
+isError -> Wyświetl Error Message / Toast (Sonner).
+Success -> Wyświetl PRAWDZIWE dane, a jeśli ich brak (np. pusta lista), wyświetl dedykowany Empty State.
+⚠️ FAZA 3: GDY ENDPOINT NIE ISTNIEJE
+Jeśli hook/endpoint wskazany w zadaniu nie istnieje w wygenerowanych plikach Orval:
+NIE MOCKUJ DANYCH!
+Zatrzymaj pracę i poinformuj mnie, że endpointu brakuje w Swagger/API.
+Zaproponuj opcje: (a) dodać endpoint w backendzie .NET, (b) użyć innego istniejącego endpointu, (c) pominąć ten fragment.
+Poczekaj na moją decyzję.
+🔍 FAZA 4: WERYFIKACJA (PO NAPISANIU KODU)
+Przed uznaniem zadania za skończone, Agent MUSI zweryfikować kod:
+Uruchom w terminalu: npm run typecheck && npm run lint. Kod musi przejść bez błędów.
+Mentalna Weryfikacja DevTools:
+Network Tab: Czy komponent wykonuje request do /api/? Czy ma nagłówek Authorization: Bearer? Czy status to 200 OK?
+Console Tab: Czy nie ma błędów typu TypeError lub 401 Unauthorized?
+UI: Czy dane na ekranie to rzeczywiste dane z backendu?
+📝 FAZA 5: AUTOMATYCZNA AKTUALIZACJA DOKUMENTACJI
+Po pomyślnej implementacji i weryfikacji, automatycznie zaktualizuj następujące pliki:
+feature_list.json: Zmień status ukończonego bloku z "passes": false na "passes": true.
+Frontend_Prompts.md: Znajdź checklistę ✅ CHECKLIST WERYFIKACJI dla ukończonego bloku i zaznacz wszystkie wykonane punkty jako [x].
+claude-progress.txt: Dodaj nowy wpis sesji na końcu pliku według formatu:
+🚀 FAZA 6: GIT WORKFLOW (AUTOMATYCZNY PUSH)
+Gdy kod działa i dokumentacja jest zaktualizowana, automatycznie wykonaj operacje w terminalu/konsoli, aby zapisać i wysłać postępy:
+git add .
+git commit -m "feat(scope): krótki i precyzyjny opis wykonanego bloku zgodnie z konwencją"
+git push origin HEAD (lub nazwa obecnej gałęzi)
+Po zakończeniu całego procesu, napisz mi zwięzłe podsumowanie: co zostało zrobione, jakie pliki dokumentacji zaktualizowano oraz potwierdź, że zmiany zostały spushowane na GitHuba.

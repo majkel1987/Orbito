@@ -3831,11 +3831,11 @@ Pliki konfiguracyjne, helper `renderWithProviders` oraz kod przykładowych test�
 
 | #     | Zadanie                | Priorytet  | Status | Opis                                    |
 | ----- | ---------------------- | ---------- | ------ | --------------------------------------- |
-| 8.2.1 | 🔴 TypeScript audit    | Krytyczne  | ⬜     | Weryfikacja brak any, pełne typy        |
-| 8.2.2 | 🔴 Accessibility audit | Krytyczne  | ⬜     | Keyboard nav, aria labels, focus states |
-| 8.2.3 | 🟡 Performance audit   | Ważne      | ⬜     | Lighthouse, bundle analysis             |
-| 8.2.4 | 🟡 Mobile responsive   | Ważne      | ⬜     | Testowanie na różnych rozdzielczościach |
-| 8.2.5 | 🟢 Documentation       | Opcjonalne | ⬜     | README, component docs                  |
+| 8.2.1 | 🔴 TypeScript audit    | Krytyczne  | ✅     | Weryfikacja brak any, pełne typy        |
+| 8.2.2 | 🔴 Accessibility audit | Krytyczne  | ✅     | Keyboard nav, aria labels, focus states |
+| 8.2.3 | 🟡 Performance audit   | Ważne      | ✅     | Lighthouse, bundle analysis             |
+| 8.2.4 | 🟡 Mobile responsive   | Ważne      | ✅     | Testowanie na różnych rozdzielczościach |
+| 8.2.5 | 🟢 Documentation       | Opcjonalne | ✅     | README, component docs                  |
 
 **Blok 8.2 - Wymagania wejściowe**: Blok 8.1 (Testy)  
 **Blok 8.2 - Rezultat**: Aplikacja gotowa do wdrożenia (Production Ready)
@@ -3930,11 +3930,11 @@ Zaktualizowane pliki konfiguracyjne, checklista dostępności oraz gotowy README
 
 | #     | Zadanie             | Priorytet | Status | Opis                                       |
 | ----- | ------------------- | --------- | ------ | ------------------------------------------ |
-| 9.1.1 | 🔴 Portal Layout    | Krytyczne | ⬜     | Osobny layout dla /portal (bez sidebara)   |
-| 9.1.2 | 🔴 Portal Guard     | Krytyczne | ⬜     | Ochrona tras tylko dla roli 'Client'       |
-| 9.1.3 | 🔴 Portal Dashboard | Krytyczne | ⬜     | /portal - podsumowanie subskrypcji         |
-| 9.1.4 | 🟡 Invoices list    | Ważne     | ⬜     | Lista faktur do pobrania (PDF)             |
-| 9.1.5 | 🟡 Billing Settings | Ważne     | ⬜     | Zarządzanie kartą i anulowanie subskrypcji |
+| 9.1.1 | 🔴 Portal Layout    | Krytyczne | ✅     | Osobny layout dla /portal (bez sidebara)   |
+| 9.1.2 | 🔴 Portal Guard     | Krytyczne | ✅     | Ochrona tras tylko dla roli 'Client'       |
+| 9.1.3 | 🔴 Portal Dashboard | Krytyczne | ✅     | /portal - podsumowanie subskrypcji         |
+| 9.1.4 | 🟡 Invoices list    | Ważne     | ✅     | Lista faktur do pobrania (PDF)             |
+| 9.1.5 | 🟡 Billing Settings | Ważne     | ⬜     | Zarządzanie kartą i anulowanie (poza scope)|
 
 **Blok 9.1 - Wymagania wejściowe**: Faza 1 (Auth), Faza 5 (Subskrypcje)  
 **Blok 9.1 - Rezultat**: Działający portal samoobsługowy dla końcowego klienta
