@@ -27,6 +27,30 @@ public class MockPaymentGateway : IPaymentGateway
     public RefundResult DefaultRefundResult { get; set; } = RefundResult.Success(RefundStatus.Completed, "re_test_123");
     public CustomerResult DefaultCustomerResult { get; set; } = CustomerResult.Success("cus_test_123", "test@example.com");
 
+    public CreatePaymentIntentResult DefaultPaymentIntentResult { get; set; } = CreatePaymentIntentResult.Success(
+        "pi_test_secret_123",
+        "pi_test_123",
+        100.00m,
+        "PLN");
+
+    public Task<CreatePaymentIntentResult> CreatePaymentIntentAsync(CreatePaymentIntentRequest request)
+    {
+        if (ShouldThrowException)
+            throw new InvalidOperationException(ExceptionMessage);
+
+        if (ShouldTimeout)
+            Thread.Sleep(TimeoutDuration);
+
+        if (ShouldReturnNetworkError)
+            return Task.FromResult(CreatePaymentIntentResult.Failure("Network connection failed"));
+
+        return Task.FromResult(CreatePaymentIntentResult.Success(
+            "pi_test_secret_" + Guid.NewGuid().ToString("N")[..8],
+            "pi_test_" + Guid.NewGuid().ToString("N")[..8],
+            request.Amount.Amount,
+            request.Amount.Currency));
+    }
+
     public Task<PaymentResult> ProcessPaymentAsync(ProcessPaymentRequest request)
     {
         _processedRequests.Add(request);

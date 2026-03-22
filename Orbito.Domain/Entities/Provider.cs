@@ -28,6 +28,9 @@ namespace Orbito.Domain.Entities
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
 
+        // Stripe Integration (for platform billing)
+        public string? StripeCustomerId { get; set; }
+
         // Business Metrics (cached values)
         public Money MonthlyRevenue { get; set; }
         public int ActiveClientsCount { get; set; }

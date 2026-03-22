@@ -19,6 +19,8 @@ export interface RegisterProviderRequest {
   /** @nullable */
   subdomainSlug?: string | null;
   /** @nullable */
+  selectedPlatformPlanId?: string | null;
+  /** @nullable */
   description?: string | null;
   /** @nullable */
   avatar?: string | null;

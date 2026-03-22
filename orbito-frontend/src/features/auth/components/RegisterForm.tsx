@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
+import { ArrowLeft } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -19,22 +21,28 @@ import { Button } from "@/shared/ui/button";
 import { Label } from "@/shared/ui/label";
 import { RegisterSchema, type RegisterInput } from "../schemas/auth.schemas";
 import { usePostApiAccountRegisterProvider } from "@/core/api/generated/account/account";
+import { PlanSelectionStep } from "./PlanSelectionStep";
+
+type Step = "plan" | "details";
 
 export function RegisterForm() {
   const router = useRouter();
+  const [step, setStep] = useState<Step>("plan");
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
+    setValue,
   } = useForm<RegisterInput>({
     resolver: zodResolver(RegisterSchema),
   });
 
-  const { mutate: registerProvider } = usePostApiAccountRegisterProvider({
+  const { mutate: registerProvider, isPending } = usePostApiAccountRegisterProvider({
     mutation: {
       onSuccess: () => {
-        toast.success("Registration successful! Please log in.");
+        toast.success("Rejestracja zakończona pomyślnie! Możesz się teraz zalogować.");
         router.push("/login");
       },
       onError: (error: AxiosError) => {
@@ -42,24 +50,39 @@ export function RegisterForm() {
         console.error("Error response:", error.response?.data);
 
         const errorData = error.response?.data as
-          | { message?: string; errors?: string[] }
+          | { message?: string; errors?: string[]; validationErrors?: Record<string, string[]> }
           | undefined;
 
         const errorMessage =
           errorData?.message ||
           error.message ||
-          "An error occurred during registration";
+          "Wystąpił błąd podczas rejestracji";
 
         toast.error(errorMessage);
 
         if (errorData?.errors && errorData.errors.length > 0) {
-          errorData.errors.forEach((err) => {
+          errorData.errors.slice(0, 3).forEach((err) => {
             toast.error(err);
           });
         }
       },
     },
   });
+
+  const handlePlanSelect = (planId: string) => {
+    setSelectedPlanId(planId);
+    setValue("selectedPlatformPlanId", planId);
+  };
+
+  const handleContinueToDetails = () => {
+    if (selectedPlanId) {
+      setStep("details");
+    }
+  };
+
+  const handleBackToPlan = () => {
+    setStep("plan");
+  };
 
   const onSubmit = async (data: RegisterInput) => {
     registerProvider({
@@ -70,29 +93,61 @@ export function RegisterForm() {
         lastName: data.lastName,
         businessName: data.businessName,
         subdomainSlug: data.subdomainSlug,
+        selectedPlatformPlanId: selectedPlanId,
       },
     });
   };
 
+  if (step === "plan") {
+    return (
+      <div className="w-full max-w-4xl mx-auto">
+        <PlanSelectionStep
+          selectedPlanId={selectedPlanId}
+          onSelectPlan={handlePlanSelect}
+          onContinue={handleContinueToDetails}
+        />
+        <p className="text-center text-sm text-muted-foreground mt-4">
+          Masz już konto?{" "}
+          <Link href="/login" className="text-primary hover:underline">
+            Zaloguj się
+          </Link>
+        </p>
+      </div>
+    );
+  }
+
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
-        <CardTitle>Register</CardTitle>
-        <CardDescription>
-          Create a new account to get started
-        </CardDescription>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={handleBackToPlan}
+            className="h-8 w-8"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <CardTitle>Uzupełnij dane</CardTitle>
+            <CardDescription>
+              Stwórz konto, aby rozpocząć okres próbny
+            </CardDescription>
+          </div>
+        </div>
       </CardHeader>
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="firstName">First Name</Label>
+              <Label htmlFor="firstName">Imię</Label>
               <Input
                 id="firstName"
                 type="text"
-                placeholder="John"
+                placeholder="Jan"
                 {...register("firstName")}
-                disabled={isSubmitting}
+                disabled={isPending}
                 autoComplete="given-name"
               />
               {errors.firstName && (
@@ -103,13 +158,13 @@ export function RegisterForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="lastName">Last Name</Label>
+              <Label htmlFor="lastName">Nazwisko</Label>
               <Input
                 id="lastName"
                 type="text"
-                placeholder="Doe"
+                placeholder="Kowalski"
                 {...register("lastName")}
-                disabled={isSubmitting}
+                disabled={isPending}
                 autoComplete="family-name"
               />
               {errors.lastName && (
@@ -121,13 +176,13 @@ export function RegisterForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="businessName">Business Name</Label>
+            <Label htmlFor="businessName">Nazwa firmy</Label>
             <Input
               id="businessName"
               type="text"
-              placeholder="Acme Corporation"
+              placeholder="Moja Firma Sp. z o.o."
               {...register("businessName")}
-              disabled={isSubmitting}
+              disabled={isPending}
               autoComplete="organization"
             />
             {errors.businessName && (
@@ -138,14 +193,14 @@ export function RegisterForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="subdomainSlug">Subdomain</Label>
+            <Label htmlFor="subdomainSlug">Subdomena</Label>
             <div className="flex items-center gap-2">
               <Input
                 id="subdomainSlug"
                 type="text"
-                placeholder="acme"
+                placeholder="mojafirma"
                 {...register("subdomainSlug")}
-                disabled={isSubmitting}
+                disabled={isPending}
                 className="flex-1"
               />
               <span className="text-sm text-muted-foreground whitespace-nowrap">
@@ -158,8 +213,8 @@ export function RegisterForm() {
               </p>
             )}
             <p className="text-xs text-muted-foreground">
-              Only lowercase letters, numbers, and hyphens. Cannot start or end
-              with a hyphen.
+              Tylko małe litery, cyfry i myślniki. Nie może zaczynać ani kończyć
+              się myślnikiem.
             </p>
           </div>
 
@@ -168,9 +223,9 @@ export function RegisterForm() {
             <Input
               id="email"
               type="email"
-              placeholder="you@example.com"
+              placeholder="jan@mojafirma.pl"
               {...register("email")}
-              disabled={isSubmitting}
+              disabled={isPending}
               autoComplete="email"
             />
             {errors.email && (
@@ -179,13 +234,13 @@ export function RegisterForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">Hasło</Label>
             <Input
               id="password"
               type="password"
               placeholder="••••••••"
               {...register("password")}
-              disabled={isSubmitting}
+              disabled={isPending}
               autoComplete="new-password"
             />
             {errors.password && (
@@ -196,13 +251,13 @@ export function RegisterForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <Label htmlFor="confirmPassword">Potwierdź hasło</Label>
             <Input
               id="confirmPassword"
               type="password"
               placeholder="••••••••"
               {...register("confirmPassword")}
-              disabled={isSubmitting}
+              disabled={isPending}
               autoComplete="new-password"
             />
             {errors.confirmPassword && (
@@ -214,13 +269,13 @@ export function RegisterForm() {
         </CardContent>
 
         <CardFooter className="flex flex-col gap-4">
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? "Registering..." : "Register"}
+          <Button type="submit" className="w-full" disabled={isPending}>
+            {isPending ? "Rejestracja..." : "Zarejestruj się"}
           </Button>
           <p className="text-sm text-muted-foreground">
-            Already have an account?{" "}
+            Masz już konto?{" "}
             <Link href="/login" className="text-primary hover:underline">
-              Login
+              Zaloguj się
             </Link>
           </p>
         </CardFooter>

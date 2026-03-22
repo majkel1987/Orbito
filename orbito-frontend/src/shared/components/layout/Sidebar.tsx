@@ -10,6 +10,7 @@ import {
   CreditCard,
   DollarSign,
   BarChart3,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
@@ -55,6 +56,11 @@ const navItems: NavItem[] = [
     label: "Analytics",
     href: "/dashboard/analytics",
     icon: BarChart3,
+  },
+  {
+    label: "Subskrypcja",
+    href: "/dashboard/billing",
+    icon: Wallet,
   },
 ];
 

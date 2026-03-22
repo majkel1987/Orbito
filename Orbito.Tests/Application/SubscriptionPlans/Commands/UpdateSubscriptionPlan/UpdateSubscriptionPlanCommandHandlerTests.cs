@@ -436,12 +436,8 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Commands.UpdateSubscription
             _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         }
 
-        [Theory]
-        [InlineData(BillingPeriodType.Daily, "1 Daily")]
-        [InlineData(BillingPeriodType.Weekly, "1 Weekly")]
-        [InlineData(BillingPeriodType.Monthly, "1 Monthly")]
-        [InlineData(BillingPeriodType.Yearly, "1 Yearly")]
-        public async Task Handle_WithDifferentBillingPeriods_ShouldUpdateCorrectBillingPeriod(BillingPeriodType billingPeriodType, string expectedBillingPeriod)
+        [Fact]
+        public async Task Handle_WhenRepositoryThrowsException_ShouldPropagateException()
         {
             // Arrange
             var planId = Guid.NewGuid();
@@ -467,7 +463,7 @@ namespace Orbito.Tests.Application.SubscriptionPlans.Commands.UpdateSubscription
                 .ThrowsAsync(new Exception("Database error"));
 
             // Act & Assert
-            var exception = await Assert.ThrowsAsync<Exception>(() => 
+            var exception = await Assert.ThrowsAsync<Exception>(() =>
                 _handler.Handle(command, CancellationToken.None));
 
             exception.Message.Should().Be("Database error");

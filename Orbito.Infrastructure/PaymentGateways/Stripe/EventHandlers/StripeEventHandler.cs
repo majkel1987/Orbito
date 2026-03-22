@@ -4,6 +4,7 @@ using Orbito.Application.Common.Models;
 using Orbito.Application.Services;
 using Orbito.Domain.Enums;
 using Orbito.Domain.ValueObjects;
+using BillingPeriodType = Orbito.Domain.ValueObjects.BillingPeriodType;
 using Orbito.Infrastructure.PaymentGateways.Stripe.Models;
 using Orbito.Infrastructure.Persistance;
 using System.Text.Json;
@@ -19,17 +20,26 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
         private readonly IUnitOfWork _unitOfWork;
         private readonly IPaymentProcessingService _paymentProcessingService;
         private readonly IEmailService _emailService;
+        private readonly IProviderSubscriptionRepository _providerSubscriptionRepository;
+        private readonly IPlatformPlanRepository _platformPlanRepository;
+        private readonly IProviderRepository _providerRepository;
 
         public StripeEventHandler(
             ILogger<StripeEventHandler> logger,
             IUnitOfWork unitOfWork,
             IPaymentProcessingService paymentProcessingService,
-            IEmailService emailService)
+            IEmailService emailService,
+            IProviderSubscriptionRepository providerSubscriptionRepository,
+            IPlatformPlanRepository platformPlanRepository,
+            IProviderRepository providerRepository)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _paymentProcessingService = paymentProcessingService ?? throw new ArgumentNullException(nameof(paymentProcessingService));
             _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
+            _providerSubscriptionRepository = providerSubscriptionRepository ?? throw new ArgumentNullException(nameof(providerSubscriptionRepository));
+            _platformPlanRepository = platformPlanRepository ?? throw new ArgumentNullException(nameof(platformPlanRepository));
+            _providerRepository = providerRepository ?? throw new ArgumentNullException(nameof(providerRepository));
         }
 
         /// <summary>
@@ -89,6 +99,14 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
                 _logger.LogDebug("Processing payment intent succeeded: {PaymentIntentId}, Amount: {Amount} {Currency}",
                     paymentIntent.Id, paymentIntent.Amount, paymentIntent.Currency);
 
+                // Check if this is a platform subscription payment (Provider paying Orbito)
+                if (paymentIntent.Metadata.TryGetValue("subscription_type", out var subscriptionType) &&
+                    subscriptionType == "platform")
+                {
+                    return await HandleProviderPlatformPaymentSucceededAsync(paymentIntent, cancellationToken);
+                }
+
+                // Standard client subscription payment flow
                 // Find payment by external ID
                 var payment = await _unitOfWork.Payments.GetByExternalPaymentIdUnsafeAsync(paymentIntent.Id, cancellationToken);
                 if (payment == null)
@@ -154,6 +172,113 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
                 _logger.LogError(ex, "Error handling payment intent succeeded");
                 return Result.Failure($"Error handling payment intent succeeded: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// Handles successful platform subscription payment (Provider paying Orbito).
+        /// Activates ProviderSubscription and sets PaidUntil date.
+        /// </summary>
+        private async Task<Result> HandleProviderPlatformPaymentSucceededAsync(
+            StripePaymentIntent paymentIntent,
+            CancellationToken cancellationToken)
+        {
+            _logger.LogInformation(
+                "Processing platform subscription payment: {PaymentIntentId}",
+                paymentIntent.Id);
+
+            // Extract metadata
+            if (!paymentIntent.Metadata.TryGetValue("provider_id", out var providerIdStr) ||
+                !Guid.TryParse(providerIdStr, out var providerId))
+            {
+                _logger.LogWarning("Missing or invalid provider_id in payment intent metadata: {PaymentIntentId}", paymentIntent.Id);
+                return Result.Failure("Missing provider_id in payment intent metadata");
+            }
+
+            if (!paymentIntent.Metadata.TryGetValue("platform_plan_id", out var planIdStr) ||
+                !Guid.TryParse(planIdStr, out var planId))
+            {
+                _logger.LogWarning("Missing or invalid platform_plan_id in payment intent metadata: {PaymentIntentId}", paymentIntent.Id);
+                return Result.Failure("Missing platform_plan_id in payment intent metadata");
+            }
+
+            // Get ProviderSubscription
+            var subscription = await _providerSubscriptionRepository.GetByProviderIdAsync(providerId, cancellationToken);
+            if (subscription == null)
+            {
+                _logger.LogWarning("ProviderSubscription not found for provider: {ProviderId}", providerId);
+                return Result.Failure($"ProviderSubscription not found for provider: {providerId}");
+            }
+
+            // Check idempotency - if already active with future PaidUntil, skip
+            if (subscription.Status == ProviderSubscriptionStatus.Active &&
+                subscription.PaidUntil.HasValue &&
+                subscription.PaidUntil.Value > DateTime.UtcNow)
+            {
+                _logger.LogInformation(
+                    "ProviderSubscription {SubscriptionId} already active until {PaidUntil}, skipping",
+                    subscription.Id, subscription.PaidUntil);
+                return Result.Success();
+            }
+
+            // Get PlatformPlan for billing period calculation
+            var plan = await _platformPlanRepository.GetByIdAsync(planId, cancellationToken);
+            if (plan == null)
+            {
+                _logger.LogWarning("PlatformPlan not found: {PlanId}", planId);
+                return Result.Failure($"PlatformPlan not found: {planId}");
+            }
+
+            // Calculate PaidUntil based on billing period
+            var paidUntil = plan.BillingPeriod.Type == BillingPeriodType.Monthly
+                ? DateTime.UtcNow.AddDays(30)
+                : DateTime.UtcNow.AddDays(365);
+
+            // Activate subscription
+            var activateResult = subscription.Activate(paidUntil);
+            if (activateResult.IsFailure)
+            {
+                _logger.LogWarning(
+                    "Failed to activate ProviderSubscription {SubscriptionId}: {Error}",
+                    subscription.Id, activateResult.Error);
+                return Result.Failure(activateResult.Error);
+            }
+
+            // Update plan if changed
+            if (subscription.PlatformPlanId != planId)
+            {
+                subscription.ChangePlan(planId);
+                _logger.LogInformation(
+                    "ProviderSubscription {SubscriptionId} plan changed to {PlanId}",
+                    subscription.Id, planId);
+            }
+
+            await _providerSubscriptionRepository.UpdateAsync(subscription, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation(
+                "ProviderSubscription {SubscriptionId} activated for provider {ProviderId}, paid until {PaidUntil}",
+                subscription.Id, providerId, paidUntil);
+
+            // Send confirmation email to Provider
+            var provider = await _providerRepository.GetByIdAsync(providerId, cancellationToken);
+            if (provider?.User?.Email != null)
+            {
+                await _emailService.SendPaymentConfirmationAsync(
+                    toEmail: provider.User.Email,
+                    clientName: provider.BusinessName,
+                    subscriptionName: $"Orbito {plan.Name}",
+                    amount: plan.Price.Amount,
+                    currency: plan.Price.CurrencyCode,
+                    paymentId: paymentIntent.Id,
+                    paymentDate: DateTime.UtcNow,
+                    cancellationToken: cancellationToken);
+
+                _logger.LogInformation(
+                    "Platform subscription confirmation email sent to {Email} for provider {ProviderId}",
+                    provider.User.Email, providerId);
+            }
+
+            return Result.Success();
         }
 
         /// <summary>

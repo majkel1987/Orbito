@@ -57,6 +57,7 @@ public class GetMyProviderSubscriptionQueryHandler
         var dto = new ProviderSubscriptionDto
         {
             Id = subscription.Id,
+            PlatformPlanId = subscription.PlatformPlanId,
             Status = subscription.Status.ToString(),
             PlanName = subscription.PlatformPlan?.Name ?? "Unknown",
             PlanPrice = subscription.PlatformPlan?.Price?.Amount ?? 0,

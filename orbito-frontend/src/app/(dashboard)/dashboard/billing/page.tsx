@@ -1,15 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import { CreditCard, Clock, CheckCircle } from "lucide-react";
 import { useProviderSubscription } from "@/features/billing/hooks/useProviderSubscription";
+import { ProviderPaymentDialog } from "@/features/billing/components/ProviderPaymentDialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Badge } from "@/shared/ui/badge";
+import { Button } from "@/shared/ui/button";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { cn } from "@/shared/lib/utils";
 
 export default function BillingPage() {
   const { subscription, isLoading, isTrial, isActive, isExpired, daysRemaining, planName } =
     useProviderSubscription();
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -118,18 +122,55 @@ export default function BillingPage() {
             )}
           </div>
 
-          {/* Placeholder for payment - will be implemented in ISSUE 6.4 */}
+          {/* Payment CTA for trial or expired subscriptions */}
           {(isTrial || isExpired) && (
-            <div className="mt-6 rounded-lg border-2 border-dashed border-muted-foreground/25 p-8 text-center">
-              <CreditCard className="mx-auto h-12 w-12 text-muted-foreground/50" />
-              <h4 className="mt-4 text-lg font-medium">Płatność zostanie dodana w następnej wersji</h4>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Formularz płatności Stripe zostanie zaimplementowany w ISSUE 6.4
+            <div className="mt-6">
+              <Button
+                size="lg"
+                className="w-full"
+                onClick={() => setPaymentDialogOpen(true)}
+              >
+                <CreditCard className="mr-2 h-5 w-5" />
+                {isExpired ? "Odnów subskrypcję" : "Opłać teraz i aktywuj"}
+              </Button>
+              {isTrial && (
+                <p className="mt-2 text-center text-sm text-muted-foreground">
+                  Opłacenie teraz aktywuje pełną subskrypcję natychmiast.
+                  Okres próbny zostanie zakończony.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Show paid until date for active subscriptions */}
+          {isActive && subscription?.paidUntil && (
+            <div className="mt-6 rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950">
+              <p className="text-sm text-green-800 dark:text-green-200">
+                Subskrypcja opłacona do:{" "}
+                <span className="font-medium">
+                  {new Date(subscription.paidUntil).toLocaleDateString("pl-PL", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </span>
               </p>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Payment Dialog */}
+      {subscription && (
+        <ProviderPaymentDialog
+          open={paymentDialogOpen}
+          onOpenChange={setPaymentDialogOpen}
+          platformPlanId={subscription.platformPlanId}
+          planName={planName || "Plan"}
+          planPrice={subscription.planPrice}
+          planCurrency={subscription.planCurrency}
+        />
+      )}
     </div>
   );
 }

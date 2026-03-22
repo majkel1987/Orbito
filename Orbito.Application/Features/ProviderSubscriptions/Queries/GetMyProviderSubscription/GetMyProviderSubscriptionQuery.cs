@@ -15,6 +15,7 @@ public record GetMyProviderSubscriptionQuery : IRequest<Result<ProviderSubscript
 public record ProviderSubscriptionDto
 {
     public Guid Id { get; init; }
+    public Guid? PlatformPlanId { get; init; }
     public string Status { get; init; } = null!;
     public string PlanName { get; init; } = null!;
     public decimal PlanPrice { get; init; }

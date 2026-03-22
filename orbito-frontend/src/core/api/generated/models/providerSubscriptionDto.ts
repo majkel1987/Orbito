@@ -11,6 +11,7 @@
  */
 export interface ProviderSubscriptionDto {
   id: string;
+  platformPlanId?: string;
   status: string;
   planName: string;
   planPrice: number;

@@ -107,4 +107,18 @@ public class ProviderSubscription
         UpdatedAt = DateTime.UtcNow;
         return Result.Success();
     }
+
+    /// <summary>
+    /// Changes the platform plan for this subscription.
+    /// Used when Provider upgrades/downgrades their plan.
+    /// </summary>
+    public Result ChangePlan(Guid newPlanId)
+    {
+        if (newPlanId == Guid.Empty)
+            return Result.Failure(DomainErrors.ProviderSubscription.PlanNotFound);
+
+        PlatformPlanId = newPlanId;
+        UpdatedAt = DateTime.UtcNow;
+        return Result.Success();
+    }
 }
