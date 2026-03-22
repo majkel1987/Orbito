@@ -2,7 +2,32 @@
   "permissions": {
     "allow": [
       "Read(//c/Users/Michał/source/repos/orbito-frontend/**)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(dotnet build:*)",
+      "Bash(npm run api:generate:*)",
+      "Bash(npm install:*)",
+      "Bash(npx shadcn@latest add calendar popover -y)",
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(npm run lint:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(ls /c/Users/Michał/source/repos/Orbito/READMEs/README_FRONTEND*)",
+      "Bash(\"/c/Users/Michał/source/repos/Orbito/orbito-frontend/.agent/claude-progress.txt\":*)",
+      "Bash(where python)",
+      "Bash(where python3)",
+      "Bash(where node)",
+      "Bash(node -e \"const a11y = require\\(''eslint-plugin-jsx-a11y''\\); console.log\\(Object.keys\\(a11y\\)\\)\")",
+      "Bash(node -e \"const a11y = require\\(''eslint-plugin-jsx-a11y''\\); console.log\\(JSON.stringify\\(Object.keys\\(a11y.flatConfigs.recommended\\), null, 2\\)\\)\")",
+      "Bash(\"c:\\\\Users\\\\Michał\\\\source\\\\repos\\\\Orbito\\\\orbito-frontend\\\\.agent\\\\claude-progress.txt\":*)",
+      "Bash(git push origin HEAD)",
+      "Bash(python -c \"import sys,json; data=json.load\\(sys.stdin\\); paths=list\\(data[''paths''].keys\\(\\)\\); portal=[p for p in paths if ''ortal'' in p]; print\\(''Portal paths:'', portal\\)\")",
+      "Bash(git push origin master)",
+      "Bash(grep -r \"TeamMemberRole\\\\|enum.*Role\" \"c:\\\\Users\\\\Michał\\\\source\\\\repos\\\\Orbito\\\\Orbito.Domain\\\\Enums\"\" --include=\"*.cs \")",
+      "Bash(ls -la \"c:\\\\Users\\\\Michał\\\\source\\\\repos\\\\Orbito\\\\Orbito.Domain\\\\Enums\"\" 2>/dev/null || echo \"Directory not found \")",
+      "Bash(git status:*)",
+      "Bash(dotnet ef migrations add:*)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []

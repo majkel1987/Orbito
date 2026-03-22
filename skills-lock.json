@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "skills": {
+    "dotnet-core-expert": {
+      "source": "jeffallan/claude-skills",
+      "sourceType": "github",
+      "computedHash": "79efc1aff0c7ff735a004ff7cbb3c0bf1a6f98805b26c8ae36553fc3d0016441"
+    },
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "computedHash": "25872a21881a950edc3db1f3329664d60405d539660ce05b3265db2de06a7dfd"
+    },
+    "backend-audit": {
+      "source": ".agents/skills/backend-audit",
+      "sourceType": "local",
+      "computedHash": "local-skill-no-hash"
+    }
+  }
+}

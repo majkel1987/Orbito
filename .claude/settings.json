@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet ef migrations add AddClientInvitationFields --project Orbito.Infrastructure --startup-project Orbito.API)",
+      "Bash(dotnet ef migrations add AddClientInvitationFields --project Orbito.Infrastructure --startup-project Orbito.API --context ApplicationDbContext)",
+      "Bash(dotnet ef database update --project Orbito.Infrastructure --startup-project Orbito.API --context ApplicationDbContext)",
+      "Bash(ls c:/Users/Michał/source/repos/Orbito/orbito-frontend/src/app/\\\\\\(auth\\\\\\)/)",
+      "Bash(ls c:/Users/Michał/source/repos/Orbito/orbito-frontend/src/app/\\\\\\(auth\\\\\\)/auth/)",
+      "Bash(ls c:/Users/Michał/source/repos/Orbito/orbito-frontend/src/app/\\\\\\(auth\\\\\\)/login/)",
+      "Bash(ls c:/Users/Michał/source/repos/Orbito/orbito-frontend/src/app/\\\\\\(auth\\\\\\)/register/)"
+    ]
+  }
+}
