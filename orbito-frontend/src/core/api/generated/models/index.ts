@@ -89,6 +89,7 @@ export * from './postApiPaymentIdRefundParams';
 export * from './problemDetails';
 export * from './processPaymentCommand';
 export * from './providerDto';
+export * from './providerSubscriptionDto';
 export * from './putApiPaymentIdStatusParams';
 export * from './reconciliationReportDto';
 export * from './refundPaymentCommand';
