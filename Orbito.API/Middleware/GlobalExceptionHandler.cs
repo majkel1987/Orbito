@@ -1,3 +1,4 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,6 +21,35 @@ public class GlobalExceptionHandler : IExceptionHandler
         Exception exception,
         CancellationToken cancellationToken)
     {
+        // Handle FluentValidation.ValidationException
+        if (exception is ValidationException validationException)
+        {
+            _logger.LogWarning("Validation exception occurred. Path: {Path}, Method: {Method}, Errors: {Errors}",
+                httpContext.Request.Path,
+                httpContext.Request.Method,
+                string.Join(", ", validationException.Errors.Select(e => $"{e.PropertyName}: {e.ErrorMessage}")));
+
+            var validationErrors = validationException.Errors
+                .GroupBy(e => e.PropertyName)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(e => e.ErrorMessage).ToArray()
+                );
+
+            var validationResponse = new
+            {
+                isSuccess = false,
+                message = "Validation failed",
+                errors = validationException.Errors.Select(e => e.ErrorMessage).ToList(),
+                validationErrors
+            };
+
+            httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await httpContext.Response.WriteAsJsonAsync(validationResponse, cancellationToken);
+
+            return true;
+        }
+
         _logger.LogError(exception, "Unhandled exception occurred. Path: {Path}, Method: {Method}",
             httpContext.Request.Path, httpContext.Request.Method);
 
