@@ -15,6 +15,14 @@ namespace Orbito.Application.Common.Interfaces
         Task<PaymentResult> ProcessPaymentAsync(ProcessPaymentRequest request);
 
         /// <summary>
+        /// Creates a PaymentIntent for Stripe Elements (client-side confirmation)
+        /// PCI DSS compliant - card data never touches our servers
+        /// </summary>
+        /// <param name="request">Payment intent creation request</param>
+        /// <returns>Result with client secret for frontend</returns>
+        Task<CreatePaymentIntentResult> CreatePaymentIntentAsync(CreatePaymentIntentRequest request);
+
+        /// <summary>
         /// Zwraca płatność przez payment gateway
         /// </summary>
         /// <param name="request">Dane zwrotu</param>

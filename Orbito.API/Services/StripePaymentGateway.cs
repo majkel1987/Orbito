@@ -301,6 +301,88 @@ namespace Orbito.API.Services
         }
 
         /// <summary>
+        /// Creates a PaymentIntent for Stripe Elements (PCI DSS compliant)
+        /// </summary>
+        public async Task<CreatePaymentIntentResult> CreatePaymentIntentAsync(CreatePaymentIntentRequest request)
+        {
+            try
+            {
+                _logger.LogInformation(
+                    "Creating PaymentIntent for subscription {SubscriptionId}, amount {Amount} {Currency}",
+                    request.SubscriptionId, request.Amount.Amount, request.Amount.Currency.Code);
+
+                var paymentIntentService = new PaymentIntentService();
+
+                var options = new PaymentIntentCreateOptions
+                {
+                    Amount = ConvertToStripeAmount(request.Amount),
+                    Currency = request.Amount.Currency.Code.ToLowerInvariant(),
+                    Customer = request.CustomerId,
+                    Description = request.Description,
+                    AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
+                    {
+                        Enabled = true
+                    },
+                    Metadata = new Dictionary<string, string>
+                    {
+                        ["subscription_id"] = request.SubscriptionId.ToString(),
+                        ["client_id"] = request.ClientId.ToString(),
+                        ["tenant_id"] = request.TenantId.ToString(),
+                        ["subscription_type"] = "client"
+                    }
+                };
+
+                foreach (var metadata in request.Metadata)
+                {
+                    options.Metadata[metadata.Key] = metadata.Value;
+                }
+
+                var paymentIntent = await paymentIntentService.CreateAsync(options);
+
+                _logger.LogInformation(
+                    "PaymentIntent {PaymentIntentId} created for subscription {SubscriptionId}",
+                    paymentIntent.Id, request.SubscriptionId);
+
+                return CreatePaymentIntentResult.Success(
+                    paymentIntent.ClientSecret,
+                    paymentIntent.Id,
+                    request.Amount.Amount,
+                    request.Amount.Currency.Code,
+                    new Dictionary<string, string>
+                    {
+                        ["stripe_payment_intent_id"] = paymentIntent.Id,
+                        ["stripe_customer_id"] = paymentIntent.CustomerId ?? string.Empty,
+                        ["stripe_status"] = paymentIntent.Status
+                    });
+            }
+            catch (StripeException ex)
+            {
+                _logger.LogError(ex,
+                    "Stripe error creating PaymentIntent for subscription {SubscriptionId}: {ErrorMessage}",
+                    request.SubscriptionId, ex.Message);
+
+                return CreatePaymentIntentResult.Failure(
+                    ex.Message,
+                    ex.StripeError?.Code,
+                    new Dictionary<string, string>
+                    {
+                        ["stripe_error_type"] = ex.StripeError?.Type ?? "unknown",
+                        ["stripe_error_code"] = ex.StripeError?.Code ?? "unknown"
+                    });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Unexpected error creating PaymentIntent for subscription {SubscriptionId}",
+                    request.SubscriptionId);
+
+                return CreatePaymentIntentResult.Failure(
+                    "An unexpected error occurred while creating payment intent",
+                    "UNEXPECTED_ERROR");
+            }
+        }
+
+        /// <summary>
         /// Sprawdza status płatności w Stripe
         /// </summary>
         public async Task<PaymentStatusResult> GetPaymentStatusAsync(string externalPaymentId)

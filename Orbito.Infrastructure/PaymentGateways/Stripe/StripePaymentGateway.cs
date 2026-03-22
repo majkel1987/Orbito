@@ -339,6 +339,103 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
         }
 
         /// <summary>
+        /// Creates a PaymentIntent for Stripe Elements (PCI DSS compliant)
+        /// Card data stays on Stripe's servers - never touches Orbito
+        /// </summary>
+        public async Task<CreatePaymentIntentResult> CreatePaymentIntentAsync(CreatePaymentIntentRequest request)
+        {
+            await _rateLimiter.WaitAsync();
+            try
+            {
+                _logger.LogInformation(
+                    "Creating PaymentIntent for subscription {SubscriptionId}, client {ClientId}, amount {Amount} {Currency}",
+                    request.SubscriptionId, request.ClientId, request.Amount.Amount, request.Amount.Currency.Code);
+
+                var paymentIntentService = new PaymentIntentService();
+
+                var options = new PaymentIntentCreateOptions
+                {
+                    Amount = ConvertToStripeAmount(request.Amount),
+                    Currency = request.Amount.Currency.Code.ToLowerInvariant(),
+                    Customer = request.CustomerId,
+                    Description = request.Description,
+                    AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
+                    {
+                        Enabled = true
+                    },
+                    Metadata = new Dictionary<string, string>
+                    {
+                        ["subscription_id"] = request.SubscriptionId.ToString(),
+                        ["client_id"] = request.ClientId.ToString(),
+                        ["tenant_id"] = request.TenantId.ToString(),
+                        ["subscription_type"] = "client" // Distinguishes from provider platform payments
+                    }
+                };
+
+                // Add custom metadata
+                foreach (var metadata in request.Metadata)
+                {
+                    options.Metadata[metadata.Key] = metadata.Value;
+                }
+
+                var requestOptions = new RequestOptions
+                {
+                    ApiKey = _configuration.SecretKey,
+                    IdempotencyKey = $"pi_{request.SubscriptionId}_{DateTime.UtcNow:yyyyMMddHH}"
+                };
+
+                var paymentIntent = await ExecuteWithRetryAsync(
+                    async () => await paymentIntentService.CreateAsync(options, requestOptions),
+                    "CreatePaymentIntent");
+
+                _logger.LogInformation(
+                    "PaymentIntent {PaymentIntentId} created successfully for subscription {SubscriptionId}",
+                    paymentIntent.Id, request.SubscriptionId);
+
+                return CreatePaymentIntentResult.Success(
+                    paymentIntent.ClientSecret,
+                    paymentIntent.Id,
+                    request.Amount.Amount,
+                    request.Amount.Currency.Code,
+                    new Dictionary<string, string>
+                    {
+                        ["stripe_payment_intent_id"] = paymentIntent.Id,
+                        ["stripe_customer_id"] = paymentIntent.CustomerId ?? string.Empty,
+                        ["stripe_status"] = paymentIntent.Status
+                    });
+            }
+            catch (StripeException ex)
+            {
+                _logger.LogError(ex,
+                    "Stripe error creating PaymentIntent for subscription {SubscriptionId}: {ErrorMessage}",
+                    request.SubscriptionId, ex.Message);
+
+                return CreatePaymentIntentResult.Failure(
+                    ex.Message,
+                    ex.StripeError?.Code,
+                    new Dictionary<string, string>
+                    {
+                        ["stripe_error_type"] = ex.StripeError?.Type ?? "unknown",
+                        ["stripe_error_code"] = ex.StripeError?.Code ?? "unknown"
+                    });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Unexpected error creating PaymentIntent for subscription {SubscriptionId}: {ErrorMessage}",
+                    request.SubscriptionId, ex.Message);
+
+                return CreatePaymentIntentResult.Failure(
+                    "An unexpected error occurred while creating payment intent",
+                    "UNEXPECTED_ERROR");
+            }
+            finally
+            {
+                _rateLimiter.Release();
+            }
+        }
+
+        /// <summary>
         /// Sprawdza status płatności w Stripe
         /// </summary>
         public async Task<PaymentStatusResult> GetPaymentStatusAsync(string externalPaymentId)
