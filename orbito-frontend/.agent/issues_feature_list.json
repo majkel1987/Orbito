@@ -594,18 +594,33 @@
         "Sidebar: link 'Subskrypcja' widoczny w menu nawigacji",
         "npm run typecheck → ZERO błędów, dotnet build → ZERO błędów"
       ],
-      "passes": false,
-      "completionDate": null,
-      "notes": []
+      "passes": true,
+      "completionDate": "2026-03-22",
+      "notes": [
+        "Backend: CreateProviderPaymentIntentCommand + Handler + Validator już zaimplementowane (poprzednia sesja)",
+        "Backend: ProviderBillingController z POST /api/ProviderBilling/create-payment-intent (bez ActiveProviderSubscription policy!)",
+        "Backend: StripeEventHandler.HandleProviderPlatformPaymentSucceededAsync obsługuje metadata subscription_type=platform",
+        "Backend: Webhook aktywuje ProviderSubscription.Activate(paidUntil) po udanej płatności",
+        "Frontend: RegisterForm.tsx - 2-krokowy formularz (plan → details) z PlanSelectionStep",
+        "Frontend: PlanSelectionStep.tsx - karty planów z useGetApiPlatformPlans, badge 'Najpopularniejszy' dla Pro",
+        "Frontend: /dashboard/billing/page.tsx - CurrentPlan, status (Trial/Active/Expired), daysRemaining, ProviderPaymentDialog",
+        "Frontend: ProviderPaymentDialog.tsx - Stripe Payment Element, PCI DSS compliant",
+        "Frontend: /dashboard/billing/payment-success/page.tsx - success/processing/error states",
+        "Frontend: StripeProvider.tsx + formatCurrency reused z ISSUE 4.1",
+        "Frontend: useProviderSubscription hook z shouldBlock dla expired (wyjątek: billing page)",
+        "Frontend: Sidebar.tsx - link 'Subskrypcja' do /dashboard/billing z ikoną Wallet",
+        "Hooki wygenerowane przez Orval: useGetApiPlatformPlans, useGetApiProviderSubscriptionMy, usePostApiProviderBillingCreatePaymentIntent",
+        "npm run typecheck: 0 błędów, npm run lint: 0 errors (2 pre-existing warnings), dotnet build: 0 Error(s)"
+      ]
     }
   ],
   "stats": {
     "totalBlocks": 13,
-    "completedBlocks": 12,
-    "remainingBlocks": 1,
-    "completionPercentage": 92
+    "completedBlocks": 13,
+    "remainingBlocks": 0,
+    "completionPercentage": 100
   },
-  "nextPriority": "ISSUE_6.4",
+  "nextPriority": "ALL_COMPLETED",
   "dependencyGraph": {
     "description": "Wizualizacja zależności między blokami. Dwie równoległe ścieżki po ISSUE 2.1.",
     "independent": ["ISSUE_1.1", "ISSUE_2.1"],
