@@ -56,6 +56,12 @@ namespace Orbito.Application.Common.Interfaces
 
         // BACKGROUND JOB METHODS: Explicit TenantId for multi-tenant operations
         /// <summary>
+        /// Gets all subscriptions for a specific tenant (regardless of status)
+        /// SECURITY: Requires explicit TenantId to prevent cross-tenant access
+        /// </summary>
+        Task<IEnumerable<Subscription>> GetSubscriptionsForTenantAsync(TenantId tenantId, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Gets active subscriptions for a specific tenant (for background jobs)
         /// SECURITY: Requires explicit TenantId to prevent cross-tenant access
         /// </summary>

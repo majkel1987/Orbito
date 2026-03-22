@@ -14,17 +14,20 @@ namespace Orbito.Application.Subscriptions.Commands.CreateSubscription
         private readonly ISubscriptionService _subscriptionService;
         private readonly IClientRepository _clientRepository;
         private readonly ISubscriptionPlanRepository _subscriptionPlanRepository;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<CreateSubscriptionCommandHandler> _logger;
 
         public CreateSubscriptionCommandHandler(
             ISubscriptionService subscriptionService,
             IClientRepository clientRepository,
             ISubscriptionPlanRepository subscriptionPlanRepository,
+            IUnitOfWork unitOfWork,
             ILogger<CreateSubscriptionCommandHandler> logger)
         {
             _subscriptionService = subscriptionService;
             _clientRepository = clientRepository;
             _subscriptionPlanRepository = subscriptionPlanRepository;
+            _unitOfWork = unitOfWork;
             _logger = logger;
         }
 
@@ -68,6 +71,9 @@ namespace Orbito.Application.Subscriptions.Commands.CreateSubscription
                 billingPeriod,
                 request.TrialDays,
                 cancellationToken);
+
+            // CRITICAL: Save changes to database
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("Successfully created subscription {SubscriptionId} for client {ClientId}",
                 subscription.Id, request.ClientId);

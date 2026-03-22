@@ -318,6 +318,22 @@ namespace Orbito.Infrastructure.Persistance
         }
 
         /// <summary>
+        /// Gets all subscriptions for a specific tenant (regardless of status)
+        /// SECURITY: Requires explicit TenantId to prevent cross-tenant access
+        /// </summary>
+        public async Task<IEnumerable<Subscription>> GetSubscriptionsForTenantAsync(TenantId tenantId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Subscriptions
+                .IgnoreQueryFilters() // Bypass query filters
+                .AsNoTracking()
+                .Include(s => s.Client)
+                .Include(s => s.Plan)
+                .Where(s => s.TenantId == tenantId)
+                .OrderByDescending(s => s.CreatedAt)
+                .ToListAsync(cancellationToken);
+        }
+
+        /// <summary>
         /// Gets active subscriptions for a specific tenant (for background jobs)
         /// SECURITY: Requires explicit TenantId to prevent cross-tenant access
         /// </summary>

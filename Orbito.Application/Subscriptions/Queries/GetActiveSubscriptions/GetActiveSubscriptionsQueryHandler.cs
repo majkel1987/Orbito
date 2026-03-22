@@ -25,7 +25,7 @@ namespace Orbito.Application.Subscriptions.Queries.GetActiveSubscriptions
 
         public async Task<Result<Common.Models.PaginatedList<SubscriptionDto>>> Handle(GetActiveSubscriptionsQuery request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Getting active subscriptions with pagination {PageNumber}/{PageSize}",
+            _logger.LogInformation("Getting all subscriptions with pagination {PageNumber}/{PageSize}",
                 request.PageNumber, request.PageSize);
 
             // SECURITY: Verify tenant context before querying
@@ -37,7 +37,7 @@ namespace Orbito.Application.Subscriptions.Queries.GetActiveSubscriptions
 
             // SECURE: Explicitly pass TenantId to ensure proper isolation
             var tenantId = _tenantContext.CurrentTenantId;
-            var subscriptions = await _subscriptionRepository.GetActiveSubscriptionsForTenantAsync(tenantId, cancellationToken);
+            var subscriptions = await _subscriptionRepository.GetSubscriptionsForTenantAsync(tenantId, cancellationToken);
 
             if (!string.IsNullOrWhiteSpace(request.SearchTerm))
             {
@@ -88,7 +88,7 @@ namespace Orbito.Application.Subscriptions.Queries.GetActiveSubscriptions
                 request.PageNumber,
                 request.PageSize);
 
-            _logger.LogInformation("Successfully retrieved {Count} active subscriptions", subscriptionDtos.Count);
+            _logger.LogInformation("Successfully retrieved {Count} subscriptions", subscriptionDtos.Count);
 
             return Result.Success(paginatedList);
         }
