@@ -70,6 +70,18 @@ namespace Orbito.Application.Common.Models.PaymentGateway
 
         private static bool IsValidEmail(string email)
         {
+            if (string.IsNullOrWhiteSpace(email))
+                return false;
+
+            // RFC 5322 compliant email validation
+            var emailPattern = @"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$";
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(email, emailPattern,
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase,
+                TimeSpan.FromMilliseconds(100)))
+                return false;
+
+            // Additional validation with MailAddress for RFC compliance
             try
             {
                 var addr = new System.Net.Mail.MailAddress(email);

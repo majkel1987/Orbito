@@ -1,0 +1,1971 @@
+{
+  "projectName": "Orbito Backend",
+  "lastUpdated": "2026-04-06T15:30:00Z",
+  "phases": [
+    {
+      "id": "0.1",
+      "phase": "PHASE 0: Health Check",
+      "block": "Build & Warnings",
+      "target": "Solution",
+      "script": "scripts/build_warnings.py",
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": "2026-03-22",
+      "fixesApplied": true,
+      "notes": [
+        "All 5 projects compile successfully with 0 errors, 0 warnings",
+        "Fixed 25 compilation errors in Orbito.Tests",
+        "Errors fixed: CS7036 (missing constructor args), CS1503 (wrong argument types), CS1061 (Result<T> access)",
+        "Test files fixed: AdminSetupServiceTests, CreateProviderCommandHandlerTests, CreateSubscriptionCommandHandlerTests, GetClientsByProviderQueryHandlerTests, RegisterProviderCommandHandlerTests, ProviderIntegrationTests"
+      ]
+    },
+    {
+      "id": "0.2",
+      "phase": "PHASE 0: Health Check",
+      "block": "Dependency Scan",
+      "target": "Solution",
+      "script": "scripts/dependency_scan.py",
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 10,
+        "suggestion": 7
+      },
+      "date": "2026-03-22",
+      "fixesApplied": true,
+      "notes": [
+        "FIXED: MimeKit/MailKit updated from 4.13.0 to 4.15.1 — CVE-2026-30227 resolved",
+        "ARCHITECTURE: Domain Layer references EF Core — violates Clean Architecture (unfixed)",
+        "OUTDATED: 15 packages have stable updates available (unfixed)",
+        "DUPLICATION: EF.Design, JwtBearer, HealthChecks in multiple projects (unfixed)"
+      ]
+    },
+    {
+      "id": "0.3",
+      "phase": "PHASE 0: Health Check",
+      "block": "Code Metrics",
+      "target": "Solution",
+      "script": "scripts/code_metrics.py",
+      "status": "completed",
+      "score": "B",
+      "issues": {
+        "critical": 0,
+        "major": 1,
+        "minor": 6,
+        "suggestion": 7
+      },
+      "date": "2026-03-22",
+      "fixesApplied": true,
+      "notes": [
+        "Total: 587 files, ~95,000 lines across 5 projects",
+        "FIXED: PaymentRepository.cs.bak backup file removed",
+        "DOCUMENTED: 6 TODO comments documented in READMEs/Audit/Phase-0.3-Code-Metrics.md",
+        "HOTSPOT: PaymentProcessingService.cs (1,169 lines) — God Class candidate",
+        "HOTSPOT: 6 services >500 lines — potential SRP violations",
+        "SUGGESTION: Consolidate Persistance/Persistence folder typo",
+        "SUGGESTION: Possible duplicate StripePaymentGateway in API and Infrastructure"
+      ]
+    },
+    {
+      "id": "1.1",
+      "phase": "PHASE 1: Domain Layer",
+      "block": "Entities",
+      "target": "Orbito.Domain/Entities/",
+      "estFiles": 15,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 2,
+        "suggestion": 3
+      },
+      "date": "2026-03-23",
+      "fixesApplied": true,
+      "notes": [
+        "15 entity files audited",
+        "FIXED: PlatformPlan.ProviderSubscriptions changed from ICollection to IReadOnlyCollection",
+        "FIXED: Client methods (UpdateDirectInfo, SetStripeCustomerId, RegenerateInvitationToken, SetProvider) now return Result instead of throwing exceptions",
+        "FIXED: Provider methods (UpdateMonthlyRevenue, UpdateBusinessProfile, UpdatePlatformSettings, UpdateActiveClientsCount, SetStripeCustomerId) now return Result",
+        "FIXED: Subscription methods (ChangePlan, ProcessPayment) now return Result",
+        "FIXED: SubscriptionPlan methods (UpdateBasicInfo, UpdateBillingPeriod) now return Result",
+        "FIXED: TeamMember.AcceptInvitation now returns Result instead of throwing exceptions",
+        "FIXED: Updated all Application handlers to handle Result returns from domain methods",
+        "MINOR REMAINING: TrialDays vs TrialPeriodDays duplication in SubscriptionPlan (not fixed - business decision needed)",
+        "MINOR REMAINING: Inconsistent DateTime usage (DateTimeOffset preferred but would be breaking change)",
+        "SUGGESTION: Consider adding Domain Events to Client, Subscription, Provider (requires architectural decision)",
+        "SUGGESTION: Consider splitting PaymentProcessingService (God Class - 1169 lines)",
+        "SUGGESTION: Consider consolidating Persistance/Persistence folder typo",
+        "GOOD: All entities now use private setters",
+        "GOOD: Navigation properties use IReadOnlyCollection pattern",
+        "GOOD: IMustHaveTenant implemented on all tenant-scoped entities",
+        "GOOD: Payment.cs has excellent domain events and state machine",
+        "GOOD: PaymentRetrySchedule.cs has proper encapsulation",
+        "GOOD: ProviderSubscription.cs uses Result pattern correctly"
+      ]
+    },
+    {
+      "id": "1.2",
+      "phase": "PHASE 1: Domain Layer",
+      "block": "Value Objects",
+      "target": "Orbito.Domain/ValueObjects/",
+      "estFiles": 11,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 4
+      },
+      "date": "2026-03-23",
+      "fixesApplied": true,
+      "notes": [
+        "11 Value Object files audited",
+        "FIXED: PlanFeatures now immutable — AddFeature/RemoveFeature replaced with WithFeature/WithoutFeature",
+        "FIXED: PlanLimitations now immutable — AddLimitation/RemoveLimitation replaced with WithLimitation/WithoutLimitation",
+        "FIXED: TenantId.Create() now has clearer error message, added CreateAllowingEmpty() for special cases",
+        "FIXED: Email.cs catch block now catches specific FormatException",
+        "FIXED: CardDetails now sealed",
+        "FIXED: IdempotencyKey and ClientInvitationToken now use get-only properties",
+        "FIXED: BillingPeriodType and LimitationType moved to Orbito.Domain.Enums folder",
+        "UPDATED: Tests for PlanFeatures and PlanLimitations to use new immutable methods",
+        "UPDATED: Added Orbito.Domain.Enums imports to affected files across Application and Tests layers",
+        "GOOD: Money.cs excellent implementation with arithmetic ops and factory methods",
+        "GOOD: Currency.cs proper ISO 4217 with decimal places support",
+        "GOOD: CardDetails.cs solid validation and utility methods",
+        "GOOD: ClientInvitationToken uses secure RandomNumberGenerator"
+      ]
+    },
+    {
+      "id": "1.3",
+      "phase": "PHASE 1: Domain Layer",
+      "block": "Enums & Constants",
+      "target": "Orbito.Domain/Enums/, Orbito.Domain/Constants/",
+      "estFiles": 20,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 2
+      },
+      "date": "2026-03-23",
+      "fixesApplied": true,
+      "notes": [
+        "20 files audited (18 enums + 2 constants classes)",
+        "FIXED: WebhookStatus.Processing — added XML documentation",
+        "FIXED: All enums now use file-scoped namespaces consistently",
+        "FIXED: Created PaymentProvider enum (Stripe/PayPal/Square) as suggested",
+        "FIXED: Created PaymentProviders constants class for external API string values",
+        "FIXED: PaymentMethods constants class — added full XML documentation",
+        "FIXED: PaymentProcessingConfiguration.DefaultPaymentMethod renamed to DefaultPaymentProvider and uses constant",
+        "FIXED: Added XML documentation to PaymentStatus, SubscriptionStatus, UserRole, EmailNotificationStatus enums",
+        "NOT FIXED: Inconsistent enum starting values (0 vs 1) — intentional: 0 for Unknown/None states, 1 for defined states",
+        "NOT FIXED: PaymentMethodType vs PaymentMethods duplication — both serve different purposes (enum for type-safety, strings for API)",
+        "GOOD: All enums have explicit int values",
+        "GOOD: PascalCase naming convention followed",
+        "GOOD: No oversized enums (all <15 values)",
+        "SUGGESTION: Add Unknown=0 for safer deserialization in future",
+        "SUGGESTION: Consider adding more providers to PaymentProvider enum as needed"
+      ]
+    },
+    {
+      "id": "1.4",
+      "phase": "PHASE 1: Domain Layer",
+      "block": "Domain Events & Errors",
+      "target": "Orbito.Domain/Events/, Orbito.Domain/Errors/, Orbito.Domain/Common/",
+      "estFiles": 10,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 3
+      },
+      "date": "2026-03-23",
+      "fixesApplied": true,
+      "notes": [
+        "10 files audited: IDomainEvent.cs, Error.cs, Result.cs, DomainErrors.cs, 6 Payment/PaymentMethod events",
+        "FIXED (MAJOR): IDomainEvent now implements MediatR.INotification — events can be dispatched through MediatR pipeline",
+        "FIXED: Added MediatR.Contracts 2.0.1 package to Orbito.Domain.csproj",
+        "FIXED (MINOR): All Event files now use file-scoped namespaces consistently",
+        "FIXED (MINOR): Updated null checks to modern .NET 8+ style (ArgumentNullException.ThrowIfNull, ArgumentOutOfRangeException.ThrowIfEqual, ArgumentException.ThrowIfNullOrWhiteSpace)",
+        "FIXED: Added XML documentation to IDomainEvent interface",
+        "FIXED: Added XML documentation to all 6 domain event records",
+        "SUGGESTION: Implement DomainEventDispatcher in Infrastructure to dispatch events via MediatR",
+        "SUGGESTION: Add events for Client, Subscription, TeamMember aggregates",
+        "SUGGESTION: Add DomainErrors.EmailNotification section",
+        "GOOD: Event naming follows past tense convention (PaymentCompleted, PaymentFailed)",
+        "GOOD: Events are immutable records with validation in constructors",
+        "GOOD: DomainErrors has comprehensive error catalog (16 sections)",
+        "GOOD: Error record with Code + Message, Result<T> pattern well integrated"
+      ]
+    },
+    {
+      "id": "1.5",
+      "phase": "PHASE 1: Domain Layer",
+      "block": "Domain Interfaces",
+      "target": "Orbito.Domain/Interfaces/",
+      "estFiles": 2,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 1
+      },
+      "date": "2026-03-24",
+      "fixesApplied": true,
+      "notes": [
+        "2 interface files audited: IMustHaveTenant.cs, ITeamMemberRepository.cs",
+        "FIXED (MAJOR): ITeamMemberRepository ISP violation resolved via Interface Inheritance pattern",
+        "FIXED: Created 5 segregated interfaces: ITeamMemberCrudRepository, ITeamMemberQueryRepository, ITeamMemberAuthorizationRepository, ITeamMemberStatisticsRepository, ITeamMemberInvitationRepository",
+        "FIXED: ITeamMemberRepository now inherits from all 5 interfaces — backward compatible",
+        "FIXED (MINOR): IMustHaveTenant converted to file-scoped namespace",
+        "FIXED (MINOR): IMustHaveTenant now has comprehensive XML documentation",
+        "SUGGESTION: Decide on repository interface location (Domain vs Application) for consistency",
+        "GOOD: Full XML documentation on all interfaces",
+        "GOOD: CancellationToken propagated in all async methods",
+        "GOOD: Zero infra concerns (no DbContext, IQueryable, HttpClient)",
+        "GOOD: Returns entities, not DTOs",
+        "GOOD: All methods require TenantId for security",
+        "GOOD: New code can inject specialized interfaces for ISP compliance"
+      ]
+    },
+    {
+      "id": "2.1",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Commands — Clients",
+      "target": "Orbito.Application/Clients/Commands/",
+      "estFiles": 24,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 2,
+        "suggestion": 4
+      },
+      "date": "2026-03-24",
+      "fixesApplied": true,
+      "notes": [
+        "24 files audited: 8 Commands, 8 Handlers, 8 Validators, 1 Mapper",
+        "FIXED (MAJOR): Created ResendClientInvitationCommandValidator — validates ClientId",
+        "FIXED (MAJOR): ConfirmClientEmailCommandHandler — added documentation explaining public endpoint security model (token-based auth, no tenant context needed)",
+        "FIXED (MAJOR): InviteClientCommandHandler — reordered: DB save FIRST, then email. Email failure no longer blocks client creation",
+        "FIXED (MAJOR): ResendClientInvitationCommandHandler — reordered: DB save FIRST, then email",
+        "FIXED (MINOR): Created ClientMapper.cs — centralized MapToDto logic used by 7 handlers",
+        "FIXED (MINOR): Updated all 7 handlers (4 commands + 3 queries) to use ClientMapper.ToDto()",
+        "REMAINING (MINOR): Inconsistent namespace style (file-scoped vs block-scoped) — cosmetic, low priority",
+        "REMAINING (MINOR): Unnecessary re-fetch after AddAsync/UpdateAsync in some handlers — optimization opportunity",
+        "SUGGESTION: InviteClientCommandHandler has 7 dependencies (max recommended: 5) — consider extracting email sending to service",
+        "SUGGESTION: IUnitOfWork injected but unused in CreateClientCommandHandler — can be removed",
+        "SUGGESTION: Consider extracting email invitation logic to dedicated IClientInvitationService",
+        "SUGGESTION: Add unit tests for new ResendClientInvitationCommandValidator",
+        "GOOD: All handlers use Result<T> pattern consistently",
+        "GOOD: Tenant context checked in all provider-facing handlers",
+        "GOOD: Cross-tenant access protection via TenantId comparison",
+        "GOOD: FluentValidation used consistently with clear error messages",
+        "GOOD: CancellationToken propagated in all async methods"
+      ]
+    },
+    {
+      "id": "2.2",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Queries — Clients",
+      "target": "Orbito.Application/Clients/Queries/",
+      "estFiles": 6,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 3
+      },
+      "date": "2026-03-24",
+      "fixesApplied": true,
+      "notes": [
+        "6 query files audited: 3 Queries + 3 Handlers (+ ClientMapper)",
+        "FIXED (MAJOR): GetClientsByProviderQueryHandler — added ITenantContext injection and HasTenant check for defense in depth",
+        "FIXED (MINOR): Namespace qualification standardized — using alias for PaginatedList to avoid ambiguity with Orbito.Application.Common.Models.Result<T>",
+        "FIXED (MINOR): Added XML documentation to GetClientsByProviderQuery and SearchClientsQuery",
+        "FIXED: Updated GetClientsByProviderQueryHandlerTests — added tenant context mock and new test for NoTenantContext scenario",
+        "NOTE: Duplicate Result<T> exists in Orbito.Application.Common.Models — should be removed in future refactor",
+        "SUGGESTION: SearchClientsQuery brak FluentValidation validator (walidacja w handlerze — acceptable)",
+        "SUGGESTION: GetClientsByProvider vs SearchClients — overlap w funkcjonalności (intentional: different use cases)",
+        "SUGGESTION: Repository calls — 2 roundtripy (data + count) mogłyby być 1 tuple (optimization)",
+        "GOOD: Result<T> pattern używany konsekwentnie",
+        "GOOD: CancellationToken propagowany w 100% metod",
+        "GOOD: Wszystkie handlery <80 linii (max 70)",
+        "GOOD: Max 2 dependencies (poniżej limitu 5)",
+        "GOOD: ClientMapper scentralizowany, brak duplikacji",
+        "GOOD: Query to immutable records",
+        "ALL TESTS PASSING: 6/6 GetClientsByProviderQueryHandlerTests"
+      ]
+    },
+    {
+      "id": "2.3a",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Payments — Commands Core (CreatePaymentIntent, ProcessPayment, UpdatePaymentStatus)",
+      "target": "Orbito.Application/Features/Payments/Commands/CreatePaymentIntent/, ProcessPayment/, UpdatePaymentStatus/",
+      "estFiles": 10,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 2
+      },
+      "date": "2026-03-24",
+      "fixesApplied": true,
+      "notes": [
+        "9 files audited: 3 Commands, 3 Handlers, 1 Validator → after fixes: 7 files (2 deleted unused Result types)",
+        "FIXED (MAJOR): Created UpdatePaymentStatusCommandValidator with validation for PaymentId, ClientId, Status, FailureReason, RefundReason, RefundedAmount",
+        "FIXED (MAJOR): ProcessPaymentCommandHandler — added null-check for subscription.Plan with DomainErrors.Subscription.NoPlanAssociated",
+        "FIXED (MAJOR): ProcessPaymentCommandHandler — removed IsValidCurrencyCode dead code and ValidCurrencies HashSet",
+        "FIXED (MINOR): Deleted ProcessPaymentResult.cs — unused",
+        "FIXED (MINOR): Deleted UpdatePaymentStatusResult.cs — unused",
+        "FIXED (MINOR): Created PaymentMapper.cs — centralized MapToDto logic for Payment entity",
+        "FIXED (MINOR): Updated ProcessPaymentCommandHandler and UpdatePaymentStatusCommandHandler to use PaymentMapper.ToDto()",
+        "FIXED (MINOR): ProcessPaymentCommandHandler — fixed indentation and converted to file-scoped namespace",
+        "FIXED (MINOR): UpdatePaymentStatusCommandHandler — converted to file-scoped namespace, removed duplicate MapToDto",
+        "ADDED: DomainErrors.Subscription.NoPlanAssociated error definition",
+        "SUGGESTION: Consider using IdempotencyKey Value Object for ExternalTransactionId",
+        "SUGGESTION: PaymentMapper could be extended to handle IEnumerable<Payment> in future queries handlers",
+        "GOOD: CreatePaymentIntentCommandHandler — excellent PCI DSS compliant flow",
+        "GOOD: Tenant context checked in all handlers",
+        "GOOD: Cross-tenant access protection via TenantId comparison",
+        "GOOD: Client verification in GetByIdForClientAsync and GetByExternalTransactionIdForClientAsync",
+        "GOOD: Execution strategy for retry in case of transient failures",
+        "GOOD: Duplicate key detection handles SQL Server and PostgreSQL",
+        "GOOD: Status transition validation in UpdatePaymentStatusCommandHandler"
+      ]
+    },
+    {
+      "id": "2.3b",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Payments — Commands Refunds & Retries (Refund, Retry, BulkRetry, CancelRetry)",
+      "target": "Orbito.Application/Features/Payments/Commands/Refund*, Retry*, BulkRetry*, CancelRetry*",
+      "estFiles": 10,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 1
+      },
+      "date": "2026-03-26",
+      "fixesApplied": true,
+      "notes": [
+        "14 files audited: 4 Commands, 4 Handlers, 2 Response types, 4 Validators",
+        "FIXED (MAJOR): Created RetryFailedPaymentCommandValidator — validates PaymentId, ClientId, Reason",
+        "FIXED (MAJOR): Created BulkRetryPaymentsCommandValidator — validates PaymentIds list (non-empty, max 50), ClientId, Reason",
+        "FIXED (MAJOR): Created CancelRetryCommandValidator — validates ScheduleId and ClientId",
+        "FIXED (MINOR): CancelRetryCommand now returns Result<CancelRetryResponse> — consistent with other commands",
+        "FIXED (MINOR): CancelRetryCommandHandler uses DomainErrors instead of magic strings",
+        "FIXED (MINOR): Removed dead code RetryFailedPaymentResult class from RetryFailedPaymentCommand.cs",
+        "FIXED (MINOR): Removed dead code BulkRetryPaymentsResult class from BulkRetryPaymentsCommand.cs",
+        "FIXED (MINOR): All commands converted to records with init properties (immutable)",
+        "FIXED (MINOR): All files converted to file-scoped namespaces for consistency",
+        "FIXED (MINOR): Simplified RefundPaymentResult — removed redundant IsSuccess/ErrorMessage (handled by Result<T>)",
+        "ADDED: DomainErrors.PaymentRetry.CannotCancelCompleted and AlreadyCancelled errors",
+        "SUGGESTION: RefundPaymentCommandValidator Reason regex may be too restrictive for international users",
+        "GOOD: RefundPaymentCommandHandler has full tenant context verification and cross-tenant protection",
+        "GOOD: All handlers use GetByIdForClientAsync / GetCurrentClientIdAsync for security",
+        "GOOD: Rate limiting implemented in RetryFailedPaymentCommandHandler and BulkRetryPaymentsCommandHandler",
+        "GOOD: Transaction handling (Begin/Commit/Rollback) in Retry handlers",
+        "GOOD: BulkRetryPaymentsCommandHandler uses batch loading to prevent N+1",
+        "GOOD: CancellationToken propagated in 100% of async methods",
+        "GOOD: Structured logging with PaymentId, ClientId context",
+        "GOOD: All handlers under 150 lines, max 4 dependencies"
+      ]
+    },
+    {
+      "id": "2.3c",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Payments — Commands Webhooks & Stripe (ProcessWebhook, UpdateFromWebhook, CreateStripeCustomer, SavePaymentMethod)",
+      "target": "Orbito.Application/Features/Payments/Commands/ProcessWebhook*, UpdatePaymentFromWebhook*, CreateStripeCustomer*, SavePaymentMethod*",
+      "estFiles": 8,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 2
+      },
+      "date": "2026-03-26",
+      "fixesApplied": true,
+      "notes": [
+        "9 files audited: 4 Commands (+1 combined Command+Handler), 4 Validators",
+        "FIXED (MAJOR): UpdatePaymentFromWebhookCommandValidator — added EventId validation rule",
+        "FIXED (MAJOR): SavePaymentMethodCommand — changed from Application.Common.Models.Result<T> to Domain.Common.Result<T> with proper DomainErrors",
+        "FIXED (MINOR): ProcessWebhookEventCommand — replaced magic strings with PaymentProviders constants",
+        "FIXED (MINOR): CreateStripeCustomerCommandHandler — implemented idempotency check (returns existing StripeCustomerId if present)",
+        "FIXED (MINOR): UpdatePaymentFromWebhookCommand — added handler documentation explaining GetByIdUnsafeAsync usage for webhooks",
+        "FIXED (MINOR): All commands converted to file-scoped namespaces for consistency",
+        "FIXED (MINOR): CreateStripeCustomer comments translated to English",
+        "ADDED: DomainErrors.General.TransactionFailed error for transaction failures",
+        "FIXED (API): PaymentRetryController — updated CancelRetry handler to use Result<T>.IsSuccess pattern",
+        "SUGGESTION: Duplicate Result<T> types in project — consolidate to Domain.Common.Result<T> (cross-cutting concern)",
+        "SUGGESTION: Metadata in SavePaymentMethodCommand/UpdatePaymentFromWebhookCommand logged but not persisted (entity extension needed)",
+        "GOOD: Tenant context check in all handlers with cross-tenant protection",
+        "GOOD: CancellationToken propagated 100%",
+        "GOOD: Webhook signature validation and idempotency implemented",
+        "GOOD: Transaction handling in SavePaymentMethodCommandHandler",
+        "GOOD: Status transition validation in UpdatePaymentFromWebhookCommandHandler",
+        "GOOD: All handlers <120 lines, max 4 dependencies",
+        "BUILD: API/Domain/Application/Infrastructure compile with 0 errors"
+      ]
+    },
+    {
+      "id": "2.3d",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Payments — Commands Validators (RE-AUDIT)",
+      "target": "Orbito.Application/Features/Payments/Commands/Validators/",
+      "estFiles": 9,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 2
+      },
+      "date": "2026-03-29",
+      "fixesApplied": false,
+      "notes": [
+        "RE-AUDIT: 2026-03-29 — Verification after Phase 2.3d consolidation and Phase 2.7b advanced validation additions",
+        "9 validator files audited: BulkRetryPayments, CancelRetry, CreateStripeCustomer, ProcessPayment, ProcessWebhookEvent, RefundPayment, RetryFailedPayment, SavePaymentMethod, UpdatePaymentFromWebhook",
+        "VERIFIED: All validators now in single location (Features/Payments/Commands/Validators/) — no duplicates",
+        "VERIFIED: ProcessPaymentCommandValidator has tenant verification + subscription status check (added in Phase 2.7b)",
+        "VERIFIED: RetryFailedPaymentCommandValidator has comprehensive async validation (added in Phase 2.7b)",
+        "VERIFIED: CancelRetryCommandValidator has tenant isolation + schedule ownership check (added in Phase 2.7b)",
+        "VERIFIED: BulkRetryPaymentsCommandValidator has advanced async rules (tenant, payment status, active retry detection, rate limiting, uniqueness)",
+        "VERIFIED: SavePaymentMethodCommandValidator and UpdatePaymentFromWebhookCommandValidator are null-safe for Metadata",
+        "VERIFIED: RefundPaymentCommandValidator uses Unicode regex (\\p{L}\\p{N}) for international support",
+        "VERIFIED: All 9 files use file-scoped namespaces consistently",
+        "SUGGESTION: Create PaymentValidationConstants.cs for shared validation limits (Reason: 500, ErrorMessage: 1000, Payload: 1MB)",
+        "SUGGESTION: Add detailed XML documentation to ProcessWebhookEventCommandValidator (security context for payload limits, signature verification)",
+        "GOOD: Excellent security patterns — tenant isolation, cross-tenant protection, business rule validation",
+        "GOOD: BulkRetryPaymentsCommandValidator exemplifies advanced async validation with multiple repository checks",
+        "GOOD: Null-safe patterns for optional fields (Metadata, Reason)",
+        "GOOD: Clear, user-friendly error messages throughout",
+        "GOOD: 100% file-scoped namespace consistency",
+        "BUILD: Orbito.Application compiles with 0 errors, 0 warnings"
+      ]
+    },
+    {
+      "id": "2.3e",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Payments — Queries Part 1 (GetPaymentById, GetAllPayments, GetPaymentsBySubscription, GetPaymentMethodsByClient)",
+      "target": "Orbito.Application/Features/Payments/Queries/GetPaymentById/, GetAllPayments/, GetPaymentsBySubscription/, GetPaymentMethodsByClient*",
+      "estFiles": 10,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 1,
+        "suggestion": 1
+      },
+      "date": "2026-03-26",
+      "fixesApplied": true,
+      "notes": [
+        "9 files audited after cleanup: 4 Queries, 4 Handlers, 1 Response type",
+        "FIXED (MAJOR): Deleted GetPaymentByIdResult.cs — dead code, handler returns Result<PaymentDto>",
+        "FIXED (MAJOR): Deleted GetPaymentsBySubscriptionResult.cs — dead code, handler returns Result<GetPaymentsBySubscriptionResponse>",
+        "FIXED (MAJOR): Replaced MapToDto() in 3 handlers with PaymentMapper.ToDto() — eliminates duplication",
+        "FIXED (MINOR): GetPaymentMethodsByClientQueryHandler — replaced hardcoded 'Access denied' with DomainErrors.Tenant.NoTenantContext and DomainErrors.Client.NotFound",
+        "FIXED (MINOR): GetPaymentMethodsByClientQueryHandler — no longer exposes ex.Message, uses DomainErrors.General.UnexpectedError",
+        "FIXED (MINOR): Added pagination validation (PageNumber, PageSize) to GetPaymentMethodsByClientQueryHandler",
+        "FIXED (MINOR): LogInformation → LogDebug in GetPaymentMethodsByClientQueryHandler for consistency",
+        "FIXED (MINOR): Converted all handlers to file-scoped namespaces",
+        "FIXED (MINOR): Removed Success/ErrorMessage fields from GetPaymentMethodsByClientResult — Result<T> pattern handles this",
+        "REMAINING (MINOR): GetPaymentMethodsByClientQuery.cs namespace doesn't match file location (Query+Handler+Result+DTO in single file)",
+        "SUGGESTION: Consider moving PaymentMethodDto to Application/DTOs/ folder for consistency",
+        "GOOD: All handlers verify tenant context",
+        "GOOD: Cross-tenant protection via TenantId comparison",
+        "GOOD: Security: GetByIdForClientAsync pattern used",
+        "GOOD: PaymentMapper.ToDto() now used consistently across all query handlers",
+        "ALL TESTS PASSING: 32/32 GetPayment* tests"
+      ]
+    },
+    {
+      "id": "2.3f",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Payments — Queries Part 2 (Statistics, Trends, RevenueReport, FailedPayments, ScheduledRetries, FailureReasons)",
+      "target": "Orbito.Application/Features/Payments/Queries/GetPaymentStatistics/, GetPaymentTrends/, GetRevenueReport/, GetFailedPayments*, GetScheduledRetries*, GetFailureReasons/",
+      "estFiles": 16,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 1,
+        "suggestion": 2
+      },
+      "date": "2026-03-27",
+      "fixesApplied": true,
+      "notes": [
+        "16 files audited + 2 new DTO files created: 6 Queries, 6 Handlers, 4 Validators, 2 DTOs",
+        "CORRECTED: Previous audit noted 'NO TENANT AUTHORIZATION' but re-audit confirmed all 4 analytics handlers (GetPaymentStatistics, GetPaymentTrends, GetRevenueReport, GetFailureReasons) HAVE proper ITenantContext injection and tenant verification",
+        "FIXED (MAJOR): Created DTOs/FailedPaymentDto.cs — extracted from inline definition in GetFailedPaymentsForRetryQuery.cs",
+        "FIXED (MAJOR): Created DTOs/RetryScheduleDto.cs — extracted from inline definition in GetScheduledRetriesQuery.cs",
+        "FIXED (MAJOR): Updated GetFailedPaymentsForRetryQuery.cs and GetScheduledRetriesQuery.cs to use new DTOs",
+        "FIXED (MAJOR): GetFailedPaymentsForRetryQueryHandler — removed try/catch, let MediatR pipeline handle exceptions",
+        "FIXED (MAJOR): GetScheduledRetriesQueryHandler — removed try/catch, let MediatR pipeline handle exceptions",
+        "FIXED (MAJOR): DateRangeValidationExtensions.cs — fixed FluentValidation methods (LessThanOrEqualTo/GreaterThanOrEqualTo replaced with Must())",
+        "FIXED (MINOR): All handlers converted to file-scoped namespaces",
+        "FIXED (MINOR): PaymentRetryController — added using for new DTOs namespace",
+        "FIXED (MINOR): PaymentMetricsController — refactored to use Result<T> pattern with ErrorResponse",
+        "FIXED (MINOR): PaymentMethodController — fixed result.ErrorMessage to result.Error.Message",
+        "FIXED: All Result<T> usages now use fully qualified Orbito.Domain.Common.Result<T> to avoid ambiguity",
+        "REMAINING (MINOR): Inconsistent style — GetFailedPayments/GetScheduledRetries use class+set, others use record+init",
+        "SUGGESTION: Add caching for statistics/trends queries (expensive calculations)",
+        "SUGGESTION: Consider composite query pattern if analytics queries called together",
+        "GOOD: All 4 analytics handlers have proper tenant authorization via ITenantContext",
+        "GOOD: GetFailedPaymentsForRetryQueryHandler — excellent security with role-based access control",
+        "GOOD: GetScheduledRetriesQueryHandler — excellent security with tenant isolation",
+        "GOOD: Both retry handlers use ISecurityLimitService for pagination DoS protection",
+        "GOOD: AsNoTracking() used consistently for read queries",
+        "GOOD: CancellationToken propagated in 100% of async methods",
+        "BUILD: All 4 main projects (Domain, Application, Infrastructure, API) compile with 0 errors"
+      ]
+    },
+    {
+      "id": "2.3g",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Payments — Root Validators",
+      "target": "Orbito.Application/Features/Payments/Queries/",
+      "estFiles": 5,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 1
+      },
+      "date": "2026-03-27",
+      "fixesApplied": true,
+      "notes": [
+        "5 validator files now in single location: Features/Payments/Queries/",
+        "FIXED (MAJOR): Deleted 5 duplicate validators from Features/Payments/Validators/ folder (now removed)",
+        "FIXED (MAJOR): Moved GetScheduledRetriesQueryValidator from Application/Validators/ to Features/Payments/Queries/",
+        "FIXED (MAJOR): Deleted DateRangeQueryValidator.cs abstract class — unused, replaced by DateRangeValidationExtensions",
+        "FIXED (MINOR): Updated GetScheduledRetriesQueryValidator namespace to match new location",
+        "FIXED (MINOR): Removed empty Application/Validators/ and Features/Payments/Validators/ folders",
+        "SUGGESTION: ProcessWebhookEventCommandValidator — consider co-locating with command (low priority)",
+        "GOOD: All validators now use DateRangeValidationExtensions for DRY validation",
+        "GOOD: No more duplicate DI registration risk",
+        "GOOD: Consistent co-located pattern for all Payment queries",
+        "BUILD: Application project compiles with 0 errors"
+      ]
+    },
+    {
+      "id": "2.4",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Commands — Subscriptions",
+      "target": "Orbito.Application/Subscriptions/Commands/, Orbito.Application/Features/ProviderSubscriptions/Commands/",
+      "estFiles": 32,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 4,
+        "suggestion": 4
+      },
+      "date": "2026-03-27",
+      "fixesApplied": true,
+      "notes": [
+        "32 files audited (23 Subscriptions + 9 ProviderSubscriptions)",
+        "FIXED (CRITICAL): CreateSubscriptionCommandHandler — added ITenantContext injection and cross-tenant protection",
+        "FIXED (CRITICAL/MAJOR): Added ClientId validation to 7 validators — CancelSubscription, SuspendSubscription, ResumeSubscription, ActivateSubscription, RenewSubscription, UpgradeSubscription, DowngradeSubscription",
+        "FIXED (MAJOR): Created SubscriptionMapper.cs — centralized mapping eliminates ~160 lines of duplicate code across 8 handlers",
+        "FIXED (MINOR): All handlers now use file-scoped namespaces and SubscriptionMapper.ToDto()",
+        "FIXED (MINOR): RenewSubscriptionCommandHandler — proper null check instead of null-forgiving operator",
+        "FIXED (MINOR): ExpireTrialSubscriptionsCommandHandler — MarkNotificationSent Result now checked and logged",
+        "NOT FIXED: Background job commands (SendTrialExpirationNotifications, ExpireTrialSubscriptions) have no validators — intentional for internal background jobs",
+        "SUGGESTION: CreateProviderPaymentIntentCommandHandler has 7 dependencies — extract Stripe customer creation to service",
+        "SUGGESTION: CreateSubscriptionCommandValidator — use Enum.TryParse instead of manual string comparison",
+        "SUGGESTION: Consider separate SubscriptionDetailDto for optional details",
+        "SUGGESTION: Consider base class for trial notification handlers",
+        "GOOD: All subscription handlers verify tenant context and cross-tenant access",
+        "GOOD: Result<T> pattern used consistently",
+        "GOOD: CancellationToken propagated 100%",
+        "BUILD: All 4 main projects (Domain, Application, Infrastructure, API) compile with 0 errors"
+      ]
+    },
+    {
+      "id": "2.5a",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Commands — TeamMembers",
+      "target": "Orbito.Application/Features/TeamMembers/",
+      "estFiles": 16,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 4
+      },
+      "date": "2026-03-27",
+      "fixesApplied": true,
+      "notes": [
+        "16 files audited: 4 Commands, 4 Handlers, 3 Queries, 3 QueryHandlers, 1 DTO, 1 Extension",
+        "FIXED (MAJOR): Created AcceptInvitationCommandValidator — validates Token (NotEmpty, MaxLength 500)",
+        "FIXED (MAJOR): Created InviteTeamMemberCommandValidator — validates Email, Role (not Owner), FirstName, LastName, Message",
+        "FIXED (MAJOR): Created RemoveTeamMemberCommandValidator — validates TeamMemberId, Reason",
+        "FIXED (MAJOR): Created UpdateTeamMemberRoleCommandValidator — validates TeamMemberId, NewRole (not Owner)",
+        "FIXED (MINOR): Added IUnitOfWork + SaveChangesAsync to InviteTeamMemberCommandHandler",
+        "FIXED (MINOR): Added IUnitOfWork + SaveChangesAsync to RemoveTeamMemberCommandHandler",
+        "FIXED (MINOR): Added IUnitOfWork + SaveChangesAsync to UpdateTeamMemberRoleCommandHandler",
+        "FIXED (MINOR): UpdateTeamMemberRoleCommandHandler — captured oldRole before mutation for correct logging",
+        "FIXED (MINOR): AcceptInvitationCommandHandler — removed redundant token validation (handled by validator)",
+        "NOT FIXED: GetPendingInvitationsQuery lacks pagination — acceptable for typical team sizes",
+        "NOT FIXED: GetTeamMembersQuery loads all then paginates in memory — optimization opportunity",
+        "SUGGESTION: GetTeamMembersQuery.RoleFilter could be TeamMemberRole? instead of string?",
+        "SUGGESTION: Add ToDtos(IEnumerable<TeamMember>) extension method for bulk mapping",
+        "SUGGESTION: InviteTeamMemberCommandHandler has no email sending — may need IEmailService integration",
+        "SUGGESTION: Consider adding pagination to GetPendingInvitationsQuery for large teams",
+        "GOOD: All handlers use Result<T> pattern consistently",
+        "GOOD: All tenant-facing handlers verify ITenantContext",
+        "GOOD: Cross-tenant access protection via GetByIdForTenantAsync",
+        "GOOD: TeamMemberExtensions.ToDto() centralized mapping",
+        "GOOD: All handlers <100 lines, max 4 dependencies",
+        "BUILD: Application project compiles with 0 errors"
+      ]
+    },
+    {
+      "id": "2.5b",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Commands — Providers",
+      "target": "Orbito.Application/Providers/",
+      "estFiles": 23,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 4
+      },
+      "date": "2026-03-28",
+      "fixesApplied": true,
+      "notes": [
+        "23 files audited after fixes: 4 Commands, 4 Handlers, 3 Queries, 3 QueryHandlers, 6 Validators, 2 Results, 1 Mapper, 1 embedded Query+Handler",
+        "FIXED (MAJOR): Created CreateProviderCommandValidator — validates UserId, BusinessName, SubdomainSlug, Email, FirstName, LastName, Description, Avatar, CustomDomain",
+        "FIXED (MAJOR): RegisterProviderCommand now returns Result<RegisterProviderResult> — consistent with all other commands",
+        "FIXED (MAJOR): RegisterProviderCommandHandler no longer leaks ex.Message — uses DomainErrors.User.EmailAlreadyExists, CreationFailed",
+        "FIXED (MINOR): Created ProviderMapper.cs — ToDto() and ToDtos() methods eliminate ~100 lines of duplicate code",
+        "FIXED (MINOR): All 23 files converted to file-scoped namespaces for consistency",
+        "FIXED (MINOR): CreateProviderCommandHandler — removed try/catch (MediatR pipeline handles exceptions)",
+        "FIXED (MINOR): CreateProviderCommandHandler — Polish log messages translated to English",
+        "FIXED (MINOR): RegisterProviderResult simplified — removed redundant Success/Message/Errors fields (handled by Result<T>)",
+        "FIXED: AccountController updated to handle new Result<RegisterProviderResult> API",
+        "FIXED: Added DomainErrors.User.EmailAlreadyExists and CreationFailed error definitions",
+        "SUGGESTION: CreateProviderCommandHandler has 7 dependencies (max recommended: 5) — consider extracting to service",
+        "SUGGESTION: CheckSubdomainAvailabilityQuery embedded in RegisterProviderCommandHandler file — could be separate file",
+        "SUGGESTION: SanitizeSubdomain() could be moved to Subdomain Value Object",
+        "SUGGESTION: Missing unit tests for UpdateProviderCommandHandler, DeleteProviderCommandHandler",
+        "GOOD: All handlers now use Result<T> pattern consistently",
+        "GOOD: Proper subdomain validation and sanitization in CreateProviderCommandHandler",
+        "GOOD: Soft delete support in DeleteProviderCommandHandler",
+        "GOOD: All validators have proper input validation rules",
+        "GOOD: CancellationToken propagated in 100% of async methods",
+        "GOOD: ProviderMapper.ToDto() now used consistently across all handlers",
+        "BUILD: Domain, Application, Infrastructure, API compile with 0 errors"
+      ]
+    },
+    {
+      "id": "2.5c",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Commands — ProviderSubscriptions & TeamMembers (Re-audit with fixes)",
+      "target": "Orbito.Application/Features/ProviderSubscriptions/Commands/, Orbito.Application/Features/TeamMembers/Commands/",
+      "estFiles": 19,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 3
+      },
+      "date": "2026-03-28",
+      "fixesApplied": true,
+      "notes": [
+        "19 files audited: 7 ProviderSubscriptions (3 Commands, 3 Handlers, 1 Validator) + 12 TeamMembers (4 Commands, 4 Handlers, 4 Validators)",
+        "FIXED (MAJOR): InviteTeamMemberCommandHandler now sends invitation email via IEmailService.SendTeamMemberInvitationAsync",
+        "FIXED (MAJOR): Added SendTeamMemberInvitationAsync to IEmailService interface",
+        "FIXED (MAJOR): Implemented SendTeamMemberInvitationAsync in EmailService with HTML template",
+        "FIXED (MAJOR): Added IUserContextService.GetCurrentUserName() for inviter name in email",
+        "FIXED (MAJOR): InviteTeamMemberCommand.Message now passed to email template",
+        "FIXED (MINOR): CreateProviderPaymentIntent files converted to file-scoped namespaces",
+        "SUGGESTION: SendTrialExpirationNotificationsCommandHandler loads all trial subscriptions without pagination",
+        "SUGGESTION: CreateProviderPaymentIntentCommandHandler has 7 dependencies (max recommended: 5)",
+        "SUGGESTION: Role != Owner validation duplicated in validators AND handlers — validator check sufficient",
+        "GOOD: Result<T> pattern used consistently",
+        "GOOD: Tenant isolation verified in all tenant-facing handlers",
+        "GOOD: Cross-tenant protection via GetByIdForTenantAsync",
+        "GOOD: All validators have proper input validation",
+        "GOOD: CancellationToken propagated 100%",
+        "GOOD: All handlers <160 lines (InviteTeamMemberCommandHandler now 153 with email sending)",
+        "GOOD: Trial notification deduplication via TrialNotificationTier",
+        "GOOD: Secure InvitationToken generation",
+        "GOOD: Email failure does not block invitation creation (DB save first pattern)",
+        "BUILD: Domain, Application, Infrastructure, API compile with 0 errors"
+      ]
+    },
+    {
+      "id": "2.5d",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Team Commands Validators",
+      "target": "Orbito.Application/Features/TeamMembers/Commands/*/Validator*.cs",
+      "estFiles": 4,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 2
+      },
+      "date": "2026-03-28",
+      "fixesApplied": false,
+      "notes": [
+        "4 validator files audited: AcceptInvitationCommandValidator, InviteTeamMemberCommandValidator, RemoveTeamMemberCommandValidator, UpdateTeamMemberRoleCommandValidator",
+        "ALL VALIDATORS CORRECT — created in phase 2.5a, verified in this phase",
+        "AcceptInvitationCommandValidator: Token (NotEmpty, MaxLength 500)",
+        "InviteTeamMemberCommandValidator: Email (NotEmpty, MaxLength 256, EmailAddress), Role (IsInEnum, != Owner), FirstName/LastName/Message (MaxLength when not null)",
+        "RemoveTeamMemberCommandValidator: TeamMemberId (NotEmpty), Reason (MaxLength 500 when not null)",
+        "UpdateTeamMemberRoleCommandValidator: TeamMemberId (NotEmpty), NewRole (IsInEnum, != Owner)",
+        "SUGGESTION: Email regex in FluentValidation .EmailAddress() is lenient — acceptable for 99% cases",
+        "SUGGESTION: No async validation (email uniqueness check in handler — correct architecture)",
+        "GOOD: All validators prevent Owner role assignment via invitation/update",
+        "GOOD: Clear error messages with proper context",
+        "GOOD: Optional fields validated only when not null"
+      ]
+    },
+    {
+      "id": "2.5e",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Commands — SubscriptionPlans",
+      "target": "Orbito.Application/SubscriptionPlans/",
+      "estFiles": 23,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 4
+      },
+      "date": "2026-03-28",
+      "fixesApplied": true,
+      "notes": [
+        "23 files audited: 4 Commands, 4 Handlers, 4 Validators, 3 Queries, 3 QueryHandlers, 5 DTOs/Results, 1 Mapper",
+        "FIXED (CRITICAL): SubscriptionPlanRepository missing tenant isolation — added ITenantProvider and ApplyTenantFilter() to all queries",
+        "FIXED (MAJOR): Created SubscriptionPlanMapper.cs — centralized mapping eliminates ~100 lines of duplicate code across 6 handlers",
+        "FIXED (MAJOR): Created GetSubscriptionPlansByProviderQueryValidator — validates PageNumber >= 1, PageSize 1-100, SearchTerm max 200 chars",
+        "FIXED (MAJOR): Updated UnitOfWork to pass ITenantProvider to SubscriptionPlanRepository",
+        "FIXED (MINOR): All 23 files converted to file-scoped namespaces for consistency",
+        "FIXED (MINOR): LogInformation -> LogDebug in query handlers (less verbose in production)",
+        "FIXED (MINOR): Removed unused imports (Orbito.Domain.ValueObjects, Orbito.Domain.Enums)",
+        "NOT FIXED: TrialDays/TrialPeriodDays duplication — exists in Domain entity, requires architectural decision",
+        "SUGGESTION: CloneSubscriptionPlanResult vs SubscriptionPlanDto overlap (~90% shared fields)",
+        "SUGGESTION: GetActiveSubscriptionPlansQuery.Limit lacks max bound",
+        "SUGGESTION: DeleteSubscriptionPlanResult.Message uses hardcoded strings vs DomainErrors",
+        "SUGGESTION: Missing tests for CreateSubscriptionPlanCommandHandler, DeleteSubscriptionPlanCommandHandler",
+        "GOOD: All handlers verify ITenantContext.HasTenant",
+        "GOOD: Repository now uses tenant filtering in all queries",
+        "GOOD: Result<T> pattern used consistently",
+        "GOOD: CancellationToken propagated 100%",
+        "GOOD: All validators have proper input validation",
+        "BUILD: Domain, Application, Infrastructure, API compile with 0 errors"
+      ]
+    },
+    {
+      "id": "2.6a",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Interfaces — Core & Tenant",
+      "target": "Orbito.Application/Common/Interfaces/ (IRepository, IUnitOfWork, IDateTime, ICacheService, ITenant*, IUserContextService, ISecurityLimitService, ITransactionService)",
+      "estFiles": 10,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": "2026-03-28",
+      "fixesApplied": true,
+      "notes": [
+        "10 interface files audited + 2 new files created",
+        "FIXED (MAJOR): Created IExecutionStrategy abstraction in Application — eliminates EF Core leak from IUnitOfWork",
+        "FIXED (MAJOR): Created ExecutionStrategyAdapter in Infrastructure to wrap EF Core IExecutionStrategy",
+        "FIXED (MINOR): All 8 interface files converted to file-scoped namespaces",
+        "FIXED (MINOR): IRepository, IDateTime, ITenantContext — added comprehensive XML documentation",
+        "FIXED (MINOR): IDateTime — removed 5 unused imports",
+        "FIXED (MINOR): IUserContextService — removed unused System.Security.Claims import",
+        "FIXED (MINOR): IUnitOfWork Obsolete methods — added 'v2.0' deprecation deadline",
+        "FIXED (SUGGESTION): ITenantValidationBypass — added IsTenantValidationBypassed property",
+        "FIXED: ApplicationDbContext — implemented IsTenantValidationBypassed property",
+        "GOOD: ICacheService, ISecurityLimitService, ITransactionService — excellent documentation",
+        "GOOD: ITenantProvider — proper tenant override support for background jobs",
+        "BUILD: Domain, Application, Infrastructure, API compile with 0 errors",
+        "NOTE: Tests have 364 pre-existing errors (unrelated to this audit)"
+      ]
+    },
+    {
+      "id": "2.6b",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Interfaces — Payment",
+      "target": "Orbito.Application/Common/Interfaces/ (IPayment*, IRefundService, IIdempotencyCacheService)",
+      "estFiles": 14,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 2
+      },
+      "date": "2026-03-28",
+      "fixesApplied": true,
+      "notes": [
+        "14 interface files audited",
+        "FIXED (MAJOR): IPaymentRetryRepository — EF Core IDbContextTransaction leak fixed by creating ITransactionScope abstraction",
+        "FIXED (MAJOR): Created TransactionScopeAdapter in Infrastructure to wrap EF Core transaction",
+        "FIXED (MAJOR): StripeEventHandler.cs — changed from Application.Common.Models.Result to Domain.Common.Result for consistency",
+        "FIXED (MAJOR): StripeWebhookProcessor.cs — Result.Failure('string') calls replaced with DomainErrors.Webhook.* errors",
+        "FIXED (MINOR): All payment interfaces converted to file-scoped namespaces",
+        "FIXED (MINOR): Application.Common.Models.Result — added Failure(Error) overload for compatibility with DomainErrors",
+        "FIXED (MINOR): IPaymentGateway.cs — Polish comments translated to English",
+        "ADDED: DomainErrors.Webhook — 10 new error types (SecretNotConfigured, MissingSignature, SignatureValidationFailed, EventIdRequired, EventStatusCheckFailed, InvalidEventData, PaymentNotFound, SubscriptionNotFound, MissingPaymentIntent, MissingMetadata, ProviderSubscriptionNotFound, PlatformPlanNotFound, EventHandlingFailed)",
+        "SUGGESTION: Consolidate Domain.Common.Result and Application.Common.Models.Result (cross-cutting concern)",
+        "SUGGESTION: Consider adding Result<T>.Failure(Error) static method to Domain.Common.Result for ergonomics",
+        "GOOD: IPaymentWebhookProcessor uses Domain.Common.Result consistently",
+        "GOOD: All interfaces have proper XML documentation",
+        "GOOD: CancellationToken propagated in 100% of async methods",
+        "GOOD: Zero EF Core leaks now (ITransactionScope abstracts transaction)",
+        "BUILD: Domain, Application, Infrastructure, API compile with 0 errors (Tests have pre-existing errors)"
+      ]
+    },
+    {
+      "id": "2.6c",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Interfaces — Domain Repositories",
+      "target": "Orbito.Application/Common/Interfaces/ (IClientRepository, IProviderRepository, ISubscription*Repository, IEmailNotificationRepository, IReconciliationRepository, IWebhookLogRepository, IPlatformPlanRepository)",
+      "estFiles": 9,
+      "status": "in-progress",
+      "score": null,
+      "issues": {
+        "critical": 0,
+        "major": 1,
+        "minor": 7,
+        "suggestion": 2
+      },
+      "date": "2026-03-28",
+      "fixesApplied": false,
+      "notes": [
+        "9 interface files audited",
+        "MAJOR: IClientRepository — Missing tenant isolation, all methods operate without TenantId",
+        "MINOR: 5 files use block-scoped namespaces (IClientRepository, IProviderRepository, ISubscriptionRepository, ISubscriptionPlanRepository, IWebhookLogRepository)",
+        "MINOR: ISubscriptionRepository — unused 'using System;' import",
+        "MINOR: IWebhookLogRepository — WebhookStatistics record embedded in interface file (should be separate)",
+        "SUGGESTION: IClientRepository lacks XML documentation",
+        "SUGGESTION: IProviderRepository lacks XML documentation on methods",
+        "GOOD: IReconciliationRepository — all methods require TenantId parameter (exemplary!)",
+        "GOOD: ISubscriptionRepository — has ForTenantAsync methods for background jobs",
+        "GOOD: IProviderSubscriptionRepository — file-scoped namespace, XML docs",
+        "GOOD: IEmailNotificationRepository — inherits IRepository<T>, has XML docs",
+        "GOOD: IPlatformPlanRepository — global scope (PlatformPlans are not tenant-scoped) - correct",
+        "GOOD: IWebhookLogRepository — comprehensive XML documentation"
+      ]
+    },
+    {
+      "id": "2.6d",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Interfaces — Domain Services",
+      "target": "Orbito.Application/Common/Interfaces/ (IAdminSetupService, ICustomerManagementService, IEmailSender, IEmailService, IProviderService, ISubscription*Service)",
+      "estFiles": 7,
+      "status": "in-progress",
+      "score": null,
+      "issues": {
+        "critical": 0,
+        "major": 1,
+        "minor": 12,
+        "suggestion": 2
+      },
+      "date": "2026-03-28",
+      "fixesApplied": false,
+      "notes": [
+        "7 interface files audited: IAdminSetupService, ICustomerManagementService, IEmailSender, IEmailService, IProviderService, ISubscriptionService, ISubscriptionPlanService",
+        "MAJOR: ISubscriptionService has 9 methods — ISP violation (max recommended: 5)",
+        "MINOR: 5 files use block-scoped namespaces (IAdminSetupService, ICustomerManagementService, IProviderService, ISubscriptionService, ISubscriptionPlanService)",
+        "MINOR: IAdminSetupService — missing XML documentation, returns bool instead of Result<T>, missing CancellationToken",
+        "MINOR: IProviderService — missing XML documentation, returns bool/entity instead of Result<T>",
+        "MINOR: ISubscriptionService — missing XML documentation, returns bool/entity instead of Result<T>",
+        "MINOR: ISubscriptionPlanService — missing XML documentation, returns bool/entity instead of Result<T>",
+        "MINOR: IEmailSender — EmailAttachment class embedded in interface file, uses set instead of init (not immutable)",
+        "MINOR: IEmailService — first 5 methods missing XML documentation (only SendTeamMemberInvitationAsync has docs)",
+        "SUGGESTION: ISubscriptionService — consider splitting into ISubscriptionLifecycleService + ISubscriptionBillingService",
+        "SUGGESTION: Standardize return types to Result<T> for consistency across all service interfaces",
+        "GOOD: ICustomerManagementService — excellent XML docs, uses Result<T>, CancellationToken",
+        "GOOD: IEmailSender — comprehensive XML documentation, async methods with CancellationToken",
+        "GOOD: All interfaces have CancellationToken on async methods (except IAdminSetupService)"
+      ]
+    },
+    {
+      "id": "2.7a",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Validators — Clients",
+      "target": "Orbito.Application/Clients/Commands/*/Validator*.cs",
+      "estFiles": 8,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 1
+      },
+      "date": "2026-03-29",
+      "fixesApplied": true,
+      "notes": [
+        "8 validator files audited: ActivateClient, ConfirmClientEmail, CreateClient, DeactivateClient, DeleteClient, InviteClient, ResendClientInvitation, UpdateClient",
+        "Re-audited 2026-03-29 with detailed code review",
+        "Originally created in Phase 2.1 (Commands — Clients)",
+        "FIXED (MINOR): Converted 5 files to file-scoped namespace (Activate, Create, Deactivate, Delete, Update)",
+        "FIXED (MINOR): Translated Polish comments to English in CreateClient and UpdateClient validators",
+        "REMAINING (SUGGESTION): UpdateClient allows no-op updates (intentional design decision)",
+        "GOOD: All validators use FluentValidation correctly with clear error messages",
+        "GOOD: Password policy validation in ConfirmClientEmail (8+ chars, uppercase, digit, special char)",
+        "GOOD: Mutual exclusion logic in CreateClient (UserId XOR DirectEmail) handled properly",
+        "GOOD: Phone regex validation consistent across Create/Update (E.164 format)",
+        "GOOD: Guid.Empty check in ResendClientInvitation prevents attack vector",
+        "GOOD: Optional fields validated conditionally with .When()",
+        "GOOD: Email validation with MaxLength 255-256 (within SQL VARCHAR limits)",
+        "GOOD: No hardcoded magic numbers, all validation limits documented",
+        "GOOD: All 8 files now use consistent file-scoped namespace style",
+        "BUILD: Application project compiles with 0 errors"
+      ]
+    },
+    {
+      "id": "2.7b",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Validators — Payment Commands (Re-audit after refactoring)",
+      "target": "Orbito.Application/Features/Payments/Commands/Validators/",
+      "estFiles": 9,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 4,
+        "suggestion": 3
+      },
+      "date": "2026-03-29",
+      "fixesApplied": true,
+      "notes": [
+        "9 validator files audited after Vertical Slice Architecture refactoring (moved from Application/Validators/ to Features/Payments/Commands/Validators/)",
+        "Files: BulkRetryPaymentsCommandValidator, CancelRetryCommandValidator, CreateStripeCustomerCommandValidator, ProcessPaymentCommandValidator, ProcessWebhookEventCommandValidator, RefundPaymentCommandValidator, RetryFailedPaymentCommandValidator, SavePaymentMethodCommandValidator, UpdatePaymentFromWebhookCommandValidator",
+        "CRITICAL: UpdatePaymentFromWebhookCommandValidator.cs:52-54 — NullReferenceException when Metadata is null (When(x => x.Metadata.Any()) crashes)",
+        "MAJOR: CancelRetryCommandValidator — Missing tenant verification and business rules (schedule ownership, cancellable status)",
+        "MAJOR: RetryFailedPaymentCommandValidator — Missing tenant verification and business rules (payment status, client ownership, no active retry)",
+        "MAJOR: ProcessPaymentCommandValidator — Missing tenant verification (ClientId, SubscriptionId) and subscription status check",
+        "MINOR: BulkRetryPaymentsCommandValidator — 3x DB call to GetByIdsForClientAsync (lines 90, 100, 110) — performance issue",
+        "MINOR: CreateStripeCustomerCommandValidator — Hardcoded regex patterns (FirstName/LastName) should be extracted as constants",
+        "MINOR: Inconsistent metadata validation — SavePaymentMethodCommandValidator is null-safe, others are not",
+        "MINOR: SavePaymentMethodCommandValidator — Business rule (card requires expiry) in validator instead of handler (borderline)",
+        "SUGGESTION: RefundPaymentCommandValidator uses Unicode regex (\\p{L}\\p{N}) but CreateStripeCustomerCommandValidator uses hardcoded Polish chars — inconsistent",
+        "SUGGESTION: ProcessWebhookEventCommandValidator lacks detailed XML documentation",
+        "SUGGESTION: Create shared PaymentValidationConstants class for magic numbers (1000000, 500, 1048576, etc.)",
+        "GOOD: BulkRetryPaymentsCommandValidator — comprehensive validation with async tenant/business rules (exemplary pattern)",
+        "GOOD: SavePaymentMethodCommandValidator — null-safe metadata handling (pattern to replicate)",
+        "GOOD: RefundPaymentCommandValidator — modern Unicode regex patterns",
+        "GOOD: ProcessWebhookEventCommandValidator — security-conscious (payload size limits, signature required)",
+        "FIXED (CRITICAL): UpdatePaymentFromWebhookCommandValidator — null-safe metadata validation (lines 51-63)",
+        "FIXED (MAJOR): CancelRetryCommandValidator — added ITenantContext, IClientRepository, IPaymentRetryRepository injections with tenant verification and business rules",
+        "FIXED (MAJOR): RetryFailedPaymentCommandValidator — added ITenantContext, IClientRepository, IPaymentRepository, IPaymentRetryRepository injections with comprehensive validation",
+        "FIXED (MAJOR): ProcessPaymentCommandValidator — added ITenantContext, IClientRepository, ISubscriptionRepository injections with tenant verification and active subscription check",
+        "REMAINING (MINOR): BulkRetryPaymentsCommandValidator — 3x DB call optimization not implemented (performance vs complexity tradeoff)",
+        "REMAINING (MINOR): Hardcoded regex patterns in CreateStripeCustomerCommandValidator — should be extracted as constants",
+        "REMAINING (MINOR): Inconsistent metadata validation — SavePaymentMethodCommandValidator is null-safe, others are not",
+        "REMAINING (MINOR): SavePaymentMethodCommandValidator — business rule (card requires expiry) in validator instead of handler",
+        "REMAINING (SUGGESTION): Inconsistent regex patterns — Unicode (\\p{L}) vs hardcoded Polish chars",
+        "REMAINING (SUGGESTION): ProcessWebhookEventCommandValidator lacks detailed XML documentation",
+        "REMAINING (SUGGESTION): Create shared PaymentValidationConstants class for magic numbers",
+        "BUILD: Application project compiles with 0 errors, 43 warnings (pre-existing)"
+      ]
+    },
+    {
+      "id": "2.7c",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Validators — Subscriptions & ProviderSubscriptions",
+      "target": "Orbito.Application/Subscriptions/Commands/*/Validator*.cs, Orbito.Application/Features/ProviderSubscriptions/Commands/*/Validator*.cs",
+      "estFiles": 9,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": "2026-03-29",
+      "fixesApplied": true,
+      "notes": [
+        "RE-AUDIT: 2026-03-29 — Detailed code review after phase 2.4 fixes",
+        "9 validator files audited: 8 Subscription + 1 ProviderSubscription",
+        "Subscription: CreateSubscription, CancelSubscription, SuspendSubscription, ResumeSubscription, ActivateSubscription, RenewSubscription, UpgradeSubscription, DowngradeSubscription",
+        "ProviderSubscription: CreateProviderPaymentIntent",
+        "VERIFIED: ClientId validation present in all 7 subscription lifecycle validators (added in phase 2.4)",
+        "FIXED (MINOR): CreateSubscriptionCommandValidator — converted to file-scoped namespace",
+        "FIXED (MINOR): CreateSubscriptionCommandValidator — added XML documentation",
+        "FIXED (MINOR): BeValidBillingPeriodType replaced with Enum.TryParse<BillingPeriodType>()",
+        "FIXED (MINOR): Added ISO 4217 currency validation to 4 validators (CreateSubscription, RenewSubscription, UpgradeSubscription, DowngradeSubscription)",
+        "FIXED: Added 30 supported currencies: USD, EUR, PLN, GBP, JPY, CHF, AUD, CAD, CNY, SEK, NOK, DKK, CZK, HUF, RON, BGN, HRK, ISK, TRY, RUB, INR, BRL, MXN, ZAR, KRW, SGD, HKD, NZD, THB, MYR",
+        "CORRECTED: Previous audit note 'ensures amount > 0' for CreateProviderPaymentIntent was incorrect (Amount not in Command, calculated in handler)",
+        "GOOD: All 9 validators now use file-scoped namespaces and XML documentation",
+        "GOOD: All subscription lifecycle validators have ClientId validation (cross-tenant protection)",
+        "GOOD: Optional fields (Reason, PlatformPlanId) validated conditionally with .When()",
+        "GOOD: Clear, descriptive error messages throughout",
+        "GOOD: Amount > 0 validation in all monetary commands",
+        "GOOD: No async validation (business rules in handler — correct architecture)",
+        "BUILD: Application project compiles with 0 errors, 23 pre-existing warnings",
+        "CONCLUSION: All validators production-ready, all issues resolved"
+      ]
+    },
+    {
+      "id": "2.7d",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Validators — Providers, TeamMembers, SubscriptionPlans",
+      "target": "Orbito.Application/Providers/**/Validator*.cs, Orbito.Application/Features/TeamMembers/**/Validator*.cs, Orbito.Application/SubscriptionPlans/**/Validator*.cs",
+      "estFiles": 16,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": "2026-03-28",
+      "fixesApplied": true,
+      "notes": [
+        "16 validator files: 7 Provider + 4 TeamMember + 5 SubscriptionPlan validators",
+        "Provider Commands: CreateProvider, DeleteProvider, RegisterProvider, UpdateProvider",
+        "Provider Queries: GetAllProviders, GetProviderById, GetProviderByUserId",
+        "TeamMember Commands: AcceptInvitation, InviteTeamMember, RemoveTeamMember, UpdateTeamMemberRole",
+        "SubscriptionPlan Commands: CloneSubscriptionPlan, CreateSubscriptionPlan, DeleteSubscriptionPlan, UpdateSubscriptionPlan",
+        "SubscriptionPlan Queries: GetSubscriptionPlansByProvider",
+        "FIXED (MAJOR): Created CreateProviderCommandValidator with subdomain validation",
+        "FIXED (MAJOR): Created 4 TeamMember validators",
+        "FIXED (MAJOR): Created GetSubscriptionPlansByProviderQueryValidator",
+        "GOOD: All validators prevent Owner role assignment/update",
+        "GOOD: Subdomain validation with regex pattern in CreateProviderCommandValidator",
+        "GOOD: Pagination validation in GetSubscriptionPlansByProviderQueryValidator (PageSize 1-100)"
+      ]
+    },
+    {
+      "id": "2.8",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Application Services",
+      "target": "Orbito.Application/Common/Services/, Orbito.Application/Services/",
+      "estFiles": 11,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 2,
+        "minor": 8,
+        "suggestion": 6
+      },
+      "date": "2026-03-30",
+      "fixesApplied": true,
+      "notes": [
+        "RE-AUDIT 2026-03-30 with --fix flag",
+        "11 service files audited: AdminSetupService, DateTimeService, MemoryCacheService, ProviderService, SecurityLimitService, SubscriptionPlanService, SubscriptionService, PaymentMetricsService, PaymentNotificationService, PaymentProcessingService, PaymentRetryService",
+        "FIXED (MAJOR #4): PaymentRetryService.AttemptPaymentRetryAsync() — implemented real payment processing logic using IPaymentProcessingService (GetDefaultPaymentMethodAsync → ValidatePaymentMethodAsync → GetRateLimitDelayAsync → ProcessSubscriptionPaymentAsync)",
+        "FIXED (MAJOR #1): Removed multi-tenant violation methods — deleted GetExpiringSubscriptionsAsync and ProcessExpiredSubscriptionsAsync from SubscriptionService, ISubscriptionService, ISubscriptionRepository, SubscriptionRepository",
+        "FIXED (MAJOR #1): Updated ProcessRecurringPaymentsJob.cs — removed ProcessExpiredSubscriptionsAsync call (lines 102-112)",
+        "FIXED (MAJOR #1): Cleaned up tests — removed GetExpiringSubscriptionsAsync/ProcessExpiredSubscriptionsAsync tests from SubscriptionServiceTests, ProcessRecurringPaymentsJobTests, CheckExpiringSubscriptionsJobTests",
+        "REMAINING (MAJOR #2): Multiple services use GetByIdUnsafeAsync() deprecated methods (PaymentNotificationService:181,265,333,403, PaymentProcessingService:322,370,418, PaymentRetryService:250)",
+        "REMAINING (MAJOR #3): SubscriptionService.CreateSubscriptionAsync() throws exceptions instead of Result<T>",
+        "MINOR #5: Polish logging messages in AdminSetupService (lines 50,61,74,100)",
+        "MINOR #6: PaymentProcessingService magic numbers (MinPaymentAmount=0.50, MaxPaymentAmount=999999.99) hardcoded",
+        "MINOR #7: SubscriptionPlanService unnecessary async overhead (all methods just delegate to repository)",
+        "MINOR #8: ProviderService.UpdateProviderMetricsAsync() missing null check on provider.MonthlyRevenue",
+        "MINOR #9: PaymentNotificationService uses IMemoryCache directly instead of ICacheService abstraction",
+        "MINOR #10: SecurityLimitService Regex patterns recompiled on every call (SanitizeWebhookDataForLogging)",
+        "MINOR #11: SubscriptionService.ProcessRecurringPaymentsAsync() potential N+1 query (foreach ProcessPaymentAsync)",
+        "MINOR #12: PaymentMetricsService duplicate cache TTL constants (local copies of CacheConstants)",
+        "SUGGESTION #13: Extract TenantContextExtensions.ValidateHasTenant() — duplicate validation pattern across services",
+        "SUGGESTION #14: AdminSetupService.CreateInitialAdminAsync() uses _tenantValidationBypass — needs audit logging",
+        "SUGGESTION #15: PaymentProcessingService (1170 lines) — split into PaymentProcessingService/PaymentRefundService/PaymentWebhookService/PaymentSyncService",
+        "SUGGESTION #16: PaymentNotificationService.IsValidEmail() uses EmailAddressAttribute — should use Email value object",
+        "SUGGESTION #17: PaymentRetryService manual transaction management — use transaction scope helper or middleware",
+        "SUGGESTION #18: DateTimeService.Now/UtcNow — consider adding timezone aware methods",
+        "GOOD: DateTimeService — simple and correct (IDateTime abstraction)",
+        "GOOD: MemoryCacheService — excellent implementation with error handling and logging",
+        "GOOD: SecurityLimitService — excellent security patterns (rate limiting, sanitization)",
+        "GOOD: PaymentMetricsService — comprehensive metrics with caching and tenant isolation",
+        "GOOD: PaymentNotificationService — excellent template system with outbox pattern for retry",
+        "GOOD: PaymentProcessingService — comprehensive payment processing with security, transactions, compensation",
+        "GOOD: PaymentRetryService — excellent retry logic with exponential backoff, parallelization, and transaction safety"
+      ]
+    },
+    {
+      "id": "2.9",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Background Jobs",
+      "target": "Orbito.Application/BackgroundJobs/",
+      "estFiles": 6,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 4,
+        "suggestion": 3
+      },
+      "date": "2026-03-30",
+      "fixesApplied": true,
+      "notes": [
+        "RE-AUDIT 2026-03-30 with --fix flag",
+        "6 files audited: 5 BackgroundService jobs + 1 TenantJobHelper",
+        "FIXED (CRITICAL): UpcomingPaymentReminderJob — removed SetTenant(null) admin context bypass, now uses TenantJobHelper.ExecuteForAllTenantsAsync() for proper tenant isolation",
+        "FIXED (MAJOR): CheckExpiringSubscriptionsJob — refactored to use TenantJobHelper.ExecuteForAllTenantsAsync() instead of manual tenant iteration with int.MaxValue page size",
+        "FIXED (MAJOR): CheckExpiringSubscriptionsJob — replaced GetService() with GetRequiredService() for consistency",
+        "REMAINING (MINOR): ProcessEmailNotificationsJob not inheriting from BackgroundService — needs manual invocation (architectural decision)",
+        "REMAINING (MINOR): ProcessEmailNotificationsJob missing tenant isolation — EmailNotifications table may need tenant scoping",
+        "REMAINING (MINOR): ProcessEmailNotificationsJob hardcodes isHtml: false — EmailNotification entity lacks IsHtml property",
+        "REMAINING (MINOR): ExpiredCardNotificationJob filtering in memory after GetByTypeAsync (line 186) — inefficient",
+        "SUGGESTION: Add structured logging with metrics (duration, success/failure counts)",
+        "SUGGESTION: Add health checks for background jobs monitoring",
+        "SUGGESTION: Move hardcoded periods/timeouts to configuration",
+        "GOOD: TenantJobHelper provides excellent multi-tenant isolation pattern with batching (10 tenants per batch)",
+        "GOOD: All jobs now use TenantJobHelper.ExecuteForAllTenantsAsync() for consistency (5/5)",
+        "GOOD: Timeout protection (10-20 min) used consistently across all jobs",
+        "GOOD: CancellationToken propagated correctly in 100% of async methods",
+        "GOOD: Comprehensive structured logging throughout",
+        "GOOD: Small delays (100ms) to prevent overwhelming email/notification services",
+        "BUILD: Domain, Application, Infrastructure, API compile with 0 errors (Tests have 4 pre-existing compilation errors)"
+      ]
+    },
+    {
+      "id": "2.10a",
+      "phase": "PHASE 2: Application Layer",
+      "block": "DTOs & Models — Clients",
+      "target": "Orbito.Application/Clients/Commands/, Orbito.Application/Clients/Queries/, Orbito.Application/DTOs/ClientDto.cs, Orbito.Application/Clients/ClientMapper.cs",
+      "estFiles": 13,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 3
+      },
+      "date": "2026-03-31",
+      "fixesApplied": true,
+      "notes": [
+        "AUDITED: 13 files (ClientDto, ClientMapper, 8 Commands, 3 Queries)",
+        "MAJOR #1: ClientMapper missing null-coalescing for non-nullable strings (Email, FirstName, LastName, FullName) — FIXED",
+        "MAJOR #2: Inconsistent status filtering between GetClientsByProviderQuery (string Status) and SearchClientsQuery (bool ActiveOnly) — FIXED to bool? ActiveOnly",
+        "MINOR #1: UpdateClientCommand lacks XML documentation — FIXED",
+        "MINOR #2: UpdateClientCommand missing XOR constraint docs for DirectEmail/FirstName/LastName — FIXED",
+        "MINOR #3: InviteClientCommand properties should use 'required' keyword — FIXED",
+        "MINOR #4: ConfirmClientEmailCommand properties should use 'required' keyword — FIXED",
+        "MINOR #5: DeleteClientCommand.HardDelete lacks XML docs — FIXED",
+        "SUGGESTION #1: ClientDto property grouping for readability — NOT APPLIED (cosmetic)",
+        "SUGGESTION #2: ClientMapper could return lazy IEnumerable — NOT APPLIED (handlers need List)",
+        "SUGGESTION #3: Add unit tests for ClientMapper — NOTED FOR PHASE 6",
+        "GOOD: CreateClientCommand has excellent XML documentation with scenarios",
+        "GOOD: ClientMapper uses static methods with proper null checks",
+        "GOOD: All Commands/Queries follow CQRS pattern correctly",
+        "GOOD: Proper use of Result<T> for error handling",
+        "GOOD: DTOs are immutable with 'init' setters"
+      ]
+    },
+    {
+      "id": "2.10b",
+      "phase": "PHASE 2: Application Layer",
+      "block": "DTOs & Models — Providers",
+      "target": "Orbito.Application/Providers/Commands/, Orbito.Application/Providers/Queries/",
+      "estFiles": 9,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 1
+      },
+      "date": "2026-03-31",
+      "fixesApplied": true,
+      "notes": [
+        "Commands: CreateProvider, DeleteProvider, RegisterProvider, UpdateProvider",
+        "Queries: GetAllProviders, GetProviderById, GetProviderByUserId",
+        "Results: CreateProviderResult, RegisterProviderResult",
+        "Fixed: TenantId consistency in Result objects (MAJOR), XML documentation added (MINOR), ProviderMapper eager-loading warnings (MAJOR)",
+        "Remaining: 1 SUGGESTION (DeleteProviderCommand naming improvement)"
+      ]
+    },
+    {
+      "id": "2.10c",
+      "phase": "PHASE 2: Application Layer",
+      "block": "DTOs & Models — TeamMembers & ProviderSubscriptions",
+      "target": "Orbito.Application/Features/TeamMembers/, Orbito.Application/Features/ProviderSubscriptions/Commands/",
+      "estFiles": 11,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 8,
+        "suggestion": 3
+      },
+      "date": "2026-03-31",
+      "fixesApplied": false,
+      "notes": [
+        "TeamMembers Commands: AcceptInvitation, InviteTeamMember, RemoveTeamMember, UpdateTeamMemberRole",
+        "TeamMembers Queries: GetPendingInvitations, GetTeamMembers, GetTeamMemberById",
+        "ProviderSubscriptions: CreateProviderPaymentIntent, ExpireTrialSubscriptions, SendTrialExpirationNotifications",
+        "Audit completed: 11 files reviewed, all DTOs follow Clean Architecture and CQRS patterns",
+        "Minor issues: 8 (mainly missing XML documentation and minor consistency improvements)",
+        "Suggestions: 3 (enum validation enhancement, cross-entity validation, performance considerations)",
+        "No critical or major issues found - excellent code quality"
+      ]
+    },
+    {
+      "id": "2.10d",
+      "phase": "PHASE 2: Application Layer",
+      "block": "DTOs & Models — Subscriptions",
+      "target": "Orbito.Application/Subscriptions/Commands/, Orbito.Application/Subscriptions/Queries/",
+      "estFiles": 12,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 4,
+        "suggestion": 3
+      },
+      "date": "2026-03-31",
+      "fixesApplied": false,
+      "notes": [
+        "Commands: ActivateSubscription, CancelSubscription, CreateSubscription, DowngradeSubscription, RenewSubscription, ResumeSubscription, SuspendSubscription, UpgradeSubscription",
+        "Queries: GetSubscriptionById, GetSubscriptionsByClient, GetActiveSubscriptionsByClient",
+        "Audit completed: 12 files reviewed, excellent CQRS implementation",
+        "Minor issues: 4 (inconsistent naming, missing XML docs, missing validators, query result naming)",
+        "Suggestions: 3 (mapper centralization, command examples, CQRS result standardization)",
+        "All commands use immutable records, proper MediatR patterns, clear business intent"
+      ]
+    },
+    {
+      "id": "2.10e-i",
+      "phase": "PHASE 2: Application Layer",
+      "block": "DTOs & Models — SubscriptionPlans (Full)",
+      "target": "Orbito.Application/SubscriptionPlans/",
+      "estFiles": 25,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 7,
+        "minor": 3,
+        "suggestion": 4
+      },
+      "date": "2026-03-31",
+      "fixesApplied": true,
+      "notes": [
+        "FIXED: 7 MAJOR tenant context validation issues (HasTenant check without CurrentTenantId null check)",
+        "Fixed files: CloneSubscriptionPlanCommandHandler, CreateSubscriptionPlanCommandHandler, UpdateSubscriptionPlanCommandHandler, DeleteSubscriptionPlanCommandHandler, GetActiveSubscriptionPlansQueryHandler, GetSubscriptionPlanByIdQueryHandler, GetSubscriptionPlansByProviderQueryHandler",
+        "MINOR: CloneSubscriptionPlanCommandValidator allows $0 amount (business decision needed)",
+        "MINOR: DeleteSubscriptionPlanResult.IsDeleted is ambiguous (consider DeletionStatus enum)",
+        "MINOR: Money.Create() lacks domain-level validation (should return Result<Money>)",
+        "SUGGESTION: SubscriptionPlanMapper causes N+1 queries for subscription counts (add scalar count methods to repository)",
+        "SUGGESTION: SubscriptionPlansListDto is unused (dead code)",
+        "SUGGESTION: No cross-field validation for TrialDays vs TrialPeriodDays",
+        "SUGGESTION: CloneSubscriptionPlanCommand has inconsistent required/optional fields",
+        "Architecture: Excellent CQRS separation, proper Result<T> usage, centralized mapper",
+        "Compilation: 0 errors in Orbito.Application after fixes"
+      ]
+    },
+    {
+      "id": "2.10e-ii",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Commands — Clone & Create SubscriptionPlan",
+      "target": "Orbito.Application/SubscriptionPlans/Commands/CloneSubscriptionPlan/, CreateSubscriptionPlan/",
+      "estFiles": 6,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 4
+      },
+      "date": "2026-04-01",
+      "fixesApplied": true,
+      "notes": [
+        "6 files audited (Commands, Handlers, Validators, Result)",
+        "FIXED: 4 MINOR issues - Added Currency.IsSupported() validation for ISO 4217 codes in both validators",
+        "FIXED: Cross-field validation for NewAmount/NewCurrency in CloneSubscriptionPlanCommandValidator",
+        "SUGGESTION: CloneSubscriptionPlanResult.BillingPeriod returned as string instead of enum/structured object",
+        "SUGGESTION: CloneSubscriptionPlanCommand.NewSortOrder may be unused parameter (auto-generated in practice)",
+        "SUGGESTION: CreateSubscriptionPlanCommand has both TrialDays and TrialPeriodDays - unclear semantic difference",
+        "SUGGESTION: No cross-field validation for TrialDays vs TrialPeriodDays consistency",
+        "Architecture: Excellent CQRS, proper Result<T>, tenant context validation",
+        "Compilation: 0 errors in Orbito.Application and Orbito.Domain"
+      ]
+    },
+    {
+      "id": "2.10e-iii",
+      "phase": "PHASE 2: Application Layer",
+      "block": "DTOs & Models — SubscriptionPlans (part 3)",
+      "target": "Orbito.Application/SubscriptionPlans/Queries/GetSubscriptionPlanById/, GetSubscriptionPlansByProvider/, SubscriptionPlanMapper.cs",
+      "estFiles": 8,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": "2026-04-01",
+      "fixesApplied": true,
+      "notes": [
+        "8 files audited: Queries (GetSubscriptionPlanById, GetSubscriptionPlansByProvider) and SubscriptionPlanMapper",
+        "All issues fixed: Removed TrialDays duplication, removed unused SubscriptionPlansListDto"
+      ]
+    },
+    {
+      "id": "2.10e-iv",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Queries — SubscriptionPlans",
+      "target": "Orbito.Application/SubscriptionPlans/Queries/",
+      "estFiles": 7,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": "2026-04-01",
+      "fixesApplied": true,
+      "notes": [
+        "5 files audited: GetSubscriptionPlansByProvider (Query + Handler + Validator + DTO) + SubscriptionPlanMapper",
+        "ALL ISSUES FIXED - no remaining problems",
+        "FIXED: Added N+1 query warnings to mapper methods requiring eager loading",
+        "FIXED: Renamed SubscriptionPlansListDto.cs to SubscriptionPlanListItemDto.cs for consistency",
+        "FIXED: Added comprehensive XML documentation to SubscriptionPlanListItemDto properties",
+        "FIXED: Moved MaxPageSize constant to PaginationParams.MaxPageSize for global reuse"
+      ]
+    },
+    {
+      "id": "2.10f",
+      "phase": "PHASE 2: Application Layer",
+      "block": "DTOs & Models — Payments Commands",
+      "target": "Orbito.Application/Features/Payments/Commands/",
+      "estFiles": 13,
+      "status": "completed",
+      "score": "B",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": "2026-04-01",
+      "fixesApplied": true,
+      "notes": [
+        "13 command/response files audited",
+        "All CRITICAL and MAJOR issues fixed:",
+        "- Separated handlers from DTOs (ProcessWebhookEvent, SavePaymentMethod, UpdatePaymentFromWebhook)",
+        "- Removed Result<T> duplication from CreateStripeCustomerResult",
+        "- Fixed mixed language comments in RefundPaymentCommand",
+        "- Added required modifiers to all mandatory properties",
+        "- Standardized command syntax to property-based format",
+        "Build verified successfully with 0 errors"
+      ]
+    },
+    {
+      "id": "2.10g",
+      "phase": "PHASE 2: Application Layer",
+      "block": "DTOs & Models — Payments Queries",
+      "target": "Orbito.Application/Features/Payments/Queries/DTOs/, Response models",
+      "estFiles": 5,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": "2026-04-01",
+      "fixesApplied": true,
+      "notes": [
+        "5 DTO/Response files audited: FailedPaymentDto, RetryScheduleDto, GetAllPaymentsResponse, GetPaymentsBySubscriptionResponse, PaymentDto",
+        "FIXED: Converted FailedPaymentDto and RetryScheduleDto from mutable class to immutable record with required properties",
+        "FIXED: Added required modifiers to PaymentDto non-nullable properties (Currency, Status, etc.)",
+        "All DTOs have excellent XML documentation",
+        "Response models use proper record pattern with required + init",
+        "No business logic in DTOs (correct separation of concerns)",
+        "Flat structure, no deep nesting",
+        "No sensitive data exposure",
+        "Proper pagination metadata in response models",
+        "Build verified: 0 errors after fixes"
+      ]
+    },
+    {
+      "id": "2.10h",
+      "phase": "PHASE 2: Application Layer",
+      "block": "DTOs & Models — Mappers & Extensions",
+      "target": "Orbito.Application/**/Mapper*.cs, Orbito.Application/**/Extensions.cs",
+      "estFiles": 8,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 1
+      },
+      "date": "2026-04-06",
+      "fixesApplied": true,
+      "notes": [
+        "8 mapper and extension files audited",
+        "All CRITICAL and MAJOR issues fixed",
+        "UNFIXED SUGGESTION: SubscriptionPlanMapper.cs eager-loading documentation could be more detailed"
+      ]
+    },
+    {
+      "id": "2.10i",
+      "phase": "PHASE 2: Application Layer",
+      "block": "DTOs & Models — Common Configuration & Settings",
+      "target": "Orbito.Application/Common/Configuration/, Orbito.Application/Common/Constants/, Orbito.Application/Common/Settings/, Orbito.Application/Common/Options/",
+      "estFiles": 9,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 2
+      },
+      "date": "2026-04-06",
+      "fixesApplied": true,
+      "notes": [
+        "6 configuration and settings files audited",
+        "FIXED: Critical - IdempotencySettings.cs:16 hardcoded Redis connection",
+        "FIXED: Major - IdempotencySettings.cs:31 MinKeyLength too weak",
+        "FIXED: Major - PaymentProcessingConfiguration converted to instance-based",
+        "FIXED: Minor - CacheSettings.cs DepartmentCacheMinutes removed",
+        "FIXED: Minor - XML documentation added to all settings classes",
+        "UNFIXED SUGGESTION: ReconciliationSettings.cs:41 - DailyRunTime as unvalidated string (consider TimeSpan or validation)",
+        "UNFIXED SUGGESTION: PaymentSettings.cs:7-8 - MaxPaymentAmount lacks currency context in comment"
+      ]
+    },
+    {
+      "id": "2.10j",
+      "phase": "PHASE 2: Application Layer",
+      "block": "DTOs & Models — Common Core Models",
+      "target": "Orbito.Application/Common/Models/ (excluding PaymentGateway/)",
+      "estFiles": 10,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 2
+      },
+      "date": "2026-04-06",
+      "fixesApplied": true,
+      "notes": [
+        "8 files audited: DateRange.cs, ErrorResponse.cs, PaginatedList.cs, PaginationParams.cs, PaymentStatistics.cs, PaymentTrends.cs, Result.cs, RevenueMetrics.cs",
+        "FIXED CRITICAL: Result.cs - Removed automatic stack trace exposure in production (security risk)",
+        "FIXED MAJOR: Result.cs - Changed implicit to explicit operator for Result<T> to prevent accidental conversions",
+        "FIXED MAJOR: PaginationParams.cs - Refactored Validate() to return new instance (immutable pattern), added ValidateWithService() for DI",
+        "FIXED MINOR: PaginationParams.cs - Changed PageNumber/PageSize to init-only properties",
+        "FIXED MINOR: PaginatedList.cs - Changed Items to init-only property, added division by zero guard in TotalPages",
+        "FIXED MINOR: DateRange.cs - Improved XML documentation for Days property (inclusive range)",
+        "UNFIXED SUGGESTION: DateRange.cs - Consider enforcing validation in constructor or factory method",
+        "UNFIXED SUGGESTION: Result.cs - Consider whether explicit conversion from Exception should also be removed for consistency"
+      ]
+    },
+    {
+      "id": "2.10k",
+      "phase": "PHASE 2: Application Layer",
+      "block": "DTOs & Models — Common PaymentGateway Models",
+      "target": "Orbito.Application/Common/Models/PaymentGateway/",
+      "estFiles": 9,
+      "status": "completed",
+      "score": "C",
+      "issues": {
+        "critical": 0,
+        "major": 6,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": "2026-04-06",
+      "fixesApplied": true,
+      "notes": [
+        "9 PaymentGateway model files audited",
+        "FIXED CRITICAL: CreateCustomerRequest.cs:71 - Improved email validation with regex + timeout protection",
+        "UNFIXED MAJOR (Architectural Debt): CreatePaymentIntentResult.cs - Should use Result<T> pattern instead of custom Success/Failure methods",
+        "UNFIXED MAJOR (Architectural Debt): CustomerResult.cs - Should use Result<T> pattern",
+        "UNFIXED MAJOR (Architectural Debt): PaymentResult.cs - Should use Result<T> pattern",
+        "UNFIXED MAJOR (Architectural Debt): PaymentStatusResult.cs - Should use Result<T> pattern",
+        "UNFIXED MAJOR (Architectural Debt): RefundResult.cs - Should use Result<T> pattern",
+        "UNFIXED MAJOR (Architectural Debt): WebhookValidationResult.cs - Should use Result<T> pattern",
+        "Recommendation: Create separate task for Result<T> refactoring to avoid breaking Stripe integration"
+      ]
+    },
+    {
+      "id": "2.10l",
+      "phase": "PHASE 2: Application Layer",
+      "block": "DTOs & Models — Common Authorization & Helpers",
+      "target": "Orbito.Application/Common/Authorization/, Orbito.Application/Common/Helpers/",
+      "estFiles": 8,
+      "status": "pending",
+      "score": null,
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": null,
+      "fixesApplied": false,
+      "notes": [
+        "Authorization: ActiveProviderSubscriptionHandler, ClientAccessHandler, PolicyNames, ProviderOwnerOnlyHandler, ProviderTeamAccessHandler",
+        "Helpers: TenantJobHelper"
+      ]
+    },
+    {
+      "id": "2.11",
+      "phase": "PHASE 2: Application Layer",
+      "block": "Behaviours & Pipeline",
+      "target": "Orbito.Application/Behaviours/",
+      "estFiles": 3,
+      "status": "pending",
+      "score": null,
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": null,
+      "fixesApplied": false,
+      "notes": []
+    },
+    {
+      "id": "3.1",
+      "phase": "PHASE 3: Infrastructure Layer",
+      "block": "DbContext & EF Config",
+      "target": "Orbito.Infrastructure/Persistence/",
+      "estFiles": 5,
+      "status": "pending",
+      "score": null,
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": null,
+      "fixesApplied": false,
+      "notes": [
+        "Check both Persistance/ and Persistence/ folders"
+      ]
+    },
+    {
+      "id": "3.2",
+      "phase": "PHASE 3: Infrastructure Layer",
+      "block": "Repositories",
+      "target": "Orbito.Infrastructure/Repositories/",
+      "estFiles": 12,
+      "status": "pending",
+      "score": null,
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": null,
+      "fixesApplied": false,
+      "notes": []
+    },
+    {
+      "id": "3.3",
+      "phase": "PHASE 3: Infrastructure Layer",
+      "block": "Stripe Integration",
+      "target": "Orbito.Infrastructure/Stripe/",
+      "estFiles": 6,
+      "status": "pending",
+      "score": null,
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": null,
+      "fixesApplied": false,
+      "notes": []
+    },
+    {
+      "id": "3.4",
+      "phase": "PHASE 3: Infrastructure Layer",
+      "block": "Infrastructure Services",
+      "target": "Orbito.Infrastructure/Services/",
+      "estFiles": 7,
+      "status": "pending",
+      "score": null,
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": null,
+      "fixesApplied": false,
+      "notes": []
+    },
+    {
+      "id": "3.5",
+      "phase": "PHASE 3: Infrastructure Layer",
+      "block": "Background Jobs (Infra)",
+      "target": "Orbito.Infrastructure/Jobs/",
+      "estFiles": 4,
+      "status": "pending",
+      "score": null,
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": null,
+      "fixesApplied": false,
+      "notes": []
+    },
+    {
+      "id": "3.6",
+      "phase": "PHASE 3: Infrastructure Layer",
+      "block": "DI Registration",
+      "target": "Orbito.Infrastructure/DependencyInjection.cs",
+      "estFiles": 1,
+      "status": "pending",
+      "score": null,
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": null,
+      "fixesApplied": false,
+      "notes": []
+    },
+    {
+      "id": "4.1",
+      "phase": "PHASE 4: API Layer",
+      "block": "Controllers (Part 1 — Core)",
+      "target": "Orbito.API/Controllers/",
+      "estFiles": 6,
+      "status": "pending",
+      "score": null,
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": null,
+      "fixesApplied": false,
+      "notes": [
+        "Core controllers: Clients, Team, Provider, Auth"
+      ]
+    },
+    {
+      "id": "4.2",
+      "phase": "PHASE 4: API Layer",
+      "block": "Controllers (Part 2 — Billing)",
+      "target": "Orbito.API/Controllers/",
+      "estFiles": 9,
+      "status": "pending",
+      "score": null,
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": null,
+      "fixesApplied": false,
+      "notes": [
+        "Billing controllers: Payments, Subscriptions, Plans, Webhooks"
+      ]
+    },
+    {
+      "id": "4.3",
+      "phase": "PHASE 4: API Layer",
+      "block": "Middleware",
+      "target": "Orbito.API/Middleware/",
+      "estFiles": 4,
+      "status": "pending",
+      "score": null,
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": null,
+      "fixesApplied": false,
+      "notes": []
+    },
+    {
+      "id": "4.4",
+      "phase": "PHASE 4: API Layer",
+      "block": "Program.cs & Config",
+      "target": "Orbito.API/",
+      "estFiles": 4,
+      "status": "pending",
+      "score": null,
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": null,
+      "fixesApplied": false,
+      "notes": [
+        "Program.cs, appsettings.json, appsettings.*.json"
+      ]
+    },
+    {
+      "id": "4.5",
+      "phase": "PHASE 4: API Layer",
+      "block": "Health Checks",
+      "target": "Orbito.API/HealthChecks/",
+      "estFiles": 2,
+      "status": "pending",
+      "score": null,
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": null,
+      "fixesApplied": false,
+      "notes": []
+    },
+    {
+      "id": "5.1",
+      "phase": "PHASE 5: Cross-Cutting Concerns",
+      "block": "Multi-Tenancy Security",
+      "target": "All layers",
+      "script": "scripts/tenant_security_scan.py",
+      "status": "pending",
+      "score": null,
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": null,
+      "fixesApplied": false,
+      "notes": [
+        "Uses tenant_security_scan.py — CRITICAL priority"
+      ]
+    },
+    {
+      "id": "5.2",
+      "phase": "PHASE 5: Cross-Cutting Concerns",
+      "block": "Error Handling & Result<T>",
+      "target": "All layers",
+      "status": "pending",
+      "score": null,
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": null,
+      "fixesApplied": false,
+      "notes": [
+        "Grep scan for exception handling patterns"
+      ]
+    },
+    {
+      "id": "5.3",
+      "phase": "PHASE 5: Cross-Cutting Concerns",
+      "block": "Logging & Observability",
+      "target": "All layers",
+      "status": "pending",
+      "score": null,
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": null,
+      "fixesApplied": false,
+      "notes": [
+        "Grep scan for ILogger usage, structured logging"
+      ]
+    },
+    {
+      "id": "5.4",
+      "phase": "PHASE 5: Cross-Cutting Concerns",
+      "block": "Security Hardening",
+      "target": "Config + Auth",
+      "status": "pending",
+      "score": null,
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": null,
+      "fixesApplied": false,
+      "notes": [
+        "JWT config, CORS, secrets management, HTTPS"
+      ]
+    },
+    {
+      "id": "5.5",
+      "phase": "PHASE 5: Cross-Cutting Concerns",
+      "block": "Performance Patterns",
+      "target": "All layers",
+      "script": "scripts/performance_scan.py",
+      "status": "pending",
+      "score": null,
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": null,
+      "fixesApplied": false,
+      "notes": [
+        "Uses performance_scan.py"
+      ]
+    },
+    {
+      "id": "6.1",
+      "phase": "PHASE 6: Tests",
+      "block": "Test Coverage Gaps",
+      "target": "Orbito.Tests/",
+      "script": "scripts/test_coverage_gaps.py",
+      "status": "pending",
+      "score": null,
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": null,
+      "fixesApplied": false,
+      "notes": [
+        "Uses test_coverage_gaps.py"
+      ]
+    },
+    {
+      "id": "6.2",
+      "phase": "PHASE 6: Tests",
+      "block": "Test Quality — Unit",
+      "target": "Orbito.Tests/Unit/",
+      "estFiles": 20,
+      "status": "pending",
+      "score": null,
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": null,
+      "fixesApplied": false,
+      "notes": [
+        "Sample 20 files for quality review"
+      ]
+    },
+    {
+      "id": "6.3",
+      "phase": "PHASE 6: Tests",
+      "block": "Test Quality — Integration",
+      "target": "Orbito.Tests/Integration/",
+      "estFiles": 10,
+      "status": "pending",
+      "score": null,
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": null,
+      "fixesApplied": false,
+      "notes": []
+    },
+    {
+      "id": "6.4",
+      "phase": "PHASE 6: Tests",
+      "block": "Failing Tests Triage",
+      "target": "Orbito.Tests/",
+      "status": "pending",
+      "score": null,
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": null,
+      "fixesApplied": false,
+      "notes": [
+        "Triage 15 failing tests"
+      ]
+    }
+  ]
+}
