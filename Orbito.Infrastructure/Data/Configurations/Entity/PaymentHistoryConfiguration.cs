@@ -62,6 +62,9 @@ namespace Orbito.Infrastructure.Data.Configurations.Entity
             builder.HasIndex(ph => new { ph.PaymentId, ph.OccurredAt })
                 .HasDatabaseName("IX_PaymentHistory_PaymentId_OccurredAt");
 
+            // NOTE: Multi-tenancy query filter configured in ApplicationDbContext.OnModelCreating()
+            // Filter: WHERE TenantId == CurrentTenantId (applied to all queries automatically)
+
             // Relationships
             builder.HasOne(ph => ph.Payment)
                 .WithMany()

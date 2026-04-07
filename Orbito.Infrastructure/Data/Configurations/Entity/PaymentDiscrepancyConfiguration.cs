@@ -25,7 +25,8 @@ public class PaymentDiscrepancyConfiguration : IEntityTypeConfiguration<PaymentD
             .HasConversion(
                 tenantId => tenantId.Value,
                 value => TenantId.Create(value))
-            .IsRequired();
+            .IsRequired()
+            .HasColumnName("TenantId");
 
         // Reconciliation report reference
         builder.Property(d => d.ReconciliationReportId)
@@ -95,27 +96,27 @@ public class PaymentDiscrepancyConfiguration : IEntityTypeConfiguration<PaymentD
 
         // Indexes for performance
         builder.HasIndex(d => d.TenantId)
-            .HasDatabaseName("ix_payment_discrepancies_tenant_id");
+            .HasDatabaseName("IX_PaymentDiscrepancies_TenantId");
 
         builder.HasIndex(d => d.ReconciliationReportId)
-            .HasDatabaseName("ix_payment_discrepancies_report_id");
+            .HasDatabaseName("IX_PaymentDiscrepancies_ReconciliationReportId");
 
         builder.HasIndex(d => new { d.TenantId, d.Resolution })
-            .HasDatabaseName("ix_payment_discrepancies_tenant_resolution");
+            .HasDatabaseName("IX_PaymentDiscrepancies_TenantId_Resolution");
 
         builder.HasIndex(d => new { d.TenantId, d.Type })
-            .HasDatabaseName("ix_payment_discrepancies_tenant_type");
+            .HasDatabaseName("IX_PaymentDiscrepancies_TenantId_Type");
 
         builder.HasIndex(d => d.PaymentId)
-            .HasDatabaseName("ix_payment_discrepancies_payment_id");
+            .HasDatabaseName("IX_PaymentDiscrepancies_PaymentId");
 
         builder.HasIndex(d => d.ExternalPaymentId)
-            .HasDatabaseName("ix_payment_discrepancies_external_payment_id");
+            .HasDatabaseName("IX_PaymentDiscrepancies_ExternalPaymentId");
 
         builder.HasIndex(d => d.DetectedAt)
-            .HasDatabaseName("ix_payment_discrepancies_detected_at");
+            .HasDatabaseName("IX_PaymentDiscrepancies_DetectedAt");
 
-        // Query filter for multi-tenancy (will be configured in DbContext)
-        // builder.HasQueryFilter(d => d.TenantId == currentTenantId);
+        // NOTE: Multi-tenancy query filter configured in ApplicationDbContext.OnModelCreating()
+        // Filter: WHERE TenantId == CurrentTenantId (applied to all queries automatically)
     }
 }

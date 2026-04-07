@@ -74,7 +74,8 @@ namespace Orbito.Infrastructure.Data.Configurations.Entity
             builder.HasIndex(pm => pm.ExpiryDate)
                 .HasDatabaseName("IX_PaymentMethods_ExpiryDate");
 
-            // Multi-tenancy query filter is handled globally in ApplicationDbContext
+            // NOTE: Multi-tenancy query filter configured in ApplicationDbContext.OnModelCreating()
+            // Filter: WHERE TenantId == CurrentTenantId (applied to all queries automatically)
 
             // Relationships
             builder.HasOne(pm => pm.Client)

@@ -47,7 +47,11 @@
       "Bash(select-object -expandproperty Lines)",
       "Bash(Select-Object -First 20)",
       "Bash(findstr:*)",
-      "Bash(git mv:*)"
+      "Bash(git mv:*)",
+      "Bash(Get-ChildItem -Path \"Orbito.Infrastructure\\\\Persistance\" -Filter \"*.cs\" -Recurse)",
+      "Bash(Where-Object {$_FullName -notmatch 'bin|obj'})",
+      "Bash(Measure-Object)",
+      "Bash(Select-Object -ExpandProperty Count)"
     ],
     "deny": [],
     "ask": []

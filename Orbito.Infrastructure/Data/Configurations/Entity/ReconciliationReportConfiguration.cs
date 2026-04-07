@@ -25,7 +25,8 @@ public class ReconciliationReportConfiguration : IEntityTypeConfiguration<Reconc
             .HasConversion(
                 tenantId => tenantId.Value,
                 value => TenantId.Create(value))
-            .IsRequired();
+            .IsRequired()
+            .HasColumnName("TenantId");
 
         // Report metadata
         builder.Property(r => r.RunDate)
@@ -78,18 +79,18 @@ public class ReconciliationReportConfiguration : IEntityTypeConfiguration<Reconc
 
         // Indexes for performance
         builder.HasIndex(r => r.TenantId)
-            .HasDatabaseName("ix_reconciliation_reports_tenant_id");
+            .HasDatabaseName("IX_ReconciliationReports_TenantId");
 
         builder.HasIndex(r => new { r.TenantId, r.RunDate })
-            .HasDatabaseName("ix_reconciliation_reports_tenant_run_date");
+            .HasDatabaseName("IX_ReconciliationReports_TenantId_RunDate");
 
         builder.HasIndex(r => new { r.TenantId, r.Status })
-            .HasDatabaseName("ix_reconciliation_reports_tenant_status");
+            .HasDatabaseName("IX_ReconciliationReports_TenantId_Status");
 
         builder.HasIndex(r => new { r.PeriodStart, r.PeriodEnd })
-            .HasDatabaseName("ix_reconciliation_reports_period");
+            .HasDatabaseName("IX_ReconciliationReports_PeriodStartEnd");
 
-        // Query filter for multi-tenancy (will be configured in DbContext)
-        // builder.HasQueryFilter(r => r.TenantId == currentTenantId);
+        // NOTE: Multi-tenancy query filter configured in ApplicationDbContext.OnModelCreating()
+        // Filter: WHERE TenantId == CurrentTenantId (applied to all queries automatically)
     }
 }

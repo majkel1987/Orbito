@@ -74,7 +74,8 @@ namespace Orbito.Infrastructure.Data.Configurations.Entity
                 .HasDatabaseName("IX_PaymentWebhookLogs_Status_ReceivedAt")
                 .HasFilter("[Status] = 'Failed'"); // For retry logic
 
-            // Multi-tenancy query filter is handled globally in ApplicationDbContext
+            // NOTE: Multi-tenancy query filter configured in ApplicationDbContext.OnModelCreating()
+            // Filter: WHERE TenantId == CurrentTenantId (applied to all queries automatically)
 
             // Relationships
             // No foreign key relationships for webhook logs as they are independent entities
