@@ -4,10 +4,12 @@ using Orbito.Domain.ValueObjects;
 
 namespace Orbito.Domain.Interfaces;
 
+#region Segregated Interfaces
+
 /// <summary>
-/// Repository interface for managing team members.
+/// Core CRUD operations for team members.
 /// </summary>
-public interface ITeamMemberRepository
+public interface ITeamMemberCrudRepository
 {
     /// <summary>
     /// Gets a team member by ID.
@@ -49,7 +51,13 @@ public interface ITeamMemberRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Task representing the operation.</returns>
     Task DeleteAsync(TeamMember teamMember, CancellationToken cancellationToken = default);
+}
 
+/// <summary>
+/// Query operations for listing and filtering team members.
+/// </summary>
+public interface ITeamMemberQueryRepository
+{
     /// <summary>
     /// Gets a team member by user ID for a specific tenant.
     /// </summary>
@@ -85,6 +93,26 @@ public interface ITeamMemberRepository
     Task<IEnumerable<TeamMember>> GetByRoleAsync(TenantId tenantId, TeamMemberRole role, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets team members with pagination for a specific tenant.
+    /// </summary>
+    /// <param name="tenantId">The tenant ID.</param>
+    /// <param name="pageNumber">Page number (1-based).</param>
+    /// <param name="pageSize">Page size.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Paginated list of team members.</returns>
+    Task<(IEnumerable<TeamMember> Items, int TotalCount)> GetPagedByTenantIdAsync(
+        TenantId tenantId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Authorization-related queries for team members.
+/// </summary>
+public interface ITeamMemberAuthorizationRepository
+{
+    /// <summary>
     /// Checks if a user is a team member of a specific tenant.
     /// </summary>
     /// <param name="userId">The user ID.</param>
@@ -112,7 +140,13 @@ public interface ITeamMemberRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>True if the user has any of the roles, false otherwise.</returns>
     Task<bool> HasAnyRoleAsync(Guid userId, TenantId tenantId, IEnumerable<TeamMemberRole> roles, CancellationToken cancellationToken = default);
+}
 
+/// <summary>
+/// Statistical queries for team members.
+/// </summary>
+public interface ITeamMemberStatisticsRepository
+{
     /// <summary>
     /// Gets the count of team members for a specific tenant.
     /// </summary>
@@ -137,6 +171,20 @@ public interface ITeamMemberRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The count of team members with the specified role.</returns>
     Task<int> GetCountByRoleAsync(TenantId tenantId, TeamMemberRole role, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Invitation-related operations for team members.
+/// </summary>
+public interface ITeamMemberInvitationRepository
+{
+    /// <summary>
+    /// Gets a team member by invitation token.
+    /// </summary>
+    /// <param name="token">The invitation token.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The team member if found, null otherwise.</returns>
+    Task<TeamMember?> GetByInvitationTokenAsync(string token, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Checks if an email is already used in a tenant.
@@ -146,26 +194,29 @@ public interface ITeamMemberRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>True if the email is already used, false otherwise.</returns>
     Task<bool> IsEmailUsedInTenantAsync(string email, TenantId tenantId, CancellationToken cancellationToken = default);
+}
 
-    /// <summary>
-    /// Gets team members with pagination for a specific tenant.
-    /// </summary>
-    /// <param name="tenantId">The tenant ID.</param>
-    /// <param name="pageNumber">Page number (1-based).</param>
-    /// <param name="pageSize">Page size.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Paginated list of team members.</returns>
-    Task<(IEnumerable<TeamMember> Items, int TotalCount)> GetPagedByTenantIdAsync(
-        TenantId tenantId, 
-        int pageNumber, 
-        int pageSize, 
-        CancellationToken cancellationToken = default);
+#endregion
 
-    /// <summary>
-    /// Gets a team member by invitation token.
-    /// </summary>
-    /// <param name="token">The invitation token.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The team member if found, null otherwise.</returns>
-    Task<TeamMember?> GetByInvitationTokenAsync(string token, CancellationToken cancellationToken = default);
+/// <summary>
+/// Aggregate repository interface for managing team members.
+/// Combines all specialized interfaces for backward compatibility.
+/// </summary>
+/// <remarks>
+/// For new code, prefer injecting the more specific interfaces:
+/// <list type="bullet">
+/// <item><see cref="ITeamMemberCrudRepository"/> - for CRUD operations</item>
+/// <item><see cref="ITeamMemberQueryRepository"/> - for listing and filtering</item>
+/// <item><see cref="ITeamMemberAuthorizationRepository"/> - for permission checks</item>
+/// <item><see cref="ITeamMemberStatisticsRepository"/> - for counts and metrics</item>
+/// <item><see cref="ITeamMemberInvitationRepository"/> - for invitation management</item>
+/// </list>
+/// </remarks>
+public interface ITeamMemberRepository :
+    ITeamMemberCrudRepository,
+    ITeamMemberQueryRepository,
+    ITeamMemberAuthorizationRepository,
+    ITeamMemberStatisticsRepository,
+    ITeamMemberInvitationRepository
+{
 }

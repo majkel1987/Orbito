@@ -12,7 +12,7 @@ namespace Orbito.Application.Features.Payments.Commands.CreatePaymentIntent
         /// <summary>
         /// The subscription to pay for
         /// </summary>
-        public Guid SubscriptionId { get; init; }
+        public required Guid SubscriptionId { get; init; }
     }
 
     /// <summary>

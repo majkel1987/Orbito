@@ -1,6 +1,7 @@
 using FluentAssertions;
 using FluentValidation.TestHelper;
 using Orbito.Application.SubscriptionPlans.Commands.CreateSubscriptionPlan;
+using Orbito.Domain.Enums;
 using Orbito.Domain.ValueObjects;
 using Xunit;
 

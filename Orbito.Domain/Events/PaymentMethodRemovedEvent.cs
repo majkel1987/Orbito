@@ -22,17 +22,12 @@ public record PaymentMethodRemovedEvent : IDomainEvent
         string reason,
         DateTime? occurredOn = null)
     {
-        if (paymentMethodId == Guid.Empty)
-            throw new ArgumentException("PaymentMethodId cannot be empty", nameof(paymentMethodId));
-
-        if (clientId == Guid.Empty)
-            throw new ArgumentException("ClientId cannot be empty", nameof(clientId));
-
-        if (string.IsNullOrWhiteSpace(reason))
-            throw new ArgumentException("Reason cannot be null or empty", nameof(reason));
+        ArgumentOutOfRangeException.ThrowIfEqual(paymentMethodId, Guid.Empty, nameof(paymentMethodId));
+        ArgumentOutOfRangeException.ThrowIfEqual(clientId, Guid.Empty, nameof(clientId));
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
 
         if (!Enum.IsDefined(typeof(PaymentMethodType), type))
-            throw new ArgumentException("Invalid payment method type", nameof(type));
+            throw new ArgumentOutOfRangeException(nameof(type), "Invalid payment method type");
 
         Id = Guid.NewGuid();
         OccurredOn = occurredOn ?? DateTime.UtcNow;

@@ -1,13 +1,13 @@
-using Orbito.Application.DTOs;
-using Orbito.Application.Common.Models;
 using MediatR;
 using Orbito.Application.Common.Interfaces;
+using Orbito.Application.DTOs;
 using Orbito.Domain.Common;
 using Orbito.Domain.Errors;
+using PaginatedList = Orbito.Application.Common.Models.PaginatedList<Orbito.Application.DTOs.ClientDto>;
 
 namespace Orbito.Application.Clients.Queries.SearchClients
 {
-    public class SearchClientsQueryHandler : IRequestHandler<SearchClientsQuery, Orbito.Domain.Common.Result<PaginatedList<ClientDto>>>
+    public class SearchClientsQueryHandler : IRequestHandler<SearchClientsQuery, Result<PaginatedList>>
     {
         private readonly IClientRepository _clientRepository;
         private readonly ITenantContext _tenantContext;
@@ -20,18 +20,18 @@ namespace Orbito.Application.Clients.Queries.SearchClients
             _tenantContext = tenantContext;
         }
 
-        public async Task<Orbito.Domain.Common.Result<PaginatedList<ClientDto>>> Handle(SearchClientsQuery request, CancellationToken cancellationToken)
+        public async Task<Result<PaginatedList>> Handle(SearchClientsQuery request, CancellationToken cancellationToken)
         {
             // Sprawdź czy mamy kontekst tenanta
             if (!_tenantContext.HasTenant)
             {
-                return Orbito.Domain.Common.Result.Failure<PaginatedList<ClientDto>>(DomainErrors.Tenant.NoTenantContext);
+                return Result.Failure<PaginatedList>(DomainErrors.Tenant.NoTenantContext);
             }
 
             // Walidacja search term
             if (string.IsNullOrWhiteSpace(request.SearchTerm))
             {
-                return Orbito.Domain.Common.Result.Failure<PaginatedList<ClientDto>>(DomainErrors.Validation.Required("SearchTerm"));
+                return Result.Failure<PaginatedList>(DomainErrors.Validation.Required("SearchTerm"));
             }
 
             // Wyszukaj klientów
@@ -47,38 +47,14 @@ namespace Orbito.Application.Clients.Queries.SearchClients
                 request.ActiveOnly,
                 cancellationToken);
 
-            var clientDtos = clients.Select(MapToDto).ToList();
-            var paginatedList = new PaginatedList<ClientDto>(
-                clientDtos,
+            var clientDtos = ClientMapper.ToDto(clients);
+            var paginatedList = new PaginatedList(
+                clientDtos.ToList(),
                 totalCount,
                 request.PageNumber,
                 request.PageSize);
 
-            return Orbito.Domain.Common.Result.Success(paginatedList);
-        }
-
-        private static ClientDto MapToDto(Orbito.Domain.Entities.Client client)
-        {
-            return new ClientDto
-            {
-                Id = client.Id,
-                TenantId = client.TenantId.Value,
-                UserId = client.UserId,
-                CompanyName = client.CompanyName,
-                Phone = client.Phone,
-                DirectEmail = client.DirectEmail,
-                DirectFirstName = client.DirectFirstName,
-                DirectLastName = client.DirectLastName,
-                IsActive = client.IsActive,
-                CreatedAt = client.CreatedAt,
-                Email = client.Email,
-                FirstName = client.FirstName,
-                LastName = client.LastName,
-                FullName = client.FullName,
-                UserEmail = client.User?.Email,
-                UserFirstName = client.User?.FirstName,
-                UserLastName = client.User?.LastName
-            };
+            return Result.Success(paginatedList);
         }
     }
 }

@@ -1,3 +1,4 @@
+using System.Reflection;
 using Orbito.Domain.Entities;
 using Orbito.Domain.ValueObjects;
 
@@ -91,12 +92,22 @@ public class ClientTestDataBuilder
     public Client Build()
     {
         var client = Client.CreateWithUser(_tenantId, _userId, _companyName);
-        
-        // Set properties directly since they have setters
-        client.Id = _id;
-        client.Phone = _phoneNumber;
-        client.IsActive = _isActive;
+
+        // Set properties using reflection (private setters)
+        SetPrivateProperty(client, "Id", _id);
+        client.SetPhone(_phoneNumber);
+
+        if (!_isActive)
+        {
+            client.Deactivate();
+        }
 
         return client;
+    }
+
+    private static void SetPrivateProperty<T>(object obj, string propertyName, T value)
+    {
+        var property = obj.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
+        property?.SetValue(obj, value);
     }
 }

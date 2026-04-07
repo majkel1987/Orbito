@@ -9,21 +9,21 @@ namespace Orbito.Domain.Entities;
 /// </summary>
 public class EmailNotification : IMustHaveTenant
 {
-    public Guid Id { get; set; }
-    public TenantId TenantId { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public string Type { get; set; } = string.Empty;
-    public string RecipientEmail { get; set; } = string.Empty;
-    public string Subject { get; set; } = string.Empty;
-    public string Body { get; set; } = string.Empty;
-    public string Status { get; set; } = "Pending";
-    public int RetryCount { get; set; } = 0;
-    public int MaxRetries { get; set; } = 3;
-    public DateTime? ProcessedAt { get; set; }
-    public string? ErrorMessage { get; set; }
-    public DateTime? NextRetryAt { get; set; }
-    public Guid? RelatedEntityId { get; set; } // PaymentId, SubscriptionId, etc.
-    public string? RelatedEntityType { get; set; } // "Payment", "Subscription", etc.
+    public Guid Id { get; private set; }
+    public TenantId TenantId { get; private set; }
+    public DateTime CreatedAt { get; private set; }
+    public string Type { get; private set; } = string.Empty;
+    public string RecipientEmail { get; private set; } = string.Empty;
+    public string Subject { get; private set; } = string.Empty;
+    public string Body { get; private set; } = string.Empty;
+    public EmailNotificationStatus Status { get; private set; } = EmailNotificationStatus.Pending;
+    public int RetryCount { get; private set; }
+    public int MaxRetries { get; private set; } = 3;
+    public DateTime? ProcessedAt { get; private set; }
+    public string? ErrorMessage { get; private set; }
+    public DateTime? NextRetryAt { get; private set; }
+    public Guid? RelatedEntityId { get; private set; } // PaymentId, SubscriptionId, etc.
+    public string? RelatedEntityType { get; private set; } // "Payment", "Subscription", etc.
 
     /// <summary>
     /// Creates a new email notification
@@ -45,7 +45,7 @@ public class EmailNotification : IMustHaveTenant
             RecipientEmail = recipientEmail,
             Subject = subject,
             Body = body,
-            Status = "Pending",
+            Status = EmailNotificationStatus.Pending,
             RetryCount = 0,
             MaxRetries = 3,
             CreatedAt = DateTime.UtcNow,
@@ -59,7 +59,7 @@ public class EmailNotification : IMustHaveTenant
     /// </summary>
     public void MarkAsProcessed()
     {
-        Status = "Processed";
+        Status = EmailNotificationStatus.Processed;
         ProcessedAt = DateTime.UtcNow;
         ErrorMessage = null;
     }
@@ -69,7 +69,7 @@ public class EmailNotification : IMustHaveTenant
     /// </summary>
     public void MarkAsFailed(string errorMessage)
     {
-        Status = "Failed";
+        Status = EmailNotificationStatus.Failed;
         ErrorMessage = errorMessage;
         ProcessedAt = DateTime.UtcNow;
     }
@@ -86,8 +86,8 @@ public class EmailNotification : IMustHaveTenant
         }
 
         RetryCount++;
-        Status = "Pending";
-        
+        Status = EmailNotificationStatus.Pending;
+
         // Exponential backoff: 5min, 15min, 1h
         var delayMinutes = RetryCount switch
         {
@@ -96,7 +96,7 @@ public class EmailNotification : IMustHaveTenant
             3 => 60,
             _ => 60
         };
-        
+
         NextRetryAt = DateTime.UtcNow.AddMinutes(delayMinutes);
     }
 
@@ -105,8 +105,8 @@ public class EmailNotification : IMustHaveTenant
     /// </summary>
     public bool CanRetry()
     {
-        return Status == "Pending" && 
-               RetryCount < MaxRetries && 
+        return Status == EmailNotificationStatus.Pending &&
+               RetryCount < MaxRetries &&
                (NextRetryAt == null || NextRetryAt <= DateTime.UtcNow);
     }
 }

@@ -6,9 +6,12 @@ using Orbito.Domain.Common;
 using Orbito.Domain.Errors;
 using Orbito.Domain.ValueObjects;
 
-namespace Orbito.Application.Subscriptions.Commands.RenewSubscription
-{
-    public class RenewSubscriptionCommandHandler : IRequestHandler<RenewSubscriptionCommand, Result<SubscriptionDto>>
+namespace Orbito.Application.Subscriptions.Commands.RenewSubscription;
+
+/// <summary>
+/// Handler for renewing a subscription after payment.
+/// </summary>
+public class RenewSubscriptionCommandHandler : IRequestHandler<RenewSubscriptionCommand, Result<SubscriptionDto>>
     {
         private readonly ISubscriptionService _subscriptionService;
         private readonly ISubscriptionRepository _subscriptionRepository;
@@ -56,34 +59,17 @@ namespace Orbito.Application.Subscriptions.Commands.RenewSubscription
                 return Result.Failure<SubscriptionDto>(DomainErrors.Subscription.CannotRenew);
             }
 
-            // Get updated subscription to get new billing date (using same client verification)
-            var updatedSubscription = await _subscriptionRepository.GetByIdForClientAsync(request.SubscriptionId, request.ClientId, cancellationToken);
+        // Get updated subscription to get new billing date (using same client verification)
+        var updatedSubscription = await _subscriptionRepository.GetByIdForClientAsync(request.SubscriptionId, request.ClientId, cancellationToken);
 
-            _logger.LogInformation("Successfully renewed subscription {SubscriptionId}", request.SubscriptionId);
-
-            var dto = new SubscriptionDto
-            {
-                Id = updatedSubscription!.Id,
-                TenantId = updatedSubscription.TenantId.Value,
-                ClientId = updatedSubscription.ClientId,
-                PlanId = updatedSubscription.PlanId,
-                Status = updatedSubscription.Status.ToString(),
-                Amount = updatedSubscription.CurrentPrice.Amount,
-                Currency = updatedSubscription.CurrentPrice.Currency,
-                BillingPeriodValue = updatedSubscription.BillingPeriod.Value,
-                BillingPeriodType = updatedSubscription.BillingPeriod.Type.ToString(),
-                StartDate = updatedSubscription.StartDate,
-                EndDate = updatedSubscription.EndDate,
-                NextBillingDate = updatedSubscription.NextBillingDate,
-                IsInTrial = updatedSubscription.IsInTrial,
-                TrialEndDate = updatedSubscription.TrialEndDate,
-                ExternalSubscriptionId = updatedSubscription.ExternalSubscriptionId,
-                CreatedAt = updatedSubscription.CreatedAt,
-                CancelledAt = updatedSubscription.CancelledAt,
-                UpdatedAt = updatedSubscription.UpdatedAt
-            };
-
-            return Result.Success(dto);
+        if (updatedSubscription == null)
+        {
+            _logger.LogError("Failed to retrieve updated subscription {SubscriptionId} after renewal", request.SubscriptionId);
+            return Result.Failure<SubscriptionDto>(DomainErrors.Subscription.NotFound);
         }
+
+        _logger.LogInformation("Successfully renewed subscription {SubscriptionId}", request.SubscriptionId);
+
+        return Result.Success(SubscriptionMapper.ToDto(updatedSubscription));
     }
 }

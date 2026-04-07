@@ -67,15 +67,15 @@ public static class LoggingExtensions
     /// <param name="operation">Operation to execute</param>
     /// <param name="additionalProperties">Additional properties to log</param>
     public static async Task LogOperationAsync(
-        this ILogger logger, 
-        string operationName, 
+        this ILogger logger,
+        string operationName,
         Func<Task> operation,
         Dictionary<string, object>? additionalProperties = null)
     {
-        await LogOperationAsync(logger, operationName, async () =>
+        await LogOperationAsync<object?>(logger, operationName, async () =>
         {
             await operation();
-            return Task.CompletedTask;
+            return null;
         }, additionalProperties);
     }
 

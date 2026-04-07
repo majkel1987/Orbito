@@ -1,10 +1,10 @@
 using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
-using Orbito.Application.Common.Models;
 using Orbito.Application.Services;
+using Orbito.Domain.Common;
 using Orbito.Domain.Enums;
+using Orbito.Domain.Errors;
 using Orbito.Domain.ValueObjects;
-using BillingPeriodType = Orbito.Domain.ValueObjects.BillingPeriodType;
 using Orbito.Infrastructure.PaymentGateways.Stripe.Models;
 using Orbito.Infrastructure.Persistance;
 using System.Text.Json;
@@ -74,12 +74,12 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
             catch (JsonException ex)
             {
                 _logger.LogError(ex, "JSON parsing error for Stripe event {EventType}: {EventId}", eventType, webhookData.Id);
-                return Result.Failure($"Invalid event data format: {ex.Message}");
+                return Result.Failure(DomainErrors.Webhook.InvalidPayloadFormat);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error handling Stripe event {EventType}: {EventId}", eventType, webhookData.Id);
-                return Result.Failure($"Error handling event: {ex.Message}");
+                return Result.Failure(DomainErrors.Webhook.EventHandlingFailed(eventType, ex.Message));
             }
         }
 
@@ -93,7 +93,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
                 var paymentIntent = DeserializeEventData<StripePaymentIntent>(webhookData);
                 if (paymentIntent == null)
                 {
-                    return Result.Failure("Failed to parse payment intent data");
+                    return Result.Failure(DomainErrors.Webhook.InvalidEventData);
                 }
 
                 _logger.LogDebug("Processing payment intent succeeded: {PaymentIntentId}, Amount: {Amount} {Currency}",
@@ -112,7 +112,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
                 if (payment == null)
                 {
                     _logger.LogWarning("Payment not found for payment intent: {PaymentIntentId}", paymentIntent.Id);
-                    return Result.Failure($"Payment not found for external ID: {paymentIntent.Id}");
+                    return Result.Failure(DomainErrors.Webhook.PaymentNotFound(paymentIntent.Id));
                 }
 
                 // Verify payment is in correct state
@@ -170,7 +170,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error handling payment intent succeeded");
-                return Result.Failure($"Error handling payment intent succeeded: {ex.Message}");
+                return Result.Failure(DomainErrors.Webhook.EventHandlingFailed("payment_intent.succeeded", ex.Message));
             }
         }
 
@@ -191,14 +191,14 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
                 !Guid.TryParse(providerIdStr, out var providerId))
             {
                 _logger.LogWarning("Missing or invalid provider_id in payment intent metadata: {PaymentIntentId}", paymentIntent.Id);
-                return Result.Failure("Missing provider_id in payment intent metadata");
+                return Result.Failure(DomainErrors.Webhook.MissingMetadata("provider_id"));
             }
 
             if (!paymentIntent.Metadata.TryGetValue("platform_plan_id", out var planIdStr) ||
                 !Guid.TryParse(planIdStr, out var planId))
             {
                 _logger.LogWarning("Missing or invalid platform_plan_id in payment intent metadata: {PaymentIntentId}", paymentIntent.Id);
-                return Result.Failure("Missing platform_plan_id in payment intent metadata");
+                return Result.Failure(DomainErrors.Webhook.MissingMetadata("platform_plan_id"));
             }
 
             // Get ProviderSubscription
@@ -206,7 +206,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
             if (subscription == null)
             {
                 _logger.LogWarning("ProviderSubscription not found for provider: {ProviderId}", providerId);
-                return Result.Failure($"ProviderSubscription not found for provider: {providerId}");
+                return Result.Failure(DomainErrors.Webhook.ProviderSubscriptionNotFound(providerId));
             }
 
             // Check idempotency - if already active with future PaidUntil, skip
@@ -225,7 +225,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
             if (plan == null)
             {
                 _logger.LogWarning("PlatformPlan not found: {PlanId}", planId);
-                return Result.Failure($"PlatformPlan not found: {planId}");
+                return Result.Failure(DomainErrors.Webhook.PlatformPlanNotFound(planId));
             }
 
             // Calculate PaidUntil based on billing period
@@ -291,7 +291,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
                 var paymentIntent = DeserializeEventData<StripePaymentIntent>(webhookData);
                 if (paymentIntent == null)
                 {
-                    return Result.Failure("Failed to parse payment intent data");
+                    return Result.Failure(DomainErrors.Webhook.InvalidEventData);
                 }
 
                 _logger.LogDebug("Processing payment intent failed: {PaymentIntentId}, Status: {Status}",
@@ -302,7 +302,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
                 if (payment == null)
                 {
                     _logger.LogWarning("Payment not found for payment intent: {PaymentIntentId}", paymentIntent.Id);
-                    return Result.Failure($"Payment not found for external ID: {paymentIntent.Id}");
+                    return Result.Failure(DomainErrors.Webhook.PaymentNotFound(paymentIntent.Id));
                 }
 
                 // Build detailed failure reason
@@ -342,7 +342,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error handling payment intent failed");
-                return Result.Failure($"Error handling payment intent failed: {ex.Message}");
+                return Result.Failure(DomainErrors.Webhook.EventHandlingFailed("payment_intent.payment_failed", ex.Message));
             }
         }
 
@@ -356,17 +356,17 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
                 var paymentIntent = DeserializeEventData<StripePaymentIntent>(webhookData);
                 if (paymentIntent == null)
                 {
-                    return Result.Failure("Failed to parse payment intent data");
+                    return Result.Failure(DomainErrors.Webhook.InvalidEventData);
                 }
 
                 var payment = await _unitOfWork.Payments.GetByExternalPaymentIdUnsafeAsync(paymentIntent.Id, cancellationToken);
                 if (payment == null)
                 {
                     _logger.LogWarning("Payment not found for payment intent: {PaymentIntentId}", paymentIntent.Id);
-                    return Result.Failure($"Payment not found for external ID: {paymentIntent.Id}");
+                    return Result.Failure(DomainErrors.Webhook.PaymentNotFound(paymentIntent.Id));
                 }
 
-                payment.MarkAsCanceled();
+                payment.MarkAsCancelled();
                 await _unitOfWork.Payments.UpdateAsync(payment, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -376,7 +376,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error handling payment intent canceled");
-                return Result.Failure($"Error handling payment intent canceled: {ex.Message}");
+                return Result.Failure(DomainErrors.Webhook.EventHandlingFailed("payment_intent.canceled", ex.Message));
             }
         }
 
@@ -390,14 +390,14 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
                 var charge = DeserializeEventData<StripeCharge>(webhookData);
                 if (charge == null)
                 {
-                    return Result.Failure("Failed to parse charge data");
+                    return Result.Failure(DomainErrors.Webhook.InvalidEventData);
                 }
 
                 // Validate that we have a payment intent ID
                 if (string.IsNullOrEmpty(charge.PaymentIntent))
                 {
                     _logger.LogWarning("Charge {ChargeId} has no payment intent associated", charge.Id);
-                    return Result.Failure("No payment intent associated with charge");
+                    return Result.Failure(DomainErrors.Webhook.MissingPaymentIntent);
                 }
 
                 _logger.LogDebug("Processing charge refunded: {ChargeId}, Amount Refunded: {AmountRefunded}/{TotalAmount}",
@@ -408,7 +408,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
                 if (payment == null)
                 {
                     _logger.LogWarning("Payment not found for payment intent: {PaymentIntentId}", charge.PaymentIntent);
-                    return Result.Failure($"Payment not found for external ID: {charge.PaymentIntent}");
+                    return Result.Failure(DomainErrors.Webhook.PaymentNotFound(charge.PaymentIntent));
                 }
 
                 // Handle full vs partial refund
@@ -441,7 +441,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error handling charge refunded");
-                return Result.Failure($"Error handling charge refunded: {ex.Message}");
+                return Result.Failure(DomainErrors.Webhook.EventHandlingFailed("charge.refunded", ex.Message));
             }
         }
 
@@ -455,7 +455,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
                 var charge = DeserializeEventData<StripeCharge>(webhookData);
                 if (charge == null)
                 {
-                    return Result.Failure("Failed to parse charge data");
+                    return Result.Failure(DomainErrors.Webhook.InvalidEventData);
                 }
 
                 _logger.LogDebug("Processing charge succeeded: {ChargeId}, Amount: {Amount} {Currency}",
@@ -471,7 +471,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error handling charge succeeded");
-                return Result.Failure($"Error handling charge succeeded: {ex.Message}");
+                return Result.Failure(DomainErrors.Webhook.EventHandlingFailed("charge.succeeded", ex.Message));
             }
         }
 
@@ -485,7 +485,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
                 var charge = DeserializeEventData<StripeCharge>(webhookData);
                 if (charge == null)
                 {
-                    return Result.Failure("Failed to parse charge data");
+                    return Result.Failure(DomainErrors.Webhook.InvalidEventData);
                 }
 
                 _logger.LogWarning("Charge failed: {ChargeId}, Status: {Status}", charge.Id, charge.Status);
@@ -497,7 +497,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error handling charge failed");
-                return Result.Failure($"Error handling charge failed: {ex.Message}");
+                return Result.Failure(DomainErrors.Webhook.EventHandlingFailed("charge.failed", ex.Message));
             }
         }
 
@@ -511,7 +511,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
                 var subscription = DeserializeEventData<StripeSubscription>(webhookData);
                 if (subscription == null)
                 {
-                    return Result.Failure("Failed to parse subscription data");
+                    return Result.Failure(DomainErrors.Webhook.InvalidEventData);
                 }
 
                 _logger.LogDebug("Processing subscription created: {SubscriptionId}, Customer: {Customer}, Status: {Status}",
@@ -522,7 +522,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
                 if (internalSubscription == null)
                 {
                     _logger.LogWarning("Subscription not found for external ID: {ExternalId}", subscription.Id);
-                    return Result.Failure($"Subscription not found for external ID: {subscription.Id}");
+                    return Result.Failure(DomainErrors.Webhook.SubscriptionNotFound(subscription.Id));
                 }
 
                 // Update subscription based on initial status
@@ -540,7 +540,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error handling subscription created");
-                return Result.Failure($"Error handling subscription created: {ex.Message}");
+                return Result.Failure(DomainErrors.Webhook.EventHandlingFailed("customer.subscription.created", ex.Message));
             }
         }
 
@@ -554,7 +554,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
                 var subscription = DeserializeEventData<StripeSubscription>(webhookData);
                 if (subscription == null)
                 {
-                    return Result.Failure("Failed to parse subscription data");
+                    return Result.Failure(DomainErrors.Webhook.InvalidEventData);
                 }
 
                 _logger.LogDebug("Processing subscription updated: {SubscriptionId}, Status: {Status}, CancelAtPeriodEnd: {CancelAtPeriodEnd}",
@@ -565,7 +565,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
                 if (internalSubscription == null)
                 {
                     _logger.LogWarning("Subscription not found for external ID: {ExternalId}", subscription.Id);
-                    return Result.Failure($"Subscription not found for external ID: {subscription.Id}");
+                    return Result.Failure(DomainErrors.Webhook.SubscriptionNotFound(subscription.Id));
                 }
 
                 // Update subscription status based on Stripe status
@@ -619,7 +619,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error handling subscription updated");
-                return Result.Failure($"Error handling subscription updated: {ex.Message}");
+                return Result.Failure(DomainErrors.Webhook.EventHandlingFailed("customer.subscription.updated", ex.Message));
             }
 }
 
@@ -633,7 +633,7 @@ private async Task<Result> HandleCustomerSubscriptionDeletedAsync(StripeWebhookD
         var subscription = DeserializeEventData<StripeSubscription>(webhookData);
         if (subscription == null)
         {
-            return Result.Failure("Failed to parse subscription data");
+            return Result.Failure(DomainErrors.Webhook.InvalidEventData);
         }
 
         _logger.LogDebug("Processing subscription deleted: {SubscriptionId}, Customer: {Customer}",
@@ -644,7 +644,7 @@ private async Task<Result> HandleCustomerSubscriptionDeletedAsync(StripeWebhookD
         if (internalSubscription == null)
         {
             _logger.LogWarning("Subscription not found for external ID: {ExternalId}", subscription.Id);
-            return Result.Failure($"Subscription not found for external ID: {subscription.Id}");
+            return Result.Failure(DomainErrors.Webhook.SubscriptionNotFound(subscription.Id));
         }
 
         // Cancel the subscription
@@ -660,7 +660,7 @@ private async Task<Result> HandleCustomerSubscriptionDeletedAsync(StripeWebhookD
     catch (Exception ex)
     {
         _logger.LogError(ex, "Error handling subscription deleted");
-        return Result.Failure($"Error handling subscription deleted: {ex.Message}");
+        return Result.Failure(DomainErrors.Webhook.EventHandlingFailed("customer.subscription.deleted", ex.Message));
     }
 }
 
@@ -674,7 +674,7 @@ private async Task<Result> HandleInvoicePaymentSucceededAsync(StripeWebhookData 
         var invoice = DeserializeEventData<StripeInvoice>(webhookData);
         if (invoice == null)
         {
-            return Result.Failure("Failed to parse invoice data");
+            return Result.Failure(DomainErrors.Webhook.InvalidEventData);
         }
 
         _logger.LogDebug("Processing invoice payment succeeded: {InvoiceId}, Amount Paid: {AmountPaid} {Currency}, Subscription: {Subscription}",
@@ -701,7 +701,7 @@ private async Task<Result> HandleInvoicePaymentSucceededAsync(StripeWebhookData 
         if (payment == null)
         {
             _logger.LogWarning("Payment not found for payment intent: {PaymentIntentId}", invoice.PaymentIntent);
-            return Result.Failure($"Payment not found for external ID: {invoice.PaymentIntent}");
+            return Result.Failure(DomainErrors.Webhook.PaymentNotFound(invoice.PaymentIntent));
         }
 
         // Verify payment is not already completed
@@ -722,7 +722,7 @@ private async Task<Result> HandleInvoicePaymentSucceededAsync(StripeWebhookData 
     catch (Exception ex)
     {
         _logger.LogError(ex, "Error handling invoice payment succeeded");
-        return Result.Failure($"Error handling invoice payment succeeded: {ex.Message}");
+        return Result.Failure(DomainErrors.Webhook.EventHandlingFailed("invoice.payment_succeeded", ex.Message));
     }
 }
 
@@ -736,7 +736,7 @@ private async Task<Result> HandleInvoicePaymentFailedAsync(StripeWebhookData web
         var invoice = DeserializeEventData<StripeInvoice>(webhookData);
         if (invoice == null)
         {
-            return Result.Failure("Failed to parse invoice data");
+            return Result.Failure(DomainErrors.Webhook.InvalidEventData);
         }
 
         _logger.LogDebug("Processing invoice payment failed: {InvoiceId}, Amount Due: {AmountDue} {Currency}, Attempt: {AttemptCount}",
@@ -762,7 +762,7 @@ private async Task<Result> HandleInvoicePaymentFailedAsync(StripeWebhookData web
         if (payment == null)
         {
             _logger.LogWarning("Payment not found for payment intent: {PaymentIntentId}", invoice.PaymentIntent);
-            return Result.Failure($"Payment not found for external ID: {invoice.PaymentIntent}");
+            return Result.Failure(DomainErrors.Webhook.PaymentNotFound(invoice.PaymentIntent));
         }
 
         // Build failure reason with attempt count
@@ -781,7 +781,7 @@ private async Task<Result> HandleInvoicePaymentFailedAsync(StripeWebhookData web
     catch (Exception ex)
     {
         _logger.LogError(ex, "Error handling invoice payment failed");
-        return Result.Failure($"Error handling invoice payment failed: {ex.Message}");
+        return Result.Failure(DomainErrors.Webhook.EventHandlingFailed("invoice.payment_failed", ex.Message));
     }
 }
 
@@ -815,7 +815,7 @@ private async Task<Result> HandleSubscriptionRenewalAsync(StripeInvoice invoice,
     catch (Exception ex)
     {
         _logger.LogError(ex, "Error handling subscription renewal");
-        return Result.Failure($"Error handling subscription renewal: {ex.Message}");
+        return Result.Failure(DomainErrors.Webhook.EventHandlingFailed("subscription.renewal", ex.Message));
     }
 }
 
@@ -847,7 +847,7 @@ private async Task<Result> HandleSubscriptionPaymentFailureAsync(StripeInvoice i
     catch (Exception ex)
     {
         _logger.LogError(ex, "Error handling subscription payment failure");
-        return Result.Failure($"Error handling subscription payment failure: {ex.Message}");
+        return Result.Failure(DomainErrors.Webhook.EventHandlingFailed("subscription.payment_failure", ex.Message));
     }
 }
 

@@ -21,8 +21,9 @@ public class PlatformPlan
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
 
-    // Navigation
-    public ICollection<ProviderSubscription> ProviderSubscriptions { get; private set; } = [];
+    // Navigation Properties
+    private readonly List<ProviderSubscription> _providerSubscriptions = [];
+    public IReadOnlyCollection<ProviderSubscription> ProviderSubscriptions => _providerSubscriptions.AsReadOnly();
 
     private PlatformPlan() { } // EF Core
 

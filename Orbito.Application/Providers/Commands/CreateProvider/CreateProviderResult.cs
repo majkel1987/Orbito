@@ -1,12 +1,12 @@
-using Orbito.Domain.ValueObjects;
+namespace Orbito.Application.Providers.Commands.CreateProvider;
 
-namespace Orbito.Application.Providers.Commands.CreateProvider
-{
-    public record CreateProviderResult(
-        Guid ProviderId,
-        TenantId TenantId,
-        string BusinessName,
-        string SubdomainSlug,
-        bool IsActive
-    );
-}
+/// <summary>
+/// Result DTO for successful provider creation.
+/// </summary>
+public record CreateProviderResult(
+    Guid ProviderId,
+    Guid TenantId,
+    string BusinessName,
+    string SubdomainSlug,
+    bool IsActive
+);

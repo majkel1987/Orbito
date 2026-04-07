@@ -13,7 +13,7 @@ public class IdempotencySettings
     /// <summary>
     /// Redis connection string for idempotency cache
     /// </summary>
-    public string RedisConnectionString { get; set; } = "localhost:6379";
+    public string RedisConnectionString { get; set; } = string.Empty;
 
     /// <summary>
     /// Whether to enable idempotency middleware
@@ -28,7 +28,7 @@ public class IdempotencySettings
     /// <summary>
     /// Minimum length of idempotency key in characters
     /// </summary>
-    public int MinKeyLength { get; set; } = 1;
+    public int MinKeyLength { get; set; } = 16;
 
     /// <summary>
     /// Whether to require idempotency key for payment creation

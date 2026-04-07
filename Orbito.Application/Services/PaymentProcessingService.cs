@@ -18,6 +18,7 @@ namespace Orbito.Application.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<PaymentProcessingService> _logger;
         private readonly ITenantContext _tenantContext;
+        private readonly PaymentProcessingConfiguration _configuration;
 
         // Security limits
         private const decimal MinPaymentAmount = 0.50m; // Stripe minimum
@@ -37,12 +38,14 @@ namespace Orbito.Application.Services
             IPaymentGateway paymentGateway,
             IUnitOfWork unitOfWork,
             ILogger<PaymentProcessingService> logger,
-            ITenantContext tenantContext)
+            ITenantContext tenantContext,
+            PaymentProcessingConfiguration configuration)
         {
             _paymentGateway = paymentGateway;
             _unitOfWork = unitOfWork;
             _logger = logger;
             _tenantContext = tenantContext;
+            _configuration = configuration;
         }
 
         /// <summary>
@@ -101,7 +104,7 @@ namespace Orbito.Application.Services
             // only one Pending/Processing payment per subscription can exist
             // This check provides early detection before attempting DB insert
             var recentPayment = await _unitOfWork.Payments
-                .GetRecentBySubscriptionIdAsync(subscriptionId, PaymentProcessingConfiguration.DuplicatePaymentCheckWindow, cancellationToken);
+                .GetRecentBySubscriptionIdAsync(subscriptionId, _configuration.DuplicatePaymentCheckWindow, cancellationToken);
 
             if (recentPayment != null && (recentPayment.Status == PaymentStatus.Processing || recentPayment.Status == PaymentStatus.Pending))
             {
@@ -149,7 +152,7 @@ namespace Orbito.Application.Services
                 subscription.Id,
                 subscription.ClientId,
                 amount,
-                paymentMethod: PaymentProcessingConfiguration.DefaultPaymentMethod);
+                paymentMethod: _configuration.DefaultPaymentProvider);
 
             try
             {
@@ -203,9 +206,9 @@ namespace Orbito.Application.Services
             // Update payment status in system
             if (result.IsSuccess)
             {
-                payment.ExternalPaymentId = result.ExternalPaymentId;
-                payment.ExternalTransactionId = result.TransactionId;
-                payment.PaymentMethodId = paymentMethodId.ToString();
+                payment.SetExternalPaymentId(result.ExternalPaymentId);
+                payment.SetExternalTransactionId(result.TransactionId);
+                payment.SetPaymentMethodId(paymentMethodId.ToString());
 
                 if (result.Status == PaymentStatus.Completed)
                 {
@@ -611,7 +614,7 @@ namespace Orbito.Application.Services
 
                 // Filter payments that should be processed
                 var paymentsToProcess = pendingPayments
-                    .Where(p => p.CreatedAt.Add(PaymentProcessingConfiguration.PendingPaymentMinAge) <= billingDate)
+                    .Where(p => p.CreatedAt.Add(_configuration.PendingPaymentMinAge) <= billingDate)
                     .Where(p => !string.IsNullOrEmpty(p.ExternalPaymentId))
                     .ToList();
 
@@ -858,7 +861,7 @@ namespace Orbito.Application.Services
                     try
                     {
                         // Check if payment is too old (timeout)
-                        if (payment.CreatedAt.Add(PaymentProcessingConfiguration.PaymentTimeout) < DateTime.UtcNow)
+                        if (payment.CreatedAt.Add(_configuration.PaymentTimeout) < DateTime.UtcNow)
                         {
                             payment.MarkAsFailed("Payment timeout");
                             await _unitOfWork.Payments.UpdateAsync(payment, cancellationToken);

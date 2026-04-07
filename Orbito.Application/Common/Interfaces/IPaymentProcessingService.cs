@@ -1,13 +1,14 @@
-using Orbito.Domain.ValueObjects;
 using Orbito.Application.Common.Models.PaymentGateway;
+using Orbito.Domain.ValueObjects;
 
-namespace Orbito.Application.Common.Interfaces
+namespace Orbito.Application.Common.Interfaces;
+
+/// <summary>
+/// Service interface for processing payments.
+/// Orchestrates payment flows including subscriptions, refunds, and customer management.
+/// </summary>
+public interface IPaymentProcessingService
 {
-    /// <summary>
-    /// Service interface for processing payments
-    /// </summary>
-    public interface IPaymentProcessingService
-    {
         /// <summary>
         /// Processes subscription payment
         /// </summary>
@@ -142,6 +143,5 @@ namespace Orbito.Application.Common.Interfaces
         /// <param name="clientId">Client ID for security verification</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>True if valid and usable, false otherwise</returns>
-        Task<bool> ValidatePaymentMethodAsync(Guid paymentMethodId, Guid clientId, CancellationToken cancellationToken = default);
-    }
+    Task<bool> ValidatePaymentMethodAsync(Guid paymentMethodId, Guid clientId, CancellationToken cancellationToken = default);
 }

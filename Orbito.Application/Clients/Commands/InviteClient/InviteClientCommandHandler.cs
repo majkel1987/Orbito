@@ -63,7 +63,14 @@ public class InviteClientCommandHandler : IRequestHandler<InviteClientCommand, R
             invitationToken.ExpiresAt,
             request.CompanyName);
 
-        client.Provider = provider;
+        var setProviderResult = client.SetProvider(provider);
+        if (setProviderResult.IsFailure)
+            return Result.Failure<Guid>(setProviderResult.Error);
+
+        // IMPORTANT: Save client FIRST, then send email
+        // This ensures data consistency - if email fails, client exists and we can retry
+        // If we sent email first and DB failed, client would have link but no record
+        await _clientRepository.AddAsync(client, cancellationToken);
 
         var baseUrl = _configuration["App:FrontendBaseUrl"] ?? "http://localhost:3000";
         var invitationLink = $"{baseUrl}/portal/confirm?token={invitationToken.Token}";
@@ -82,14 +89,14 @@ public class InviteClientCommandHandler : IRequestHandler<InviteClientCommand, R
 
         if (emailResult.IsFailure)
         {
+            // Client is saved but email failed - log warning but don't fail the operation
+            // Admin can use ResendClientInvitation to retry
             _logger.LogWarning(
-                "Failed to send invitation email to {Email}: {Error}",
+                "Client {ClientId} created but failed to send invitation email to {Email}: {Error}. Use ResendClientInvitation to retry.",
+                client.Id,
                 request.Email,
                 emailResult.Error.Message);
-            return Result.Failure<Guid>(emailResult.Error);
         }
-
-        await _clientRepository.AddAsync(client, cancellationToken);
 
         return Result.Success(client.Id);
     }

@@ -7,6 +7,7 @@ using Orbito.Application.Common.Interfaces;
 using Orbito.Application.Common.Services;
 using Orbito.Domain.Enums;
 using Orbito.Domain.Identity;
+using Orbito.Domain.Interfaces;
 using Xunit;
 
 namespace Orbito.Tests.Application.Common.Services
@@ -18,26 +19,32 @@ namespace Orbito.Tests.Application.Common.Services
         private readonly Mock<ITenantValidationBypass> _tenantValidationBypassMock;
         private readonly Mock<IConfiguration> _configurationMock;
         private readonly Mock<ILogger<AdminSetupService>> _loggerMock;
+        private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+        private readonly Mock<ITeamMemberRepository> _teamMemberRepositoryMock;
         private readonly AdminSetupService _adminSetupService;
 
         public AdminSetupServiceTests()
         {
             _userManagerMock = new Mock<UserManager<ApplicationUser>>(
                 Mock.Of<IUserStore<ApplicationUser>>(), null!, null!, null!, null!, null!, null!, null!, null!);
-            
+
             _roleManagerMock = new Mock<RoleManager<ApplicationRole>>(
                 Mock.Of<IRoleStore<ApplicationRole>>(), null!, null!, null!, null!);
-            
+
             _tenantValidationBypassMock = new Mock<ITenantValidationBypass>();
             _configurationMock = new Mock<IConfiguration>();
             _loggerMock = new Mock<ILogger<AdminSetupService>>();
+            _unitOfWorkMock = new Mock<IUnitOfWork>();
+            _teamMemberRepositoryMock = new Mock<ITeamMemberRepository>();
 
             _adminSetupService = new AdminSetupService(
                 _userManagerMock.Object,
                 _roleManagerMock.Object,
                 _tenantValidationBypassMock.Object,
                 _configurationMock.Object,
-                _loggerMock.Object);
+                _loggerMock.Object,
+                _unitOfWorkMock.Object,
+                _teamMemberRepositoryMock.Object);
         }
 
         #region IsAdminSetupRequiredAsync Tests

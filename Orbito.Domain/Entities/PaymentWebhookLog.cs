@@ -12,62 +12,62 @@ namespace Orbito.Domain.Entities
         /// <summary>
         /// Unique identifier for the webhook log
         /// </summary>
-        public Guid Id { get; set; }
+        public Guid Id { get; private set; }
 
         /// <summary>
         /// Tenant ID for multi-tenancy
         /// </summary>
-        public TenantId TenantId { get; set; }
+        public TenantId TenantId { get; private set; }
 
         /// <summary>
         /// Unique event ID from the webhook provider
         /// </summary>
-        public string EventId { get; set; } = string.Empty;
+        public string EventId { get; private set; } = string.Empty;
 
         /// <summary>
         /// Payment gateway provider (e.g., Stripe, PayPal)
         /// </summary>
-        public string Provider { get; set; } = string.Empty;
+        public string Provider { get; private set; } = string.Empty;
 
         /// <summary>
         /// Type of webhook event
         /// </summary>
-        public string EventType { get; set; } = string.Empty;
+        public string EventType { get; private set; } = string.Empty;
 
         /// <summary>
         /// Raw webhook payload
         /// </summary>
-        public string Payload { get; set; } = string.Empty;
+        public string Payload { get; private set; } = string.Empty;
 
         /// <summary>
         /// When the webhook was processed
         /// </summary>
-        public DateTime? ProcessedAt { get; set; }
+        public DateTime? ProcessedAt { get; private set; }
 
         /// <summary>
         /// Processing status (Pending, Processed, Failed)
         /// </summary>
-        public WebhookStatus Status { get; set; }
+        public WebhookStatus Status { get; private set; }
 
         /// <summary>
         /// Error message if processing failed
         /// </summary>
-        public string? ErrorMessage { get; set; }
+        public string? ErrorMessage { get; private set; }
 
         /// <summary>
         /// Number of processing attempts
         /// </summary>
-        public int Attempts { get; set; } = 1;
+        public int Attempts { get; private set; } = 1;
 
         /// <summary>
         /// When the webhook was first received
         /// </summary>
-        public DateTime ReceivedAt { get; set; } = DateTime.UtcNow;
+        public DateTime ReceivedAt { get; private set; } = DateTime.UtcNow;
 
         /// <summary>
         /// Additional metadata for the webhook
         /// </summary>
-        public string? Metadata { get; set; }
+        public string? Metadata { get; private set; }
 
         /// <summary>
         /// Creates a new webhook log entry
@@ -90,6 +90,30 @@ namespace Orbito.Domain.Entities
                 Status = WebhookStatus.Pending,
                 ReceivedAt = DateTime.UtcNow,
                 Attempts = 0
+            };
+        }
+
+        /// <summary>
+        /// Creates a new webhook log entry without tenant context (for system-wide webhooks)
+        /// </summary>
+        public static PaymentWebhookLog CreateForWebhook(
+            string eventId,
+            string provider,
+            string eventType,
+            string payload,
+            WebhookStatus status = WebhookStatus.Pending)
+        {
+            return new PaymentWebhookLog
+            {
+                Id = Guid.NewGuid(),
+                TenantId = TenantId.Empty,
+                EventId = eventId,
+                Provider = provider,
+                EventType = eventType,
+                Payload = payload,
+                Status = status,
+                ReceivedAt = DateTime.UtcNow,
+                Attempts = 1
             };
         }
 

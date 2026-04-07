@@ -2,23 +2,30 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.Common.Models;
-using Orbito.Application.Features.Payments.Queries.GetRevenueReport;
+using Orbito.Domain.Errors;
 
 namespace Orbito.Application.Features.Payments.Queries.GetRevenueReport;
 
 /// <summary>
-/// Handler for get revenue report query
+/// Handler for get revenue report query.
+/// SECURITY: Validates tenant context and ensures users can only query their own provider's data.
 /// </summary>
-public class GetRevenueReportQueryHandler : IRequestHandler<GetRevenueReportQuery, RevenueMetrics>
+public class GetRevenueReportQueryHandler : IRequestHandler<GetRevenueReportQuery, Orbito.Domain.Common.Result<RevenueMetrics>>
 {
     private readonly IPaymentMetricsService _metricsService;
+    private readonly ITenantContext _tenantContext;
+    private readonly IProviderRepository _providerRepository;
     private readonly ILogger<GetRevenueReportQueryHandler> _logger;
 
     public GetRevenueReportQueryHandler(
         IPaymentMetricsService metricsService,
+        ITenantContext tenantContext,
+        IProviderRepository providerRepository,
         ILogger<GetRevenueReportQueryHandler> logger)
     {
         _metricsService = metricsService;
+        _tenantContext = tenantContext;
+        _providerRepository = providerRepository;
         _logger = logger;
     }
 
@@ -27,47 +34,47 @@ public class GetRevenueReportQueryHandler : IRequestHandler<GetRevenueReportQuer
     /// </summary>
     /// <param name="request">The query request</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Revenue metrics for the specified provider and period</returns>
-    public async Task<RevenueMetrics> Handle(GetRevenueReportQuery request, CancellationToken cancellationToken)
+    /// <returns>Revenue metrics for the specified provider and period wrapped in Result</returns>
+    public async Task<Orbito.Domain.Common.Result<RevenueMetrics>> Handle(GetRevenueReportQuery request, CancellationToken cancellationToken)
     {
-        try
+        // SECURITY: Verify tenant context exists
+        if (!_tenantContext.HasTenant)
         {
-            _logger.LogInformation("Getting revenue report for provider {ProviderId} in period {StartDate} to {EndDate}",
-                request.ProviderId, request.StartDate, request.EndDate);
-
-            var dateRange = request.GetDateRange();
-            
-            if (!dateRange.IsValid())
-            {
-                _logger.LogWarning("Invalid date range provided: {StartDate} to {EndDate}", 
-                    request.StartDate, request.EndDate);
-                return new RevenueMetrics 
-                { 
-                    Period = dateRange, 
-                    ProviderId = request.ProviderId 
-                };
-            }
-
-            var revenueMetrics = await _metricsService.GetRevenueMetricsAsync(
-                dateRange, 
-                request.ProviderId, 
-                cancellationToken);
-
-            _logger.LogInformation("Retrieved revenue report for provider {ProviderId}: {TotalRevenue} {Currency} from {PaymentCount} payments",
-                request.ProviderId, revenueMetrics.TotalRevenue, revenueMetrics.Currency, revenueMetrics.SuccessfulPaymentsCount);
-
-            return revenueMetrics;
+            _logger.LogWarning("Attempted to get revenue report without tenant context");
+            return Orbito.Domain.Common.Result.Failure<RevenueMetrics>(DomainErrors.Tenant.NoTenantContext);
         }
-        catch (Exception ex)
+
+        var currentTenantId = _tenantContext.CurrentTenantId!;
+
+        // SECURITY: Verify the requested ProviderId belongs to the current tenant
+        var provider = await _providerRepository.GetByIdAsync(request.ProviderId, cancellationToken);
+        if (provider == null)
         {
-            _logger.LogError(ex, "Error getting revenue report for provider {ProviderId} in period {StartDate} to {EndDate}",
-                request.ProviderId, request.StartDate, request.EndDate);
-            
-            return new RevenueMetrics 
-            { 
-                Period = request.GetDateRange(), 
-                ProviderId = request.ProviderId 
-            };
+            _logger.LogWarning("Provider {ProviderId} not found", request.ProviderId);
+            return Orbito.Domain.Common.Result.Failure<RevenueMetrics>(DomainErrors.Provider.NotFound);
         }
+
+        if (provider.TenantId != currentTenantId)
+        {
+            _logger.LogWarning("Cross-tenant access attempt: Tenant {CurrentTenant} tried to access revenue for provider {ProviderId}",
+                currentTenantId, request.ProviderId);
+            return Orbito.Domain.Common.Result.Failure<RevenueMetrics>(DomainErrors.Tenant.CrossTenantAccess);
+        }
+
+        _logger.LogDebug("Getting revenue report for provider {ProviderId} in period {StartDate} to {EndDate}",
+            request.ProviderId, request.StartDate, request.EndDate);
+
+        // Note: DateRange validation is already done by FluentValidation pipeline
+        var dateRange = request.GetDateRange();
+
+        var revenueMetrics = await _metricsService.GetRevenueMetricsAsync(
+            dateRange,
+            request.ProviderId,
+            cancellationToken);
+
+        _logger.LogDebug("Retrieved revenue report for provider {ProviderId}: {TotalRevenue} {Currency} from {PaymentCount} payments",
+            request.ProviderId, revenueMetrics.TotalRevenue, revenueMetrics.Currency, revenueMetrics.SuccessfulPaymentsCount);
+
+        return Orbito.Domain.Common.Result.Success(revenueMetrics);
     }
 }

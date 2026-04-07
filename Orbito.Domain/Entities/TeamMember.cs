@@ -1,5 +1,7 @@
 using Orbito.Domain.Common;
 using Orbito.Domain.Enums;
+using Orbito.Domain.Errors;
+using Orbito.Domain.Interfaces;
 using Orbito.Domain.ValueObjects;
 
 namespace Orbito.Domain.Entities;
@@ -7,7 +9,7 @@ namespace Orbito.Domain.Entities;
 /// <summary>
 /// Represents a team member in a provider's organization.
 /// </summary>
-public class TeamMember
+public class TeamMember : IMustHaveTenant
 {
     private TeamMember() { } // EF Core constructor
 
@@ -19,6 +21,7 @@ public class TeamMember
         string? firstName = null,
         string? lastName = null)
     {
+        Id = Guid.NewGuid();
         TenantId = tenantId ?? throw new ArgumentNullException(nameof(tenantId));
         UserId = userId;
         Role = role;
@@ -30,24 +33,26 @@ public class TeamMember
         LastActiveAt = DateTime.UtcNow;
         InvitationToken = GenerateInvitationToken();
         InvitationExpiresAt = DateTime.UtcNow.AddDays(7); // Invitations expire in 7 days
+        CreatedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
     }
 
-        /// <summary>
-        /// Generates a unique invitation token.
-        /// </summary>
-        private static string GenerateInvitationToken()
-        {
-            return Convert.ToBase64String(Guid.NewGuid().ToByteArray())
-                .Replace("+", "-")
-                .Replace("/", "_")
-                .Replace("=", "")
-                .Trim();
-        }
+    /// <summary>
+    /// Generates a unique invitation token.
+    /// </summary>
+    private static string GenerateInvitationToken()
+    {
+        return Convert.ToBase64String(Guid.NewGuid().ToByteArray())
+            .Replace("+", "-")
+            .Replace("/", "_")
+            .Replace("=", "")
+            .Trim();
+    }
 
     /// <summary>
     /// Unique identifier for the team member.
     /// </summary>
-    public Guid Id { get; set; }
+    public Guid Id { get; private set; }
 
     /// <summary>
     /// The tenant (provider) this team member belongs to.
@@ -153,17 +158,18 @@ public class TeamMember
     /// Marks the team member as accepted the invitation.
     /// </summary>
     /// <param name="userId">The user ID from the identity system.</param>
-    public void AcceptInvitation(Guid userId)
+    /// <returns>Result indicating success or failure</returns>
+    public Result AcceptInvitation(Guid userId)
     {
         if (AcceptedAt.HasValue)
-            return;
+            return Result.Failure(DomainErrors.TeamMember.AlreadyAccepted);
 
         if (!string.IsNullOrEmpty(InvitationToken))
         {
             // Validate invitation token expiration
             if (InvitationExpiresAt.HasValue && InvitationExpiresAt.Value < DateTime.UtcNow)
             {
-                throw new InvalidOperationException("Invitation token has expired");
+                return Result.Failure(DomainErrors.TeamMember.InvitationExpired);
             }
         }
 
@@ -172,6 +178,7 @@ public class TeamMember
         LastActiveAt = DateTime.UtcNow;
         InvitationToken = null; // Clear token after acceptance
         InvitationExpiresAt = null;
+        return Result.Success();
     }
 
     /// <summary>
@@ -248,11 +255,18 @@ public class TeamMember
     /// <summary>
     /// When the team member was created.
     /// </summary>
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTime CreatedAt { get; private set; }
 
     /// <summary>
     /// When the team member was last updated.
     /// </summary>
-    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTime UpdatedAt { get; private set; }
 
+    /// <summary>
+    /// Sets the updated timestamp (for repository use).
+    /// </summary>
+    public void SetUpdatedAt(DateTime updatedAt)
+    {
+        UpdatedAt = updatedAt;
+    }
 }

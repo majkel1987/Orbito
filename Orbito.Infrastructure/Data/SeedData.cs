@@ -402,7 +402,7 @@ public static class SeedData
             await userManager.AddToRoleAsync(user, "Client");
 
             var client = Client.CreateWithUser(tenantId, user.Id, company);
-            client.Phone = GeneratePhoneNumber();
+            client.SetPhone(GeneratePhoneNumber());
             clients.Add(client);
         }
 
@@ -428,7 +428,7 @@ public static class SeedData
                 lastName,
                 company
             );
-            client.Phone = GeneratePhoneNumber();
+            client.SetPhone(GeneratePhoneNumber());
             clients.Add(client);
         }
 
@@ -442,7 +442,7 @@ public static class SeedData
                 "User",
                 $"Inactive Company {i + 1}"
             );
-            client.IsActive = false;
+            client.Deactivate();
             clients.Add(client);
         }
 
@@ -504,25 +504,25 @@ public static class SeedData
                 SetPrivateProperty(subscription, "TrialEndDate", trialEndDate);
             }
 
-            // Randomize some statuses
+            // Randomize some statuses using reflection (same as backdated values)
             var statusRoll = _random.Next(100);
             if (statusRoll < 70)
             {
-                subscription.Status = SubscriptionStatus.Active;
+                SetPrivateProperty(subscription, "Status", SubscriptionStatus.Active);
             }
             else if (statusRoll < 85)
             {
-                subscription.Status = SubscriptionStatus.Cancelled;
-                subscription.CancelledAt = DateTime.UtcNow.AddDays(-_random.Next(1, 60));
+                SetPrivateProperty(subscription, "Status", SubscriptionStatus.Cancelled);
+                SetPrivateProperty(subscription, "CancelledAt", DateTime.UtcNow.AddDays(-_random.Next(1, 60)));
             }
             else if (statusRoll < 95)
             {
-                subscription.Status = SubscriptionStatus.Suspended;
+                SetPrivateProperty(subscription, "Status", SubscriptionStatus.Suspended);
             }
             else
             {
-                subscription.Status = SubscriptionStatus.Cancelled;
-                subscription.CancelledAt = DateTime.UtcNow.AddDays(-_random.Next(1, 30));
+                SetPrivateProperty(subscription, "Status", SubscriptionStatus.Cancelled);
+                SetPrivateProperty(subscription, "CancelledAt", DateTime.UtcNow.AddDays(-_random.Next(1, 30)));
             }
 
             subscriptions.Add(subscription);
@@ -576,7 +576,7 @@ public static class SeedData
                 var statusRoll = _random.Next(100);
                 if (statusRoll < 85)
                 {
-                    payment.ExternalTransactionId = $"tx_{Guid.NewGuid():N}";
+                    payment.SetExternalTransactionId($"tx_{Guid.NewGuid():N}");
                     payment.MarkAsCompleted();
                 }
                 else if (statusRoll < 95)
@@ -607,8 +607,10 @@ public static class SeedData
         return $"+48 {_random.Next(500, 999)} {_random.Next(100, 999)} {_random.Next(100, 999)}";
     }
 
+#if DEBUG
     /// <summary>
-    /// Helper method to set private properties using reflection (for seeding only)
+    /// Helper method to set private properties using reflection (SEEDING ONLY - DEBUG BUILDS)
+    /// WARNING: This bypasses encapsulation and should NEVER be used in production code
     /// </summary>
     private static void SetPrivateProperty<T>(T obj, string propertyName, object value)
     {
@@ -618,4 +620,10 @@ public static class SeedData
             property.SetValue(obj, value);
         }
     }
+#else
+    private static void SetPrivateProperty<T>(T obj, string propertyName, object value)
+    {
+        throw new InvalidOperationException("Reflection-based property setting is only allowed in DEBUG builds for seeding purposes.");
+    }
+#endif
 }

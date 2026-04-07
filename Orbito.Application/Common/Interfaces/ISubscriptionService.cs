@@ -13,8 +13,6 @@ namespace Orbito.Application.Common.Interfaces
         Task<bool> CanClientSubscribeToPlanAsync(Guid clientId, Guid planId, CancellationToken cancellationToken = default);
         Task<Subscription> CreateSubscriptionAsync(Guid clientId, Guid planId, Money price, BillingPeriod billingPeriod, int trialDays = 0, CancellationToken cancellationToken = default);
         Task<bool> ProcessPaymentAsync(Guid subscriptionId, Money amount, string? externalPaymentId = null, CancellationToken cancellationToken = default);
-        Task<IEnumerable<Subscription>> GetExpiringSubscriptionsAsync(int daysBeforeExpiration = 7, CancellationToken cancellationToken = default);
-        Task ProcessExpiredSubscriptionsAsync(CancellationToken cancellationToken = default);
         Task ProcessRecurringPaymentsAsync(DateTime billingDate, CancellationToken cancellationToken = default);
     }
 }

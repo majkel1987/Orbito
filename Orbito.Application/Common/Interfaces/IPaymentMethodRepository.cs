@@ -2,13 +2,14 @@ using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
 using Orbito.Domain.ValueObjects;
 
-namespace Orbito.Application.Common.Interfaces
+namespace Orbito.Application.Common.Interfaces;
+
+/// <summary>
+/// Repository interface for PaymentMethod entity operations.
+/// Provides CRUD operations with client-level security.
+/// </summary>
+public interface IPaymentMethodRepository
 {
-    /// <summary>
-    /// Repository interface for payment method operations
-    /// </summary>
-    public interface IPaymentMethodRepository
-    {
         /// <summary>
         /// Gets payment method by ID
         /// </summary>
@@ -151,6 +152,5 @@ namespace Orbito.Application.Common.Interfaces
         /// <param name="clientId">Client ID</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Count of active payment methods</returns>
-        Task<int> GetActiveCountByClientIdAsync(Guid clientId, CancellationToken cancellationToken = default);
-    }
+    Task<int> GetActiveCountByClientIdAsync(Guid clientId, CancellationToken cancellationToken = default);
 }

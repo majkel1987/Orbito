@@ -6,9 +6,12 @@ using Orbito.Domain.Common;
 using Orbito.Domain.Errors;
 using Orbito.Domain.ValueObjects;
 
-namespace Orbito.Application.Subscriptions.Commands.DowngradeSubscription
-{
-    public class DowngradeSubscriptionCommandHandler : IRequestHandler<DowngradeSubscriptionCommand, Result<SubscriptionDto>>
+namespace Orbito.Application.Subscriptions.Commands.DowngradeSubscription;
+
+/// <summary>
+/// Handler for downgrading a subscription to a lower tier plan.
+/// </summary>
+public class DowngradeSubscriptionCommandHandler : IRequestHandler<DowngradeSubscriptionCommand, Result<SubscriptionDto>>
     {
         private readonly ISubscriptionService _subscriptionService;
         private readonly ISubscriptionRepository _subscriptionRepository;
@@ -58,32 +61,9 @@ namespace Orbito.Application.Subscriptions.Commands.DowngradeSubscription
             var updatedSubscription = await _subscriptionService.ProcessSubscriptionChangeAsync(
                 subscription, request.NewPlanId, newPrice, cancellationToken);
 
-            _logger.LogInformation("Successfully downgraded subscription {SubscriptionId} to plan {NewPlanId}",
-                request.SubscriptionId, request.NewPlanId);
+        _logger.LogInformation("Successfully downgraded subscription {SubscriptionId} to plan {NewPlanId}",
+            request.SubscriptionId, request.NewPlanId);
 
-            var dto = new SubscriptionDto
-            {
-                Id = updatedSubscription.Id,
-                TenantId = updatedSubscription.TenantId.Value,
-                ClientId = updatedSubscription.ClientId,
-                PlanId = updatedSubscription.PlanId,
-                Status = updatedSubscription.Status.ToString(),
-                Amount = updatedSubscription.CurrentPrice.Amount,
-                Currency = updatedSubscription.CurrentPrice.Currency,
-                BillingPeriodValue = updatedSubscription.BillingPeriod.Value,
-                BillingPeriodType = updatedSubscription.BillingPeriod.Type.ToString(),
-                StartDate = updatedSubscription.StartDate,
-                EndDate = updatedSubscription.EndDate,
-                NextBillingDate = updatedSubscription.NextBillingDate,
-                IsInTrial = updatedSubscription.IsInTrial,
-                TrialEndDate = updatedSubscription.TrialEndDate,
-                ExternalSubscriptionId = updatedSubscription.ExternalSubscriptionId,
-                CreatedAt = updatedSubscription.CreatedAt,
-                CancelledAt = updatedSubscription.CancelledAt,
-                UpdatedAt = updatedSubscription.UpdatedAt
-            };
-
-            return Result.Success(dto);
-        }
+        return Result.Success(SubscriptionMapper.ToDto(updatedSubscription));
     }
 }

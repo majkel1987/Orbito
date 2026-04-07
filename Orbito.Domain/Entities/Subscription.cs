@@ -1,4 +1,6 @@
-﻿using Orbito.Domain.Enums;
+﻿using Orbito.Domain.Common;
+using Orbito.Domain.Enums;
+using Orbito.Domain.Errors;
 using Orbito.Domain.Interfaces;
 using Orbito.Domain.ValueObjects;
 
@@ -6,37 +8,38 @@ namespace Orbito.Domain.Entities
 {
     public class Subscription : IMustHaveTenant
     {
-        public Guid Id { get; set; }
-        public TenantId TenantId { get; set; }  // Which provider this belongs to
+        public Guid Id { get; private set; }
+        public TenantId TenantId { get; private set; }  // Which provider this belongs to
 
         // Subscription Details
-        public Guid ClientId { get; set; }
-        public Guid PlanId { get; set; }
-        public SubscriptionStatus Status { get; set; }
+        public Guid ClientId { get; private set; }
+        public Guid PlanId { get; private set; }
+        public SubscriptionStatus Status { get; private set; }
 
         // Billing Information
-        public Money CurrentPrice { get; set; }        // Price at subscription time
-        public BillingPeriod BillingPeriod { get; set; }
-        public DateTime StartDate { get; set; }
-        public DateTime? EndDate { get; set; }
-        public DateTime NextBillingDate { get; set; }
+        public Money CurrentPrice { get; private set; }        // Price at subscription time
+        public BillingPeriod BillingPeriod { get; private set; }
+        public DateTime StartDate { get; private set; }
+        public DateTime? EndDate { get; private set; }
+        public DateTime NextBillingDate { get; private set; }
 
         // External Integration
-        public string? ExternalSubscriptionId { get; set; }  // External provider subscription ID (e.g., Stripe)
+        public string? ExternalSubscriptionId { get; private set; }  // External provider subscription ID (e.g., Stripe)
 
         // Trial Information
-        public bool IsInTrial { get; set; }
-        public DateTime? TrialEndDate { get; set; }
+        public bool IsInTrial { get; private set; }
+        public DateTime? TrialEndDate { get; private set; }
 
         // Timestamps
-        public DateTime CreatedAt { get; set; }
-        public DateTime? CancelledAt { get; set; }
-        public DateTime? UpdatedAt { get; set; }
+        public DateTime CreatedAt { get; private set; }
+        public DateTime? CancelledAt { get; private set; }
+        public DateTime? UpdatedAt { get; private set; }
 
         // Navigation Properties
-        public Client Client { get; set; }
-        public SubscriptionPlan Plan { get; set; }
-        public ICollection<Payment> Payments { get; set; } = [];
+        public Client Client { get; private set; } = null!;
+        public SubscriptionPlan Plan { get; private set; } = null!;
+        private readonly List<Payment> _payments = [];
+        public IReadOnlyCollection<Payment> Payments => _payments.AsReadOnly();
 
         private Subscription() { } // EF Core
 
@@ -122,17 +125,18 @@ namespace Orbito.Domain.Entities
             UpdatedAt = DateTime.UtcNow;
         }
 
-        public void ChangePlan(Guid newPlanId, Money newPrice)
+        public Result ChangePlan(Guid newPlanId, Money newPrice)
         {
             if (newPlanId == Guid.Empty)
-                throw new ArgumentException("Plan ID cannot be empty", nameof(newPlanId));
+                return Result.Failure(DomainErrors.Subscription.PlanNotFound);
 
             if (newPrice == null || newPrice.Amount <= 0)
-                throw new ArgumentException("Price must be greater than zero", nameof(newPrice));
+                return Result.Failure(DomainErrors.SubscriptionPlan.InvalidPrice);
 
             PlanId = newPlanId;
             CurrentPrice = newPrice;
             UpdatedAt = DateTime.UtcNow;
+            return Result.Success();
         }
 
         public void UpdateNextBillingDate()
@@ -182,16 +186,17 @@ namespace Orbito.Domain.Entities
             return Status == SubscriptionStatus.Active || Status == SubscriptionStatus.PastDue;
         }
 
-        public void ProcessPayment(Guid paymentId)
+        public Result ProcessPayment(Guid paymentId)
         {
             if (!CanBePaid())
-                throw new InvalidOperationException("Subscription cannot be paid in current status");
+                return Result.Failure(DomainErrors.Subscription.NotActive);
 
             if (Status == SubscriptionStatus.PastDue)
                 Status = SubscriptionStatus.Active;
 
             UpdateNextBillingDate();
             UpdatedAt = DateTime.UtcNow;
+            return Result.Success();
         }
 
         public bool IsExpiring(DateTime checkDate, int daysBeforeExpiration = 7)

@@ -10,6 +10,12 @@ using Orbito.Domain.ValueObjects;
 
 namespace Orbito.Application.Clients.Commands.ConfirmClientEmail;
 
+/// <summary>
+/// Handles client email confirmation via invitation token.
+/// This is a PUBLIC endpoint (no auth required) - client confirms by token from email.
+/// Security: Token-based validation only; tenant context is NOT required as this is a public operation.
+/// The token itself provides the security - it's cryptographically random and expires.
+/// </summary>
 public class ConfirmClientEmailCommandHandler : IRequestHandler<ConfirmClientEmailCommand, Result>
 {
     private readonly IClientRepository _clientRepository;
@@ -28,6 +34,12 @@ public class ConfirmClientEmailCommandHandler : IRequestHandler<ConfirmClientEma
 
     public async Task<Result> Handle(ConfirmClientEmailCommand request, CancellationToken cancellationToken)
     {
+        // Note: This is intentionally a PUBLIC endpoint (no tenant context required).
+        // Security is provided by the cryptographically random token.
+        // Logging token hash for security audit (never log full token).
+        var tokenHash = request.Token.Length > 8 ? request.Token[..8] + "..." : "***";
+        _logger.LogInformation("Processing email confirmation for token {TokenHash}", tokenHash);
+
         var client = await _clientRepository.GetByInvitationTokenAsync(request.Token, cancellationToken);
         if (client is null)
             return Result.Failure(DomainErrors.Client.InvalidToken);
@@ -70,7 +82,7 @@ public class ConfirmClientEmailCommandHandler : IRequestHandler<ConfirmClientEma
             return Result.Failure("Identity.RoleAssignFailed", errors);
         }
 
-        client.UserId = user.Id;
+        client.SetUserId(user.Id);
 
         await _clientRepository.UpdateAsync(client, cancellationToken);
 

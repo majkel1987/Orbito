@@ -179,33 +179,34 @@ namespace Orbito.Tests.Domain.ValueObjects
         }
 
         [Fact]
-        public void AddFeature_WithValidFeature_ShouldAddFeature()
+        public void WithFeature_WithValidFeature_ShouldReturnNewInstanceWithFeature()
         {
             // Arrange
             var planFeatures = PlanFeatures.Create(new List<Feature>());
             var newFeature = new Feature("NewFeature", "New Description", "New Value", true);
 
             // Act
-            planFeatures.AddFeature(newFeature);
+            var result = planFeatures.WithFeature(newFeature);
 
             // Assert
-            planFeatures.Features.Should().HaveCount(1);
-            planFeatures.Features[0].Should().Be(newFeature);
+            result.Features.Should().HaveCount(1);
+            result.Features[0].Should().Be(newFeature);
+            planFeatures.Features.Should().HaveCount(0); // Original should be unchanged
         }
 
         [Fact]
-        public void AddFeature_WithNullFeature_ShouldThrowArgumentNullException()
+        public void WithFeature_WithNullFeature_ShouldThrowArgumentNullException()
         {
             // Arrange
             var planFeatures = PlanFeatures.Create(new List<Feature>());
 
             // Act & Assert
-            var exception = Assert.Throws<ArgumentNullException>(() => planFeatures.AddFeature(null!));
+            var exception = Assert.Throws<ArgumentNullException>(() => planFeatures.WithFeature(null!));
             exception.ParamName.Should().Be("feature");
         }
 
         [Fact]
-        public void RemoveFeature_WithExistingFeature_ShouldRemoveFeature()
+        public void WithoutFeature_WithExistingFeature_ShouldReturnNewInstanceWithoutFeature()
         {
             // Arrange
             var features = new List<Feature>
@@ -216,15 +217,16 @@ namespace Orbito.Tests.Domain.ValueObjects
             var planFeatures = PlanFeatures.Create(features);
 
             // Act
-            planFeatures.RemoveFeature("Feature1");
+            var result = planFeatures.WithoutFeature("Feature1");
 
             // Assert
-            planFeatures.Features.Should().HaveCount(1);
-            planFeatures.Features[0].Name.Should().Be("Feature2");
+            result.Features.Should().HaveCount(1);
+            result.Features[0].Name.Should().Be("Feature2");
+            planFeatures.Features.Should().HaveCount(2); // Original should be unchanged
         }
 
         [Fact]
-        public void RemoveFeature_WithNonExistingFeature_ShouldNotRemoveAnyFeature()
+        public void WithoutFeature_WithNonExistingFeature_ShouldReturnNewInstanceWithSameFeatures()
         {
             // Arrange
             var features = new List<Feature>
@@ -235,14 +237,14 @@ namespace Orbito.Tests.Domain.ValueObjects
             var planFeatures = PlanFeatures.Create(features);
 
             // Act
-            planFeatures.RemoveFeature("NonExistingFeature");
+            var result = planFeatures.WithoutFeature("NonExistingFeature");
 
             // Assert
-            planFeatures.Features.Should().HaveCount(2);
+            result.Features.Should().HaveCount(2);
         }
 
         [Fact]
-        public void RemoveFeature_WithCaseInsensitiveName_ShouldRemoveFeature()
+        public void WithoutFeature_WithCaseInsensitiveName_ShouldReturnNewInstanceWithoutFeature()
         {
             // Arrange
             var features = new List<Feature>
@@ -253,11 +255,11 @@ namespace Orbito.Tests.Domain.ValueObjects
             var planFeatures = PlanFeatures.Create(features);
 
             // Act
-            planFeatures.RemoveFeature("feature1");
+            var result = planFeatures.WithoutFeature("feature1");
 
             // Assert
-            planFeatures.Features.Should().HaveCount(1);
-            planFeatures.Features[0].Name.Should().Be("Feature2");
+            result.Features.Should().HaveCount(1);
+            result.Features[0].Name.Should().Be("Feature2");
         }
 
         [Fact]

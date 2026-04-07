@@ -57,6 +57,26 @@ namespace Orbito.Domain.ValueObjects
         public static Currency GBP => Create("GBP", "£", 2);
 
         /// <summary>
+        /// Supported currency codes (ISO 4217)
+        /// </summary>
+        private static readonly HashSet<string> SupportedCurrencyCodes = new()
+        {
+            "USD", "EUR", "GBP", "PLN", "CAD", "AUD", "JPY", "CHF",
+            "SEK", "NOK", "DKK", "CZK", "HUF", "RON", "BGN"
+        };
+
+        /// <summary>
+        /// Check if a currency code is supported
+        /// </summary>
+        /// <param name="code">Currency code to validate</param>
+        /// <returns>True if currency is supported, false otherwise</returns>
+        public static bool IsSupported(string code)
+        {
+            if (string.IsNullOrWhiteSpace(code)) return false;
+            return SupportedCurrencyCodes.Contains(code.ToUpperInvariant());
+        }
+
+        /// <summary>
         /// Check if two currencies are the same
         /// </summary>
         public bool Equals(Currency? other)

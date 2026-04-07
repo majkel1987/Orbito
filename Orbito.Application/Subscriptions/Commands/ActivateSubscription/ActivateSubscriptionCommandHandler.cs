@@ -5,9 +5,12 @@ using Orbito.Application.DTOs;
 using Orbito.Domain.Common;
 using Orbito.Domain.Errors;
 
-namespace Orbito.Application.Subscriptions.Commands.ActivateSubscription
-{
-    public class ActivateSubscriptionCommandHandler : IRequestHandler<ActivateSubscriptionCommand, Result<SubscriptionDto>>
+namespace Orbito.Application.Subscriptions.Commands.ActivateSubscription;
+
+/// <summary>
+/// Handler for activating a subscription.
+/// </summary>
+public class ActivateSubscriptionCommandHandler : IRequestHandler<ActivateSubscriptionCommand, Result<SubscriptionDto>>
     {
         private readonly ISubscriptionRepository _subscriptionRepository;
         private readonly ITenantContext _tenantContext;
@@ -52,31 +55,8 @@ namespace Orbito.Application.Subscriptions.Commands.ActivateSubscription
             subscription.Activate();
             await _subscriptionRepository.UpdateAsync(subscription, cancellationToken);
 
-            _logger.LogInformation("Successfully activated subscription {SubscriptionId}", request.SubscriptionId);
+        _logger.LogInformation("Successfully activated subscription {SubscriptionId}", request.SubscriptionId);
 
-            var dto = new SubscriptionDto
-            {
-                Id = subscription.Id,
-                TenantId = subscription.TenantId.Value,
-                ClientId = subscription.ClientId,
-                PlanId = subscription.PlanId,
-                Status = subscription.Status.ToString(),
-                Amount = subscription.CurrentPrice.Amount,
-                Currency = subscription.CurrentPrice.Currency,
-                BillingPeriodValue = subscription.BillingPeriod.Value,
-                BillingPeriodType = subscription.BillingPeriod.Type.ToString(),
-                StartDate = subscription.StartDate,
-                EndDate = subscription.EndDate,
-                NextBillingDate = subscription.NextBillingDate,
-                IsInTrial = subscription.IsInTrial,
-                TrialEndDate = subscription.TrialEndDate,
-                ExternalSubscriptionId = subscription.ExternalSubscriptionId,
-                CreatedAt = subscription.CreatedAt,
-                CancelledAt = subscription.CancelledAt,
-                UpdatedAt = subscription.UpdatedAt
-            };
-
-            return Result.Success(dto);
-        }
+        return Result.Success(SubscriptionMapper.ToDto(subscription));
     }
 }

@@ -6,19 +6,19 @@ namespace Orbito.Domain.Entities
 {
     public class PaymentHistory : IMustHaveTenant
     {
-        public Guid Id { get; set; }
-        public TenantId TenantId { get; set; }
-        public Guid PaymentId { get; set; }
+        public Guid Id { get; private set; }
+        public TenantId TenantId { get; private set; }
+        public Guid PaymentId { get; private set; }
 
         // History Details
-        public string Action { get; set; } = string.Empty; // Created, Processed, Failed, Refunded, etc.
-        public PaymentStatus Status { get; set; }
-        public DateTime OccurredAt { get; set; }
-        public string? Details { get; set; }
-        public string? ErrorMessage { get; set; }
+        public string Action { get; private set; } = string.Empty; // Created, Processed, Failed, Refunded, etc.
+        public PaymentStatus Status { get; private set; }
+        public DateTime OccurredAt { get; private set; }
+        public string? Details { get; private set; }
+        public string? ErrorMessage { get; private set; }
 
         // Navigation Properties
-        public Payment Payment { get; set; } = default!;
+        public Payment Payment { get; private set; } = null!;
 
         private PaymentHistory() { } // EF Core
 

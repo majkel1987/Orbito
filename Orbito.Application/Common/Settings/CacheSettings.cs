@@ -1,9 +1,17 @@
-﻿namespace Orbito.Application.Common.Settings
+﻿namespace Orbito.Application.Common.Settings;
+
+/// <summary>
+/// Configuration settings for caching functionality
+/// </summary>
+public class CacheSettings
 {
-    public class CacheSettings
-    {
-        public int DepartmentCacheMinutes { get; set; } = 15;
-        public int DefaultAbsoluteExpirationHours { get; set; } = 1;
-        public bool EnableCaching { get; set; } = true;
-    }
+    /// <summary>
+    /// Default absolute expiration time in hours for cache entries
+    /// </summary>
+    public int DefaultAbsoluteExpirationHours { get; set; } = 1;
+
+    /// <summary>
+    /// Whether to enable caching globally
+    /// </summary>
+    public bool EnableCaching { get; set; } = true;
 }

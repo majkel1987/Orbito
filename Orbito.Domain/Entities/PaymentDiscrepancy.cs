@@ -9,42 +9,42 @@ namespace Orbito.Domain.Entities;
 /// </summary>
 public class PaymentDiscrepancy : IMustHaveTenant
 {
-    public Guid Id { get; set; }
-    public TenantId TenantId { get; set; }
+    public Guid Id { get; private set; }
+    public TenantId TenantId { get; private set; }
 
     // Reconciliation report reference
-    public Guid ReconciliationReportId { get; set; }
+    public Guid ReconciliationReportId { get; private set; }
 
     // Payment reference
-    public Guid? PaymentId { get; set; }
-    public string? ExternalPaymentId { get; set; }
+    public Guid? PaymentId { get; private set; }
+    public string? ExternalPaymentId { get; private set; }
 
     // Discrepancy details
-    public DiscrepancyType Type { get; set; }
-    public DiscrepancyResolution Resolution { get; set; }
+    public DiscrepancyType Type { get; private set; }
+    public DiscrepancyResolution Resolution { get; private set; }
 
     // Status comparison
-    public PaymentStatus? OrbitoStatus { get; set; }
-    public string? StripeStatus { get; set; }
+    public PaymentStatus? OrbitoStatus { get; private set; }
+    public string? StripeStatus { get; private set; }
 
     // Amount comparison
-    public decimal? OrbitoAmount { get; set; }
-    public string? OrbitoCurrency { get; set; }
-    public decimal? StripeAmount { get; set; }
-    public string? StripeCurrency { get; set; }
+    public decimal? OrbitoAmount { get; private set; }
+    public string? OrbitoCurrency { get; private set; }
+    public decimal? StripeAmount { get; private set; }
+    public string? StripeCurrency { get; private set; }
 
     // Resolution details
-    public string? ResolutionNotes { get; set; }
-    public DateTime? ResolvedAt { get; set; }
-    public string? ResolvedBy { get; set; }
+    public string? ResolutionNotes { get; private set; }
+    public DateTime? ResolvedAt { get; private set; }
+    public string? ResolvedBy { get; private set; }
 
     // Additional metadata
-    public string? AdditionalData { get; set; }
-    public DateTime DetectedAt { get; set; }
+    public string? AdditionalData { get; private set; }
+    public DateTime DetectedAt { get; private set; }
 
     // Navigation properties
-    public ReconciliationReport ReconciliationReport { get; set; } = null!;
-    public Payment? Payment { get; set; }
+    public ReconciliationReport ReconciliationReport { get; private set; } = null!;
+    public Payment? Payment { get; private set; }
 
     private PaymentDiscrepancy() { }
 

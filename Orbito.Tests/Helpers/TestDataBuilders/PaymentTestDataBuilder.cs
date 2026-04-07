@@ -1,3 +1,4 @@
+using System.Reflection;
 using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
 using Orbito.Domain.ValueObjects;
@@ -143,25 +144,29 @@ public class PaymentTestDataBuilder
             _externalPaymentId,
             _idempotencyKey);
 
-        // Set the specific ID if provided
-        payment.Id = _id;
-
-        // Set additional properties that aren't in the constructor
-        payment.Status = _status;
-        payment.PaymentMethodId = _paymentMethodId;
-        payment.FailureReason = _failureReason;
-        payment.RefundReason = _refundReason;
-        payment.ProcessedAt = _processedAt;
-        payment.FailedAt = _failedAt;
-        payment.RefundedAt = _refundedAt;
+        // Set properties using reflection (private setters)
+        SetPrivateProperty(payment, "Id", _id);
+        SetPrivateProperty(payment, "Status", _status);
+        payment.SetPaymentMethodId(_paymentMethodId);
+        SetPrivateProperty(payment, "FailureReason", _failureReason);
+        SetPrivateProperty(payment, "RefundReason", _refundReason);
+        SetPrivateProperty(payment, "ProcessedAt", _processedAt);
+        SetPrivateProperty(payment, "FailedAt", _failedAt);
+        SetPrivateProperty(payment, "RefundedAt", _refundedAt);
 
         // Set navigation properties if provided
         if (_subscription != null)
         {
-            payment.Subscription = _subscription;
+            SetPrivateProperty(payment, "Subscription", _subscription);
         }
 
         return payment;
+    }
+
+    private static void SetPrivateProperty<T>(object obj, string propertyName, T value)
+    {
+        var property = obj.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
+        property?.SetValue(obj, value);
     }
 
     // Predefined scenarios for common test cases

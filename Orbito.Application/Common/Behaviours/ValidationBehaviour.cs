@@ -35,18 +35,16 @@ namespace Orbito.Application.Common.Behaviours
             try
             {
                 _logger.LogInformation(
-                    "Rozpoczęcie walidacji żądania {RequestType}\nSzczegóły żądania: {@Request}",
+                    "Starting validation for request {RequestType}\nRequest details: {@Request}",
                     requestType,
                     request);
 
                 var context = new ValidationContext<TRequest>(request);
 
-                // Uruchamiamy wszystkie walidatory równolegle
                 var validationResults = await Task.WhenAll(
                     _validators.Select(validator =>
                         validator.ValidateAsync(context, cancellationToken)));
 
-                // Zbieramy wszystkie błędy walidacji
                 var failures = validationResults
                     .SelectMany(result => result.Errors)
                     .Where(failure => failure != null)
@@ -59,26 +57,24 @@ namespace Orbito.Application.Common.Behaviours
 
                 if (failures.Any())
                 {
-                    // Formatujemy szczegółowy komunikat o błędach
                     var errorDetails = FormatValidationErrors(failures);
 
                     _logger.LogWarning(
-                        "Wykryto błędy walidacji dla żądania {RequestType}\n{ValidationErrors}",
+                        "Validation errors detected for request {RequestType}\n{ValidationErrors}",
                         requestType,
                         errorDetails);
 
                     throw new ValidationException(
-                        "Wykryto błędy walidacji. Sprawdź szczegóły w komunikacie.",
+                        "Validation errors occurred. See exception details.",
                         validationResults.SelectMany(r => r.Errors));
                 }
 
                 timer.Stop();
                 _logger.LogInformation(
-                    "Walidacja zakończona sukcesem dla żądania {RequestType} (czas: {ElapsedMilliseconds}ms)",
+                    "Validation completed successfully for request {RequestType} (elapsed: {ElapsedMilliseconds}ms)",
                     requestType,
                     timer.ElapsedMilliseconds);
 
-                // Jeśli walidacja przeszła pomyślnie, przekazujemy żądanie dalej
                 return await next();
             }
             catch (ValidationException)
@@ -89,19 +85,18 @@ namespace Orbito.Application.Common.Behaviours
             {
                 _logger.LogError(
                     ex,
-                    "Wystąpił nieoczekiwany błąd podczas walidacji żądania {RequestType}",
+                    "Unexpected error occurred during validation of request {RequestType}",
                     requestType);
                 throw;
             }
         }
 
-        // Formatowanie błędów walidacji do czytelnej postaci.
         private static string FormatValidationErrors(
             Dictionary<string, string[]> failures)
         {
             return string.Join("\n", failures.Select(failure =>
-                $"Właściwość: {failure.Key}\n" +
-                $"Błędy:\n{string.Join("\n", failure.Value.Select(error => $"- {error}"))}"));
+                $"Property: {failure.Key}\n" +
+                $"Errors:\n{string.Join("\n", failure.Value.Select(error => $"- {error}"))}"));
         }
     }
 }

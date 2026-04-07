@@ -1,3 +1,4 @@
+using System.Reflection;
 using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
 using Orbito.Domain.ValueObjects;
@@ -104,11 +105,22 @@ public class SubscriptionPlanTestDataBuilder
             null, // limitationsJson
             _sortOrder);
 
-        // Set properties directly since they have setters
-        plan.Id = _id;
-        plan.IsActive = _isActive;
-        plan.IsPublic = _isPublic;
+        // Set properties using reflection (private setters)
+        SetPrivateProperty(plan, "Id", _id);
+
+        if (_isActive)
+            plan.Activate();
+        else
+            plan.Deactivate();
+
+        plan.UpdateVisibility(_isPublic);
 
         return plan;
+    }
+
+    private static void SetPrivateProperty<T>(object obj, string propertyName, T value)
+    {
+        var property = obj.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
+        property?.SetValue(obj, value);
     }
 }

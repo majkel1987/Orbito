@@ -1,3 +1,4 @@
+using System.Reflection;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -44,8 +45,8 @@ namespace Orbito.Tests.Application.Common.Services
         {
             // Arrange
             var subscription = CreateTestSubscription();
-            subscription.IsInTrial = true;
-            subscription.TrialEndDate = DateTime.UtcNow.AddDays(14);
+            var trialEndDate = DateTime.UtcNow.AddDays(14);
+            subscription.StartTrial(trialEndDate);
             var currentDate = DateTime.UtcNow;
             _dateTimeMock.Setup(x => x.UtcNow).Returns(currentDate);
 
@@ -53,7 +54,7 @@ namespace Orbito.Tests.Application.Common.Services
             var result = await _subscriptionService.CalculateNextBillingDateAsync(subscription);
 
             // Assert
-            result.Should().Be(subscription.TrialEndDate.Value);
+            result.Should().Be(subscription.TrialEndDate!.Value);
         }
 
         [Fact]
@@ -62,7 +63,7 @@ namespace Orbito.Tests.Application.Common.Services
         {
             // Arrange
             var subscription = CreateTestSubscription();
-            subscription.IsInTrial = false;
+            // Subscription is not in trial by default (created without trial days)
             var currentDate = DateTime.UtcNow;
             _dateTimeMock.Setup(x => x.UtcNow).Returns(currentDate);
 
@@ -543,61 +544,6 @@ namespace Orbito.Tests.Application.Common.Services
 
         #endregion
 
-        #region GetExpiringSubscriptionsAsync Tests
-
-        [Fact]
-        public async Task GetExpiringSubscriptionsAsync_ShouldReturnExpiringSubscriptions()
-        {
-            // Arrange
-            var daysBeforeExpiration = 7;
-            var checkDate = DateTime.UtcNow;
-
-            _dateTimeMock.Setup(x => x.UtcNow).Returns(checkDate);
-
-            // Act
-            var result = await _subscriptionService.GetExpiringSubscriptionsAsync(daysBeforeExpiration);
-
-            // Assert
-            // NOTE: This method returns empty list for security reasons (see SubscriptionService.cs line 187)
-            // Background jobs should use tenant-specific methods instead
-            result.Should().BeEmpty();
-            _subscriptionRepositoryMock.Verify(x => x.GetExpiringSubscriptionsByClientAsync(It.IsAny<Guid>(), checkDate, daysBeforeExpiration, It.IsAny<CancellationToken>()), Times.Never);
-        }
-
-        #endregion
-
-        #region ProcessExpiredSubscriptionsAsync Tests
-
-        [Fact]
-        public async Task ProcessExpiredSubscriptionsAsync_ShouldMarkExpiredSubscriptions()
-        {
-            // Arrange
-            var checkDate = DateTime.UtcNow;
-            var expiredSubscriptions = new List<Subscription>
-            {
-                CreateTestSubscription(),
-                CreateTestSubscription()
-            };
-
-            _dateTimeMock.Setup(x => x.UtcNow).Returns(checkDate);
-
-            // Act
-            await _subscriptionService.ProcessExpiredSubscriptionsAsync();
-
-            // Assert
-            // NOTE: This method does not process subscriptions for security reasons (see SubscriptionService.cs line 198)
-            // Background jobs should use tenant-specific methods instead
-            // Subscriptions should remain unchanged
-            foreach (var subscription in expiredSubscriptions)
-            {
-                subscription.Status.Should().Be(SubscriptionStatus.Active); // Status unchanged
-            }
-
-            _subscriptionRepositoryMock.Verify(x => x.GetExpiredSubscriptionsByClientAsync(It.IsAny<Guid>(), checkDate, It.IsAny<CancellationToken>()), Times.Never);
-            _subscriptionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Subscription>(), It.IsAny<CancellationToken>()), Times.Never);
-        }
-
-        #endregion
 
         #region ProcessRecurringPaymentsAsync Tests
 

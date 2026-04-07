@@ -1,36 +1,43 @@
 using System.Text.Json;
+using Orbito.Domain.Enums;
 
 namespace Orbito.Domain.ValueObjects
 {
+    /// <summary>
+    /// Immutable Value Object representing plan limitations collection.
+    /// Use WithLimitation/WithoutLimitation methods to create new instances with modifications.
+    /// </summary>
     public sealed class PlanLimitations : IEquatable<PlanLimitations>
     {
-        private readonly List<Limitation> _limitations;
+        private readonly IReadOnlyList<Limitation> _limitations;
 
-        public IReadOnlyList<Limitation> Limitations => _limitations.AsReadOnly();
+        public IReadOnlyList<Limitation> Limitations => _limitations;
 
-        private PlanLimitations(List<Limitation> limitations)
+        private PlanLimitations(IReadOnlyList<Limitation> limitations)
         {
             _limitations = limitations ?? throw new ArgumentNullException(nameof(limitations));
         }
 
-        public static PlanLimitations Create(List<Limitation> limitations)
+        public static PlanLimitations Create(IEnumerable<Limitation> limitations)
         {
-            return new PlanLimitations(limitations);
+            return new PlanLimitations(limitations?.ToList().AsReadOnly() ?? new List<Limitation>().AsReadOnly());
         }
+
+        public static PlanLimitations Empty => new(Array.Empty<Limitation>());
 
         public static PlanLimitations CreateFromJson(string? json)
         {
             if (string.IsNullOrWhiteSpace(json))
-                return new PlanLimitations(new List<Limitation>());
+                return Empty;
 
             try
             {
                 var limitations = JsonSerializer.Deserialize<List<Limitation>>(json);
-                return new PlanLimitations(limitations ?? new List<Limitation>());
+                return new PlanLimitations((limitations ?? new List<Limitation>()).AsReadOnly());
             }
             catch (JsonException)
             {
-                return new PlanLimitations(new List<Limitation>());
+                return Empty;
             }
         }
 
@@ -39,21 +46,28 @@ namespace Orbito.Domain.ValueObjects
             return JsonSerializer.Serialize(_limitations);
         }
 
-        public void AddLimitation(Limitation limitation)
+        /// <summary>
+        /// Creates a new PlanLimitations instance with the specified limitation added.
+        /// </summary>
+        public PlanLimitations WithLimitation(Limitation limitation)
         {
             if (limitation == null)
                 throw new ArgumentNullException(nameof(limitation));
 
-            _limitations.Add(limitation);
+            var newLimitations = _limitations.ToList();
+            newLimitations.Add(limitation);
+            return new PlanLimitations(newLimitations.AsReadOnly());
         }
 
-        public void RemoveLimitation(string limitationName)
+        /// <summary>
+        /// Creates a new PlanLimitations instance with the specified limitation removed.
+        /// </summary>
+        public PlanLimitations WithoutLimitation(string limitationName)
         {
-            var limitation = _limitations.FirstOrDefault(l => l.Name.Equals(limitationName, StringComparison.OrdinalIgnoreCase));
-            if (limitation != null)
-            {
-                _limitations.Remove(limitation);
-            }
+            var newLimitations = _limitations
+                .Where(l => !l.Name.Equals(limitationName, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            return new PlanLimitations(newLimitations.AsReadOnly());
         }
 
         public bool HasLimitation(string limitationName)
@@ -76,16 +90,37 @@ namespace Orbito.Domain.ValueObjects
         {
             if (other is null) return false;
             if (ReferenceEquals(this, other)) return true;
-            
+
             return _limitations.Count == other._limitations.Count &&
                    _limitations.All(l => other._limitations.Contains(l));
         }
 
         public override bool Equals(object? obj) => obj is PlanLimitations other && Equals(other);
-        public override int GetHashCode() => _limitations.GetHashCode();
+
+        public override int GetHashCode()
+        {
+            var hash = new HashCode();
+            foreach (var limitation in _limitations.OrderBy(l => l.Name))
+            {
+                hash.Add(limitation);
+            }
+            return hash.ToHashCode();
+        }
+
         public override string ToString() => $"Limitations: {_limitations.Count} items";
+
+        public static bool operator ==(PlanLimitations? left, PlanLimitations? right)
+        {
+            if (left is null) return right is null;
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(PlanLimitations? left, PlanLimitations? right) => !(left == right);
     }
 
+    /// <summary>
+    /// Immutable Value Object representing a single plan limitation.
+    /// </summary>
     public sealed class Limitation : IEquatable<Limitation>
     {
         public string Name { get; }
@@ -93,6 +128,12 @@ namespace Orbito.Domain.ValueObjects
         public int? NumericValue { get; }
         public string? StringValue { get; }
         public LimitationType Type { get; }
+
+        // Parameterless constructor for JSON deserialization
+        private Limitation()
+        {
+            Name = string.Empty;
+        }
 
         public Limitation(string name, LimitationType type, string? description = null, int? numericValue = null, string? stringValue = null)
         {
@@ -118,12 +159,5 @@ namespace Orbito.Domain.ValueObjects
         public override bool Equals(object? obj) => obj is Limitation other && Equals(other);
         public override int GetHashCode() => HashCode.Combine(Name, Description, NumericValue, StringValue, Type);
         public override string ToString() => $"{Name}: {NumericValue?.ToString() ?? StringValue ?? "Unlimited"}";
-    }
-
-    public enum LimitationType
-    {
-        Numeric = 1,
-        String = 2,
-        Boolean = 3
     }
 }

@@ -1,14 +1,13 @@
 using FluentValidation;
 
-namespace Orbito.Application.Clients.Commands.DeleteClient
+namespace Orbito.Application.Clients.Commands.DeleteClient;
+
+public class DeleteClientCommandValidator : AbstractValidator<DeleteClientCommand>
 {
-    public class DeleteClientCommandValidator : AbstractValidator<DeleteClientCommand>
+    public DeleteClientCommandValidator()
     {
-        public DeleteClientCommandValidator()
-        {
-            RuleFor(x => x.Id)
-                .NotEmpty()
-                .WithMessage("Client ID is required");
-        }
+        RuleFor(x => x.Id)
+            .NotEmpty()
+            .WithMessage("Client ID is required");
     }
 }

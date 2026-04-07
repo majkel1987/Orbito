@@ -3,7 +3,7 @@ namespace Orbito.Domain.ValueObjects;
 /// <summary>
 /// Value Object representing credit/debit card details
 /// </summary>
-public class CardDetails : IEquatable<CardDetails>
+public sealed class CardDetails : IEquatable<CardDetails>
 {
     private static readonly HashSet<string> ValidBrands = new(StringComparer.OrdinalIgnoreCase)
     {

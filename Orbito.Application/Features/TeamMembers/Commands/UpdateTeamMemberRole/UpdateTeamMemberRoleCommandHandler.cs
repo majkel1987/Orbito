@@ -18,15 +18,18 @@ public class UpdateTeamMemberRoleCommandHandler : IRequestHandler<UpdateTeamMemb
 {
     private readonly ITeamMemberRepository _teamMemberRepository;
     private readonly ITenantContext _tenantContext;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<UpdateTeamMemberRoleCommandHandler> _logger;
 
     public UpdateTeamMemberRoleCommandHandler(
         ITeamMemberRepository teamMemberRepository,
         ITenantContext tenantContext,
+        IUnitOfWork unitOfWork,
         ILogger<UpdateTeamMemberRoleCommandHandler> logger)
     {
         _teamMemberRepository = teamMemberRepository;
         _tenantContext = tenantContext;
+        _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
@@ -70,17 +73,21 @@ public class UpdateTeamMemberRoleCommandHandler : IRequestHandler<UpdateTeamMemb
             return Result.Failure<TeamMemberDto>(validationResult.Error);
         }
 
+        // Capture old role for logging before update
+        var oldRole = teamMember.Role;
+
         // Update the role
         teamMember.UpdateRole(request.NewRole);
 
-        // Update in repository
+        // Update in repository and save
         await _teamMemberRepository.UpdateAsync(teamMember, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
             "Team member {TeamMemberId} ({Email}) role updated from {OldRole} to {NewRole} in tenant {TenantId}",
             request.TeamMemberId,
             teamMember.Email,
-            teamMember.Role,
+            oldRole,
             request.NewRole,
             tenantId);
 

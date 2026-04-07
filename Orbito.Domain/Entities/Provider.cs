@@ -1,4 +1,6 @@
-﻿using Orbito.Domain.Identity;
+﻿using Orbito.Domain.Common;
+using Orbito.Domain.Errors;
+using Orbito.Domain.Identity;
 using Orbito.Domain.Interfaces;
 using Orbito.Domain.ValueObjects;
 
@@ -11,34 +13,37 @@ namespace Orbito.Domain.Entities
     /// </summary>
     public class Provider
     {
-        public Guid Id { get; set; }
-        public TenantId TenantId { get; set; }
+        public Guid Id { get; private set; }
+        public TenantId TenantId { get; private set; }
 
-        public ApplicationUser? User { get; set; }
-        public Guid? UserId { get; set; }
+        public ApplicationUser? User { get; private set; }
+        public Guid? UserId { get; private set; }
 
         // Business Profile
-        public string BusinessName { get; set; }
-        public string? Description { get; set; }
-        public string? Avatar { get; set; }
+        public string BusinessName { get; private set; } = string.Empty;
+        public string? Description { get; private set; }
+        public string? Avatar { get; private set; }
 
         // Platform Settings
-        public string SubdomainSlug { get; set; }
-        public string? CustomDomain { get; set; }
-        public bool IsActive { get; set; }
-        public DateTime CreatedAt { get; set; }
+        public string SubdomainSlug { get; private set; } = string.Empty;
+        public string? CustomDomain { get; private set; }
+        public bool IsActive { get; private set; }
+        public DateTime CreatedAt { get; private set; }
 
         // Stripe Integration (for platform billing)
-        public string? StripeCustomerId { get; set; }
+        public string? StripeCustomerId { get; private set; }
 
         // Business Metrics (cached values)
-        public Money MonthlyRevenue { get; set; }
-        public int ActiveClientsCount { get; set; }
+        public Money MonthlyRevenue { get; private set; }
+        public int ActiveClientsCount { get; private set; }
 
         // Navigation Properties
-        public ICollection<SubscriptionPlan> Plans { get; set; } = [];
-        public ICollection<Client> Clients { get; set; } = [];
-        public ICollection<Subscription> Subscriptions { get; set; } = [];
+        private readonly List<SubscriptionPlan> _plans = [];
+        public IReadOnlyCollection<SubscriptionPlan> Plans => _plans.AsReadOnly();
+        private readonly List<Client> _clients = [];
+        public IReadOnlyCollection<Client> Clients => _clients.AsReadOnly();
+        private readonly List<Subscription> _subscriptions = [];
+        public IReadOnlyCollection<Subscription> Subscriptions => _subscriptions.AsReadOnly();
 
         private Provider() { }
         
@@ -61,31 +66,34 @@ namespace Orbito.Domain.Entities
             };
         }
 
-        public void UpdateMonthlyRevenue(Money revenue)
+        public Result UpdateMonthlyRevenue(Money revenue)
         {
             if (revenue.Currency != MonthlyRevenue.Currency)
-                throw new InvalidOperationException("Currency mismatch");
+                return Result.Failure(DomainErrors.Payment.CurrencyMismatch);
 
             MonthlyRevenue = revenue;
+            return Result.Success();
         }
 
-        public void UpdateBusinessProfile(string businessName, string? description = null, string? avatar = null)
+        public Result UpdateBusinessProfile(string businessName, string? description = null, string? avatar = null)
         {
             if (string.IsNullOrWhiteSpace(businessName))
-                throw new ArgumentException("Business name cannot be empty", nameof(businessName));
+                return Result.Failure(DomainErrors.Provider.BusinessNameCannotBeEmpty);
 
             BusinessName = businessName;
             Description = description;
             Avatar = avatar;
+            return Result.Success();
         }
 
-        public void UpdatePlatformSettings(string subdomainSlug, string? customDomain = null)
+        public Result UpdatePlatformSettings(string subdomainSlug, string? customDomain = null)
         {
             if (string.IsNullOrWhiteSpace(subdomainSlug))
-                throw new ArgumentException("Subdomain slug cannot be empty", nameof(subdomainSlug));
+                return Result.Failure(DomainErrors.Provider.InvalidSubdomain);
 
             SubdomainSlug = subdomainSlug;
             CustomDomain = customDomain;
+            return Result.Success();
         }
 
         public void Activate()
@@ -98,18 +106,43 @@ namespace Orbito.Domain.Entities
             IsActive = false;
         }
 
-        public void UpdateActiveClientsCount(int count)
+        public Result UpdateActiveClientsCount(int count)
         {
             if (count < 0)
-                throw new ArgumentException("Active clients count cannot be negative", nameof(count));
+                return Result.Failure(DomainErrors.Provider.ActiveClientsCountCannotBeNegative);
 
             ActiveClientsCount = count;
+            return Result.Success();
         }
 
         public bool CanBeDeleted()
         {
             // Provider can be deleted only if there are no active clients or subscriptions
             return ActiveClientsCount == 0 && !Subscriptions.Any(s => s.Status == Domain.Enums.SubscriptionStatus.Active);
+        }
+
+        public void SetDescription(string? description)
+        {
+            Description = description;
+        }
+
+        public void SetAvatar(string? avatar)
+        {
+            Avatar = avatar;
+        }
+
+        public void SetCustomDomain(string? customDomain)
+        {
+            CustomDomain = customDomain;
+        }
+
+        public Result SetStripeCustomerId(string stripeCustomerId)
+        {
+            if (string.IsNullOrWhiteSpace(stripeCustomerId))
+                return Result.Failure(DomainErrors.Provider.StripeCustomerIdCannotBeEmpty);
+
+            StripeCustomerId = stripeCustomerId;
+            return Result.Success();
         }
     }
 }

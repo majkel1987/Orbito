@@ -15,15 +15,34 @@
             Value = value;
         }
 
+        /// <summary>
+        /// Creates a TenantId from a GUID value.
+        /// Use TenantId.Empty for system-wide entities without tenant context.
+        /// </summary>
+        /// <exception cref="ArgumentException">Thrown when value is Guid.Empty. Use TenantId.Empty instead.</exception>
         public static TenantId Create(Guid value)
         {
             if (value == Guid.Empty)
-                throw new ArgumentException("TenantId cannot be empty", nameof(value));
+                throw new ArgumentException("TenantId cannot be empty. Use TenantId.Empty for system-wide entities.", nameof(value));
 
             return new TenantId(value);
         }
 
+        /// <summary>
+        /// Creates a TenantId from a GUID, allowing empty GUID for system entities.
+        /// Prefer using TenantId.Empty directly for clarity.
+        /// </summary>
+        public static TenantId CreateAllowingEmpty(Guid value)
+        {
+            return new TenantId(value);
+        }
+
         public static TenantId New() => new(Guid.NewGuid());
+
+        /// <summary>
+        /// Gets an empty TenantId (for system-wide entities without tenant context)
+        /// </summary>
+        public static TenantId Empty => new(Guid.Empty);
 
         public static implicit operator Guid(TenantId tenantId) => tenantId.Value;
         public static explicit operator TenantId(Guid guid) => Create(guid);

@@ -115,7 +115,11 @@ namespace Orbito.Application.Features.Payments.Commands.CreatePaymentIntent
                         DomainErrors.Payment.CustomerCreationFailed(createCustomerResult.ErrorMessage ?? "Unknown error"));
                 }
 
-                client.StripeCustomerId = createCustomerResult.ExternalCustomerId;
+                var setStripeResult = client.SetStripeCustomerId(createCustomerResult.ExternalCustomerId!);
+                if (setStripeResult.IsFailure)
+                {
+                    return Result.Failure<CreatePaymentIntentResponse>(setStripeResult.Error);
+                }
                 await _clientRepository.UpdateAsync(client, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 

@@ -1554,19 +1554,23 @@
       "block": "DTOs & Models — Common Authorization & Helpers",
       "target": "Orbito.Application/Common/Authorization/, Orbito.Application/Common/Helpers/",
       "estFiles": 8,
-      "status": "pending",
-      "score": null,
+      "status": "completed",
+      "score": "B",
       "issues": {
         "critical": 0,
         "major": 0,
         "minor": 0,
         "suggestion": 0
       },
-      "date": null,
-      "fixesApplied": false,
+      "date": "2026-04-06",
+      "fixesApplied": true,
       "notes": [
-        "Authorization: ActiveProviderSubscriptionHandler, ClientAccessHandler, PolicyNames, ProviderOwnerOnlyHandler, ProviderTeamAccessHandler",
-        "Helpers: TenantJobHelper"
+        "6 files audited (Authorization handlers + TenantJobHelper)",
+        "ALL CRITICAL/MAJOR issues FIXED",
+        "ALL MINOR issues FIXED (logging added, magic strings removed)",
+        "Memory optimization: TenantJobHelper now uses HashSet instead of List",
+        "All authorization handlers now have proper logging for debugging",
+        "No remaining unfixed issues"
       ]
     },
     {
@@ -1575,24 +1579,89 @@
       "block": "Behaviours & Pipeline",
       "target": "Orbito.Application/Behaviours/",
       "estFiles": 3,
-      "status": "pending",
-      "score": null,
+      "status": "completed",
+      "score": "A",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 3,
+        "suggestion": 2
+      },
+      "date": "2026-04-07",
+      "fixesApplied": true,
+      "notes": [
+        "3 behaviour files audited (LoggingBehaviour, PerformanceBehaviour, ValidationBehaviour)",
+        "FIXED CRITICAL: LoggingBegaviour.cs renamed to LoggingBehaviour.cs",
+        "FIXED MAJOR: LoggingBehaviour.cs - Added structured logging with BeginScope for operationId",
+        "FIXED MAJOR: LoggingBehaviour.cs - Replaced string interpolation with parameterized logging",
+        "FIXED MAJOR: PerformanceBehaviour.cs - Translated all Polish log messages to English",
+        "FIXED MAJOR: ValidationBehaviour.cs - Translated all Polish log messages to English",
+        "FIXED MINOR: PerformanceBehaviour.cs - Moved PerformanceLevel enum to Common/Enums/",
+        "UNFIXED MINOR: PerformanceBehaviour.cs:88 - Logging full request object may expose PII/sensitive data",
+        "UNFIXED MINOR: ValidationBehaviour.cs:38 - Logging full request object may expose PII/sensitive data",
+        "UNFIXED MINOR: LoggingBehaviour.cs - No distributed tracing (Activity/TraceId) integration",
+        "UNFIXED SUGGESTION: All files - Consider implementing ILogger BeginScope for better observability",
+        "UNFIXED SUGGESTION: PerformanceBehaviour.cs - Consider sanitizing request data before logging"
+      ]
+    },
+    {
+      "id": "3.1a",
+      "phase": "PHASE 3: Infrastructure Layer",
+      "block": "DbContext Core",
+      "target": "Orbito.Infrastructure/Data/ (Core files)",
+      "estFiles": 4,
+      "status": "completed",
+      "score": "C",
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 1
+      },
+      "date": "2026-04-07",
+      "fixesApplied": true,
+      "notes": [
+        "4 files audited: ApplicationDbContext.cs, ApplicationDbContextFactory.cs, OrbitoTestContext.cs (deleted), SeedData.cs",
+        "FIXED CRITICAL: Deleted OrbitoTestContext.cs - scaffold file with hardcoded connection string (security risk)",
+        "FIXED MAJOR: Added IDateTime dependency injection to ApplicationDbContext for testability",
+        "FIXED MAJOR: Removed SeedDefaultData() from OnModelCreating - anti-pattern (seeding should be in migrations or SeedData.cs)",
+        "FIXED MINOR: Removed obsolete ClearTenantCache() method",
+        "FIXED MINOR: Added #if DEBUG guard to SetPrivateProperty() reflection method in SeedData.cs",
+        "UNFIXED SUGGESTION: ApplicationDbContext.cs:31 - Add documentation about Lazy<T> cache lifetime (valid only for single request)",
+        "NOTE: Obsolete method GetCurrentTenantIdForQueryFilter() uses 'admin access as safest default' pattern - documented as security anti-pattern but method is not used (query filters disabled)"
+      ]
+    },
+    {
+      "id": "3.1b",
+      "phase": "PHASE 3: Infrastructure Layer",
+      "block": "Entity Configurations Part 1",
+      "target": "Orbito.Infrastructure/Data/Configurations/Entity/",
+      "estFiles": 14,
+      "status": "completed",
+      "score": "B",
       "issues": {
         "critical": 0,
         "major": 0,
         "minor": 0,
         "suggestion": 0
       },
-      "date": null,
-      "fixesApplied": false,
-      "notes": []
+      "date": "2026-04-07",
+      "fixesApplied": true,
+      "notes": [
+        "13 entity configuration files audited (ClientConfiguration, PaymentConfiguration, PaymentDiscrepancyConfiguration, PaymentHistoryConfiguration, PaymentMethodConfiguration, PaymentRetryScheduleConfiguration, PaymentWebhookLogConfiguration, PlatformPlanConfiguration, ProviderConfiguration, ProviderSubscriptionConfiguration, ReconciliationReportConfiguration, SubscriptionConfiguration, SubscriptionPlanConfiguration)",
+        "All configurations follow Fluent API pattern with proper multi-tenancy filtering (TenantId conversions)",
+        "Comprehensive index coverage with proper race condition prevention (Payment.cs, PaymentRetrySchedule.cs unique indexes)",
+        "Value objects properly configured (Money, BillingPeriod, Currency)",
+        "Check constraints implemented for data validation (PaymentRetryScheduleConfiguration)",
+        "FIXED: Removed inconsistent snake_case column names from PaymentDiscrepancyConfiguration.cs and ReconciliationReportConfiguration.cs - now uses EF Core naming conventions (PascalCase)"
+      ]
     },
     {
-      "id": "3.1",
+      "id": "3.1c",
       "phase": "PHASE 3: Infrastructure Layer",
-      "block": "DbContext & EF Config",
-      "target": "Orbito.Infrastructure/Persistence/",
-      "estFiles": 5,
+      "block": "Entity Configurations Part 2",
+      "target": "Orbito.Infrastructure/Data/Configurations/",
+      "estFiles": 4,
       "status": "pending",
       "score": null,
       "issues": {
@@ -1604,7 +1673,27 @@
       "date": null,
       "fixesApplied": false,
       "notes": [
-        "Check both Persistance/ and Persistence/ folders"
+        "ValueObjects, Identity configurations"
+      ]
+    },
+    {
+      "id": "3.1d",
+      "phase": "PHASE 3: Infrastructure Layer",
+      "block": "Migrations (Review Only)",
+      "target": "Orbito.Infrastructure/Data/Migrations/",
+      "estFiles": 4,
+      "status": "pending",
+      "score": null,
+      "issues": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0,
+        "suggestion": 0
+      },
+      "date": null,
+      "fixesApplied": false,
+      "notes": [
+        "Review only - no automated fixes for migration files"
       ]
     },
     {

@@ -33,11 +33,13 @@ namespace Orbito.Infrastructure.Data
             // Design-time services (for migrations)
             var designTimeTenantProvider = new DesignTimeTenantProvider();
             var designTimeHttpContextAccessor = new DesignTimeHttpContextAccessor();
+            var designTimeDateTime = new DesignTimeDateTime();
 
             return new ApplicationDbContext(
-                optionsBuilder.Options, 
-                designTimeTenantProvider, 
+                optionsBuilder.Options,
+                designTimeTenantProvider,
                 designTimeHttpContextAccessor,
+                designTimeDateTime,
                 Microsoft.Extensions.Logging.Abstractions.NullLogger<ApplicationDbContext>.Instance);
         }
 
@@ -87,6 +89,16 @@ namespace Orbito.Infrastructure.Data
                 // Not supported during design-time operations
                 throw new NotSupportedException("Tenant override is not supported during design-time operations (migrations).");
             }
+        }
+
+        /// <summary>
+        /// Design-time DateTime service for EF Core migrations.
+        /// Returns actual system time during migrations.
+        /// </summary>
+        private class DesignTimeDateTime : IDateTime
+        {
+            public DateTime Now => DateTime.Now;
+            public DateTime UtcNow => DateTime.UtcNow;
         }
     }
 }

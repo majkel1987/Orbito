@@ -1,115 +1,66 @@
 using MediatR;
-using Orbito.Application.Common.Interfaces;
 using Orbito.Domain.Common;
 
-namespace Orbito.Application.Features.Payments.Commands
+namespace Orbito.Application.Features.Payments.Commands;
+
+/// <summary>
+/// Command for creating a Stripe customer
+/// </summary>
+public record CreateStripeCustomerCommand : IRequest<Result<CreateStripeCustomerResult>>
 {
     /// <summary>
-    /// Komenda do tworzenia klienta Stripe
+    /// Client ID
     /// </summary>
-    public record CreateStripeCustomerCommand : IRequest<Result<CreateStripeCustomerResult>>
-    {
-        /// <summary>
-        /// ID klienta
-        /// </summary>
-        public Guid ClientId { get; init; }
-
-        /// <summary>
-        /// Email klienta
-        /// </summary>
-        public string Email { get; init; } = string.Empty;
-
-        /// <summary>
-        /// Imię klienta
-        /// </summary>
-        public string? FirstName { get; init; }
-
-        /// <summary>
-        /// Nazwisko klienta
-        /// </summary>
-        public string? LastName { get; init; }
-
-        /// <summary>
-        /// Nazwa firmy
-        /// </summary>
-        public string? CompanyName { get; init; }
-
-        /// <summary>
-        /// Telefon klienta
-        /// </summary>
-        public string? Phone { get; init; }
-    }
+    public Guid ClientId { get; init; }
 
     /// <summary>
-    /// Wynik tworzenia klienta Stripe
+    /// Client email address
     /// </summary>
-    public record CreateStripeCustomerResult
-    {
-        /// <summary>
-        /// Czy operacja zakończyła się sukcesem
-        /// </summary>
-        public bool IsSuccess { get; init; }
+    public string Email { get; init; } = string.Empty;
 
-        /// <summary>
-        /// Komunikat błędu (jeśli wystąpił)
-        /// </summary>
-        public string? ErrorMessage { get; init; }
+    /// <summary>
+    /// Client first name
+    /// </summary>
+    public string? FirstName { get; init; }
 
-        /// <summary>
-        /// Kod błędu (jeśli wystąpił)
-        /// </summary>
-        public string? ErrorCode { get; init; }
+    /// <summary>
+    /// Client last name
+    /// </summary>
+    public string? LastName { get; init; }
 
-        /// <summary>
-        /// Zewnętrzny ID klienta w Stripe
-        /// </summary>
-        public string? StripeCustomerId { get; init; }
+    /// <summary>
+    /// Company name
+    /// </summary>
+    public string? CompanyName { get; init; }
 
-        /// <summary>
-        /// Email klienta
-        /// </summary>
-        public string? Email { get; init; }
+    /// <summary>
+    /// Client phone number
+    /// </summary>
+    public string? Phone { get; init; }
+}
 
-        /// <summary>
-        /// Imię klienta
-        /// </summary>
-        public string? FirstName { get; init; }
+/// <summary>
+/// Result of creating a Stripe customer
+/// </summary>
+public record CreateStripeCustomerResult
+{
+    /// <summary>
+    /// External Stripe customer ID
+    /// </summary>
+    public required string StripeCustomerId { get; init; }
 
-        /// <summary>
-        /// Nazwisko klienta
-        /// </summary>
-        public string? LastName { get; init; }
+    /// <summary>
+    /// Client email address
+    /// </summary>
+    public string? Email { get; init; }
 
-        /// <summary>
-        /// Konstruktor dla sukcesu
-        /// </summary>
-        public static CreateStripeCustomerResult Success(
-            string stripeCustomerId,
-            string? email = null,
-            string? firstName = null,
-            string? lastName = null)
-        {
-            return new CreateStripeCustomerResult
-            {
-                IsSuccess = true,
-                StripeCustomerId = stripeCustomerId,
-                Email = email,
-                FirstName = firstName,
-                LastName = lastName
-            };
-        }
+    /// <summary>
+    /// Client first name
+    /// </summary>
+    public string? FirstName { get; init; }
 
-        /// <summary>
-        /// Konstruktor dla błędu
-        /// </summary>
-        public static CreateStripeCustomerResult Failure(string errorMessage, string? errorCode = null)
-        {
-            return new CreateStripeCustomerResult
-            {
-                IsSuccess = false,
-                ErrorMessage = errorMessage,
-                ErrorCode = errorCode
-            };
-        }
-    }
+    /// <summary>
+    /// Client last name
+    /// </summary>
+    public string? LastName { get; init; }
 }

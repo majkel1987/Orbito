@@ -88,6 +88,7 @@ public class ActiveProviderSubscriptionHandler : AuthorizationHandler<ActiveProv
         }
 
         // Check if subscription is active (trial or paid)
+        // Note: Status should never be null for a valid subscription entity
         if (subscription.IsTrialActive || subscription.Status == ProviderSubscriptionStatus.Active)
         {
             _logger.LogDebug(

@@ -1,14 +1,10 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Orbito.Application.Common.Enums;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.Common.Settings;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Orbito.Application.Common.Behaviours
 {
@@ -41,19 +37,16 @@ namespace Orbito.Application.Common.Behaviours
 
             try
             {
-                // Zapisujemy informację o rozpoczęciu przetwarzania żądania
                 _logger.LogInformation(
-                    "Rozpoczęcie przetwarzania żądania {RequestName} o {StartTime}",
+                    "Starting request {RequestName} at {StartTime}",
                     requestName,
                     startTime);
 
-                // Wykonujemy właściwą operację
                 var response = await next();
 
                 timer.Stop();
                 var elapsedMilliseconds = timer.ElapsedMilliseconds;
 
-                // Analizujemy wydajność operacji
                 AnalyzePerformance(requestName, elapsedMilliseconds, request, startTime);
 
                 return response;
@@ -64,7 +57,7 @@ namespace Orbito.Application.Common.Behaviours
 
                 _logger.LogError(
                     ex,
-                    "Błąd podczas wykonywania żądania {RequestName}. Czas wykonania: {ElapsedMilliseconds}ms",
+                    "Error executing request {RequestName}. Execution time: {ElapsedMilliseconds}ms",
                     requestName,
                     timer.ElapsedMilliseconds);
 
@@ -81,12 +74,10 @@ namespace Orbito.Application.Common.Behaviours
             var performanceLevel = DeterminePerformanceLevel(elapsedMilliseconds);
             var message = CreatePerformanceMessage(performanceLevel, requestName, elapsedMilliseconds);
 
-            // Logujemy odpowiedni komunikat w zależności od poziomu wydajności
             switch (performanceLevel)
             {
                 case PerformanceLevel.Critical:
                     _logger.LogError(message + " {@Request}", request);
-                    // Tutaj możemy dodać dodatkowe akcje dla krytycznych problemów wydajnościowych
                     break;
 
                 case PerformanceLevel.Warning:
@@ -99,7 +90,7 @@ namespace Orbito.Application.Common.Behaviours
 
                 default:
                     _logger.LogDebug(
-                        "Żądanie {RequestName} wykonane w {ElapsedMilliseconds}ms",
+                        "Request {RequestName} executed in {ElapsedMilliseconds}ms",
                         requestName,
                         elapsedMilliseconds);
                     break;
@@ -128,21 +119,13 @@ namespace Orbito.Application.Common.Behaviours
             return level switch
             {
                 PerformanceLevel.Critical =>
-                    $"KRYTYCZNY PROBLEM WYDAJNOŚCI: {requestName} ({elapsedMilliseconds}ms)",
+                    $"CRITICAL PERFORMANCE ISSUE: {requestName} ({elapsedMilliseconds}ms)",
                 PerformanceLevel.Warning =>
-                    $"OSTRZEŻENIE WYDAJNOŚCI: {requestName} ({elapsedMilliseconds}ms)",
+                    $"PERFORMANCE WARNING: {requestName} ({elapsedMilliseconds}ms)",
                 PerformanceLevel.Monitor =>
-                    $"MONITOROWANIE WYDAJNOŚCI: {requestName} ({elapsedMilliseconds}ms)",
+                    $"PERFORMANCE MONITORING: {requestName} ({elapsedMilliseconds}ms)",
                 _ => string.Empty
             };
         }
-    }
-
-    public enum PerformanceLevel
-    {
-        Normal,
-        Monitor,
-        Warning,
-        Critical
     }
 }

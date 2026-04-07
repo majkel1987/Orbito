@@ -78,7 +78,7 @@ public class PaymentReconciliationService : IPaymentReconciliationService
             _logger.LogInformation("Found {Count} Stripe payments", stripePayments.Count);
 
             // Update statistics
-            report.TotalPayments = localPayments.Count;
+            report.SetTotalPayments(localPayments.Count);
 
             // Compare and find discrepancies in parallel
             var discrepancies = await FindDiscrepanciesAsync(
@@ -94,7 +94,7 @@ public class PaymentReconciliationService : IPaymentReconciliationService
             }
 
             // Calculate matched payments
-            report.MatchedPayments = report.TotalPayments - report.MismatchedPayments;
+            report.SetMatchedPayments(report.TotalPayments - report.MismatchedPayments);
 
             // Save report with discrepancies
             await _reconciliationRepository.SaveReportAsync(report, cancellationToken);

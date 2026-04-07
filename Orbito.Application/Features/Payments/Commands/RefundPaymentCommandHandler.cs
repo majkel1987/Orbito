@@ -1,18 +1,17 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
-using Orbito.Application.Features.Payments.Commands;
 using Orbito.Domain.Common;
 using Orbito.Domain.Errors;
 using Orbito.Domain.ValueObjects;
 
-namespace Orbito.Application.Features.Payments.Commands
+namespace Orbito.Application.Features.Payments.Commands;
+
+/// <summary>
+/// Handler for refund payment command
+/// </summary>
+public class RefundPaymentCommandHandler : IRequestHandler<RefundPaymentCommand, Result<RefundPaymentResult>>
 {
-    /// <summary>
-    /// Handler dla komendy zwrotu płatności
-    /// </summary>
-    public class RefundPaymentCommandHandler : IRequestHandler<RefundPaymentCommand, Result<RefundPaymentResult>>
-    {
         private readonly IPaymentProcessingService _paymentProcessingService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ITenantContext _tenantContext;
@@ -85,16 +84,18 @@ namespace Orbito.Application.Features.Payments.Commands
 
                 if (result.IsSuccess)
                 {
-                    _logger.LogInformation("Payment {PaymentId} refunded successfully with external ID {ExternalRefundId}", 
+                    _logger.LogInformation("Payment {PaymentId} refunded successfully with external ID {ExternalRefundId}",
                         request.PaymentId, result.ExternalRefundId);
 
-                    return Result.Success(RefundPaymentResult.Success(
-                        result.ExternalRefundId ?? string.Empty,
-                        result.Status.ToString()));
+                    return Result.Success(new RefundPaymentResult
+                    {
+                        ExternalRefundId = result.ExternalRefundId ?? string.Empty,
+                        Status = result.Status.ToString()
+                    });
                 }
                 else
                 {
-                    _logger.LogError("Failed to refund payment {PaymentId}: {ErrorMessage}", 
+                    _logger.LogError("Failed to refund payment {PaymentId}: {ErrorMessage}",
                         request.PaymentId, result.ErrorMessage);
 
                     return Result.Failure<RefundPaymentResult>(DomainErrors.Payment.ProcessingFailed);
@@ -107,4 +108,3 @@ namespace Orbito.Application.Features.Payments.Commands
             }
         }
     }
-}

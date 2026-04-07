@@ -21,6 +21,7 @@ namespace Orbito.Infrastructure.Data
     {
         private readonly ITenantProvider _tenantProvider;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IDateTime _dateTime;
         private readonly ILogger<ApplicationDbContext> _logger;
 
         // Security constants
@@ -38,12 +39,14 @@ namespace Orbito.Infrastructure.Data
             DbContextOptions<ApplicationDbContext> options,
             ITenantProvider tenantProvider,
             IHttpContextAccessor httpContextAccessor,
+            IDateTime dateTime,
             ILogger<ApplicationDbContext> logger) : base(options)
         {
             _tenantProvider = tenantProvider ?? throw new ArgumentNullException(nameof(tenantProvider));
             _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
+            _dateTime = dateTime ?? throw new ArgumentNullException(nameof(dateTime));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            
+
             // Initialize thread-safe cache
             _cachedTenantId = new Lazy<Guid?>(() => GetCurrentTenantIdSafe());
         }
@@ -67,6 +70,11 @@ namespace Orbito.Infrastructure.Data
             _skipTenantValidation = false;
             _logger.LogDebug("Tenant validation re-enabled after admin setup operation");
         }
+
+        /// <summary>
+        /// Indicates whether tenant validation is currently bypassed
+        /// </summary>
+        public bool IsTenantValidationBypassed => _skipTenantValidation;
 
         // Domain entities DbSets
         public DbSet<Provider> Providers { get; set; } = null!;
@@ -106,8 +114,8 @@ namespace Orbito.Infrastructure.Data
             // Configure multi-tenancy with query filters
             ConfigureMultiTenancy(builder);
 
-            // Seed default data
-            SeedDefaultData(builder);
+            // NOTE: Default data (roles) should be seeded via SeedData.cs or migrations
+            // Seeding in OnModelCreating is an anti-pattern - removed in audit fix
         }
 
         /// <summary>
@@ -479,7 +487,7 @@ namespace Orbito.Infrastructure.Data
             if (!entries.Any())
                 return;
 
-            var now = DateTime.UtcNow;
+            var now = _dateTime.UtcNow;
             var userId = GetCurrentUserIdSafe();
 
             foreach (var entry in entries)
@@ -563,72 +571,6 @@ namespace Orbito.Infrastructure.Data
             }
         }
 
-        /// <summary>
-        /// INTERNAL USE ONLY - Clears tenant cache
-        /// Called automatically by DI container when DbContext scope ends
-        /// Should NOT be called manually during request processing
-        /// Note: With Lazy<T>, cache is automatically cleared when DbContext is disposed
-        /// </summary>
-        internal void ClearTenantCache()
-        {
-            // With Lazy<T>, the cache is automatically cleared when DbContext is disposed
-            // No manual clearing needed - this method is kept for compatibility
-            _logger.LogDebug("Tenant cache will be cleared on DbContext disposal");
-        }
 
-        /// <summary>
-        /// Seeds default data for the application
-        /// Creates global roles: PlatformAdmin, Provider, Client
-        /// </summary>
-        private void SeedDefaultData(ModelBuilder builder)
-        {
-            // Default global roles with validated GUIDs
-            var platformAdminRoleId = Guid.Parse("11111111-1111-1111-1111-111111111111");
-            var providerRoleId = Guid.Parse("22222222-2222-2222-2222-222222222222");
-            var clientRoleId = Guid.Parse("33333333-3333-3333-3333-333333333333");
-
-            // Validate GUIDs to prevent conflicts
-            var roleIds = new[] { platformAdminRoleId, providerRoleId, clientRoleId };
-
-            if (roleIds.Any(id => id == Guid.Empty))
-                throw new InvalidOperationException("Seed data GUIDs cannot be empty");
-
-            if (roleIds.Distinct().Count() != roleIds.Length)
-                throw new InvalidOperationException("Seed data GUIDs must be unique");
-
-            var seedDate = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-
-            builder.Entity<ApplicationRole>().HasData(
-                new ApplicationRole("PlatformAdmin")
-                {
-                    Id = platformAdminRoleId,
-                    NormalizedName = "PLATFORMADMIN",
-                    Description = "Platform Administrator - Full system access",
-                    TenantId = null, // Global role
-                    IsActive = true,
-                    CreatedAt = seedDate
-                },
-                new ApplicationRole("Provider")
-                {
-                    Id = providerRoleId,
-                    NormalizedName = "PROVIDER",
-                    Description = "Service Provider - Manages clients and subscriptions",
-                    TenantId = null, // Global role
-                    IsActive = true,
-                    CreatedAt = seedDate
-                },
-                new ApplicationRole("Client")
-                {
-                    Id = clientRoleId,
-                    NormalizedName = "CLIENT",
-                    Description = "Client User - Manages own subscriptions and payments",
-                    TenantId = null, // Global role
-                    IsActive = true,
-                    CreatedAt = seedDate
-                }
-            );
-
-            _logger.LogInformation("Seed data configuration completed for {RoleCount} roles", roleIds.Length);
-        }
     }
 }

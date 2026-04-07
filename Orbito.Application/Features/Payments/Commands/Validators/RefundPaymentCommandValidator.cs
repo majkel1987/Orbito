@@ -1,10 +1,10 @@
 using FluentValidation;
-using Orbito.Application.Features.Payments.Commands;
 
 namespace Orbito.Application.Features.Payments.Commands.Validators;
 
 /// <summary>
-/// Walidator dla komendy zwrotu płatności
+/// Validator for refund payment command.
+/// Validates payment ID, client ID, amount, currency, and reason.
 /// </summary>
 public class RefundPaymentCommandValidator : AbstractValidator<RefundPaymentCommand>
 {
@@ -13,6 +13,11 @@ public class RefundPaymentCommandValidator : AbstractValidator<RefundPaymentComm
         RuleFor(x => x.PaymentId)
             .NotEmpty()
             .WithMessage("Payment ID is required");
+
+        // FIXED: Added ClientId validation - required for security verification
+        RuleFor(x => x.ClientId)
+            .NotEmpty()
+            .WithMessage("Client ID is required");
 
         RuleFor(x => x.Amount)
             .GreaterThan(0)
@@ -35,9 +40,12 @@ public class RefundPaymentCommandValidator : AbstractValidator<RefundPaymentComm
         RuleFor(x => x.Reason)
             .NotEmpty()
             .WithMessage("Refund reason is required")
+            .Must(reason => !string.IsNullOrWhiteSpace(reason))
+            .WithMessage("Refund reason cannot be only whitespace")
             .MaximumLength(500)
             .WithMessage("Refund reason cannot exceed 500 characters")
-            .Matches(@"^[a-zA-Z0-9\s\-_,.()]+$")
+            // FIXED: Updated regex to support Polish and other Unicode characters (consistent with CreateStripeCustomer)
+            .Matches(@"^[\p{L}\p{N}\s\-_,.()]+$")
             .WithMessage("Refund reason contains invalid characters");
     }
 }

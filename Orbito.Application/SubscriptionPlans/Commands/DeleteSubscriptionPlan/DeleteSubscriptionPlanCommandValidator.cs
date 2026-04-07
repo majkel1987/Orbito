@@ -1,13 +1,12 @@
 using FluentValidation;
 
-namespace Orbito.Application.SubscriptionPlans.Commands.DeleteSubscriptionPlan
+namespace Orbito.Application.SubscriptionPlans.Commands.DeleteSubscriptionPlan;
+
+public class DeleteSubscriptionPlanCommandValidator : AbstractValidator<DeleteSubscriptionPlanCommand>
 {
-    public class DeleteSubscriptionPlanCommandValidator : AbstractValidator<DeleteSubscriptionPlanCommand>
+    public DeleteSubscriptionPlanCommandValidator()
     {
-        public DeleteSubscriptionPlanCommandValidator()
-        {
-            RuleFor(x => x.Id)
-                .NotEmpty().WithMessage("Plan ID is required");
-        }
+        RuleFor(x => x.Id)
+            .NotEmpty().WithMessage("Plan ID is required");
     }
 }

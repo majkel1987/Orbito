@@ -4,48 +4,48 @@ using Orbito.Application.Common.Models;
 namespace Orbito.Application.Features.Payments.Queries.GetFailureReasons;
 
 /// <summary>
-/// Query to get failure reasons breakdown for a specific period
+/// Query to get failure reasons breakdown for a specific period.
+/// Returns Result&lt;FailureReasonsResponse&gt; for proper error handling.
 /// </summary>
-public record GetFailureReasonsQuery : IRequest<Dictionary<string, int>>
+/// <param name="StartDate">Start date of the period</param>
+/// <param name="EndDate">End date of the period</param>
+/// <param name="ProviderId">Optional provider ID to filter failure reasons by. If not specified, uses current tenant's provider</param>
+/// <param name="TopN">Optional limit for top N failure reasons (prevents unbounded result sets)</param>
+public record GetFailureReasonsQuery(
+    DateTime StartDate,
+    DateTime EndDate,
+    Guid? ProviderId = null,
+    int? TopN = null) : IRequest<Orbito.Domain.Common.Result<FailureReasonsResponse>>
 {
-    /// <summary>
-    /// Start date of the period
-    /// </summary>
-    public DateTime StartDate { get; init; }
-
-    /// <summary>
-    /// End date of the period
-    /// </summary>
-    public DateTime EndDate { get; init; }
-
-    /// <summary>
-    /// Optional provider ID to filter failure reasons by
-    /// </summary>
-    public Guid? ProviderId { get; init; }
-
-    /// <summary>
-    /// Default constructor
-    /// </summary>
-    public GetFailureReasonsQuery()
-    {
-    }
-
-    /// <summary>
-    /// Constructor with parameters
-    /// </summary>
-    /// <param name="startDate">Start date</param>
-    /// <param name="endDate">End date</param>
-    /// <param name="providerId">Optional provider ID</param>
-    public GetFailureReasonsQuery(DateTime startDate, DateTime endDate, Guid? providerId = null)
-    {
-        StartDate = startDate;
-        EndDate = endDate;
-        ProviderId = providerId;
-    }
-
     /// <summary>
     /// Gets the date range for this query
     /// </summary>
     /// <returns>Date range</returns>
     public DateRange GetDateRange() => new(StartDate, EndDate);
+}
+
+/// <summary>
+/// Response containing failure reasons breakdown with metadata
+/// </summary>
+public record FailureReasonsResponse
+{
+    /// <summary>
+    /// Dictionary of failure reasons and their counts
+    /// </summary>
+    public required Dictionary<string, int> FailureReasons { get; init; }
+
+    /// <summary>
+    /// Total number of distinct failure reasons (before TopN limit)
+    /// </summary>
+    public int TotalCount { get; init; }
+
+    /// <summary>
+    /// The date range for this query
+    /// </summary>
+    public DateRange Period { get; init; }
+
+    /// <summary>
+    /// The provider ID used for this query (may differ from requested if defaulted)
+    /// </summary>
+    public Guid? ProviderId { get; init; }
 }

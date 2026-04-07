@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Orbito.Application.Common.Helpers;
 using Orbito.Application.Common.Interfaces;
 
 namespace Orbito.Application.BackgroundJobs;
@@ -61,97 +62,74 @@ public class UpcomingPaymentReminderJob : BackgroundService
     private async Task SendUpcomingPaymentRemindersAsync(CancellationToken cancellationToken)
     {
         await using var scope = _serviceProvider.CreateAsyncScope();
-
-        var unitOfWork = scope.ServiceProvider.GetService<IUnitOfWork>();
-        var notificationService = scope.ServiceProvider.GetService<IPaymentNotificationService>();
-        var dateTime = scope.ServiceProvider.GetService<IDateTime>();
-        var tenantContext = scope.ServiceProvider.GetService<ITenantContext>();
-
-        if (unitOfWork == null || notificationService == null || dateTime == null || tenantContext == null)
-        {
-            _logger.LogError("Required services not available");
-            return;
-        }
+        var dateTime = scope.ServiceProvider.GetRequiredService<IDateTime>();
 
         var currentDate = dateTime.UtcNow;
         var reminderDate = currentDate.AddDays(DaysBeforePayment).Date;
 
         _logger.LogInformation("Processing upcoming payment reminders for date {ReminderDate}", reminderDate);
 
-        try
-        {
-            // Set admin tenant context for background job
-            // This allows access to all tenants' data for admin operations
-            tenantContext.SetTenant(null); // Admin context - no tenant filtering
+        // Create timeout for the operation
+        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromMinutes(OperationTimeoutMinutes));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
-            // Create timeout for the operation
-            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromMinutes(OperationTimeoutMinutes));
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
-
-            // Get all active subscriptions with billing dates matching the reminder date
-            var subscriptions = await unitOfWork.Subscriptions.GetSubscriptionsForBillingAsync(
-                reminderDate, linkedCts.Token);
-
-            _logger.LogInformation("Found {Count} subscriptions with upcoming payments on {Date}",
-                subscriptions.Count(), reminderDate);
-
-            var successCount = 0;
-            var failureCount = 0;
-
-            foreach (var subscription in subscriptions)
+        // SECURE: Execute for all tenants with proper tenant context isolation
+        var results = await TenantJobHelper.ExecuteForAllTenantsAsync(
+            _serviceProvider,
+            _logger,
+            async (tenantId, serviceProvider, ct) =>
             {
-                try
+                var unitOfWork = serviceProvider.GetRequiredService<IUnitOfWork>();
+                var notificationService = serviceProvider.GetRequiredService<IPaymentNotificationService>();
+                var dateTimeService = serviceProvider.GetRequiredService<IDateTime>();
+                var reminderDateLocal = dateTimeService.UtcNow.AddDays(DaysBeforePayment).Date;
+
+                // Get subscriptions for billing for THIS tenant only
+                var subscriptions = await unitOfWork.Subscriptions.GetSubscriptionsForBillingAsync(
+                    reminderDateLocal, ct);
+
+                _logger.LogDebug("Tenant {TenantId}: Found {Count} subscriptions with upcoming payments on {Date}",
+                    tenantId, subscriptions.Count(), reminderDateLocal);
+
+                var successCount = 0;
+                var failureCount = 0;
+
+                foreach (var subscription in subscriptions)
                 {
-                    // Send reminder notification
-                    await notificationService.SendUpcomingPaymentReminderAsync(
-                        subscription.Id,
-                        DaysBeforePayment,
-                        linkedCts.Token);
+                    try
+                    {
+                        // Send reminder notification
+                        await notificationService.SendUpcomingPaymentReminderAsync(
+                            subscription.Id,
+                            DaysBeforePayment,
+                            ct);
 
-                    successCount++;
-                    _logger.LogDebug("Sent upcoming payment reminder for subscription {SubscriptionId}",
-                        subscription.Id);
+                        successCount++;
+                        _logger.LogDebug("Sent upcoming payment reminder for subscription {SubscriptionId}",
+                            subscription.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        failureCount++;
+                        _logger.LogError(ex,
+                            "Failed to send upcoming payment reminder for subscription {SubscriptionId}",
+                            subscription.Id);
+                    }
+
+                    // Small delay to avoid overwhelming the email service
+                    await Task.Delay(TimeSpan.FromMilliseconds(100), ct);
                 }
-                catch (Exception ex)
-                {
-                    failureCount++;
-                    _logger.LogError(ex,
-                        "Failed to send upcoming payment reminder for subscription {SubscriptionId}",
-                        subscription.Id);
-                }
 
-                // Small delay to avoid overwhelming the email service
-                await Task.Delay(TimeSpan.FromMilliseconds(100), linkedCts.Token);
-            }
+                _logger.LogDebug(
+                    "Completed upcoming payment reminders for tenant {TenantId}. Success: {SuccessCount}, Failed: {FailureCount}",
+                    tenantId, successCount, failureCount);
+            },
+            linkedCts.Token);
 
-            _logger.LogInformation(
-                "Completed upcoming payment reminder processing. Success: {SuccessCount}, Failed: {FailureCount}",
-                successCount, failureCount);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            _logger.LogWarning("SendUpcomingPaymentReminders operation was cancelled");
-        }
-        catch (OperationCanceledException)
-        {
-            _logger.LogError("SendUpcomingPaymentReminders operation timed out after {Minutes} minutes", OperationTimeoutMinutes);
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing upcoming payment reminders");
-            throw;
-        }
-        finally
-        {
-            // Clear tenant context
-            tenantContext.ClearTenant();
-            
-            // Properly dispose UnitOfWork
-            if (unitOfWork is IAsyncDisposable asyncDisposable)
-            {
-                await asyncDisposable.DisposeAsync();
-            }
-        }
+        var successCount = results.Values.Count(r => r);
+        _logger.LogInformation(
+            "Completed upcoming payment reminder processing. Success: {SuccessCount}/{TotalCount}",
+            successCount,
+            results.Count);
     }
 }

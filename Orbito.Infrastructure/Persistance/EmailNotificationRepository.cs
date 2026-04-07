@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Domain.Entities;
+using Orbito.Domain.Enums;
 using Orbito.Infrastructure.Data;
 using System.Linq.Expressions;
 
@@ -104,7 +105,7 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     public async Task<List<EmailNotification>> GetPendingNotificationsAsync(CancellationToken cancellationToken = default)
     {
         return await _context.EmailNotifications
-            .Where(en => en.Status == "Pending")
+            .Where(en => en.Status == EmailNotificationStatus.Pending)
             .Where(en => en.NextRetryAt == null || en.NextRetryAt <= DateTime.UtcNow)
             .OrderBy(en => en.CreatedAt)
             .ToListAsync(cancellationToken);
@@ -113,7 +114,7 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     public async Task<List<EmailNotification>> GetFailedNotificationsAsync(CancellationToken cancellationToken = default)
     {
         return await _context.EmailNotifications
-            .Where(en => en.Status == "Failed")
+            .Where(en => en.Status == EmailNotificationStatus.Failed)
             .OrderByDescending(en => en.ProcessedAt)
             .ToListAsync(cancellationToken);
     }
@@ -134,7 +135,7 @@ public class EmailNotificationRepository : IEmailNotificationRepository
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<List<EmailNotification>> GetByStatusAsync(string status, CancellationToken cancellationToken = default)
+    public async Task<List<EmailNotification>> GetByStatusAsync(EmailNotificationStatus status, CancellationToken cancellationToken = default)
     {
         return await _context.EmailNotifications
             .Where(en => en.Status == status)
@@ -145,7 +146,7 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     public async Task<List<EmailNotification>> GetReadyForRetryAsync(CancellationToken cancellationToken = default)
     {
         return await _context.EmailNotifications
-            .Where(en => en.Status == "Pending")
+            .Where(en => en.Status == EmailNotificationStatus.Pending)
             .Where(en => en.RetryCount < en.MaxRetries)
             .Where(en => en.NextRetryAt == null || en.NextRetryAt <= DateTime.UtcNow)
             .OrderBy(en => en.NextRetryAt ?? en.CreatedAt)

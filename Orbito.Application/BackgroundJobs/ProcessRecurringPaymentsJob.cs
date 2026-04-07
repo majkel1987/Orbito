@@ -98,18 +98,6 @@ public class ProcessRecurringPaymentsJob : BackgroundService
                     _logger.LogError(ex, "Failed to process recurring payments for tenant {TenantId}", tenantId);
                     throw;
                 }
-
-                // Process expired subscriptions
-                try
-                {
-                    await subscriptionService.ProcessExpiredSubscriptionsAsync(ct);
-                    _logger.LogDebug("Successfully processed expired subscriptions for tenant {TenantId}", tenantId);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to process expired subscriptions for tenant {TenantId}", tenantId);
-                    throw;
-                }
             },
             linkedCts.Token);
 

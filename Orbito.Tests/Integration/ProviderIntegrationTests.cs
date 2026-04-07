@@ -28,6 +28,9 @@ namespace Orbito.Tests.Integration
         private readonly Mock<IUnitOfWork> _unitOfWorkMock;
         private readonly Mock<IProviderRepository> _providerRepositoryMock;
         private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
+        private readonly Mock<IPlatformPlanRepository> _platformPlanRepositoryMock;
+        private readonly Mock<IProviderSubscriptionRepository> _providerSubscriptionRepositoryMock;
+        private readonly Mock<IClientRepository> _clientRepositoryMock;
         private readonly Mock<ILogger<CreateProviderCommandHandler>> _createLoggerMock;
         private readonly Mock<ILogger<UpdateProviderCommandHandler>> _updateLoggerMock;
         private readonly Mock<ILogger<DeleteProviderCommandHandler>> _deleteLoggerMock;
@@ -44,12 +47,15 @@ namespace Orbito.Tests.Integration
             _tenantContextMock = new Mock<ITenantContext>();
             _unitOfWorkMock = new Mock<IUnitOfWork>();
             _providerRepositoryMock = new Mock<IProviderRepository>();
-            
+            _platformPlanRepositoryMock = new Mock<IPlatformPlanRepository>();
+            _providerSubscriptionRepositoryMock = new Mock<IProviderSubscriptionRepository>();
+            _clientRepositoryMock = new Mock<IClientRepository>();
+
             // Fix nullable reference warnings by using null! or proper mock setup
             _userManagerMock = new Mock<UserManager<ApplicationUser>>(
-                Mock.Of<IUserStore<ApplicationUser>>(), 
+                Mock.Of<IUserStore<ApplicationUser>>(),
                 null!, null!, null!, null!, null!, null!, null!, null!);
-            
+
             _createLoggerMock = new Mock<ILogger<CreateProviderCommandHandler>>();
             _updateLoggerMock = new Mock<ILogger<UpdateProviderCommandHandler>>();
             _deleteLoggerMock = new Mock<ILogger<DeleteProviderCommandHandler>>();
@@ -88,6 +94,9 @@ namespace Orbito.Tests.Integration
             services.AddSingleton(_tenantContextMock.Object);
             services.AddSingleton(_unitOfWorkMock.Object);
             services.AddSingleton(_providerRepositoryMock.Object);
+            services.AddSingleton(_platformPlanRepositoryMock.Object);
+            services.AddSingleton(_providerSubscriptionRepositoryMock.Object);
+            services.AddSingleton(_clientRepositoryMock.Object);
             services.AddSingleton(_userManagerMock.Object);
             services.AddSingleton(_createLoggerMock.Object);
             services.AddSingleton(_updateLoggerMock.Object);
@@ -111,10 +120,10 @@ namespace Orbito.Tests.Integration
             var subdomainSlug = "test-business";
             var description = "Test business description";
 
-            var command = new CreateProviderCommand(userId, businessName, subdomainSlug, description);
+            var command = new CreateProviderCommand(userId, businessName, subdomainSlug, "test@example.com", "John", "Doe", null, description);
 
             var createdProvider = Provider.Create(userId, businessName, subdomainSlug);
-            
+
             _providerRepositoryMock.Setup(x => x.GetBySubdomainSlugAsync(subdomainSlug, It.IsAny<CancellationToken>()))
                 .ReturnsAsync((Provider?)null);
             _providerRepositoryMock.Setup(x => x.AddAsync(It.IsAny<Provider>(), It.IsAny<CancellationToken>()))
@@ -123,6 +132,9 @@ namespace Orbito.Tests.Integration
             var handler = new CreateProviderCommandHandler(
                 _unitOfWorkMock.Object,
                 _providerRepositoryMock.Object,
+                _platformPlanRepositoryMock.Object,
+                _providerSubscriptionRepositoryMock.Object,
+                _clientRepositoryMock.Object,
                 _userManagerMock.Object,
                 _createLoggerMock.Object);
 
@@ -152,7 +164,7 @@ namespace Orbito.Tests.Integration
             var subdomainSlug = "taken-subdomain";
             var description = "Test business description";
 
-            var command = new CreateProviderCommand(userId, businessName, subdomainSlug, description);
+            var command = new CreateProviderCommand(userId, businessName, subdomainSlug, "test@example.com", "John", "Doe", null, description);
 
             _providerRepositoryMock.Setup(x => x.GetBySubdomainSlugAsync(subdomainSlug, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Provider.Create(Guid.NewGuid(), "Existing Business", subdomainSlug));
@@ -160,6 +172,9 @@ namespace Orbito.Tests.Integration
             var handler = new CreateProviderCommandHandler(
                 _unitOfWorkMock.Object,
                 _providerRepositoryMock.Object,
+                _platformPlanRepositoryMock.Object,
+                _providerSubscriptionRepositoryMock.Object,
+                _clientRepositoryMock.Object,
                 _userManagerMock.Object,
                 _createLoggerMock.Object);
 
@@ -344,9 +359,10 @@ namespace Orbito.Tests.Integration
 
             // Assert
             result.Should().NotBeNull();
-            result.Providers.Should().HaveCount(2);
-            result.Providers.Should().Contain(p => p.BusinessName == "Business 1");
-            result.Providers.Should().Contain(p => p.BusinessName == "Business 2");
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Items.Should().HaveCount(2);
+            result.Value.Items.Should().Contain(p => p.BusinessName == "Business 1");
+            result.Value.Items.Should().Contain(p => p.BusinessName == "Business 2");
 
             _providerRepositoryMock.Verify(x => x.GetAllAsync(pageNumber, pageSize, It.IsAny<CancellationToken>()), Times.Once);
         }
@@ -371,10 +387,10 @@ namespace Orbito.Tests.Integration
 
             // Assert
             result.Should().NotBeNull();
-            result.Success.Should().BeTrue();
-            result.Provider.Should().NotBeNull();
-            result.Provider!.UserId.Should().Be(userId);
-            result.Provider.BusinessName.Should().Be("Test Business");
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value!.UserId.Should().Be(userId);
+            result.Value.BusinessName.Should().Be("Test Business");
 
             _providerRepositoryMock.Verify(x => x.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
         }
@@ -600,9 +616,9 @@ namespace Orbito.Tests.Integration
             var description = "Complex business with multiple features";
 
             // Test 1: Create Provider
-            var createCommand = new CreateProviderCommand(userId, businessName, subdomainSlug, description);
+            var createCommand = new CreateProviderCommand(userId, businessName, subdomainSlug, "test@example.com", "John", "Doe", null, description);
             var createdProvider = Provider.Create(userId, businessName, subdomainSlug);
-            
+
             _providerRepositoryMock.Setup(x => x.GetBySubdomainSlugAsync(subdomainSlug, It.IsAny<CancellationToken>()))
                 .ReturnsAsync((Provider?)null);
             _providerRepositoryMock.Setup(x => x.AddAsync(It.IsAny<Provider>(), It.IsAny<CancellationToken>()))
@@ -611,6 +627,9 @@ namespace Orbito.Tests.Integration
             var createHandler = new CreateProviderCommandHandler(
                 _unitOfWorkMock.Object,
                 _providerRepositoryMock.Object,
+                _platformPlanRepositoryMock.Object,
+                _providerSubscriptionRepositoryMock.Object,
+                _clientRepositoryMock.Object,
                 _userManagerMock.Object,
                 _createLoggerMock.Object);
 
@@ -666,7 +685,7 @@ namespace Orbito.Tests.Integration
             var subdomainSlug = "edge-case-business";
             var description = "Business with edge case scenarios";
 
-            var command = new CreateProviderCommand(userId, businessName, subdomainSlug, description);
+            var command = new CreateProviderCommand(userId, businessName, subdomainSlug, "test@example.com", "John", "Doe", null, description);
 
             // Simulate database error
             _providerRepositoryMock.Setup(x => x.GetBySubdomainSlugAsync(subdomainSlug, It.IsAny<CancellationToken>()))
@@ -675,6 +694,9 @@ namespace Orbito.Tests.Integration
             var handler = new CreateProviderCommandHandler(
                 _unitOfWorkMock.Object,
                 _providerRepositoryMock.Object,
+                _platformPlanRepositoryMock.Object,
+                _providerSubscriptionRepositoryMock.Object,
+                _clientRepositoryMock.Object,
                 _userManagerMock.Object,
                 _createLoggerMock.Object);
 

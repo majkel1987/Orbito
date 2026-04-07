@@ -1,4 +1,5 @@
 using Orbito.Domain.Entities;
+using Orbito.Domain.Enums;
 
 namespace Orbito.Application.Common.Interfaces;
 
@@ -30,7 +31,7 @@ public interface IEmailNotificationRepository : IRepository<EmailNotification>
     /// <summary>
     /// Gets email notifications by status
     /// </summary>
-    Task<List<EmailNotification>> GetByStatusAsync(string status, CancellationToken cancellationToken = default);
+    Task<List<EmailNotification>> GetByStatusAsync(EmailNotificationStatus status, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets email notifications ready for retry

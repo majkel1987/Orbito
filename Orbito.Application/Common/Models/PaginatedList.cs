@@ -9,7 +9,7 @@ namespace Orbito.Application.Common.Models
         /// <summary>
         /// Items in the current page
         /// </summary>
-        public List<T> Items { get; set; } = new();
+        public List<T> Items { get; init; } = new();
 
         /// <summary>
         /// Total number of items across all pages
@@ -29,7 +29,7 @@ namespace Orbito.Application.Common.Models
         /// <summary>
         /// Total number of pages
         /// </summary>
-        public int TotalPages => (int)Math.Ceiling((double)TotalCount / PageSize);
+        public int TotalPages => PageSize > 0 ? (int)Math.Ceiling((double)TotalCount / PageSize) : 0;
 
         /// <summary>
         /// Whether there is a previous page

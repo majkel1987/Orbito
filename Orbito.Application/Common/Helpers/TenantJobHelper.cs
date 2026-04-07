@@ -29,35 +29,37 @@ public static class TenantJobHelper
         await using var scope = serviceProvider.CreateAsyncScope();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
-        // Get all active tenants - use pagination to get all
-        // Note: This assumes reasonable number of tenants. For very large deployments,
-        // consider adding a dedicated method to IProviderRepository
-        var allActiveProviders = new List<Domain.Entities.Provider>();
+        // Get all active tenant IDs without loading full Provider entities
+        // Memory-optimized: extract only TenantId values
+        var tenantIds = new HashSet<Guid>();
         var pageNumber = 1;
         const int pageSize = 100;
         var hasMore = true;
 
-        while (hasMore)
+        while (hasMore && !cancellationToken.IsCancellationRequested)
         {
             var providers = await unitOfWork.Providers.GetActiveProvidersAsync(pageNumber, pageSize, cancellationToken);
             var providersList = providers.ToList();
-            allActiveProviders.AddRange(providersList);
+
+            // Extract tenant IDs immediately, don't keep full entities
+            foreach (var provider in providersList)
+            {
+                tenantIds.Add(provider.TenantId.Value);
+            }
+
             hasMore = providersList.Count == pageSize;
             pageNumber++;
         }
 
-        var tenantIds = allActiveProviders
-            .Select(p => p.TenantId.Value)
-            .Distinct()
-            .ToList();
+        var tenantIdsList = tenantIds.ToList();
 
         logger.LogInformation(
             "Executing operation for {TenantCount} tenants",
-            tenantIds.Count);
+            tenantIdsList.Count);
 
         // Process tenants in batches for better performance
         const int batchSize = 10;
-        var tenantBatches = tenantIds
+        var tenantBatches = tenantIdsList
             .Select((id, index) => new { id, index })
             .GroupBy(x => x.index / batchSize)
             .Select(g => g.Select(x => x.id).ToList())
@@ -93,7 +95,7 @@ public static class TenantJobHelper
         logger.LogInformation(
             "Completed operation for all tenants. Success: {SuccessCount}/{TotalCount}",
             successCount,
-            tenantIds.Count);
+            tenantIdsList.Count);
 
         return results;
     }

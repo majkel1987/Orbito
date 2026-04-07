@@ -2,9 +2,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orbito.Application.Common.Interfaces;
-using Orbito.Application.Common.Models;
+using Orbito.Domain.Common;
 using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
+using Orbito.Domain.Errors;
 using Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers;
 using Orbito.Infrastructure.PaymentGateways.Stripe.Models;
 using Stripe;
@@ -59,7 +60,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
                 {
                     _logger.LogWarning("Webhook payload size {Size} exceeds maximum {MaxSize}",
                         payload.Length, _webhookSettings.MaxPayloadSize);
-                    return Result.Failure($"Payload size exceeds maximum allowed size of {_webhookSettings.MaxPayloadSize} bytes");
+                    return Result.Failure(DomainErrors.Webhook.PayloadTooLarge);
                 }
 
                 _logger.LogInformation("Processing Stripe webhook event: {EventType}, Payload size: {Size} bytes",
@@ -75,14 +76,14 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
                 {
                     _logger.LogError(ex, "Failed to parse Stripe webhook payload");
                     await LogFailedWebhookAsync(null, eventType, payload, "Invalid JSON format", cancellationToken);
-                    return Result.Failure("Invalid webhook payload format");
+                    return Result.Failure(DomainErrors.Webhook.InvalidPayloadFormat);
                 }
 
                 if (webhookData == null)
                 {
                     _logger.LogError("Webhook data deserialized to null");
                     await LogFailedWebhookAsync(null, eventType, payload, "Null webhook data", cancellationToken);
-                    return Result.Failure("Invalid webhook payload format");
+                    return Result.Failure(DomainErrors.Webhook.InvalidPayloadFormat);
                 }
 
                 // Validate event type matches
@@ -97,7 +98,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
                 if (!idempotencyCheck.IsSuccess)
                 {
                     _logger.LogWarning("Failed to check idempotency for event {EventId}: {Error}",
-                        webhookData.Id, idempotencyCheck.ErrorMessage);
+                        webhookData.Id, idempotencyCheck.Error.Message);
                     // Continue processing - don't fail due to idempotency check issues
                 }
                 else if (idempotencyCheck.Value)
@@ -141,7 +142,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
                 var processingTime = DateTime.UtcNow - startTime;
                 _logger.LogError(ex, "Unexpected error processing Stripe webhook event: {EventType} (took {ProcessingTime}ms)",
                     eventType, processingTime.TotalMilliseconds);
-                return Result.Failure($"Error processing webhook: {ex.Message}");
+                return Result.Failure(DomainErrors.General.UnexpectedError);
             }
         }
 
@@ -162,8 +163,8 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
                 if (!processResult.IsSuccess)
                 {
                     _logger.LogError("Failed to process webhook event {EventId}: {Error}",
-                        webhookData.Id, processResult.ErrorMessage);
-                    await LogFailedWebhookAsync(webhookData.Id, eventType, payload, processResult.ErrorMessage, cancellationToken);
+                        webhookData.Id, processResult.Error.Message);
+                    await LogFailedWebhookAsync(webhookData.Id, eventType, payload, processResult.Error.Message, cancellationToken);
                     return processResult;
                 }
 
@@ -172,7 +173,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
                 if (!markResult.IsSuccess)
                 {
                     _logger.LogWarning("Failed to mark webhook event {EventId} as processed: {Error}",
-                        webhookData.Id, markResult.ErrorMessage);
+                        webhookData.Id, markResult.Error.Message);
                     // Don't fail the whole operation if we can't mark as processed
                 }
 
@@ -185,7 +186,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
             {
                 _logger.LogError(ex, "Error in internal webhook processing for {EventId}", webhookData.Id);
                 await LogFailedWebhookAsync(webhookData.Id, eventType, payload, ex.Message, cancellationToken);
-                return Result.Failure($"Error processing webhook: {ex.Message}");
+                return Result.Failure(DomainErrors.General.UnexpectedError);
             }
         }
 
@@ -210,13 +211,13 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
                 if (string.IsNullOrEmpty(_configuration.WebhookSecret))
                 {
                     _logger.LogError("Stripe webhook secret not configured - cannot verify signature");
-                    return Result<bool>.Failure("Webhook secret not configured");
+                    return Result.Failure<bool>(DomainErrors.Webhook.SecretNotConfigured);
                 }
 
                 if (string.IsNullOrEmpty(signature))
                 {
                     _logger.LogWarning("Missing webhook signature header");
-                    return Result<bool>.Failure("Missing webhook signature");
+                    return Result.Failure<bool>(DomainErrors.Webhook.MissingSignature);
                 }
 
                 // Use Stripe's official signature verification
@@ -235,13 +236,13 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
                 catch (StripeException stripeEx)
                 {
                     _logger.LogWarning(stripeEx, "Webhook signature validation failed: {Message}", stripeEx.Message);
-                    return Result<bool>.Failure($"Invalid signature: {stripeEx.Message}");
+                    return Result.Failure<bool>(DomainErrors.Webhook.SignatureValidationFailed(stripeEx.Message));
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error validating webhook signature");
-                return Result<bool>.Failure($"Signature validation error: {ex.Message}");
+                return Result.Failure<bool>(DomainErrors.Webhook.SignatureValidationFailed(ex.Message));
             }
         }
 
@@ -254,7 +255,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
             {
                 if (string.IsNullOrEmpty(eventId))
                 {
-                    return Result<bool>.Failure("Event ID is null or empty");
+                    return Result.Failure<bool>(DomainErrors.Webhook.EventIdRequired);
                 }
 
                 var webhookLog = await _webhookLogRepository.GetByEventIdAsync(eventId, cancellationToken);
@@ -273,7 +274,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error checking if event {EventId} is processed", eventId);
-                return Result<bool>.Failure($"Error checking event status: {ex.Message}");
+                return Result.Failure<bool>(DomainErrors.Webhook.EventStatusCheckFailed(ex.Message));
             }
         }
 
@@ -295,19 +296,12 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
                     return Result.Success();
                 }
 
-                var webhookLog = new PaymentWebhookLog
-                {
-                    Id = Guid.NewGuid(),
-                    EventId = eventId,
-                    Provider = "Stripe",
-                    EventType = eventType,
-                    Payload = _webhookSettings.LogPayloads ? payload : "[Payload logging disabled]",
-                    Status = WebhookStatus.Processing,
-                    ReceivedAt = DateTime.UtcNow,
-                    Attempts = 1,
-                    ProcessedAt = null,
-                    ErrorMessage = null
-                };
+                var webhookLog = PaymentWebhookLog.CreateForWebhook(
+                    eventId,
+                    "Stripe",
+                    eventType,
+                    _webhookSettings.LogPayloads ? payload : "[Payload logging disabled]",
+                    WebhookStatus.Processing);
 
                 await _webhookLogRepository.AddAsync(webhookLog, cancellationToken);
                 await _webhookLogRepository.SaveChangesAsync(cancellationToken);
@@ -338,27 +332,19 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
                 if (webhookLog == null)
                 {
                     // Create new log if it doesn't exist
-                    webhookLog = new PaymentWebhookLog
-                    {
-                        Id = Guid.NewGuid(),
-                        EventId = eventId,
-                        Provider = "Stripe",
-                        EventType = eventType,
-                        Payload = _webhookSettings.LogPayloads ? payload : "[Payload logging disabled]",
-                        Status = WebhookStatus.Processed,
-                        ProcessedAt = DateTime.UtcNow,
-                        ReceivedAt = DateTime.UtcNow,
-                        Attempts = 1
-                    };
+                    webhookLog = PaymentWebhookLog.CreateForWebhook(
+                        eventId,
+                        "Stripe",
+                        eventType,
+                        _webhookSettings.LogPayloads ? payload : "[Payload logging disabled]",
+                        WebhookStatus.Processed);
 
                     await _webhookLogRepository.AddAsync(webhookLog, cancellationToken);
                 }
                 else
                 {
                     // Update existing log
-                    webhookLog.Status = WebhookStatus.Processed;
-                    webhookLog.ProcessedAt = DateTime.UtcNow;
-                    webhookLog.ErrorMessage = null;
+                    webhookLog.MarkAsProcessed();
 
                     await _webhookLogRepository.UpdateAsync(webhookLog, cancellationToken);
                 }
@@ -377,7 +363,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error marking event {EventId} as processed", eventId);
-                return Result.Failure($"Error marking event as processed: {ex.Message}");
+                return Result.Failure(DomainErrors.General.UnexpectedError);
             }
         }
 
@@ -402,35 +388,28 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
 
                 if (webhookLog == null)
                 {
-                    webhookLog = new PaymentWebhookLog
-                    {
-                        Id = Guid.NewGuid(),
-                        EventId = eventId,
-                        Provider = "Stripe",
-                        EventType = eventType,
-                        Payload = _webhookSettings.LogPayloads ? TruncatePayload(payload) : "[Payload logging disabled]",
-                        Status = WebhookStatus.Failed,
-                        ReceivedAt = DateTime.UtcNow,
-                        ProcessedAt = DateTime.UtcNow,
-                        Attempts = 1,
-                        ErrorMessage = TruncateErrorMessage(errorMessage)
-                    };
+                    webhookLog = PaymentWebhookLog.CreateForWebhook(
+                        eventId,
+                        "Stripe",
+                        eventType,
+                        _webhookSettings.LogPayloads ? TruncatePayload(payload) : "[Payload logging disabled]",
+                        WebhookStatus.Failed);
+                    webhookLog.MarkAsFailed(TruncateErrorMessage(errorMessage));
 
                     await _webhookLogRepository.AddAsync(webhookLog, cancellationToken);
                 }
                 else
                 {
-                    webhookLog.Status = WebhookStatus.Failed;
-                    webhookLog.ProcessedAt = DateTime.UtcNow;
-                    webhookLog.Attempts++;
-                    webhookLog.ErrorMessage = TruncateErrorMessage(errorMessage);
-
-                    // Implement retry logic
-                    if (webhookLog.Attempts < _webhookSettings.MaxRetryAttempts)
+                    // Check if can retry before marking as failed
+                    if (webhookLog.CanRetry(_webhookSettings.MaxRetryAttempts))
                     {
-                        webhookLog.Status = WebhookStatus.Pending;
+                        webhookLog.MarkAsFailed(TruncateErrorMessage(errorMessage));
                         _logger.LogInformation("Webhook {EventId} will be retried (Attempt {Attempts}/{MaxAttempts})",
                             eventId, webhookLog.Attempts, _webhookSettings.MaxRetryAttempts);
+                    }
+                    else
+                    {
+                        webhookLog.MarkAsFailed(TruncateErrorMessage(errorMessage));
                     }
 
                     await _webhookLogRepository.UpdateAsync(webhookLog, cancellationToken);
@@ -442,7 +421,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error logging failed webhook {EventId}", eventId);
-                return Result.Failure($"Error logging failed webhook: {ex.Message}");
+                return Result.Failure(DomainErrors.General.UnexpectedError);
             }
         }
 

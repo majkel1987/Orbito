@@ -97,8 +97,8 @@ public record DateRange
     public TimeSpan Duration => EndDate - StartDate;
 
     /// <summary>
-    /// Gets the number of days in the range
+    /// Gets the number of days in the range (inclusive)
     /// </summary>
-    /// <returns>Number of days</returns>
+    /// <returns>Number of days including both start and end dates</returns>
     public int Days => (int)Duration.TotalDays + 1;
 }

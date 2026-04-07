@@ -1,6 +1,7 @@
-using Orbito.Application.DTOs;
 using MediatR;
+using Orbito.Application.Clients;
 using Orbito.Application.Common.Interfaces;
+using Orbito.Application.DTOs;
 using Orbito.Domain.Common;
 using Orbito.Domain.Errors;
 
@@ -55,32 +56,15 @@ namespace Orbito.Application.Clients.Commands.UpdateClient
             }
 
             // Aktualizuj właściwości klienta
-            if (!string.IsNullOrWhiteSpace(request.CompanyName))
-            {
-                client.CompanyName = request.CompanyName;
-            }
-
-            if (!string.IsNullOrWhiteSpace(request.Phone))
-            {
-                client.Phone = request.Phone;
-            }
+            client.UpdateContactInfo(request.CompanyName, request.Phone);
 
             // Aktualizuj dane bezpośrednie (tylko dla klientów bez konta Identity)
             if (client.UserId == null)
             {
-                if (!string.IsNullOrWhiteSpace(request.DirectEmail))
+                var updateResult = client.UpdateDirectInfo(request.DirectEmail, request.DirectFirstName, request.DirectLastName);
+                if (updateResult.IsFailure)
                 {
-                    client.DirectEmail = request.DirectEmail;
-                }
-
-                if (!string.IsNullOrWhiteSpace(request.DirectFirstName))
-                {
-                    client.DirectFirstName = request.DirectFirstName;
-                }
-
-                if (!string.IsNullOrWhiteSpace(request.DirectLastName))
-                {
-                    client.DirectLastName = request.DirectLastName;
+                    return Result.Failure<ClientDto>(updateResult.Error);
                 }
             }
 
@@ -95,32 +79,7 @@ namespace Orbito.Application.Clients.Commands.UpdateClient
                 return Result.Failure<ClientDto>(DomainErrors.Client.NotFound);
             }
 
-            var clientDto = MapToDto(updatedClient);
-            return Result.Success(clientDto);
-        }
-
-        private static ClientDto MapToDto(Orbito.Domain.Entities.Client client)
-        {
-            return new ClientDto
-            {
-                Id = client.Id,
-                TenantId = client.TenantId.Value,
-                UserId = client.UserId,
-                CompanyName = client.CompanyName,
-                Phone = client.Phone,
-                DirectEmail = client.DirectEmail,
-                DirectFirstName = client.DirectFirstName,
-                DirectLastName = client.DirectLastName,
-                IsActive = client.IsActive,
-                CreatedAt = client.CreatedAt,
-                Email = client.Email,
-                FirstName = client.FirstName,
-                LastName = client.LastName,
-                FullName = client.FullName,
-                UserEmail = client.User?.Email,
-                UserFirstName = client.User?.FirstName,
-                UserLastName = client.User?.LastName
-            };
+            return Result.Success(ClientMapper.ToDto(updatedClient));
         }
     }
 }

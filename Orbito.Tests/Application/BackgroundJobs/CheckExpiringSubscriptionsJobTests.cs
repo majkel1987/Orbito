@@ -105,8 +105,6 @@ public class CheckExpiringSubscriptionsJobTests : BaseTestFixture
         var cancellationTokenSource = new CancellationTokenSource();
         var expiringSubscriptions = new List<Subscription>();
 
-        _subscriptionServiceMock.Setup(x => x.GetExpiringSubscriptionsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expiringSubscriptions);
 
         // Act
 
@@ -134,8 +132,6 @@ public class CheckExpiringSubscriptionsJobTests : BaseTestFixture
         var cancellationTokenSource = new CancellationTokenSource();
         var expiringSubscriptions = new List<Subscription>();
 
-        _subscriptionServiceMock.Setup(x => x.GetExpiringSubscriptionsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expiringSubscriptions);
 
         var startTime = DateTime.UtcNow;
 
@@ -284,8 +280,6 @@ public class CheckExpiringSubscriptionsJobTests : BaseTestFixture
         var cancellationToken = CancellationToken.None;
         var exception = new InvalidOperationException("Notification failed");
 
-        _subscriptionServiceMock.Setup(x => x.GetExpiringSubscriptionsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expiringSubscriptions);
         _notificationServiceMock.Setup(x => x.SendUpcomingPaymentReminderAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(exception);
 
@@ -418,8 +412,6 @@ public class CheckExpiringSubscriptionsJobTests : BaseTestFixture
         var expiringSubscriptions = new List<Subscription> { subscription1, subscription2 };
         var cancellationToken = CancellationToken.None;
 
-        _subscriptionServiceMock.Setup(x => x.GetExpiringSubscriptionsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expiringSubscriptions);
         _notificationServiceMock.Setup(x => x.SendUpcomingPaymentReminderAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
@@ -449,8 +441,6 @@ public class CheckExpiringSubscriptionsJobTests : BaseTestFixture
         var expiringSubscriptions = new List<Subscription>();
         var cancellationToken = CancellationToken.None;
 
-        _subscriptionServiceMock.Setup(x => x.GetExpiringSubscriptionsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expiringSubscriptions);
 
         // Act
 
@@ -485,8 +475,6 @@ public class CheckExpiringSubscriptionsJobTests : BaseTestFixture
         var expiringSubscriptions = new List<Subscription> { subscription1, subscription2 };
         var cancellationToken = CancellationToken.None;
 
-        _subscriptionServiceMock.Setup(x => x.GetExpiringSubscriptionsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expiringSubscriptions);
         _notificationServiceMock.Setup(x => x.SendUpcomingPaymentReminderAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 

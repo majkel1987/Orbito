@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Domain.Entities;
+using Orbito.Domain.ValueObjects;
 using Orbito.Infrastructure.Data;
 
 namespace Orbito.Infrastructure.Persistance
@@ -23,6 +24,13 @@ namespace Orbito.Infrastructure.Persistance
                 .Include(p => p.Clients)
                 .Include(p => p.Subscriptions)
                 .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+        }
+
+        public async Task<Provider?> GetByTenantIdAsync(TenantId tenantId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Providers
+                .Include(p => p.User)
+                .FirstOrDefaultAsync(p => p.TenantId == tenantId, cancellationToken);
         }
 
         public async Task<Provider?> GetBySubdomainSlugAsync(string subdomainSlug, CancellationToken cancellationToken = default)

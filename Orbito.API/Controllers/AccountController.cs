@@ -126,54 +126,46 @@ namespace Orbito.API.Controllers
         }
 
         /// <summary>
-        /// Rejestracja nowego providera
+        /// Register a new provider
         /// </summary>
         [HttpPost("register-provider")]
         [AllowAnonymous]
         public async Task<IActionResult> RegisterProvider([FromBody] RegisterProviderRequest request)
         {
-            try
+            var command = new RegisterProviderCommand(
+                request.Email,
+                request.Password,
+                request.FirstName,
+                request.LastName,
+                request.BusinessName,
+                request.SubdomainSlug,
+                request.SelectedPlatformPlanId,
+                request.Description,
+                request.Avatar,
+                request.CustomDomain);
+
+            var result = await _mediator.Send(command);
+
+            if (result.IsFailure)
             {
-                var command = new RegisterProviderCommand(
-                    request.Email,
-                    request.Password,
-                    request.FirstName,
-                    request.LastName,
-                    request.BusinessName,
-                    request.SubdomainSlug,
-                    request.SelectedPlatformPlanId,
-                    request.Description,
-                    request.Avatar,
-                    request.CustomDomain);
-
-                var result = await _mediator.Send(command);
-
-                if (!result.Success)
+                return BadRequest(new
                 {
-                    return BadRequest(new
-                    {
-                        message = result.Message,
-                        errors = result.Errors
-                    });
-                }
-
-                _logger.LogInformation("Provider zarejestrowany: {Email} (ID: {ProviderId})", 
-                    request.Email, result.ProviderId);
-
-                return Ok(new
-                {
-                    message = result.Message,
-                    userId = result.UserId,
-                    providerId = result.ProviderId,
-                    businessName = result.BusinessName,
-                    subdomainSlug = result.SubdomainSlug
+                    code = result.Error.Code,
+                    message = result.Error.Message
                 });
             }
-            catch (Exception ex)
+
+            _logger.LogInformation("Provider registered: {Email} (ProviderId: {ProviderId})",
+                request.Email, result.Value.ProviderId);
+
+            return Ok(new
             {
-                _logger.LogError(ex, "Błąd podczas rejestracji providera: {Email}", request.Email);
-                return StatusCode(500, new { message = "Wystąpił błąd podczas rejestracji providera" });
-            }
+                message = "Provider registered successfully",
+                userId = result.Value.UserId,
+                providerId = result.Value.ProviderId,
+                businessName = result.Value.BusinessName,
+                subdomainSlug = result.Value.SubdomainSlug
+            });
         }
 
         /// <summary>

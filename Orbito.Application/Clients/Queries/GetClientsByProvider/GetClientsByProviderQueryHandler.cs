@@ -1,32 +1,41 @@
-using Orbito.Application.DTOs;
-using Orbito.Application.Common.Models;
 using MediatR;
+using Orbito.Application.Clients;
 using Orbito.Application.Common.Interfaces;
+using Orbito.Application.DTOs;
+using Orbito.Domain.Common;
+using Orbito.Domain.Errors;
+using PaginatedList = Orbito.Application.Common.Models.PaginatedList<Orbito.Application.DTOs.ClientDto>;
 
 namespace Orbito.Application.Clients.Queries.GetClientsByProvider
 {
-    public class GetClientsByProviderQueryHandler : IRequestHandler<GetClientsByProviderQuery, Orbito.Domain.Common.Result<PaginatedList<ClientDto>>>
+    public class GetClientsByProviderQueryHandler : IRequestHandler<GetClientsByProviderQuery, Result<PaginatedList>>
     {
         private readonly IClientRepository _clientRepository;
+        private readonly ITenantContext _tenantContext;
 
         public GetClientsByProviderQueryHandler(
-            IClientRepository clientRepository)
+            IClientRepository clientRepository,
+            ITenantContext tenantContext)
         {
             _clientRepository = clientRepository;
+            _tenantContext = tenantContext;
         }
 
-        public async Task<Orbito.Domain.Common.Result<PaginatedList<ClientDto>>> Handle(GetClientsByProviderQuery request, CancellationToken cancellationToken)
+        public async Task<Result<PaginatedList>> Handle(GetClientsByProviderQuery request, CancellationToken cancellationToken)
         {
-            // Query filters w ApplicationDbContext automatycznie obsługują filtrowanie po TenantId
-            // Jeśli nie ma TenantId, query filters zwrócą puste wyniki (bezpieczne zachowanie)
+            // Defense in depth: sprawdź czy mamy kontekst tenanta
+            // Query filters w ApplicationDbContext automatycznie filtrują po TenantId,
+            // ale jawna weryfikacja zapewnia bezpieczeństwo w przypadku błędnej konfiguracji
+            if (!_tenantContext.HasTenant)
+            {
+                return Result.Failure<PaginatedList>(DomainErrors.Tenant.NoTenantContext);
+            }
 
             // Pobierz klientów na podstawie statusu
             IEnumerable<Orbito.Domain.Entities.Client> clients;
             int totalCount;
 
-            var statusFilter = request.Status?.ToLowerInvariant();
-
-            if (statusFilter == "active")
+            if (request.ActiveOnly == true)
             {
                 // Only active clients
                 clients = await _clientRepository.GetActiveClientsAsync(
@@ -36,7 +45,7 @@ namespace Orbito.Application.Clients.Queries.GetClientsByProvider
                     cancellationToken);
                 totalCount = await _clientRepository.GetActiveClientsCountAsync(request.SearchTerm, cancellationToken);
             }
-            else if (statusFilter == "inactive")
+            else if (request.ActiveOnly == false)
             {
                 // Only inactive clients
                 clients = await _clientRepository.GetInactiveClientsAsync(
@@ -48,7 +57,7 @@ namespace Orbito.Application.Clients.Queries.GetClientsByProvider
             }
             else
             {
-                // All clients (status is null, empty, or "all")
+                // All clients (ActiveOnly is null)
                 clients = await _clientRepository.GetAllAsync(
                     request.PageNumber,
                     request.PageSize,
@@ -57,38 +66,14 @@ namespace Orbito.Application.Clients.Queries.GetClientsByProvider
                 totalCount = await _clientRepository.GetTotalCountAsync(request.SearchTerm, cancellationToken);
             }
 
-            var clientDtos = clients.Select(MapToDto).ToList();
-            var paginatedList = new PaginatedList<ClientDto>(
-                clientDtos,
+            var clientDtos = ClientMapper.ToDto(clients);
+            var paginatedList = new PaginatedList(
+                clientDtos.ToList(),
                 totalCount,
                 request.PageNumber,
                 request.PageSize);
 
-            return Orbito.Domain.Common.Result.Success(paginatedList);
-        }
-
-        private static ClientDto MapToDto(Orbito.Domain.Entities.Client client)
-        {
-            return new ClientDto
-            {
-                Id = client.Id,
-                TenantId = client.TenantId.Value,
-                UserId = client.UserId,
-                CompanyName = client.CompanyName,
-                Phone = client.Phone,
-                DirectEmail = client.DirectEmail,
-                DirectFirstName = client.DirectFirstName,
-                DirectLastName = client.DirectLastName,
-                IsActive = client.IsActive,
-                CreatedAt = client.CreatedAt,
-                Email = client.Email,
-                FirstName = client.FirstName,
-                LastName = client.LastName,
-                FullName = client.FullName,
-                UserEmail = client.User?.Email,
-                UserFirstName = client.User?.FirstName,
-                UserLastName = client.User?.LastName
-            };
+            return Result.Success(paginatedList);
         }
     }
 }

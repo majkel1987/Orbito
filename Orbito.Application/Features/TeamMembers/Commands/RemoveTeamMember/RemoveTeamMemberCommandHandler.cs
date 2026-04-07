@@ -15,15 +15,18 @@ public class RemoveTeamMemberCommandHandler : IRequestHandler<RemoveTeamMemberCo
 {
     private readonly ITeamMemberRepository _teamMemberRepository;
     private readonly ITenantContext _tenantContext;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<RemoveTeamMemberCommandHandler> _logger;
 
     public RemoveTeamMemberCommandHandler(
         ITeamMemberRepository teamMemberRepository,
         ITenantContext tenantContext,
+        IUnitOfWork unitOfWork,
         ILogger<RemoveTeamMemberCommandHandler> logger)
     {
         _teamMemberRepository = teamMemberRepository;
         _tenantContext = tenantContext;
+        _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
@@ -69,8 +72,9 @@ public class RemoveTeamMemberCommandHandler : IRequestHandler<RemoveTeamMemberCo
         // Deactivate the team member
         teamMember.Deactivate();
 
-        // Update in repository
+        // Update in repository and save
         await _teamMemberRepository.UpdateAsync(teamMember, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
             "Team member {TeamMemberId} ({Email}) removed from tenant {TenantId}. Reason: {Reason}",

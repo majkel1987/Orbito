@@ -15,6 +15,7 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.CreateSubscription
         private readonly Mock<ISubscriptionService> _subscriptionServiceMock;
         private readonly Mock<IClientRepository> _clientRepositoryMock;
         private readonly Mock<ISubscriptionPlanRepository> _subscriptionPlanRepositoryMock;
+        private readonly Mock<IUnitOfWork> _unitOfWorkMock;
         private readonly Mock<ILogger<CreateSubscriptionCommandHandler>> _loggerMock;
         private readonly CreateSubscriptionCommandHandler _handler;
         private readonly TenantId _tenantId = TenantId.New();
@@ -24,12 +25,14 @@ namespace Orbito.Tests.Application.Subscriptions.Commands.CreateSubscription
             _subscriptionServiceMock = new Mock<ISubscriptionService>();
             _clientRepositoryMock = new Mock<IClientRepository>();
             _subscriptionPlanRepositoryMock = new Mock<ISubscriptionPlanRepository>();
+            _unitOfWorkMock = new Mock<IUnitOfWork>();
             _loggerMock = new Mock<ILogger<CreateSubscriptionCommandHandler>>();
 
             _handler = new CreateSubscriptionCommandHandler(
                 _subscriptionServiceMock.Object,
                 _clientRepositoryMock.Object,
                 _subscriptionPlanRepositoryMock.Object,
+                _unitOfWorkMock.Object,
                 _loggerMock.Object);
         }
 

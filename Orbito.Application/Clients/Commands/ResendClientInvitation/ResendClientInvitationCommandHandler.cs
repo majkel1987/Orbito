@@ -53,8 +53,13 @@ public class ResendClientInvitationCommandHandler : IRequestHandler<ResendClient
 
         var newToken = ClientInvitationToken.Create(TimeSpan.FromDays(7));
 
-        client.InvitationToken = newToken.Token;
-        client.InvitationTokenExpiresAt = newToken.ExpiresAt;
+        var regenerateResult = client.RegenerateInvitationToken(newToken.Token, newToken.ExpiresAt);
+        if (regenerateResult.IsFailure)
+            return regenerateResult;
+
+        // IMPORTANT: Save token FIRST, then send email
+        // This ensures data consistency - the new token is persisted before email
+        await _clientRepository.UpdateAsync(client, cancellationToken);
 
         var baseUrl = _configuration["App:FrontendBaseUrl"] ?? "http://localhost:3000";
         var invitationLink = $"{baseUrl}/portal/confirm?token={newToken.Token}";
@@ -68,13 +73,12 @@ public class ResendClientInvitationCommandHandler : IRequestHandler<ResendClient
 
         if (emailResult.IsFailure)
         {
+            // Token is saved but email failed - log warning but don't fail
+            // The operation can be retried
             _logger.LogWarning(
-                "Failed to resend invitation email to client {ClientId}: {Error}",
+                "Token regenerated for client {ClientId} but email send failed: {Error}. Retry the operation.",
                 client.Id, emailResult.Error.Message);
-            return emailResult;
         }
-
-        await _clientRepository.UpdateAsync(client, cancellationToken);
 
         _logger.LogInformation(
             "Resent invitation to client {ClientId} for tenant {TenantId}",

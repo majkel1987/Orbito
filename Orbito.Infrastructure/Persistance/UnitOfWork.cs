@@ -9,6 +9,7 @@ using Orbito.Infrastructure.Persistence;
 using Orbito.Infrastructure.Repositories;
 using System.Collections.Concurrent;
 using System.Data;
+using IExecutionStrategy = Orbito.Application.Common.Interfaces.IExecutionStrategy;
 
 namespace Orbito.Infrastructure.Persistance
 {
@@ -50,7 +51,7 @@ namespace Orbito.Infrastructure.Persistance
         public IProviderRepository Providers => _providers ??= new ProviderRepository(_context);
         public IClientRepository Clients => _clients ??= new ClientRepository(_context, _tenantProvider);
         public ISubscriptionRepository Subscriptions => _subscriptions ??= new SubscriptionRepository(_context);
-        public ISubscriptionPlanRepository SubscriptionPlans => _subscriptionPlans ??= new SubscriptionPlanRepository(_context);
+        public ISubscriptionPlanRepository SubscriptionPlans => _subscriptionPlans ??= new SubscriptionPlanRepository(_context, _tenantProvider);
         public IPaymentRepository Payments => _payments ??= new PaymentRepository(_context, _tenantContext, _loggerFactory.CreateLogger<PaymentRepository>(), _securityLimitService);
         public IPaymentMethodRepository PaymentMethods => _paymentMethods ??= new PaymentMethodRepository(_context, _tenantContext);
         public IPaymentRetryRepository PaymentRetries => _paymentRetries ??= new PaymentRetryRepository(_context, _tenantProvider);
@@ -61,11 +62,13 @@ namespace Orbito.Infrastructure.Persistance
         public bool HasActiveTransaction => _transaction != null;
 
         /// <summary>
-        /// Create execution strategy compatible with retry logic and manual transactions
+        /// Creates an execution strategy compatible with retry logic and manual transactions
         /// </summary>
+        /// <returns>Execution strategy wrapped in Application layer abstraction</returns>
         public IExecutionStrategy CreateExecutionStrategy()
         {
-            return _context.Database.CreateExecutionStrategy();
+            var efStrategy = _context.Database.CreateExecutionStrategy();
+            return new ExecutionStrategyAdapter(efStrategy);
         }
 
          public async Task<Result> BeginTransactionAsync(CancellationToken cancellationToken = default)

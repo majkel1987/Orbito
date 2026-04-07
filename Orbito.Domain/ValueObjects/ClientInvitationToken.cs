@@ -4,15 +4,15 @@ namespace Orbito.Domain.ValueObjects;
 
 public sealed class ClientInvitationToken : IEquatable<ClientInvitationToken>
 {
-    public string Token { get; private set; }
-    public DateTime ExpiresAt { get; private set; }
+    public string Token { get; }
+    public DateTime ExpiresAt { get; }
 
     public bool IsExpired => DateTime.UtcNow > ExpiresAt;
 
-    private ClientInvitationToken()
-    {
-        Token = string.Empty;
-    }
+    // Parameterless constructor for EF Core
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor
+    private ClientInvitationToken() { }
+#pragma warning restore CS8618
 
     private ClientInvitationToken(string token, DateTime expiresAt)
     {

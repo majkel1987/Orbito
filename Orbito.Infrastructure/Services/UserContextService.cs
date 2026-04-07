@@ -97,6 +97,44 @@ namespace Orbito.Infrastructure.Services
             }
         }
 
+        public string? GetCurrentUserName()
+        {
+            try
+            {
+                var user = _httpContextAccessor.HttpContext?.User;
+                if (user?.Identity?.IsAuthenticated != true)
+                {
+                    return null;
+                }
+
+                // Try GivenName + Surname first (standard claims)
+                var givenName = user.FindFirst(ClaimTypes.GivenName)?.Value;
+                var surname = user.FindFirst(ClaimTypes.Surname)?.Value;
+
+                if (!string.IsNullOrWhiteSpace(givenName))
+                {
+                    return string.IsNullOrWhiteSpace(surname)
+                        ? givenName
+                        : $"{givenName} {surname}";
+                }
+
+                // Fallback to Name claim
+                var name = user.FindFirst(ClaimTypes.Name)?.Value;
+                if (!string.IsNullOrWhiteSpace(name))
+                {
+                    return name;
+                }
+
+                // Final fallback to email
+                return GetCurrentUserEmail();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting current user name from claims");
+                return null;
+            }
+        }
+
         public string? GetCurrentUserRole()
         {
             try

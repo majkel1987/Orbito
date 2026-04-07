@@ -5,7 +5,8 @@ using Orbito.Domain.Enums;
 namespace Orbito.Application.Features.Payments.Commands.Validators;
 
 /// <summary>
-/// Validator for SavePaymentMethodCommand
+/// Validator for SavePaymentMethodCommand.
+/// Validates client ID, payment method type, token, card details, and metadata.
 /// </summary>
 public class SavePaymentMethodCommandValidator : AbstractValidator<SavePaymentMethodCommand>
 {
@@ -43,17 +44,21 @@ public class SavePaymentMethodCommandValidator : AbstractValidator<SavePaymentMe
             .When(x => x.Type == PaymentMethodType.Card)
             .WithMessage("Expiry date is required for cards");
 
+        // FIXED: Added null check for Metadata to prevent NullReferenceException
         RuleFor(x => x.Metadata)
-            .Must(metadata => metadata.Count <= 20)
-            .When(x => x.Metadata.Any())
+            .Must(metadata => metadata == null || metadata.Count <= 20)
             .WithMessage("Metadata cannot contain more than 20 entries");
 
-        RuleForEach(x => x.Metadata.Keys)
-            .MaximumLength(50)
-            .WithMessage("Metadata key cannot exceed 50 characters");
+        // Only validate metadata keys/values if metadata is not null and has entries
+        When(x => x.Metadata != null && x.Metadata.Any(), () =>
+        {
+            RuleForEach(x => x.Metadata.Keys)
+                .MaximumLength(50)
+                .WithMessage("Metadata key cannot exceed 50 characters");
 
-        RuleForEach(x => x.Metadata.Values)
-            .MaximumLength(500)
-            .WithMessage("Metadata value cannot exceed 500 characters");
+            RuleForEach(x => x.Metadata.Values)
+                .MaximumLength(500)
+                .WithMessage("Metadata value cannot exceed 500 characters");
+        });
     }
 }

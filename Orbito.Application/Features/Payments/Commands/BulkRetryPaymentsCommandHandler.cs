@@ -6,13 +6,13 @@ using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
 using Orbito.Domain.Errors;
 
-namespace Orbito.Application.Features.Payments.Commands
+namespace Orbito.Application.Features.Payments.Commands;
+
+/// <summary>
+/// Handler for bulk retry payments command
+/// </summary>
+public class BulkRetryPaymentsCommandHandler : IRequestHandler<BulkRetryPaymentsCommand, Result<BulkRetryPaymentsResponse>>
 {
-    /// <summary>
-    /// Handler for bulk retry payments command
-    /// </summary>
-    public class BulkRetryPaymentsCommandHandler : IRequestHandler<BulkRetryPaymentsCommand, Result<BulkRetryPaymentsResponse>>
-    {
         private readonly IPaymentRetryService _retryService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IUserContextService _userContextService;
@@ -242,4 +242,3 @@ namespace Orbito.Application.Features.Payments.Commands
             }
         }
     }
-}

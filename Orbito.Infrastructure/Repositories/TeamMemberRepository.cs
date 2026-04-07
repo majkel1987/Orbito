@@ -35,7 +35,7 @@ public class TeamMemberRepository : ITeamMemberRepository
 
     public async Task<TeamMember> UpdateAsync(TeamMember teamMember, CancellationToken cancellationToken = default)
     {
-        teamMember.UpdatedAt = DateTimeOffset.UtcNow;
+        teamMember.SetUpdatedAt(DateTime.UtcNow);
         _context.TeamMembers.Update(teamMember);
         await _context.SaveChangesAsync(cancellationToken);
         return teamMember;

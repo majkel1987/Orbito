@@ -1,3 +1,4 @@
+using System.Reflection;
 using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
 using Orbito.Domain.ValueObjects;
@@ -106,21 +107,27 @@ public class SubscriptionTestDataBuilder
     public Subscription Build()
     {
         var subscription = Subscription.Create(_tenantId, _clientId, _planId, _price, _billingPeriod, _trialDays);
-        
-        // Set properties directly since they have setters
-        subscription.Id = _id;
-        subscription.Status = _status;
-        subscription.StartDate = _startDate ?? DateTime.UtcNow;
-        subscription.EndDate = _endDate;
-        subscription.IsInTrial = _isInTrial;
-        subscription.TrialEndDate = _trialEndDate;
+
+        // Set properties using reflection (private setters)
+        SetPrivateProperty(subscription, "Id", _id);
+        SetPrivateProperty(subscription, "Status", _status);
+        SetPrivateProperty(subscription, "StartDate", _startDate ?? DateTime.UtcNow);
+        SetPrivateProperty(subscription, "EndDate", _endDate);
+        SetPrivateProperty(subscription, "IsInTrial", _isInTrial);
+        SetPrivateProperty(subscription, "TrialEndDate", _trialEndDate);
 
         // Set the plan if provided
         if (_plan != null)
         {
-            subscription.Plan = _plan;
+            SetPrivateProperty(subscription, "Plan", _plan);
         }
 
         return subscription;
+    }
+
+    private static void SetPrivateProperty<T>(object obj, string propertyName, T value)
+    {
+        var property = obj.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
+        property?.SetValue(obj, value);
     }
 }

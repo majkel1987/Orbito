@@ -3,79 +3,41 @@ using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.Common.Models;
 using Orbito.Application.DTOs;
-using Orbito.Domain.Common;
-using Orbito.Domain.Entities;
 
-namespace Orbito.Application.Providers.Queries.GetAllProviders
+namespace Orbito.Application.Providers.Queries.GetAllProviders;
+
+public class GetAllProvidersQueryHandler : IRequestHandler<GetAllProvidersQuery, Orbito.Domain.Common.Result<PaginatedList<ProviderDto>>>
 {
-    public class GetAllProvidersQueryHandler : IRequestHandler<GetAllProvidersQuery, Domain.Common.Result<PaginatedList<ProviderDto>>>
+    private readonly IProviderRepository _providerRepository;
+    private readonly ILogger<GetAllProvidersQueryHandler> _logger;
+
+    public GetAllProvidersQueryHandler(
+        IProviderRepository providerRepository,
+        ILogger<GetAllProvidersQueryHandler> logger)
     {
-        private readonly IProviderRepository _providerRepository;
-        private readonly ILogger<GetAllProvidersQueryHandler> _logger;
+        _providerRepository = providerRepository;
+        _logger = logger;
+    }
 
-        public GetAllProvidersQueryHandler(
-            IProviderRepository providerRepository,
-            ILogger<GetAllProvidersQueryHandler> logger)
-        {
-            _providerRepository = providerRepository;
-            _logger = logger;
-        }
+    public async Task<Orbito.Domain.Common.Result<PaginatedList<ProviderDto>>> Handle(GetAllProvidersQuery request, CancellationToken cancellationToken)
+    {
+        var (providers, totalCount) = request.ActiveOnly
+            ? (await _providerRepository.GetActiveProvidersAsync(request.PageNumber, request.PageSize, cancellationToken),
+               await _providerRepository.GetActiveCountAsync(cancellationToken))
+            : (await _providerRepository.GetAllAsync(request.PageNumber, request.PageSize, cancellationToken),
+               await _providerRepository.GetTotalCountAsync(cancellationToken));
 
-        public async Task<Domain.Common.Result<PaginatedList<ProviderDto>>> Handle(GetAllProvidersQuery request, CancellationToken cancellationToken)
-        {
-            IEnumerable<Provider> providers;
-            int totalCount;
+        var providerDtos = ProviderMapper.ToDtos(providers);
 
-            if (request.ActiveOnly)
-            {
-                providers = await _providerRepository.GetActiveProvidersAsync(
-                    request.PageNumber, request.PageSize, cancellationToken);
-                totalCount = await _providerRepository.GetActiveCountAsync(cancellationToken);
-            }
-            else
-            {
-                providers = await _providerRepository.GetAllAsync(
-                    request.PageNumber, request.PageSize, cancellationToken);
-                totalCount = await _providerRepository.GetTotalCountAsync(cancellationToken);
-            }
+        var paginatedList = new PaginatedList<ProviderDto>(
+            providerDtos.ToList(),
+            totalCount,
+            request.PageNumber,
+            request.PageSize);
 
-            var providerDtos = providers.Select(MapToDto).ToList();
+        _logger.LogDebug("Retrieved {Count} providers (Page {PageNumber}/{TotalPages})",
+            providerDtos.Count, request.PageNumber, paginatedList.TotalPages);
 
-            var paginatedList = new PaginatedList<ProviderDto>(
-                providerDtos,
-                totalCount,
-                request.PageNumber,
-                request.PageSize);
-
-            _logger.LogInformation("Retrieved {Count} providers (Page {PageNumber}/{TotalPages})",
-                providerDtos.Count, request.PageNumber, paginatedList.TotalPages);
-
-            return Domain.Common.Result.Success(paginatedList);
-        }
-
-        private static ProviderDto MapToDto(Provider provider)
-        {
-            return new ProviderDto
-            {
-                Id = provider.Id,
-                TenantId = provider.TenantId.Value,
-                UserId = provider.UserId,
-                BusinessName = provider.BusinessName,
-                Description = provider.Description,
-                Avatar = provider.Avatar,
-                SubdomainSlug = provider.SubdomainSlug,
-                CustomDomain = provider.CustomDomain,
-                IsActive = provider.IsActive,
-                CreatedAt = provider.CreatedAt,
-                MonthlyRevenue = provider.MonthlyRevenue.Amount,
-                Currency = provider.MonthlyRevenue.Currency,
-                ActiveClientsCount = provider.ActiveClientsCount,
-                PlansCount = provider.Plans.Count,
-                SubscriptionsCount = provider.Subscriptions.Count,
-                UserEmail = provider.User?.Email,
-                UserFirstName = provider.User?.FirstName,
-                UserLastName = provider.User?.LastName
-            };
-        }
+        return Orbito.Domain.Common.Result.Success(paginatedList);
     }
 }

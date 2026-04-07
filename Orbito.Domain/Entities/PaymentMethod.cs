@@ -12,57 +12,57 @@ namespace Orbito.Domain.Entities
         /// <summary>
         /// Unique identifier for the payment method
         /// </summary>
-        public Guid Id { get; set; }
+        public Guid Id { get; private set; }
 
         /// <summary>
         /// Tenant ID for multi-tenancy
         /// </summary>
-        public TenantId TenantId { get; set; }
+        public TenantId TenantId { get; private set; }
 
         /// <summary>
         /// Client ID
         /// </summary>
-        public Guid ClientId { get; set; }
+        public Guid ClientId { get; private set; }
 
         /// <summary>
         /// Navigation property to Client
         /// </summary>
-        public Client? Client { get; set; }
+        public Client? Client { get; private set; }
 
         /// <summary>
         /// Payment method type
         /// </summary>
-        public PaymentMethodType Type { get; set; }
+        public PaymentMethodType Type { get; private set; }
 
         /// <summary>
         /// Encrypted payment method token
         /// </summary>
-        public string Token { get; set; } = string.Empty;
+        public string Token { get; private set; } = string.Empty;
 
         /// <summary>
         /// Last four digits of the card
         /// </summary>
-        public string? LastFourDigits { get; set; }
+        public string? LastFourDigits { get; private set; }
 
         /// <summary>
         /// Expiry date of the payment method
         /// </summary>
-        public DateTime? ExpiryDate { get; set; }
+        public DateTime? ExpiryDate { get; private set; }
 
         /// <summary>
         /// Whether this is the default payment method
         /// </summary>
-        public bool IsDefault { get; set; }
+        public bool IsDefault { get; private set; }
 
         /// <summary>
         /// Created date
         /// </summary>
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
 
         /// <summary>
         /// Updated date
         /// </summary>
-        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; private set; } = DateTime.UtcNow;
 
         /// <summary>
         /// Creates a new payment method

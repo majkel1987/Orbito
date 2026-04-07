@@ -1,39 +1,24 @@
 using FluentValidation;
-using Orbito.Application.Features.Payments.Queries.GetRevenueReport;
+using Orbito.Application.Common.Extensions;
 
 namespace Orbito.Application.Features.Payments.Queries.GetRevenueReport;
 
 /// <summary>
-/// Validator for get revenue report query
+/// Validator for get revenue report query.
+/// Uses shared date range validation extensions for consistency.
 /// </summary>
 public class GetRevenueReportQueryValidator : AbstractValidator<GetRevenueReportQuery>
 {
     public GetRevenueReportQueryValidator()
     {
         RuleFor(x => x.StartDate)
-            .NotEmpty()
-            .WithMessage("Start date is required")
-            .LessThanOrEqualTo(x => x.EndDate)
-            .WithMessage("Start date must be less than or equal to end date")
-            .GreaterThan(DateTime.MinValue)
-            .WithMessage("Start date must be a valid date");
+            .IsValidStartDate(x => x.EndDate)
+            .WithinMaxDateRange(x => x.EndDate);
 
         RuleFor(x => x.EndDate)
-            .NotEmpty()
-            .WithMessage("End date is required")
-            .GreaterThanOrEqualTo(x => x.StartDate)
-            .WithMessage("End date must be greater than or equal to start date")
-            .LessThanOrEqualTo(DateTime.UtcNow.AddDays(1))
-            .WithMessage("End date cannot be in the future");
-
-        RuleFor(x => x.StartDate)
-            .Must((query, startDate) => (query.EndDate - startDate).TotalDays <= 365)
-            .WithMessage("Date range cannot exceed 365 days");
+            .IsValidEndDate(x => x.StartDate);
 
         RuleFor(x => x.ProviderId)
-            .NotEmpty()
-            .WithMessage("Provider ID is required")
-            .NotEqual(Guid.Empty)
-            .WithMessage("Provider ID must be a valid GUID");
+            .IsValidRequiredProviderId();
     }
 }

@@ -1,7 +1,7 @@
 using FluentAssertions;
 using FluentValidation.TestHelper;
 using Orbito.Application.Features.Payments.Commands.ProcessPayment;
-using Orbito.Application.Validators;
+using Orbito.Application.Features.Payments.Commands.Validators;
 using Orbito.Tests.Helpers;
 using Xunit;
 

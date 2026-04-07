@@ -8,37 +8,37 @@ namespace Orbito.Domain.Entities
 {
     public class Payment : IMustHaveTenant
     {
-        public Guid Id { get; set; }
-        public TenantId TenantId { get; set; }
+        public Guid Id { get; private set; }
+        public TenantId TenantId { get; private set; }
 
         // Payment Details
-        public Guid SubscriptionId { get; set; }
-        public Guid ClientId { get; set; }
-        public Money Amount { get; set; }
-        public PaymentStatus Status { get; set; }
+        public Guid SubscriptionId { get; private set; }
+        public Guid ClientId { get; private set; }
+        public Money Amount { get; private set; }
+        public PaymentStatus Status { get; private set; }
 
         // External Payment Data
-        public string? ExternalTransactionId { get; set; }
-        public string? PaymentMethod { get; set; }
-        public string? ExternalPaymentId { get; set; }
-        public string? PaymentMethodId { get; set; }
+        public string? ExternalTransactionId { get; private set; }
+        public string? PaymentMethod { get; private set; }
+        public string? ExternalPaymentId { get; private set; }
+        public string? PaymentMethodId { get; private set; }
 
         // Idempotency
-        public IdempotencyKey? IdempotencyKey { get; set; }
+        public IdempotencyKey? IdempotencyKey { get; private set; }
 
         // Timestamps
-        public DateTime CreatedAt { get; set; }
-        public DateTime? ProcessedAt { get; set; }
-        public DateTime? FailedAt { get; set; }
-        public DateTime? RefundedAt { get; set; }
+        public DateTime CreatedAt { get; private set; }
+        public DateTime? ProcessedAt { get; private set; }
+        public DateTime? FailedAt { get; private set; }
+        public DateTime? RefundedAt { get; private set; }
 
         // Failure and Refund Information
-        public string? FailureReason { get; set; }
-        public string? RefundReason { get; set; }
+        public string? FailureReason { get; private set; }
+        public string? RefundReason { get; private set; }
 
         // Navigation Properties
-        public Subscription Subscription { get; set; }
-        public Client Client { get; set; }
+        public Subscription Subscription { get; private set; } = null!;
+        public Client Client { get; private set; } = null!;
 
         // Domain Events
         private readonly List<IDomainEvent> _domainEvents = [];
@@ -142,11 +142,6 @@ namespace Orbito.Domain.Entities
             FailureReason = "Payment cancelled";
         }
 
-        public void MarkAsCanceled()
-        {
-            MarkAsCancelled();
-        }
-
         public void MarkAsRefunded(string refundReason)
         {
             if (string.IsNullOrWhiteSpace(refundReason))
@@ -237,6 +232,21 @@ namespace Orbito.Domain.Entities
 
                 _ => false
             };
+        }
+
+        public void SetExternalPaymentId(string? externalPaymentId)
+        {
+            ExternalPaymentId = externalPaymentId;
+        }
+
+        public void SetExternalTransactionId(string? transactionId)
+        {
+            ExternalTransactionId = transactionId;
+        }
+
+        public void SetPaymentMethodId(string? paymentMethodId)
+        {
+            PaymentMethodId = paymentMethodId;
         }
     }
 }

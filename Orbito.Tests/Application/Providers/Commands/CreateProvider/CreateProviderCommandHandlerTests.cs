@@ -20,6 +20,9 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
     {
         private readonly Mock<IUnitOfWork> _unitOfWorkMock;
         private readonly Mock<IProviderRepository> _providerRepositoryMock;
+        private readonly Mock<IPlatformPlanRepository> _platformPlanRepositoryMock;
+        private readonly Mock<IProviderSubscriptionRepository> _providerSubscriptionRepositoryMock;
+        private readonly Mock<IClientRepository> _clientRepositoryMock;
         private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
         private readonly Mock<ILogger<CreateProviderCommandHandler>> _loggerMock;
         private readonly CreateProviderCommandHandler _handler;
@@ -28,17 +31,23 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
         {
             _unitOfWorkMock = new Mock<IUnitOfWork>();
             _providerRepositoryMock = new Mock<IProviderRepository>();
-            
+            _platformPlanRepositoryMock = new Mock<IPlatformPlanRepository>();
+            _providerSubscriptionRepositoryMock = new Mock<IProviderSubscriptionRepository>();
+            _clientRepositoryMock = new Mock<IClientRepository>();
+
             // Fix nullable reference warnings
             _userManagerMock = new Mock<UserManager<ApplicationUser>>(
-                Mock.Of<IUserStore<ApplicationUser>>(), 
+                Mock.Of<IUserStore<ApplicationUser>>(),
                 null!, null!, null!, null!, null!, null!, null!, null!);
-            
+
             _loggerMock = new Mock<ILogger<CreateProviderCommandHandler>>();
 
             _handler = new CreateProviderCommandHandler(
                 _unitOfWorkMock.Object,
                 _providerRepositoryMock.Object,
+                _platformPlanRepositoryMock.Object,
+                _providerSubscriptionRepositoryMock.Object,
+                _clientRepositoryMock.Object,
                 _userManagerMock.Object,
                 _loggerMock.Object);
         }
@@ -56,7 +65,7 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
             var customDomain = "test.com";
 
             var command = new CreateProviderCommand(
-                userId, businessName, subdomainSlug, description, avatar, customDomain);
+                userId, businessName, subdomainSlug, "test@example.com", "John", "Doe", null, description, avatar, customDomain);
 
             var user = new ApplicationUser
             {
@@ -105,7 +114,7 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
             var subdomainSlug = "test-business";
 
             var command = new CreateProviderCommand(
-                userId, businessName, subdomainSlug, null, null, null);
+                userId, businessName, subdomainSlug, "test@example.com", "John", "Doe");
 
             var user = new ApplicationUser
             {
@@ -139,7 +148,7 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
             // Arrange
             var userId = Guid.NewGuid();
             var command = new CreateProviderCommand(
-                userId, "Test Business", "test-business", null, null, null);
+                userId, "Test Business", "test-business", "test@example.com", "John", "Doe");
 
             _userManagerMock.Setup(x => x.FindByIdAsync(userId.ToString()))
                 .ReturnsAsync((ApplicationUser?)null);
@@ -161,7 +170,7 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
             // Arrange
             var userId = Guid.NewGuid();
             var command = new CreateProviderCommand(
-                userId, "Test Business", "test-business", null, null, null);
+                userId, "Test Business", "test-business", "test@example.com", "John", "Doe");
 
             var user = new ApplicationUser
             {
@@ -191,7 +200,7 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
             var userId = Guid.NewGuid();
             var subdomainSlug = "taken-subdomain";
             var command = new CreateProviderCommand(
-                userId, "Test Business", subdomainSlug, null, null, null);
+                userId, "Test Business", subdomainSlug, "test@example.com", "John", "Doe");
 
             var user = new ApplicationUser
             {
@@ -222,7 +231,7 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
             // Arrange
             var userId = Guid.NewGuid();
             var command = new CreateProviderCommand(
-                userId, "Test Business", "test-business", null, null, null);
+                userId, "Test Business", "test-business", "test@example.com", "John", "Doe");
 
             var user = new ApplicationUser
             {
@@ -259,7 +268,7 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
             // Arrange
             var userId = Guid.NewGuid();
             var command = new CreateProviderCommand(
-                userId, "Test Business", "test-business", null, null, null);
+                userId, "Test Business", "test-business", "test@example.com", "John", "Doe");
 
             var user = new ApplicationUser
             {
@@ -293,7 +302,7 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
             // Arrange
             var userId = Guid.NewGuid();
             var command = new CreateProviderCommand(
-                userId, "Test Business", "test-business", null, null, null);
+                userId, "Test Business", "test-business", "test@example.com", "John", "Doe");
 
             var user = new ApplicationUser
             {
@@ -333,7 +342,7 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
         {
             // Arrange
             var command = new CreateProviderCommand(
-                Guid.Empty, "Test Business", "test-business", null, null, null);
+                Guid.Empty, "Test Business", "test-business", "test@example.com", "John", "Doe");
 
             _userManagerMock.Setup(x => x.FindByIdAsync(Guid.Empty.ToString()))
                 .ReturnsAsync((ApplicationUser?)null);
@@ -393,7 +402,7 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
             // Arrange
             var userId = Guid.NewGuid();
             var command = new CreateProviderCommand(
-                userId, "Test Business", "test-business", null, null, null);
+                userId, "Test Business", "test-business", "test@example.com", "John", "Doe");
 
             var unauthorizedUser = new ApplicationUser
             {
@@ -424,7 +433,7 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
             var userId = Guid.NewGuid();
             var maliciousSubdomain = "<script>alert('xss')</script>malicious-subdomain";
             var command = new CreateProviderCommand(
-                userId, "Test Business", maliciousSubdomain, null, null, null);
+                userId, "Test Business", maliciousSubdomain, "test@example.com", "John", "Doe");
 
             var user = new ApplicationUser
             {
@@ -464,7 +473,7 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
             var userId = Guid.NewGuid();
             var maliciousBusinessName = "'; DROP TABLE Providers; --";
             var command = new CreateProviderCommand(
-                userId, maliciousBusinessName, "test-business", null, null, null);
+                userId, maliciousBusinessName, "test-business", "test@example.com", "John", "Doe");
 
             var user = new ApplicationUser
             {
@@ -501,7 +510,7 @@ namespace Orbito.Tests.Application.Providers.Commands.CreateProvider
             // Arrange
             var userId = Guid.NewGuid();
             var command = new CreateProviderCommand(
-                userId, "Test Business", "test-business", null, null, null);
+                userId, "Test Business", "test-business", "test@example.com", "John", "Doe");
 
             var userFromDifferentTenant = new ApplicationUser
             {

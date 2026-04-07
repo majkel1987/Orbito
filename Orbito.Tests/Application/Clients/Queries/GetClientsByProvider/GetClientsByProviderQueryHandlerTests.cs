@@ -3,6 +3,7 @@ using Moq;
 using Orbito.Application.Clients.Queries.GetClientsByProvider;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Domain.Entities;
+using Orbito.Domain.Errors;
 using Orbito.Domain.ValueObjects;
 using Xunit;
 
@@ -11,15 +12,22 @@ namespace Orbito.Tests.Application.Clients.Queries.GetClientsByProvider
     public class GetClientsByProviderQueryHandlerTests
     {
         private readonly Mock<IClientRepository> _clientRepositoryMock;
+        private readonly Mock<ITenantContext> _tenantContextMock;
         private readonly GetClientsByProviderQueryHandler _handler;
         private readonly TenantId _tenantId = TenantId.New();
 
         public GetClientsByProviderQueryHandlerTests()
         {
             _clientRepositoryMock = new Mock<IClientRepository>();
+            _tenantContextMock = new Mock<ITenantContext>();
+
+            // Default: valid tenant context
+            _tenantContextMock.Setup(x => x.HasTenant).Returns(true);
+            _tenantContextMock.Setup(x => x.CurrentTenantId).Returns(_tenantId);
 
             _handler = new GetClientsByProviderQueryHandler(
-                _clientRepositoryMock.Object);
+                _clientRepositoryMock.Object,
+                _tenantContextMock.Object);
         }
 
         [Fact]
@@ -34,7 +42,7 @@ namespace Orbito.Tests.Application.Clients.Queries.GetClientsByProvider
                 Client.CreateWithUser(_tenantId, Guid.NewGuid(), "Company 3")
             };
 
-            var query = new GetClientsByProviderQuery(1, 10, false, null);
+            var query = new GetClientsByProviderQuery(1, 10, null, null);
 
             _clientRepositoryMock.Setup(x => x.GetAllAsync(1, 10, null, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(clients);
@@ -69,7 +77,7 @@ namespace Orbito.Tests.Application.Clients.Queries.GetClientsByProvider
                 Client.CreateDirect(_tenantId, "active@example.com", "Active", "User", "Active Company 2")
             };
 
-            var query = new GetClientsByProviderQuery(1, 10, true, null);
+            var query = new GetClientsByProviderQuery(1, 10, "active", null);
 
             _clientRepositoryMock.Setup(x => x.GetActiveClientsAsync(1, 10, null, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(activeClients);
@@ -101,7 +109,7 @@ namespace Orbito.Tests.Application.Clients.Queries.GetClientsByProvider
                 Client.CreateDirect(_tenantId, "test@example.com", "Test", "User", "Test Company")
             };
 
-            var query = new GetClientsByProviderQuery(1, 10, false, searchTerm);
+            var query = new GetClientsByProviderQuery(1, 10, null, searchTerm);
 
             _clientRepositoryMock.Setup(x => x.GetAllAsync(1, 10, searchTerm, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(filteredClients);
@@ -133,7 +141,7 @@ namespace Orbito.Tests.Application.Clients.Queries.GetClientsByProvider
                 Client.CreateWithUser(_tenantId, Guid.NewGuid(), "Company 2")
             };
 
-            var query = new GetClientsByProviderQuery(2, 5, false, null);
+            var query = new GetClientsByProviderQuery(2, 5, null, null);
 
             _clientRepositoryMock.Setup(x => x.GetAllAsync(2, 5, null, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(clients);
@@ -154,15 +162,33 @@ namespace Orbito.Tests.Application.Clients.Queries.GetClientsByProvider
             result.Value.TotalPages.Should().Be(3); // Math.Ceiling(12/5) = 3
         }
 
-        // Note: Tenant context validation is now handled by query filters in ApplicationDbContext
-        // Query filters automatically return empty results if no tenant context is available
+        [Fact]
+        [Trait("Category", "Unit")]
+        public async Task Handle_WhenNoTenantContext_ShouldReturnFailure()
+        {
+            // Arrange
+            _tenantContextMock.Setup(x => x.HasTenant).Returns(false);
+
+            var query = new GetClientsByProviderQuery(1, 10, null, null);
+
+            // Act
+            var result = await _handler.Handle(query, CancellationToken.None);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.IsFailure.Should().BeTrue();
+            result.Error.Should().Be(DomainErrors.Tenant.NoTenantContext);
+
+            // Verify repository was never called
+            _clientRepositoryMock.Verify(x => x.GetAllAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
 
         [Fact]
         [Trait("Category", "Unit")]
         public async Task Handle_WhenRepositoryThrowsException_ShouldPropagateException()
         {
             // Arrange
-            var query = new GetClientsByProviderQuery(1, 10, false, null);
+            var query = new GetClientsByProviderQuery(1, 10, null, null);
 
             _clientRepositoryMock.Setup(x => x.GetAllAsync(1, 10, null, It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new Exception("Database error"));
@@ -176,7 +202,7 @@ namespace Orbito.Tests.Application.Clients.Queries.GetClientsByProvider
         public async Task Handle_WithEmptyResult_ShouldReturnEmptyList()
         {
             // Arrange
-            var query = new GetClientsByProviderQuery(1, 10, false, null);
+            var query = new GetClientsByProviderQuery(1, 10, null, null);
 
             _clientRepositoryMock.Setup(x => x.GetAllAsync(1, 10, null, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<Client>());

@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Orbito.Domain.Enums;
 using Orbito.Domain.ValueObjects;
 using Xunit;
 
@@ -183,33 +184,34 @@ namespace Orbito.Tests.Domain.ValueObjects
         }
 
         [Fact]
-        public void AddLimitation_WithValidLimitation_ShouldAddLimitation()
+        public void WithLimitation_WithValidLimitation_ShouldReturnNewInstanceWithLimitation()
         {
             // Arrange
             var planLimitations = PlanLimitations.Create(new List<Limitation>());
             var newLimitation = new Limitation("NewLimit", LimitationType.Numeric, "New Description", 20, null);
 
             // Act
-            planLimitations.AddLimitation(newLimitation);
+            var result = planLimitations.WithLimitation(newLimitation);
 
             // Assert
-            planLimitations.Limitations.Should().HaveCount(1);
-            planLimitations.Limitations[0].Should().Be(newLimitation);
+            result.Limitations.Should().HaveCount(1);
+            result.Limitations[0].Should().Be(newLimitation);
+            planLimitations.Limitations.Should().HaveCount(0); // Original should be unchanged
         }
 
         [Fact]
-        public void AddLimitation_WithNullLimitation_ShouldThrowArgumentNullException()
+        public void WithLimitation_WithNullLimitation_ShouldThrowArgumentNullException()
         {
             // Arrange
             var planLimitations = PlanLimitations.Create(new List<Limitation>());
 
             // Act & Assert
-            var exception = Assert.Throws<ArgumentNullException>(() => planLimitations.AddLimitation(null!));
+            var exception = Assert.Throws<ArgumentNullException>(() => planLimitations.WithLimitation(null!));
             exception.ParamName.Should().Be("limitation");
         }
 
         [Fact]
-        public void RemoveLimitation_WithExistingLimitation_ShouldRemoveLimitation()
+        public void WithoutLimitation_WithExistingLimitation_ShouldReturnNewInstanceWithoutLimitation()
         {
             // Arrange
             var limitations = new List<Limitation>
@@ -220,15 +222,16 @@ namespace Orbito.Tests.Domain.ValueObjects
             var planLimitations = PlanLimitations.Create(limitations);
 
             // Act
-            planLimitations.RemoveLimitation("Limit1");
+            var result = planLimitations.WithoutLimitation("Limit1");
 
             // Assert
-            planLimitations.Limitations.Should().HaveCount(1);
-            planLimitations.Limitations[0].Name.Should().Be("Limit2");
+            result.Limitations.Should().HaveCount(1);
+            result.Limitations[0].Name.Should().Be("Limit2");
+            planLimitations.Limitations.Should().HaveCount(2); // Original should be unchanged
         }
 
         [Fact]
-        public void RemoveLimitation_WithNonExistingLimitation_ShouldNotRemoveAnyLimitation()
+        public void WithoutLimitation_WithNonExistingLimitation_ShouldReturnNewInstanceWithSameLimitations()
         {
             // Arrange
             var limitations = new List<Limitation>
@@ -239,14 +242,14 @@ namespace Orbito.Tests.Domain.ValueObjects
             var planLimitations = PlanLimitations.Create(limitations);
 
             // Act
-            planLimitations.RemoveLimitation("NonExistingLimit");
+            var result = planLimitations.WithoutLimitation("NonExistingLimit");
 
             // Assert
-            planLimitations.Limitations.Should().HaveCount(2);
+            result.Limitations.Should().HaveCount(2);
         }
 
         [Fact]
-        public void RemoveLimitation_WithCaseInsensitiveName_ShouldRemoveLimitation()
+        public void WithoutLimitation_WithCaseInsensitiveName_ShouldReturnNewInstanceWithoutLimitation()
         {
             // Arrange
             var limitations = new List<Limitation>
@@ -257,11 +260,11 @@ namespace Orbito.Tests.Domain.ValueObjects
             var planLimitations = PlanLimitations.Create(limitations);
 
             // Act
-            planLimitations.RemoveLimitation("limit1");
+            var result = planLimitations.WithoutLimitation("limit1");
 
             // Assert
-            planLimitations.Limitations.Should().HaveCount(1);
-            planLimitations.Limitations[0].Name.Should().Be("Limit2");
+            result.Limitations.Should().HaveCount(1);
+            result.Limitations[0].Name.Should().Be("Limit2");
         }
 
         [Fact]

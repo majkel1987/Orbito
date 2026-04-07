@@ -177,27 +177,6 @@ namespace Orbito.Application.Common.Services
             return true;
         }
 
-        public async Task<IEnumerable<Subscription>> GetExpiringSubscriptionsAsync(int daysBeforeExpiration = 7, CancellationToken cancellationToken = default)
-        {
-            var checkDate = _dateTime.UtcNow;
-            // NOTE: This method is problematic - it returns data from ALL tenants when called from background jobs
-            // Background jobs should iterate through tenants and call tenant-specific methods
-            // For now, return empty to prevent security issues
-            _logger.LogWarning("SECURITY: GetExpiringSubscriptionsAsync called - this method should not be used. Use GetExpiringSubscriptionsForTenantAsync instead.");
-            return Enumerable.Empty<Subscription>();
-        }
-
-        public async Task ProcessExpiredSubscriptionsAsync(CancellationToken cancellationToken = default)
-        {
-            _logger.LogInformation("Processing expired subscriptions");
-
-            var checkDate = _dateTime.UtcNow;
-            // NOTE: This method is problematic - it processes data from ALL tenants
-            // Background jobs should iterate through tenants and call tenant-specific methods
-            // For now, skip processing to prevent security issues
-            _logger.LogWarning("SECURITY: ProcessExpiredSubscriptionsAsync called - this method should not be used directly. Background jobs should call tenant-specific methods.");
-            return;
-        }
 
         public async Task ProcessRecurringPaymentsAsync(DateTime billingDate, CancellationToken cancellationToken = default)
         {

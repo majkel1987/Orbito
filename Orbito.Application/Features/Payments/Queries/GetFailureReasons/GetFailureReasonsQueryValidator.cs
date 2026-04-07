@@ -1,38 +1,36 @@
 using FluentValidation;
-using Orbito.Application.Features.Payments.Queries.GetFailureReasons;
+using Orbito.Application.Common.Extensions;
 
 namespace Orbito.Application.Features.Payments.Queries.GetFailureReasons;
 
 /// <summary>
-/// Validator for get failure reasons query
+/// Validator for get failure reasons query.
+/// Uses shared date range validation extensions for consistency.
 /// </summary>
 public class GetFailureReasonsQueryValidator : AbstractValidator<GetFailureReasonsQuery>
 {
+    /// <summary>
+    /// Maximum allowed top N results
+    /// </summary>
+    public const int MaxTopN = 100;
+
     public GetFailureReasonsQueryValidator()
     {
         RuleFor(x => x.StartDate)
-            .NotEmpty()
-            .WithMessage("Start date is required")
-            .LessThanOrEqualTo(x => x.EndDate)
-            .WithMessage("Start date must be less than or equal to end date")
-            .GreaterThan(DateTime.MinValue)
-            .WithMessage("Start date must be a valid date");
+            .IsValidStartDate(x => x.EndDate)
+            .WithinMaxDateRange(x => x.EndDate);
 
         RuleFor(x => x.EndDate)
-            .NotEmpty()
-            .WithMessage("End date is required")
-            .GreaterThanOrEqualTo(x => x.StartDate)
-            .WithMessage("End date must be greater than or equal to start date")
-            .LessThanOrEqualTo(DateTime.UtcNow.AddDays(1))
-            .WithMessage("End date cannot be in the future");
-
-        RuleFor(x => x.StartDate)
-            .Must((query, startDate) => (query.EndDate - startDate).TotalDays <= 365)
-            .WithMessage("Date range cannot exceed 365 days");
+            .IsValidEndDate(x => x.StartDate);
 
         RuleFor(x => x.ProviderId)
-            .NotEmpty()
-            .When(x => x.ProviderId.HasValue)
-            .WithMessage("Provider ID must be a valid GUID when provided");
+            .IsValidOptionalProviderId();
+
+        RuleFor(x => x.TopN)
+            .GreaterThan(0)
+            .WithMessage("TopN must be greater than 0 when specified")
+            .LessThanOrEqualTo(MaxTopN)
+            .WithMessage($"TopN cannot exceed {MaxTopN}")
+            .When(x => x.TopN.HasValue);
     }
 }

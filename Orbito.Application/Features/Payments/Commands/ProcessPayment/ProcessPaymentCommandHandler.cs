@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.DTOs;
 using Orbito.Domain.Common;
-using Orbito.Domain.Constants;
+using DomainConstants = Orbito.Domain.Constants;
 using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
 using Orbito.Domain.Errors;
@@ -22,11 +22,6 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
     private readonly ITenantContext _tenantContext;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<ProcessPaymentCommandHandler> _logger;
-
-    private static readonly HashSet<string> ValidCurrencies = new()
-    {
-        "PLN", "EUR", "USD", "GBP", "CHF", "CZK", "SEK", "NOK", "DKK", "JPY", "CAD", "AUD"
-    };
 
     public ProcessPaymentCommandHandler(
         IPaymentRepository paymentRepository,
@@ -94,143 +89,150 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
             {
                 // Validate client exists and belongs to tenant
                 var client = await _clientRepository.GetByIdAsync(request.ClientId, cancellationToken);
-            if (client == null)
-            {
-                _logger.LogWarning("Payment processing failed: Client {ClientId} not found", request.ClientId);
-                return await FailWithRollback(DomainErrors.Client.NotFound, cancellationToken);
-            }
-
-            if (client.TenantId != tenantId)
-            {
-                _logger.LogWarning("Payment processing failed: Client {ClientId} does not belong to tenant {TenantId}",
-                    request.ClientId, tenantId);
-                return await FailWithRollback(DomainErrors.Tenant.CrossTenantAccess, cancellationToken);
-            }
-
-            // Validate subscription exists and belongs to client
-            var subscription = await _subscriptionRepository.GetByIdWithDetailsAsync(request.SubscriptionId, cancellationToken);
-            if (subscription == null)
-            {
-                _logger.LogWarning("Payment processing failed: Subscription {SubscriptionId} not found", request.SubscriptionId);
-                return await FailWithRollback(DomainErrors.Subscription.NotFound, cancellationToken);
-            }
-
-            if (subscription.ClientId != request.ClientId)
-            {
-                _logger.LogWarning("Payment processing failed: Subscription {SubscriptionId} does not belong to client {ClientId}",
-                    request.SubscriptionId, request.ClientId);
-                return await FailWithRollback(DomainErrors.Tenant.CrossTenantAccess, cancellationToken);
-            }
-
-            if (subscription.TenantId != tenantId)
-            {
-                _logger.LogWarning("Payment processing failed: Subscription {SubscriptionId} does not belong to tenant {TenantId}",
-                    request.SubscriptionId, tenantId);
-                return await FailWithRollback(DomainErrors.Tenant.CrossTenantAccess, cancellationToken);
-            }
-
-            // Check if subscription is active and can accept payments
-            if (subscription.Status != SubscriptionStatus.Active)
-            {
-                _logger.LogWarning("Payment processing failed: Subscription {SubscriptionId} is not active (status: {Status})",
-                    request.SubscriptionId, subscription.Status);
-                return await FailWithRollback(DomainErrors.Payment.SubscriptionNotActive, cancellationToken);
-            }
-
-            // Validate payment amount and currency against subscription
-            if (subscription.Plan.Price.Currency != request.Currency)
-            {
-                _logger.LogWarning("Currency mismatch: payment {PaymentCurrency} vs subscription {SubscriptionCurrency}",
-                    request.Currency, subscription.Plan.Price.Currency);
-                return await FailWithRollback(DomainErrors.Payment.CurrencyMismatch, cancellationToken);
-            }
-
-            if (subscription.Plan.Price.Amount != request.Amount)
-            {
-                _logger.LogWarning("Amount mismatch: payment {PaymentAmount} vs subscription {SubscriptionAmount}",
-                    request.Amount, subscription.Plan.Price.Amount);
-                return await FailWithRollback(DomainErrors.Payment.AmountMismatch, cancellationToken);
-            }
-
-            // Validate payment method requirements
-            if (request.PaymentMethod == Domain.Constants.PaymentMethods.Card && string.IsNullOrEmpty(request.ExternalPaymentId))
-            {
-                return await FailWithRollback(DomainErrors.Payment.ExternalPaymentIdRequired, cancellationToken);
-            }
-
-            // Check for duplicate external transaction ID within transaction (security: client verification)
-            if (!string.IsNullOrEmpty(request.ExternalTransactionId))
-            {
-                var existingPayment = await _paymentRepository.GetByExternalTransactionIdForClientAsync(
-                    request.ExternalTransactionId, request.ClientId, cancellationToken);
-                if (existingPayment != null)
+                if (client == null)
                 {
-                    // Option: Return existing payment for idempotency
-                    _logger.LogInformation("Payment already exists for external transaction, returning existing payment {PaymentId}",
-                        existingPayment.Id);
-                    await _unitOfWork.RollbackAsync(cancellationToken);
-                    return Result.Success(MapToDto(existingPayment));
+                    _logger.LogWarning("Payment processing failed: Client {ClientId} not found", request.ClientId);
+                    return await FailWithRollback(DomainErrors.Client.NotFound, cancellationToken);
                 }
-            }
 
-            // Create payment
-            var payment = Payment.Create(
-                tenantId,
-                request.SubscriptionId,
-                request.ClientId,
-                amount,
-                request.ExternalTransactionId,
-                request.PaymentMethod,
-                request.ExternalPaymentId);
+                if (client.TenantId != tenantId)
+                {
+                    _logger.LogWarning("Payment processing failed: Client {ClientId} does not belong to tenant {TenantId}",
+                        request.ClientId, tenantId);
+                    return await FailWithRollback(DomainErrors.Tenant.CrossTenantAccess, cancellationToken);
+                }
 
-            _logger.LogInformation("Created payment {PaymentId} for subscription {SubscriptionId}",
-                payment.Id, request.SubscriptionId);
+                // Validate subscription exists and belongs to client
+                var subscription = await _subscriptionRepository.GetByIdWithDetailsAsync(request.SubscriptionId, cancellationToken);
+                if (subscription == null)
+                {
+                    _logger.LogWarning("Payment processing failed: Subscription {SubscriptionId} not found", request.SubscriptionId);
+                    return await FailWithRollback(DomainErrors.Subscription.NotFound, cancellationToken);
+                }
 
-            // Save payment
-            var createdPayment = await _paymentRepository.AddAsync(payment, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-            await _unitOfWork.CommitAsync(cancellationToken);
+                if (subscription.ClientId != request.ClientId)
+                {
+                    _logger.LogWarning("Payment processing failed: Subscription {SubscriptionId} does not belong to client {ClientId}",
+                        request.SubscriptionId, request.ClientId);
+                    return await FailWithRollback(DomainErrors.Tenant.CrossTenantAccess, cancellationToken);
+                }
 
-            stopwatch.Stop();
-            _logger.LogInformation("Successfully processed payment {PaymentId} for subscription {SubscriptionId} in {ElapsedMs}ms",
-                createdPayment.Id, request.SubscriptionId, stopwatch.ElapsedMilliseconds);
+                if (subscription.TenantId != tenantId)
+                {
+                    _logger.LogWarning("Payment processing failed: Subscription {SubscriptionId} does not belong to tenant {TenantId}",
+                        request.SubscriptionId, tenantId);
+                    return await FailWithRollback(DomainErrors.Tenant.CrossTenantAccess, cancellationToken);
+                }
 
-            // Map to DTO and return (no need for additional query since we have the created payment)
-            var paymentDto = MapToDto(createdPayment);
-            return Result.Success(paymentDto);
-        }
-        catch (DbUpdateException ex) when (IsDuplicateKeyException(ex))
-        {
-            _logger.LogWarning("Duplicate external transaction ID detected during save");
-            await _unitOfWork.RollbackAsync(cancellationToken);
-            return Result.Failure<PaymentDto>(DomainErrors.Payment.DuplicateExternalTransactionId);
-        }
-        catch (ArgumentException ex)
-        {
-            _logger.LogError(ex, "Payment processing failed due to validation error: {Message}", ex.Message);
-            await _unitOfWork.RollbackAsync(cancellationToken);
-            return Result.Failure<PaymentDto>(DomainErrors.Payment.InvalidAmount);
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogError(ex, "Payment processing failed due to business rule violation: {Message}", ex.Message);
-            await _unitOfWork.RollbackAsync(cancellationToken);
-            return Result.Failure<PaymentDto>(DomainErrors.Payment.ProcessingFailed);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Payment processing failed due to unexpected error: {Message}", ex.Message);
-            await _unitOfWork.RollbackAsync(cancellationToken);
-            return Result.Failure<PaymentDto>(DomainErrors.General.UnexpectedError);
-        }
-        finally
-        {
-            if (stopwatch.IsRunning)
-            {
+                // Check if subscription is active and can accept payments
+                if (subscription.Status != SubscriptionStatus.Active)
+                {
+                    _logger.LogWarning("Payment processing failed: Subscription {SubscriptionId} is not active (status: {Status})",
+                        request.SubscriptionId, subscription.Status);
+                    return await FailWithRollback(DomainErrors.Payment.SubscriptionNotActive, cancellationToken);
+                }
+
+                // Validate subscription has a plan loaded (null-check for Plan navigation property)
+                if (subscription.Plan == null)
+                {
+                    _logger.LogError("Payment processing failed: Subscription {SubscriptionId} has no plan loaded. This indicates a data integrity issue.",
+                        request.SubscriptionId);
+                    return await FailWithRollback(DomainErrors.Subscription.NoPlanAssociated, cancellationToken);
+                }
+
+                // Validate payment amount and currency against subscription
+                if (subscription.Plan.Price.Currency != request.Currency)
+                {
+                    _logger.LogWarning("Currency mismatch: payment {PaymentCurrency} vs subscription {SubscriptionCurrency}",
+                        request.Currency, subscription.Plan.Price.Currency);
+                    return await FailWithRollback(DomainErrors.Payment.CurrencyMismatch, cancellationToken);
+                }
+
+                if (subscription.Plan.Price.Amount != request.Amount)
+                {
+                    _logger.LogWarning("Amount mismatch: payment {PaymentAmount} vs subscription {SubscriptionAmount}",
+                        request.Amount, subscription.Plan.Price.Amount);
+                    return await FailWithRollback(DomainErrors.Payment.AmountMismatch, cancellationToken);
+                }
+
+                // Validate payment method requirements
+                if (request.PaymentMethod == DomainConstants.PaymentMethods.Card && string.IsNullOrEmpty(request.ExternalPaymentId))
+                {
+                    return await FailWithRollback(DomainErrors.Payment.ExternalPaymentIdRequired, cancellationToken);
+                }
+
+                // Check for duplicate external transaction ID within transaction (security: client verification)
+                if (!string.IsNullOrEmpty(request.ExternalTransactionId))
+                {
+                    var existingPayment = await _paymentRepository.GetByExternalTransactionIdForClientAsync(
+                        request.ExternalTransactionId, request.ClientId, cancellationToken);
+                    if (existingPayment != null)
+                    {
+                        // Return existing payment for idempotency
+                        _logger.LogInformation("Payment already exists for external transaction, returning existing payment {PaymentId}",
+                            existingPayment.Id);
+                        await _unitOfWork.RollbackAsync(cancellationToken);
+                        return Result.Success(PaymentMapper.ToDto(existingPayment));
+                    }
+                }
+
+                // Create payment
+                var payment = Payment.Create(
+                    tenantId,
+                    request.SubscriptionId,
+                    request.ClientId,
+                    amount,
+                    request.ExternalTransactionId,
+                    request.PaymentMethod,
+                    request.ExternalPaymentId);
+
+                _logger.LogInformation("Created payment {PaymentId} for subscription {SubscriptionId}",
+                    payment.Id, request.SubscriptionId);
+
+                // Save payment
+                var createdPayment = await _paymentRepository.AddAsync(payment, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                await _unitOfWork.CommitAsync(cancellationToken);
+
                 stopwatch.Stop();
+                _logger.LogInformation("Successfully processed payment {PaymentId} for subscription {SubscriptionId} in {ElapsedMs}ms",
+                    createdPayment.Id, request.SubscriptionId, stopwatch.ElapsedMilliseconds);
+
+                // Map to DTO and return (no need for additional query since we have the created payment)
+                return Result.Success(PaymentMapper.ToDto(createdPayment));
             }
-            _logger.LogDebug("Payment processing attempt completed in {ElapsedMs}ms", stopwatch.ElapsedMilliseconds);
-        }
+            catch (DbUpdateException ex) when (IsDuplicateKeyException(ex))
+            {
+                _logger.LogWarning("Duplicate external transaction ID detected during save");
+                await _unitOfWork.RollbackAsync(cancellationToken);
+                return Result.Failure<PaymentDto>(DomainErrors.Payment.DuplicateExternalTransactionId);
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogError(ex, "Payment processing failed due to validation error: {Message}", ex.Message);
+                await _unitOfWork.RollbackAsync(cancellationToken);
+                return Result.Failure<PaymentDto>(DomainErrors.Payment.InvalidAmount);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogError(ex, "Payment processing failed due to business rule violation: {Message}", ex.Message);
+                await _unitOfWork.RollbackAsync(cancellationToken);
+                return Result.Failure<PaymentDto>(DomainErrors.Payment.ProcessingFailed);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Payment processing failed due to unexpected error: {Message}", ex.Message);
+                await _unitOfWork.RollbackAsync(cancellationToken);
+                return Result.Failure<PaymentDto>(DomainErrors.General.UnexpectedError);
+            }
+            finally
+            {
+                if (stopwatch.IsRunning)
+                {
+                    stopwatch.Stop();
+                }
+                _logger.LogDebug("Payment processing attempt completed in {ElapsedMs}ms", stopwatch.ElapsedMilliseconds);
+            }
         });
     }
 
@@ -238,12 +240,6 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
     {
         await _unitOfWork.RollbackAsync(cancellationToken);
         return Result.Failure<PaymentDto>(error);
-    }
-
-    private static bool IsValidCurrencyCode(string currency)
-    {
-        return !string.IsNullOrWhiteSpace(currency) &&
-               ValidCurrencies.Contains(currency.ToUpperInvariant());
     }
 
     private static bool IsDuplicateKeyException(DbUpdateException ex)
@@ -277,28 +273,5 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
         return innerEx.Message?.Contains("IX_Payments_ExternalTransactionId") == true ||
                innerEx.Message?.Contains("duplicate", StringComparison.OrdinalIgnoreCase) == true ||
                innerEx.Message?.Contains("unique", StringComparison.OrdinalIgnoreCase) == true;
-    }
-
-    private static PaymentDto MapToDto(Payment payment)
-    {
-        return new PaymentDto
-        {
-            Id = payment.Id,
-            TenantId = payment.TenantId.Value,
-            SubscriptionId = payment.SubscriptionId,
-            ClientId = payment.ClientId,
-            Amount = payment.Amount.Amount,
-            Currency = payment.Amount.Currency,
-            Status = payment.Status.ToString(),
-            ExternalTransactionId = payment.ExternalTransactionId,
-            PaymentMethod = payment.PaymentMethod,
-            ExternalPaymentId = payment.ExternalPaymentId,
-            PaymentMethodId = payment.PaymentMethodId,
-            CreatedAt = payment.CreatedAt,
-            ProcessedAt = payment.ProcessedAt,
-            FailedAt = payment.FailedAt,
-            RefundedAt = payment.RefundedAt,
-            FailureReason = payment.FailureReason
-        };
     }
 }

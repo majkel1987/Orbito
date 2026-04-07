@@ -11,14 +11,20 @@ namespace Orbito.Application.Common.Models
         private const int MinPageSize = 1;
 
         /// <summary>
+        /// Maximum allowed page size to prevent performance issues.
+        /// Used across all paginated queries for consistency.
+        /// </summary>
+        public const int MaxPageSize = 100;
+
+        /// <summary>
         /// Page number (1-based)
         /// </summary>
-        public int PageNumber { get; set; } = 1;
+        public int PageNumber { get; init; } = 1;
 
         /// <summary>
         /// Number of items per page
         /// </summary>
-        public int PageSize { get; set; } = DefaultPageSize;
+        public int PageSize { get; init; } = DefaultPageSize;
 
         /// <summary>
         /// Default constructor
@@ -39,21 +45,39 @@ namespace Orbito.Application.Common.Models
         }
 
         /// <summary>
-        /// Validate and normalize pagination parameters
+        /// Validate and normalize pagination parameters using default max page size
+        /// </summary>
+        /// <returns>New normalized PaginationParams instance</returns>
+        public PaginationParams Validate()
+        {
+            return Validate(MaxPageSize);
+        }
+
+        /// <summary>
+        /// Validate and normalize pagination parameters with custom max page size
+        /// </summary>
+        /// <param name="maxPageSize">Maximum allowed page size</param>
+        /// <returns>New normalized PaginationParams instance</returns>
+        public PaginationParams Validate(int maxPageSize)
+        {
+            var normalizedPageNumber = PageNumber < 1 ? 1 : PageNumber;
+            var normalizedPageSize = PageSize < MinPageSize ? DefaultPageSize : PageSize;
+
+            if (normalizedPageSize > maxPageSize)
+                normalizedPageSize = maxPageSize;
+
+            return new PaginationParams(normalizedPageNumber, normalizedPageSize);
+        }
+
+        /// <summary>
+        /// Validate and normalize pagination parameters using security limit service
         /// </summary>
         /// <param name="securityLimitService">Security limit service for max page size validation</param>
-        public void Validate(ISecurityLimitService? securityLimitService = null)
+        /// <returns>New normalized PaginationParams instance</returns>
+        public PaginationParams ValidateWithService(ISecurityLimitService securityLimitService)
         {
-            if (PageNumber < 1)
-                PageNumber = 1;
-
-            if (PageSize < MinPageSize)
-                PageSize = DefaultPageSize;
-
-            // Use ISecurityLimitService if available, otherwise fallback to hardcoded 100
-            var maxPageSize = securityLimitService?.MaxPageSize ?? 100;
-            if (PageSize > maxPageSize)
-                PageSize = maxPageSize;
+            ArgumentNullException.ThrowIfNull(securityLimitService);
+            return Validate(securityLimitService.MaxPageSize);
         }
     }
 }

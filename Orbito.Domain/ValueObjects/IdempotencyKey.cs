@@ -5,28 +5,20 @@ namespace Orbito.Domain.ValueObjects;
 /// </summary>
 public sealed class IdempotencyKey : IEquatable<IdempotencyKey>
 {
-    private static readonly HashSet<string> ValidFormats = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "guid",
-        "custom"
-    };
-
     /// <summary>
     /// The idempotency key value
     /// </summary>
-    public string Value { get; private set; }
+    public string Value { get; }
 
     /// <summary>
     /// The format of the idempotency key (guid or custom)
     /// </summary>
-    public string Format { get; private set; }
+    public string Format { get; }
 
     // Parameterless constructor for EF Core
-    private IdempotencyKey()
-    {
-        Value = string.Empty;
-        Format = string.Empty;
-    }
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor
+    private IdempotencyKey() { }
+#pragma warning restore CS8618
 
     private IdempotencyKey(string value, string format)
     {

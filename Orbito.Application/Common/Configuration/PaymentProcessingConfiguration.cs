@@ -1,32 +1,32 @@
 namespace Orbito.Application.Common.Configuration;
 
 /// <summary>
-/// Configuration constants for payment processing
+/// Configuration settings for payment processing
 /// </summary>
-public static class PaymentProcessingConfiguration
+public class PaymentProcessingConfiguration
 {
     /// <summary>
     /// Time window to check for duplicate payment attempts (race condition prevention)
     /// </summary>
-    public static readonly TimeSpan DuplicatePaymentCheckWindow = TimeSpan.FromMinutes(5);
+    public TimeSpan DuplicatePaymentCheckWindow { get; set; } = TimeSpan.FromMinutes(5);
 
     /// <summary>
     /// Minimum age of pending payment before retry processing
     /// </summary>
-    public static readonly TimeSpan PendingPaymentMinAge = TimeSpan.FromMinutes(30);
+    public TimeSpan PendingPaymentMinAge { get; set; } = TimeSpan.FromMinutes(30);
 
     /// <summary>
     /// Maximum time before payment times out
     /// </summary>
-    public static readonly TimeSpan PaymentTimeout = TimeSpan.FromHours(24);
+    public TimeSpan PaymentTimeout { get; set; } = TimeSpan.FromHours(24);
 
     /// <summary>
-    /// Default payment method (should be from configuration in production)
+    /// Default payment provider (configurable at runtime)
     /// </summary>
-    public static readonly string DefaultPaymentMethod = "Stripe";
+    public string DefaultPaymentProvider { get; set; } = "Stripe";
 
     /// <summary>
     /// Default currency when plan is not found (fallback)
     /// </summary>
-    public static readonly string DefaultCurrency = "USD";
+    public string DefaultCurrency { get; set; } = "USD";
 }

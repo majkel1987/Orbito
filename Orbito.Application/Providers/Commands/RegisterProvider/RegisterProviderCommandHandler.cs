@@ -1,180 +1,129 @@
 using MediatR;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.Providers.Commands.CreateProvider;
-using Orbito.Domain.Entities;
-using Orbito.Domain.Enums;
+using Orbito.Domain.Common;
+using Orbito.Domain.Errors;
 using Orbito.Domain.Identity;
-using Orbito.Domain.ValueObjects;
 
-namespace Orbito.Application.Providers.Commands.RegisterProvider
+namespace Orbito.Application.Providers.Commands.RegisterProvider;
+
+public class RegisterProviderCommandHandler : IRequestHandler<RegisterProviderCommand, Result<RegisterProviderResult>>
 {
-    public class RegisterProviderCommandHandler : IRequestHandler<RegisterProviderCommand, RegisterProviderResult>
+    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IMediator _mediator;
+    private readonly ILogger<RegisterProviderCommandHandler> _logger;
+
+    public RegisterProviderCommandHandler(
+        UserManager<ApplicationUser> userManager,
+        IMediator mediator,
+        ILogger<RegisterProviderCommandHandler> logger)
     {
-        private readonly UserManager<ApplicationUser> _userManager;
-        private readonly RoleManager<ApplicationRole> _roleManager;
-        private readonly IMediator _mediator;
-        private readonly ILogger<RegisterProviderCommandHandler> _logger;
-
-        public RegisterProviderCommandHandler(
-            UserManager<ApplicationUser> userManager,
-            RoleManager<ApplicationRole> roleManager,
-            IMediator mediator,
-            ILogger<RegisterProviderCommandHandler> logger)
-        {
-            _userManager = userManager;
-            _roleManager = roleManager;
-            _mediator = mediator;
-            _logger = logger;
-        }
-
-        public async Task<RegisterProviderResult> Handle(RegisterProviderCommand request, CancellationToken cancellationToken)
-        {
-            try
-            {
-                // Sprawdź czy użytkownik już istnieje
-                var existingUser = await _userManager.FindByEmailAsync(request.Email);
-                if (existingUser != null)
-                {
-                    return RegisterProviderResult.FailureResult(
-                        "Użytkownik z tym adresem email już istnieje",
-                        new List<string> { "Email już jest w użyciu" });
-                }
-
-                // Sprawdź czy subdomain już istnieje
-                var existingProvider = await _mediator.Send(new CheckSubdomainAvailabilityQuery(request.SubdomainSlug), cancellationToken);
-                if (!existingProvider.IsAvailable)
-                {
-                    return RegisterProviderResult.FailureResult(
-                        "Subdomain już jest w użyciu",
-                        new List<string> { "Subdomain już jest zajęty" });
-                }
-
-                // Utwórz nowego użytkownika
-                var user = new ApplicationUser
-                {
-                    Id = Guid.NewGuid(),
-                    UserName = request.Email,
-                    Email = request.Email,
-                    FirstName = request.FirstName,
-                    LastName = request.LastName,
-                    TenantId = null, // Będzie ustawiony po utworzeniu providera
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                var createUserResult = await _userManager.CreateAsync(user, request.Password);
-                if (!createUserResult.Succeeded)
-                {
-                    var errors = createUserResult.Errors.Select(e => e.Description).ToList();
-                    return RegisterProviderResult.FailureResult(
-                        "Błąd podczas tworzenia użytkownika",
-                        errors);
-                }
-
-                // NOTE: Rola Provider jest dodawana w CreateProviderCommandHandler
-                // Nie dodajemy jej tutaj, aby uniknąć osobnego SaveChanges przed utworzeniem Providera
-
-                // Utwórz providera używając istniejącej komendy
-                var createProviderCommand = new CreateProviderCommand(
-                    user.Id,
-                    request.BusinessName,
-                    request.SubdomainSlug,
-                    request.Email,
-                    request.FirstName,
-                    request.LastName,
-                    request.SelectedPlatformPlanId,
-                    request.Description,
-                    request.Avatar,
-                    request.CustomDomain);
-
-                var createProviderResult = await _mediator.Send(createProviderCommand, cancellationToken);
-
-                // Jeśli utworzenie providera się nie powiodło, usuń użytkownika
-                if (createProviderResult.IsFailure)
-                {
-                    await _userManager.DeleteAsync(user);
-                    return RegisterProviderResult.FailureResult(
-                        createProviderResult.Error.Message,
-                        new List<string> { createProviderResult.Error.Code });
-                }
-
-                // NOTE: TenantId użytkownika jest aktualizowany w CreateProviderCommandHandler
-                // Nie aktualizujemy go tutaj, aby uniknąć dodatkowego SaveChanges
-
-                _logger.LogInformation("Provider zarejestrowany: {Email} (ID: {ProviderId})",
-                    request.Email, createProviderResult.Value.ProviderId);
-
-                return RegisterProviderResult.SuccessResult(
-                    user.Id,
-                    createProviderResult.Value.ProviderId,
-                    request.BusinessName,
-                    request.SubdomainSlug);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Błąd podczas rejestracji providera: {Email}", request.Email);
-                return RegisterProviderResult.FailureResult(
-                    "Wystąpił błąd podczas rejestracji providera",
-                    new List<string> { ex.Message });
-            }
-        }
+        _userManager = userManager;
+        _mediator = mediator;
+        _logger = logger;
     }
 
-    // Query do sprawdzania dostępności subdomain
-    public record CheckSubdomainAvailabilityQuery(string SubdomainSlug) : IRequest<SubdomainAvailabilityResult>;
-
-    public record SubdomainAvailabilityResult
+    public async Task<Result<RegisterProviderResult>> Handle(RegisterProviderCommand request, CancellationToken cancellationToken)
     {
-        public bool IsAvailable { get; init; }
-        public string? Message { get; init; }
+        var existingUser = await _userManager.FindByEmailAsync(request.Email);
+        if (existingUser != null)
+        {
+            return Result.Failure<RegisterProviderResult>(DomainErrors.User.EmailAlreadyExists);
+        }
+
+        var subdomainCheck = await _mediator.Send(new CheckSubdomainAvailabilityQuery(request.SubdomainSlug), cancellationToken);
+        if (!subdomainCheck.IsAvailable)
+        {
+            return Result.Failure<RegisterProviderResult>(DomainErrors.Provider.SubdomainAlreadyExists);
+        }
+
+        var user = new ApplicationUser
+        {
+            Id = Guid.NewGuid(),
+            UserName = request.Email,
+            Email = request.Email,
+            FirstName = request.FirstName,
+            LastName = request.LastName,
+            TenantId = null,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        var createUserResult = await _userManager.CreateAsync(user, request.Password);
+        if (!createUserResult.Succeeded)
+        {
+            var errorMessages = string.Join("; ", createUserResult.Errors.Select(e => e.Description));
+            _logger.LogWarning("Failed to create user for provider registration: {Errors}", errorMessages);
+            return Result.Failure<RegisterProviderResult>(DomainErrors.User.CreationFailed);
+        }
+
+        var createProviderCommand = new CreateProviderCommand(
+            user.Id,
+            request.BusinessName,
+            request.SubdomainSlug,
+            request.Email,
+            request.FirstName,
+            request.LastName,
+            request.SelectedPlatformPlanId,
+            request.Description,
+            request.Avatar,
+            request.CustomDomain);
+
+        var createProviderResult = await _mediator.Send(createProviderCommand, cancellationToken);
+
+        if (createProviderResult.IsFailure)
+        {
+            await _userManager.DeleteAsync(user);
+            _logger.LogWarning("Provider creation failed, user rolled back: {Email}", request.Email);
+            return Result.Failure<RegisterProviderResult>(createProviderResult.Error);
+        }
+
+        _logger.LogInformation("Provider registered: {Email} (ProviderId: {ProviderId})",
+            request.Email, createProviderResult.Value.ProviderId);
+
+        return Result.Success(new RegisterProviderResult(
+            user.Id,
+            createProviderResult.Value.ProviderId,
+            createProviderResult.Value.TenantId,
+            request.BusinessName,
+            request.SubdomainSlug));
+    }
+}
+
+/// <summary>
+/// Query to check if a subdomain is available for registration.
+/// </summary>
+public record CheckSubdomainAvailabilityQuery(string SubdomainSlug) : IRequest<SubdomainAvailabilityResult>;
+
+/// <summary>
+/// Result of subdomain availability check.
+/// </summary>
+public record SubdomainAvailabilityResult(bool IsAvailable, string? Message = null);
+
+public class CheckSubdomainAvailabilityQueryHandler : IRequestHandler<CheckSubdomainAvailabilityQuery, SubdomainAvailabilityResult>
+{
+    private readonly IProviderRepository _providerRepository;
+    private readonly ILogger<CheckSubdomainAvailabilityQueryHandler> _logger;
+
+    public CheckSubdomainAvailabilityQueryHandler(
+        IProviderRepository providerRepository,
+        ILogger<CheckSubdomainAvailabilityQueryHandler> logger)
+    {
+        _providerRepository = providerRepository;
+        _logger = logger;
     }
 
-    public class CheckSubdomainAvailabilityQueryHandler : IRequestHandler<CheckSubdomainAvailabilityQuery, SubdomainAvailabilityResult>
+    public async Task<SubdomainAvailabilityResult> Handle(CheckSubdomainAvailabilityQuery request, CancellationToken cancellationToken)
     {
-        private readonly IProviderRepository _providerRepository;
-        private readonly ILogger<CheckSubdomainAvailabilityQueryHandler> _logger;
+        var existingProvider = await _providerRepository.GetBySubdomainSlugAsync(request.SubdomainSlug, cancellationToken);
 
-        public CheckSubdomainAvailabilityQueryHandler(
-            IProviderRepository providerRepository,
-            ILogger<CheckSubdomainAvailabilityQueryHandler> logger)
+        if (existingProvider != null)
         {
-            _providerRepository = providerRepository;
-            _logger = logger;
+            return new SubdomainAvailabilityResult(false, "Subdomain is already in use");
         }
 
-        public async Task<SubdomainAvailabilityResult> Handle(CheckSubdomainAvailabilityQuery request, CancellationToken cancellationToken)
-        {
-            try
-            {
-                var existingProvider = await _providerRepository.GetBySubdomainSlugAsync(request.SubdomainSlug, cancellationToken);
-                
-                if (existingProvider != null)
-                {
-                    return new SubdomainAvailabilityResult
-                    {
-                        IsAvailable = false,
-                        Message = "Subdomain już jest w użyciu"
-                    };
-                }
-
-                return new SubdomainAvailabilityResult
-                {
-                    IsAvailable = true,
-                    Message = "Subdomain jest dostępny"
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Błąd podczas sprawdzania dostępności subdomain: {SubdomainSlug}", request.SubdomainSlug);
-                return new SubdomainAvailabilityResult
-                {
-                    IsAvailable = false,
-                    Message = "Błąd podczas sprawdzania dostępności subdomain"
-                };
-            }
-        }
+        return new SubdomainAvailabilityResult(true, "Subdomain is available");
     }
 }

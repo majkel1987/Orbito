@@ -1,54 +1,53 @@
 using Orbito.Application.Common.Models.PaymentGateway;
 
-namespace Orbito.Application.Common.Interfaces
+namespace Orbito.Application.Common.Interfaces;
+
+/// <summary>
+/// Payment gateway abstraction — enables easy switching between different payment providers (Stripe, PayPal, etc.).
+/// </summary>
+public interface IPaymentGateway
 {
     /// <summary>
-    /// Abstrakcja dla payment gateway - umożliwia łatwe przełączanie między różnymi dostawcami płatności
+    /// Processes a payment through the payment gateway.
     /// </summary>
-    public interface IPaymentGateway
-    {
-        /// <summary>
-        /// Przetwarza płatność przez payment gateway
-        /// </summary>
-        /// <param name="request">Dane płatności</param>
-        /// <returns>Wynik przetwarzania płatności</returns>
-        Task<PaymentResult> ProcessPaymentAsync(ProcessPaymentRequest request);
+    /// <param name="request">Payment data</param>
+    /// <returns>Payment processing result</returns>
+    Task<PaymentResult> ProcessPaymentAsync(ProcessPaymentRequest request);
 
-        /// <summary>
-        /// Creates a PaymentIntent for Stripe Elements (client-side confirmation)
-        /// PCI DSS compliant - card data never touches our servers
-        /// </summary>
-        /// <param name="request">Payment intent creation request</param>
-        /// <returns>Result with client secret for frontend</returns>
-        Task<CreatePaymentIntentResult> CreatePaymentIntentAsync(CreatePaymentIntentRequest request);
+    /// <summary>
+    /// Creates a PaymentIntent for Stripe Elements (client-side confirmation).
+    /// PCI DSS compliant — card data never touches our servers.
+    /// </summary>
+    /// <param name="request">Payment intent creation request</param>
+    /// <returns>Result with client secret for frontend</returns>
+    Task<CreatePaymentIntentResult> CreatePaymentIntentAsync(CreatePaymentIntentRequest request);
 
-        /// <summary>
-        /// Zwraca płatność przez payment gateway
-        /// </summary>
-        /// <param name="request">Dane zwrotu</param>
-        /// <returns>Wynik zwrotu płatności</returns>
-        Task<RefundResult> RefundPaymentAsync(RefundRequest request);
+    /// <summary>
+    /// Refunds a payment through the payment gateway.
+    /// </summary>
+    /// <param name="request">Refund data</param>
+    /// <returns>Refund result</returns>
+    Task<RefundResult> RefundPaymentAsync(RefundRequest request);
 
-        /// <summary>
-        /// Tworzy klienta w payment gateway
-        /// </summary>
-        /// <param name="request">Dane klienta</param>
-        /// <returns>Wynik tworzenia klienta</returns>
-        Task<CustomerResult> CreateCustomerAsync(CreateCustomerRequest request);
+    /// <summary>
+    /// Creates a customer in the payment gateway.
+    /// </summary>
+    /// <param name="request">Customer data</param>
+    /// <returns>Customer creation result</returns>
+    Task<CustomerResult> CreateCustomerAsync(CreateCustomerRequest request);
 
-        /// <summary>
-        /// Sprawdza status płatności w payment gateway
-        /// </summary>
-        /// <param name="externalPaymentId">Zewnętrzny ID płatności</param>
-        /// <returns>Status płatności</returns>
-        Task<PaymentStatusResult> GetPaymentStatusAsync(string externalPaymentId);
+    /// <summary>
+    /// Gets the payment status from the payment gateway.
+    /// </summary>
+    /// <param name="externalPaymentId">External payment ID</param>
+    /// <returns>Payment status</returns>
+    Task<PaymentStatusResult> GetPaymentStatusAsync(string externalPaymentId);
 
-        /// <summary>
-        /// Waliduje webhook od payment gateway
-        /// </summary>
-        /// <param name="payload">Dane webhook</param>
-        /// <param name="signature">Podpis webhook</param>
-        /// <returns>Wynik walidacji webhook z szczegółami</returns>
-        Task<WebhookValidationResult> ValidateWebhookAsync(string payload, string signature);
-    }
+    /// <summary>
+    /// Validates a webhook from the payment gateway.
+    /// </summary>
+    /// <param name="payload">Webhook payload</param>
+    /// <param name="signature">Webhook signature</param>
+    /// <returns>Webhook validation result with details</returns>
+    Task<WebhookValidationResult> ValidateWebhookAsync(string payload, string signature);
 }

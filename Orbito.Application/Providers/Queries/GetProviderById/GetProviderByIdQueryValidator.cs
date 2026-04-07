@@ -1,14 +1,13 @@
 using FluentValidation;
 
-namespace Orbito.Application.Providers.Queries.GetProviderById
+namespace Orbito.Application.Providers.Queries.GetProviderById;
+
+public class GetProviderByIdQueryValidator : AbstractValidator<GetProviderByIdQuery>
 {
-    public class GetProviderByIdQueryValidator : AbstractValidator<GetProviderByIdQuery>
+    public GetProviderByIdQueryValidator()
     {
-        public GetProviderByIdQueryValidator()
-        {
-            RuleFor(x => x.Id)
-                .NotEmpty()
-                .WithMessage("Provider ID is required");
-        }
+        RuleFor(x => x.Id)
+            .NotEmpty()
+            .WithMessage("Provider ID is required");
     }
 }

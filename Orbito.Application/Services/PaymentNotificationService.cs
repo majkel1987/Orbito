@@ -19,6 +19,7 @@ public class PaymentNotificationService : IPaymentNotificationService
     private readonly ILogger<PaymentNotificationService> _logger;
     private readonly ITenantContext _tenantContext;
     private readonly IMemoryCache _cache;
+    private readonly PaymentProcessingConfiguration _configuration;
 
     // Cache settings
     private static readonly TimeSpan PlanCacheExpiration = TimeSpan.FromHours(1);
@@ -29,13 +30,15 @@ public class PaymentNotificationService : IPaymentNotificationService
         IEmailSender emailSender,
         ILogger<PaymentNotificationService> logger,
         ITenantContext tenantContext,
-        IMemoryCache cache)
+        IMemoryCache cache,
+        PaymentProcessingConfiguration configuration)
     {
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _emailSender = emailSender ?? throw new ArgumentNullException(nameof(emailSender));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _tenantContext = tenantContext ?? throw new ArgumentNullException(nameof(tenantContext));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
     }
 
     /// <summary>
@@ -474,7 +477,7 @@ public class PaymentNotificationService : IPaymentNotificationService
             var plan = await GetCachedPlanAsync(subscription.PlanId, cancellationToken);
             var subscriptionName = plan?.Name ?? "Subscription";
             // SECURITY: Use consistent currency from client's tenant context, not hardcoded USD
-            var amount = plan?.Price ?? Money.Create(0, PaymentProcessingConfiguration.DefaultCurrency);
+            var amount = plan?.Price ?? Money.Create(0, _configuration.DefaultCurrency);
 
             // Get default payment method
             var paymentMethods = await _unitOfWork.PaymentMethods.GetDefaultPaymentMethodsByClientAsync(subscription.ClientId, cancellationToken);

@@ -3,64 +3,35 @@ using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.DTOs;
 using Orbito.Domain.Common;
-using Orbito.Domain.Entities;
 using Orbito.Domain.Errors;
 
-namespace Orbito.Application.Providers.Queries.GetProviderByUserId
+namespace Orbito.Application.Providers.Queries.GetProviderByUserId;
+
+public class GetProviderByUserIdQueryHandler : IRequestHandler<GetProviderByUserIdQuery, Result<ProviderDto>>
 {
-    public class GetProviderByUserIdQueryHandler : IRequestHandler<GetProviderByUserIdQuery, Result<ProviderDto>>
+    private readonly IProviderRepository _providerRepository;
+    private readonly ILogger<GetProviderByUserIdQueryHandler> _logger;
+
+    public GetProviderByUserIdQueryHandler(
+        IProviderRepository providerRepository,
+        ILogger<GetProviderByUserIdQueryHandler> logger)
     {
-        private readonly IProviderRepository _providerRepository;
-        private readonly ILogger<GetProviderByUserIdQueryHandler> _logger;
+        _providerRepository = providerRepository;
+        _logger = logger;
+    }
 
-        public GetProviderByUserIdQueryHandler(
-            IProviderRepository providerRepository,
-            ILogger<GetProviderByUserIdQueryHandler> logger)
+    public async Task<Result<ProviderDto>> Handle(GetProviderByUserIdQuery request, CancellationToken cancellationToken)
+    {
+        var provider = await _providerRepository.GetByUserIdAsync(request.UserId, cancellationToken);
+
+        if (provider == null)
         {
-            _providerRepository = providerRepository;
-            _logger = logger;
+            _logger.LogWarning("Provider not found for user: {UserId}", request.UserId);
+            return Result.Failure<ProviderDto>(DomainErrors.Provider.NotFound);
         }
 
-        public async Task<Result<ProviderDto>> Handle(GetProviderByUserIdQuery request, CancellationToken cancellationToken)
-        {
-            var provider = await _providerRepository.GetByUserIdAsync(request.UserId, cancellationToken);
+        _logger.LogDebug("Provider retrieved for user: {UserId}", request.UserId);
 
-            if (provider == null)
-            {
-                _logger.LogWarning("Provider not found for user: {UserId}", request.UserId);
-                return Result.Failure<ProviderDto>(DomainErrors.Provider.NotFound);
-            }
-
-            var providerDto = MapToDto(provider);
-
-            _logger.LogInformation("Provider retrieved for user: {UserId}", request.UserId);
-
-            return Result.Success(providerDto);
-        }
-
-        private static ProviderDto MapToDto(Provider provider)
-        {
-            return new ProviderDto
-            {
-                Id = provider.Id,
-                TenantId = provider.TenantId.Value,
-                UserId = provider.UserId,
-                BusinessName = provider.BusinessName,
-                Description = provider.Description,
-                Avatar = provider.Avatar,
-                SubdomainSlug = provider.SubdomainSlug,
-                CustomDomain = provider.CustomDomain,
-                IsActive = provider.IsActive,
-                CreatedAt = provider.CreatedAt,
-                MonthlyRevenue = provider.MonthlyRevenue.Amount,
-                Currency = provider.MonthlyRevenue.Currency,
-                ActiveClientsCount = provider.ActiveClientsCount,
-                PlansCount = provider.Plans.Count,
-                SubscriptionsCount = provider.Subscriptions.Count,
-                UserEmail = provider.User?.Email,
-                UserFirstName = provider.User?.FirstName,
-                UserLastName = provider.User?.LastName
-            };
-        }
+        return Result.Success(ProviderMapper.ToDto(provider));
     }
 }

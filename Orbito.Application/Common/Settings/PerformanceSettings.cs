@@ -1,9 +1,22 @@
-﻿namespace Orbito.Application.Common.Settings
+﻿namespace Orbito.Application.Common.Settings;
+
+/// <summary>
+/// Configuration settings for performance monitoring
+/// </summary>
+public class PerformanceSettings
 {
-    public class PerformanceSettings
-    {
-        public int MonitorThresholdMs { get; set; } = 200;
-        public int WarningThresholdMs { get; set; } = 500;
-        public int CriticalThresholdMs { get; set; } = 1000;
-    }
+    /// <summary>
+    /// Threshold in milliseconds to start monitoring operation performance
+    /// </summary>
+    public int MonitorThresholdMs { get; set; } = 200;
+
+    /// <summary>
+    /// Threshold in milliseconds to log performance warnings
+    /// </summary>
+    public int WarningThresholdMs { get; set; } = 500;
+
+    /// <summary>
+    /// Threshold in milliseconds to log critical performance issues
+    /// </summary>
+    public int CriticalThresholdMs { get; set; } = 1000;
 }

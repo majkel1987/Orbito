@@ -1,14 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+namespace Orbito.Application.Common.Interfaces;
 
-namespace Orbito.Application.Common.Interfaces
+/// <summary>
+/// Abstraction for date/time operations to enable testability
+/// </summary>
+public interface IDateTime
 {
-    public interface IDateTime
-    {
-        DateTime Now { get; }
-        DateTime UtcNow { get; }
-    }
+    /// <summary>
+    /// Gets the current local date and time
+    /// </summary>
+    DateTime Now { get; }
+
+    /// <summary>
+    /// Gets the current UTC date and time
+    /// </summary>
+    DateTime UtcNow { get; }
 }

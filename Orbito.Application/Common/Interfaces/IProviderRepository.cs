@@ -7,6 +7,7 @@ namespace Orbito.Application.Common.Interfaces
     {
         // Read operations
         Task<Provider?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+        Task<Provider?> GetByTenantIdAsync(TenantId tenantId, CancellationToken cancellationToken = default);
         Task<Provider?> GetBySubdomainSlugAsync(string subdomainSlug, CancellationToken cancellationToken = default);
         Task<Provider?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
         Task<IEnumerable<Provider>> GetAllAsync(int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken = default);

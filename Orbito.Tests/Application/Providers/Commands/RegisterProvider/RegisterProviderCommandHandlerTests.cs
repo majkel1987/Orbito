@@ -55,6 +55,7 @@ public class RegisterProviderCommandHandlerTests
             "Doe",
             "Test Business",
             "testbusiness",
+            null,
             "Test Description",
             null,
             null

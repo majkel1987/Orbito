@@ -4,7 +4,8 @@ using Orbito.Application.Features.Payments.Commands;
 namespace Orbito.Application.Features.Payments.Commands.Validators;
 
 /// <summary>
-/// Walidator dla komendy tworzenia klienta Stripe
+/// Validator for create Stripe customer command.
+/// Validates client ID, email, name fields, company name, and phone number.
 /// </summary>
 public class CreateStripeCustomerCommandValidator : AbstractValidator<CreateStripeCustomerCommand>
 {

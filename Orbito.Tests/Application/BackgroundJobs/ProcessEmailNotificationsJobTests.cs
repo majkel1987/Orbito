@@ -1,3 +1,4 @@
+using System.Reflection;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -478,7 +479,7 @@ public class EmailNotificationBuilder
     private string _recipientEmail = "test@example.com";
     private string _subject = "Test Subject";
     private string _body = "Test Body";
-    private string _status = "Pending";
+    private EmailNotificationStatus _status = EmailNotificationStatus.Pending;
     private int _retryCount = 0;
     private int _maxRetries = 3;
     private DateTime? _nextRetryAt = DateTime.UtcNow.AddMinutes(-1);
@@ -509,7 +510,7 @@ public class EmailNotificationBuilder
         return this;
     }
 
-    public EmailNotificationBuilder WithStatus(string status)
+    public EmailNotificationBuilder WithStatus(EmailNotificationStatus status)
     {
         _status = status;
         return this;
@@ -547,23 +548,29 @@ public class EmailNotificationBuilder
 
     public EmailNotification Build()
     {
-        // Create a real EmailNotification object instead of mock
-        var notification = new EmailNotification
-        {
-            Id = _id,
-            RecipientEmail = _recipientEmail,
-            Subject = _subject,
-            Body = _body,
-            Status = _status,
-            RetryCount = _retryCount,
-            MaxRetries = _maxRetries,
-            NextRetryAt = _nextRetryAt,
-            ErrorMessage = _errorMessage,
-            CreatedAt = _createdAt,
-            TenantId = TenantId.New(),
-            Type = "Test"
-        };
-        
+        // Create using factory method and set additional properties via reflection
+        var notification = EmailNotification.Create(
+            TenantId.New(),
+            "Test",
+            _recipientEmail,
+            _subject,
+            _body);
+
+        // Set properties using reflection (private setters)
+        SetPrivateProperty(notification, "Id", _id);
+        SetPrivateProperty(notification, "Status", _status);
+        SetPrivateProperty(notification, "RetryCount", _retryCount);
+        SetPrivateProperty(notification, "MaxRetries", _maxRetries);
+        SetPrivateProperty(notification, "NextRetryAt", _nextRetryAt);
+        SetPrivateProperty(notification, "ErrorMessage", _errorMessage);
+        SetPrivateProperty(notification, "CreatedAt", _createdAt);
+
         return notification;
+    }
+
+    private static void SetPrivateProperty<T>(object obj, string propertyName, T value)
+    {
+        var property = obj.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
+        property?.SetValue(obj, value);
     }
 }

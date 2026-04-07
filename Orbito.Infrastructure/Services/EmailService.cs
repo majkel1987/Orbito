@@ -433,6 +433,117 @@ public class EmailService : IEmailService
             """;
     }
 
+    public async Task<Result> SendTeamMemberInvitationAsync(
+        string toEmail,
+        string inviteeName,
+        string providerName,
+        string inviterName,
+        string roleName,
+        string invitationLink,
+        string? personalMessage,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogInformation(
+                "Sending team member invitation email to {Email} for provider {ProviderName}",
+                toEmail,
+                providerName);
+
+            var subject = $"Zaproszenie do zespołu {providerName}";
+            var body = BuildTeamMemberInvitationEmailBody(
+                inviteeName,
+                providerName,
+                inviterName,
+                roleName,
+                invitationLink,
+                personalMessage);
+
+            await _emailSender.SendEmailAsync(toEmail, subject, body, isHtml: true, cancellationToken);
+
+            _logger.LogInformation(
+                "Successfully sent team member invitation email to {Email}",
+                toEmail);
+
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to send team member invitation email to {Email} for provider {ProviderName}",
+                toEmail,
+                providerName);
+
+            return Result.Failure("Email.SendFailed", "Failed to send team member invitation email");
+        }
+    }
+
+    private static string BuildTeamMemberInvitationEmailBody(
+        string inviteeName,
+        string providerName,
+        string inviterName,
+        string roleName,
+        string invitationLink,
+        string? personalMessage)
+    {
+        var personalMessageHtml = string.IsNullOrWhiteSpace(personalMessage)
+            ? ""
+            : $"""
+                <div style="background-color: #f9fafb; border-left: 4px solid #4F46E5; padding: 16px; margin: 24px 0; border-radius: 0 8px 8px 0;">
+                    <p style="color: #6b7280; margin: 0 0 8px 0; font-size: 12px;">Wiadomość od {inviterName}:</p>
+                    <p style="color: #374151; margin: 0; font-style: italic;">"{personalMessage}"</p>
+                </div>
+            """;
+
+        return $"""
+            <!DOCTYPE html>
+            <html lang="pl">
+            <head>
+                <meta charset="UTF-8" />
+                <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                <title>Zaproszenie do zespołu</title>
+            </head>
+            <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px;">
+                <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; padding: 40px;">
+                    <div style="text-align: center; margin-bottom: 24px;">
+                        <span style="font-size: 48px;">👋</span>
+                    </div>
+                    <h2 style="color: #333333; text-align: center;">Zostałeś zaproszony do zespołu!</h2>
+                    <p style="color: #555555; font-size: 16px; line-height: 1.6;">
+                        Cześć{(string.IsNullOrWhiteSpace(inviteeName) || inviteeName.Contains('@') ? "" : $" {inviteeName}")},
+                    </p>
+                    <p style="color: #555555; font-size: 16px; line-height: 1.6;">
+                        <strong>{inviterName}</strong> zaprasza Cię do dołączenia do zespołu <strong>{providerName}</strong> jako <strong>{roleName}</strong>.
+                    </p>
+                    {personalMessageHtml}
+                    <div style="text-align: center; margin: 32px 0;">
+                        <a href="{invitationLink}"
+                           style="background-color: #4F46E5; color: #ffffff; padding: 14px 28px;
+                                  text-decoration: none; border-radius: 6px; font-size: 16px;
+                                  display: inline-block; font-weight: bold;">
+                            Dołącz do zespołu
+                        </a>
+                    </div>
+                    <div style="background-color: #f9fafb; border-radius: 8px; padding: 16px; margin: 24px 0;">
+                        <p style="color: #6b7280; margin: 0; font-size: 14px;">
+                            <strong>Organizacja:</strong> {providerName}<br/>
+                            <strong>Rola:</strong> {roleName}<br/>
+                            <strong>Zaproszenie od:</strong> {inviterName}
+                        </p>
+                    </div>
+                    <p style="color: #888888; font-size: 14px;">
+                        Ten link zaproszenia wygaśnie za 7 dni. Jeśli nie spodziewałeś się tego zaproszenia, możesz zignorować tę wiadomość.
+                    </p>
+                    <hr style="border: none; border-top: 1px solid #eeeeee; margin: 24px 0;" />
+                    <p style="color: #aaaaaa; font-size: 12px; text-align: center;">
+                        © {DateTime.UtcNow.Year} {providerName}. Wszelkie prawa zastrzeżone.
+                    </p>
+                </div>
+            </body>
+            </html>
+            """;
+    }
+
     private static string BuildTrialExpiredEmailBody(
         string providerName,
         string planName,

@@ -2,17 +2,16 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Domain.Common;
-using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
 using Orbito.Domain.Errors;
 
-namespace Orbito.Application.Features.Payments.Commands
+namespace Orbito.Application.Features.Payments.Commands;
+
+/// <summary>
+/// Handler for retry failed payment command
+/// </summary>
+public class RetryFailedPaymentCommandHandler : IRequestHandler<RetryFailedPaymentCommand, Result<RetryFailedPaymentResponse>>
 {
-    /// <summary>
-    /// Handler for retry failed payment command
-    /// </summary>
-    public class RetryFailedPaymentCommandHandler : IRequestHandler<RetryFailedPaymentCommand, Result<RetryFailedPaymentResponse>>
-    {
         private readonly IPaymentRetryService _retryService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IUserContextService _userContextService;
@@ -138,4 +137,3 @@ namespace Orbito.Application.Features.Payments.Commands
             }
         }
     }
-}

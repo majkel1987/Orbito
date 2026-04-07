@@ -580,7 +580,13 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
                 if (customerResult.IsSuccess)
                 {
                     // Zapisz Stripe Customer ID w bazie danych
-                    client.StripeCustomerId = customerResult.ExternalCustomerId;
+                    var setResult = client.SetStripeCustomerId(customerResult.ExternalCustomerId!);
+                    if (setResult.IsFailure)
+                    {
+                        _logger.LogError("Failed to set Stripe customer ID for client {ClientId}: {Error}",
+                            client.Id, setResult.Error.Message);
+                        return null;
+                    }
                     await _unitOfWork.Clients.UpdateAsync(client);
 
                     var saveResult = await _unitOfWork.SaveChangesAsync();

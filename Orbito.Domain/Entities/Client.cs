@@ -9,38 +9,41 @@ namespace Orbito.Domain.Entities
 {
     public class Client : IMustHaveTenant
     {
-        public Guid Id { get; set; }
-        public TenantId TenantId { get; set; }
+        public Guid Id { get; private set; }
+        public TenantId TenantId { get; private set; }
 
-        public ApplicationUser? User { get; set; }
-        public Guid? UserId { get; set; }
+        public ApplicationUser? User { get; private set; }
+        public Guid? UserId { get; private set; }
 
         // Client Details
-        public string? CompanyName { get; set; }
-        public string? Phone { get; set; }
+        public string? CompanyName { get; private set; }
+        public string? Phone { get; private set; }
 
-        public string? DirectEmail { get; set; }       // Dla klientów bez konta Identity
-        public string? DirectFirstName { get; set; }   // Dla klientów bez konta Identity
-        public string? DirectLastName { get; set; }    // Dla klientów bez konta Identity
+        public string? DirectEmail { get; private set; }       // Dla klientów bez konta Identity
+        public string? DirectFirstName { get; private set; }   // Dla klientów bez konta Identity
+        public string? DirectLastName { get; private set; }    // Dla klientów bez konta Identity
 
         // Invitation Flow
-        public ClientStatus Status { get; set; } = ClientStatus.Inactive;
-        public string? InvitationToken { get; set; }
-        public DateTime? InvitationTokenExpiresAt { get; set; }
-        public DateTime? ConfirmedAt { get; set; }
+        public ClientStatus Status { get; private set; } = ClientStatus.Inactive;
+        public string? InvitationToken { get; private set; }
+        public DateTime? InvitationTokenExpiresAt { get; private set; }
+        public DateTime? ConfirmedAt { get; private set; }
 
         // Platform Data
-        public DateTime CreatedAt { get; set; }
-        public bool IsActive { get; set; }
+        public DateTime CreatedAt { get; private set; }
+        public bool IsActive { get; private set; }
 
         // Payment Gateway Integration
-        public string? StripeCustomerId { get; set; }
+        public string? StripeCustomerId { get; private set; }
 
         // Navigation Properties
-        public Provider Provider { get; set; }
-        public ICollection<Subscription> Subscriptions { get; set; } = [];
-        public ICollection<Payment> Payments { get; set; } = [];
-        public ICollection<PaymentMethod> PaymentMethods { get; set; } = [];
+        public Provider Provider { get; private set; } = null!;
+        private readonly List<Subscription> _subscriptions = [];
+        public IReadOnlyCollection<Subscription> Subscriptions => _subscriptions.AsReadOnly();
+        private readonly List<Payment> _payments = [];
+        public IReadOnlyCollection<Payment> Payments => _payments.AsReadOnly();
+        private readonly List<PaymentMethod> _paymentMethods = [];
+        public IReadOnlyCollection<PaymentMethod> PaymentMethods => _paymentMethods.AsReadOnly();
 
         public string Email => User?.Email ?? DirectEmail ?? "";
         public string FirstName => User?.FirstName ?? DirectFirstName ?? "";
@@ -172,10 +175,10 @@ namespace Orbito.Domain.Entities
             }
         }
 
-        public void UpdateDirectInfo(string? email, string? firstName, string? lastName)
+        public Result UpdateDirectInfo(string? email, string? firstName, string? lastName)
         {
             if (UserId != null)
-                throw new InvalidOperationException("Cannot update direct info for clients with Identity account. Use Identity user management instead.");
+                return Result.Failure(DomainErrors.Client.CannotUpdateDirectInfoWithIdentity);
 
             if (!string.IsNullOrWhiteSpace(email))
             {
@@ -191,12 +194,52 @@ namespace Orbito.Domain.Entities
             {
                 DirectLastName = lastName;
             }
+
+            return Result.Success();
         }
 
         public bool CanBeDeleted()
         {
             // Klient może być usunięty tylko jeśli nie ma aktywnych subskrypcji
             return !Subscriptions.Any(s => s.Status == SubscriptionStatus.Active);
+        }
+
+        public void SetUserId(Guid userId)
+        {
+            UserId = userId;
+        }
+
+        public Result SetStripeCustomerId(string stripeCustomerId)
+        {
+            if (string.IsNullOrWhiteSpace(stripeCustomerId))
+                return Result.Failure(DomainErrors.Client.StripeCustomerIdCannotBeEmpty);
+
+            StripeCustomerId = stripeCustomerId;
+            return Result.Success();
+        }
+
+        public void SetPhone(string? phone)
+        {
+            Phone = phone;
+        }
+
+        public Result RegenerateInvitationToken(string token, DateTime expiresAt)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+                return Result.Failure(DomainErrors.Client.TokenCannotBeEmpty);
+
+            InvitationToken = token;
+            InvitationTokenExpiresAt = expiresAt;
+            return Result.Success();
+        }
+
+        public Result SetProvider(Provider provider)
+        {
+            if (provider == null)
+                return Result.Failure(DomainErrors.Client.ProviderCannotBeNull);
+
+            Provider = provider;
+            return Result.Success();
         }
     }
 }

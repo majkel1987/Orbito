@@ -68,8 +68,6 @@ public class ProcessRecurringPaymentsJobTests : BaseTestFixture
         // Setup default subscription service to return successfully
         _subscriptionServiceMock.Setup(x => x.ProcessRecurringPaymentsAsync(It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        _subscriptionServiceMock.Setup(x => x.ProcessExpiredSubscriptionsAsync(It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
 
         _job = new ProcessRecurringPaymentsJob(_serviceProviderMock.Object, _loggerMock.Object, TimeSpan.FromMilliseconds(50));
     }
@@ -118,8 +116,6 @@ public class ProcessRecurringPaymentsJobTests : BaseTestFixture
         _dateTimeMock.Setup(x => x.UtcNow).Returns(testDate);
         _subscriptionServiceMock.Setup(x => x.ProcessRecurringPaymentsAsync(It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        _subscriptionServiceMock.Setup(x => x.ProcessExpiredSubscriptionsAsync(It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
 
         // Act
 
@@ -149,8 +145,6 @@ public class ProcessRecurringPaymentsJobTests : BaseTestFixture
 
         _dateTimeMock.Setup(x => x.UtcNow).Returns(testDate);
         _subscriptionServiceMock.Setup(x => x.ProcessRecurringPaymentsAsync(It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-        _subscriptionServiceMock.Setup(x => x.ProcessExpiredSubscriptionsAsync(It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         var startTime = DateTime.UtcNow;
@@ -194,8 +188,6 @@ public class ProcessRecurringPaymentsJobTests : BaseTestFixture
             .ReturnsAsync(new List<Provider>()); // Empty for subsequent pages
         _subscriptionServiceMock.Setup(x => x.ProcessRecurringPaymentsAsync(It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        _subscriptionServiceMock.Setup(x => x.ProcessExpiredSubscriptionsAsync(It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
 
         // Act
         var job = new ProcessRecurringPaymentsJob(_serviceProviderMock.Object, _loggerMock.Object, TimeSpan.FromMilliseconds(50));
@@ -227,8 +219,6 @@ public class ProcessRecurringPaymentsJobTests : BaseTestFixture
             .ReturnsAsync(new List<Provider>());
         _subscriptionServiceMock.Setup(x => x.ProcessRecurringPaymentsAsync(It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        _subscriptionServiceMock.Setup(x => x.ProcessExpiredSubscriptionsAsync(It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
 
         // Act
         var job = new ProcessRecurringPaymentsJob(_serviceProviderMock.Object, _loggerMock.Object, TimeSpan.FromMilliseconds(50));
@@ -241,37 +231,6 @@ public class ProcessRecurringPaymentsJobTests : BaseTestFixture
         _subscriptionServiceMock.Verify(x => x.ProcessRecurringPaymentsAsync(testDate, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
     }
 
-    [Fact]
-    public async Task ProcessRecurringPayments_ShouldCallSubscriptionServiceForExpiredSubscriptions()
-    {
-        // Arrange
-        var testDate = DateTime.UtcNow;
-        var cancellationToken = CancellationToken.None;
-
-        var provider = Provider.Create(Guid.NewGuid(), "TestProvider", "test-slug");
-        var tenantId = provider.TenantId;
-
-        _dateTimeMock.Setup(x => x.UtcNow).Returns(testDate);
-        // Setup TenantJobHelper pagination
-        _providerRepositoryMock.Setup(x => x.GetActiveProvidersAsync(1, 100, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Provider> { provider });
-        _providerRepositoryMock.Setup(x => x.GetActiveProvidersAsync(It.Is<int>(p => p > 1), 100, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Provider>());
-        _subscriptionServiceMock.Setup(x => x.ProcessRecurringPaymentsAsync(It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-        _subscriptionServiceMock.Setup(x => x.ProcessExpiredSubscriptionsAsync(It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
-        // Act
-        var job = new ProcessRecurringPaymentsJob(_serviceProviderMock.Object, _loggerMock.Object, TimeSpan.FromMilliseconds(50));
-
-        await job.StartAsync(cancellationToken);
-        await Task.Delay(300); // Let it process once
-        await job.StopAsync(cancellationToken);
-
-        // Assert - Should call subscription service for processing expired subscriptions
-        _subscriptionServiceMock.Verify(x => x.ProcessExpiredSubscriptionsAsync(It.IsAny<CancellationToken>()), Times.AtLeastOnce);
-    }
 
     [Fact]
     public async Task ProcessRecurringPayments_WithRecurringPaymentsFailure_ShouldLogError()
@@ -284,8 +243,6 @@ public class ProcessRecurringPaymentsJobTests : BaseTestFixture
         _dateTimeMock.Setup(x => x.UtcNow).Returns(testDate);
         _subscriptionServiceMock.Setup(x => x.ProcessRecurringPaymentsAsync(It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(exception);
-        _subscriptionServiceMock.Setup(x => x.ProcessExpiredSubscriptionsAsync(It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
 
         // Act
 
@@ -339,8 +296,6 @@ public class ProcessRecurringPaymentsJobTests : BaseTestFixture
                 // Simulate long operation that gets cancelled
                 await Task.Delay(TimeSpan.FromMinutes(20), ct); 
             });
-        _subscriptionServiceMock.Setup(x => x.ProcessExpiredSubscriptionsAsync(It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
 
         // Act
         var job = new ProcessRecurringPaymentsJob(_serviceProviderMock.Object, _loggerMock.Object, TimeSpan.FromMilliseconds(50));
@@ -389,8 +344,6 @@ public class ProcessRecurringPaymentsJobTests : BaseTestFixture
 
         _dateTimeMock.Setup(x => x.UtcNow).Returns(testDate);
         _subscriptionServiceMock.Setup(x => x.ProcessRecurringPaymentsAsync(It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-        _subscriptionServiceMock.Setup(x => x.ProcessExpiredSubscriptionsAsync(It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         // Act

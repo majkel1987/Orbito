@@ -103,7 +103,14 @@ public class ExpireTrialSubscriptionsCommandHandler
             }
 
             // Mark notification as sent (Expired tier)
-            subscription.MarkNotificationSent(TrialNotificationTier.Expired);
+            var markResult = subscription.MarkNotificationSent(TrialNotificationTier.Expired);
+            if (markResult.IsFailure)
+            {
+                _logger.LogWarning(
+                    "Failed to mark expired notification for subscription {SubscriptionId}: {Error}",
+                    subscription.Id,
+                    markResult.Error);
+            }
 
             await _subscriptionRepository.UpdateAsync(subscription, cancellationToken);
             expiredCount++;

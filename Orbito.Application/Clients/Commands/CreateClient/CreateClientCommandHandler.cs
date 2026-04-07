@@ -1,4 +1,5 @@
 using MediatR;
+using Orbito.Application.Clients;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.DTOs;
 using Orbito.Domain.Common;
@@ -104,12 +105,16 @@ namespace Orbito.Application.Clients.Commands.CreateClient
             // Ustaw dodatkowe właściwości
             if (!string.IsNullOrWhiteSpace(normalizedRequest.Phone))
             {
-                client.Phone = normalizedRequest.Phone;
+                client.SetPhone(normalizedRequest.Phone);
             }
 
             // Set Provider navigation property (required by EF Core relationship)
             // Provider.Id == TenantId.Value (self-referencing)
-            client.Provider = provider;
+            var setProviderResult = client.SetProvider(provider);
+            if (setProviderResult.IsFailure)
+            {
+                return Result.Failure<ClientDto>(setProviderResult.Error);
+            }
 
             // Zapisz klienta
             // Note: AddAsync already calls SaveChangesAsync internally
@@ -122,32 +127,7 @@ namespace Orbito.Application.Clients.Commands.CreateClient
                 return Result.Failure<ClientDto>(DomainErrors.Client.NotFound);
             }
 
-            var clientDto = MapToDto(clientWithDetails);
-            return Result.Success(clientDto);
-        }
-
-        private static ClientDto MapToDto(Client client)
-        {
-            return new ClientDto
-            {
-                Id = client.Id,
-                TenantId = client.TenantId.Value,
-                UserId = client.UserId,
-                CompanyName = client.CompanyName,
-                Phone = client.Phone,
-                DirectEmail = client.DirectEmail,
-                DirectFirstName = client.DirectFirstName,
-                DirectLastName = client.DirectLastName,
-                IsActive = client.IsActive,
-                CreatedAt = client.CreatedAt,
-                Email = client.Email,
-                FirstName = client.FirstName,
-                LastName = client.LastName,
-                FullName = client.FullName,
-                UserEmail = client.User?.Email,
-                UserFirstName = client.User?.FirstName,
-                UserLastName = client.User?.LastName
-            };
+            return Result.Success(ClientMapper.ToDto(clientWithDetails));
         }
     }
 }

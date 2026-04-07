@@ -1,4 +1,6 @@
-﻿namespace Orbito.Domain.ValueObjects
+using Orbito.Domain.Enums;
+
+namespace Orbito.Domain.ValueObjects
 {
     public sealed class BillingPeriod : IEquatable<BillingPeriod>
     {
@@ -53,13 +55,13 @@
         public override bool Equals(object? obj) => obj is BillingPeriod other && Equals(other);
         public override int GetHashCode() => HashCode.Combine(Value, Type);
         public override string ToString() => $"{Value} {Type}";
-    }
 
-    public enum BillingPeriodType
-    {
-        Daily = 1,
-        Weekly = 2,
-        Monthly = 3,
-        Yearly = 4
+        public static bool operator ==(BillingPeriod? left, BillingPeriod? right)
+        {
+            if (left is null) return right is null;
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(BillingPeriod? left, BillingPeriod? right) => !(left == right);
     }
 }

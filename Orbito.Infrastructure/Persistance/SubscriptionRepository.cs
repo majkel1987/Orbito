@@ -230,22 +230,6 @@ namespace Orbito.Infrastructure.Persistance
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<IEnumerable<Subscription>> GetExpiringSubscriptionsAsync(DateTime checkDate, int daysBeforeExpiration = 7, CancellationToken cancellationToken = default)
-        {
-            var expirationThreshold = checkDate.AddDays(daysBeforeExpiration);
-
-            // Disable query filters for admin operations
-            return await _context.Subscriptions
-                .IgnoreQueryFilters()
-                .AsNoTracking()
-                .Include(s => s.Client)
-                .Include(s => s.Plan)
-                .Where(s => s.Status == SubscriptionStatus.Active &&
-                           s.NextBillingDate != default(DateTime) &&
-                           s.NextBillingDate <= expirationThreshold)
-                .OrderBy(s => s.NextBillingDate)
-                .ToListAsync(cancellationToken);
-        }
 
         public async Task<IEnumerable<Subscription>> GetExpiredSubscriptionsAsync(DateTime checkDate, CancellationToken cancellationToken = default)
         {

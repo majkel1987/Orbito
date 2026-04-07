@@ -15,6 +15,12 @@ public class UpdatePaymentFromWebhookCommandValidator : AbstractValidator<Update
             .NotEmpty()
             .WithMessage("Payment ID is required");
 
+        RuleFor(x => x.EventId)
+            .NotEmpty()
+            .WithMessage("Event ID is required for idempotency")
+            .MaximumLength(200)
+            .WithMessage("Event ID cannot exceed 200 characters");
+
         RuleFor(x => x.EventType)
             .NotEmpty()
             .WithMessage("Event type is required")
@@ -42,17 +48,21 @@ public class UpdatePaymentFromWebhookCommandValidator : AbstractValidator<Update
             .WithMessage("Error message cannot exceed 1000 characters")
             .When(x => !string.IsNullOrEmpty(x.ErrorMessage));
 
+        // Null-safe metadata validation
         RuleFor(x => x.Metadata)
-            .Must(metadata => metadata.Count <= 50)
-            .When(x => x.Metadata.Any())
+            .Must(metadata => metadata == null || metadata.Count <= 50)
             .WithMessage("Metadata cannot contain more than 50 entries");
 
-        RuleForEach(x => x.Metadata.Keys)
-            .MaximumLength(100)
-            .WithMessage("Metadata key cannot exceed 100 characters");
+        // Only validate keys/values if metadata is not null and has entries
+        When(x => x.Metadata != null && x.Metadata.Any(), () =>
+        {
+            RuleForEach(x => x.Metadata.Keys)
+                .MaximumLength(100)
+                .WithMessage("Metadata key cannot exceed 100 characters");
 
-        RuleForEach(x => x.Metadata.Values)
-            .MaximumLength(1000)
-            .WithMessage("Metadata value cannot exceed 1000 characters");
+            RuleForEach(x => x.Metadata.Values)
+                .MaximumLength(1000)
+                .WithMessage("Metadata value cannot exceed 1000 characters");
+        });
     }
 }

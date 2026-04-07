@@ -1,12 +1,13 @@
 using Orbito.Domain.Entities;
 
-namespace Orbito.Application.Common.Interfaces
+namespace Orbito.Application.Common.Interfaces;
+
+/// <summary>
+/// Service for managing payment retry logic with exponential backoff.
+/// Provides scheduling, processing, and cancellation of payment retries.
+/// </summary>
+public interface IPaymentRetryService
 {
-    /// <summary>
-    /// Service for managing payment retry logic with exponential backoff
-    /// </summary>
-    public interface IPaymentRetryService
-    {
         /// <summary>
         /// Schedules a retry for a failed payment
         /// </summary>
@@ -79,6 +80,5 @@ namespace Orbito.Application.Common.Interfaces
         /// <param name="paymentId">ID of the payment</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Next attempt number (1-based)</returns>
-        Task<int> CalculateNextAttemptNumberAsync(Guid paymentId, CancellationToken cancellationToken = default);
-    }
+    Task<int> CalculateNextAttemptNumberAsync(Guid paymentId, CancellationToken cancellationToken = default);
 }

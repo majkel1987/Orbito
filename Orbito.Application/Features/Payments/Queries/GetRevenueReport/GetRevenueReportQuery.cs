@@ -4,45 +4,17 @@ using Orbito.Application.Common.Models;
 namespace Orbito.Application.Features.Payments.Queries.GetRevenueReport;
 
 /// <summary>
-/// Query to get revenue report for a specific provider and period
+/// Query to get revenue report for a specific provider and period.
+/// Returns Result&lt;RevenueMetrics&gt; for proper error handling.
 /// </summary>
-public record GetRevenueReportQuery : IRequest<RevenueMetrics>
+/// <param name="StartDate">Start date of the revenue period</param>
+/// <param name="EndDate">End date of the revenue period</param>
+/// <param name="ProviderId">Provider ID to get revenue for (required, must belong to current tenant)</param>
+public record GetRevenueReportQuery(
+    DateTime StartDate,
+    DateTime EndDate,
+    Guid ProviderId) : IRequest<Orbito.Domain.Common.Result<RevenueMetrics>>
 {
-    /// <summary>
-    /// Start date of the revenue period
-    /// </summary>
-    public DateTime StartDate { get; init; }
-
-    /// <summary>
-    /// End date of the revenue period
-    /// </summary>
-    public DateTime EndDate { get; init; }
-
-    /// <summary>
-    /// Provider ID to get revenue for
-    /// </summary>
-    public Guid ProviderId { get; init; }
-
-    /// <summary>
-    /// Default constructor
-    /// </summary>
-    public GetRevenueReportQuery()
-    {
-    }
-
-    /// <summary>
-    /// Constructor with parameters
-    /// </summary>
-    /// <param name="startDate">Start date</param>
-    /// <param name="endDate">End date</param>
-    /// <param name="providerId">Provider ID</param>
-    public GetRevenueReportQuery(DateTime startDate, DateTime endDate, Guid providerId)
-    {
-        StartDate = startDate;
-        EndDate = endDate;
-        ProviderId = providerId;
-    }
-
     /// <summary>
     /// Gets the date range for this query
     /// </summary>

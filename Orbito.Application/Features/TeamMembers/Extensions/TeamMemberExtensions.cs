@@ -15,6 +15,8 @@ public static class TeamMemberExtensions
     /// <returns>The team member DTO.</returns>
     public static TeamMemberDto ToDto(this TeamMember teamMember)
     {
+        ArgumentNullException.ThrowIfNull(teamMember);
+
         return new TeamMemberDto
         {
             Id = teamMember.Id,

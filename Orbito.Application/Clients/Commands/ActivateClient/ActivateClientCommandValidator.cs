@@ -1,14 +1,13 @@
 using FluentValidation;
 
-namespace Orbito.Application.Clients.Commands.ActivateClient
+namespace Orbito.Application.Clients.Commands.ActivateClient;
+
+public class ActivateClientCommandValidator : AbstractValidator<ActivateClientCommand>
 {
-    public class ActivateClientCommandValidator : AbstractValidator<ActivateClientCommand>
+    public ActivateClientCommandValidator()
     {
-        public ActivateClientCommandValidator()
-        {
-            RuleFor(x => x.Id)
-                .NotEmpty()
-                .WithMessage("Client ID is required");
-        }
+        RuleFor(x => x.Id)
+            .NotEmpty()
+            .WithMessage("Client ID is required");
     }
 }

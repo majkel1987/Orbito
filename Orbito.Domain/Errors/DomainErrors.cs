@@ -32,6 +32,10 @@ public static class DomainErrors
         public static Error Unauthorized => Error.Create(
             "General.Unauthorized",
             "Unauthorized access");
+
+        public static Error TransactionFailed => Error.Create(
+            "General.TransactionFailed",
+            "Database transaction failed");
     }
 
     /// <summary>
@@ -88,6 +92,18 @@ public static class DomainErrors
         public static Error Inactive => Error.Create(
             "Provider.Inactive",
             "Provider is not active");
+
+        public static Error BusinessNameCannotBeEmpty => Error.Create(
+            "Provider.BusinessNameCannotBeEmpty",
+            "Business name cannot be empty");
+
+        public static Error ActiveClientsCountCannotBeNegative => Error.Create(
+            "Provider.ActiveClientsCountCannotBeNegative",
+            "Active clients count cannot be negative");
+
+        public static Error StripeCustomerIdCannotBeEmpty => Error.Create(
+            "Provider.StripeCustomerIdCannotBeEmpty",
+            "StripeCustomerId cannot be empty");
     }
 
     /// <summary>
@@ -138,6 +154,22 @@ public static class DomainErrors
         public static Error InvalidToken => Error.Create(
             "Client.InvalidToken",
             "Invalid invitation token");
+
+        public static Error CannotUpdateDirectInfoWithIdentity => Error.Create(
+            "Client.CannotUpdateDirectInfoWithIdentity",
+            "Cannot update direct info for clients with Identity account. Use Identity user management instead");
+
+        public static Error StripeCustomerIdCannotBeEmpty => Error.Create(
+            "Client.StripeCustomerIdCannotBeEmpty",
+            "StripeCustomerId cannot be empty");
+
+        public static Error TokenCannotBeEmpty => Error.Create(
+            "Client.TokenCannotBeEmpty",
+            "Invitation token cannot be empty");
+
+        public static Error ProviderCannotBeNull => Error.Create(
+            "Client.ProviderCannotBeNull",
+            "Provider cannot be null");
     }
 
     /// <summary>
@@ -204,6 +236,10 @@ public static class DomainErrors
         public static Error InvalidDateRange => Error.Create(
             "Subscription.InvalidDateRange",
             "Invalid subscription date range");
+
+        public static Error NoPlanAssociated => Error.Create(
+            "Subscription.NoPlanAssociated",
+            "Subscription has no plan associated. This indicates a data integrity issue");
     }
 
     /// <summary>
@@ -234,6 +270,10 @@ public static class DomainErrors
         public static Error Inactive => Error.Create(
             "SubscriptionPlan.Inactive",
             "Subscription plan is not active");
+
+        public static Error NameRequired => Error.Create(
+            "SubscriptionPlan.NameRequired",
+            "Subscription plan name is required");
     }
 
     /// <summary>
@@ -396,6 +436,14 @@ public static class DomainErrors
         public static Error NotFailedStatus => Error.Create(
             "PaymentRetry.NotFailedStatus",
             "Only failed payments can be retried");
+
+        public static Error CannotCancelCompleted => Error.Create(
+            "PaymentRetry.CannotCancelCompleted",
+            "Cannot cancel a completed retry schedule");
+
+        public static Error AlreadyCancelled => Error.Create(
+            "PaymentRetry.AlreadyCancelled",
+            "Retry schedule is already cancelled");
     }
 
     /// <summary>
@@ -484,6 +532,14 @@ public static class DomainErrors
         public static Error AlreadyExists => Error.Create(
             "User.AlreadyExists",
             "User already exists");
+
+        public static Error EmailAlreadyExists => Error.Create(
+            "User.EmailAlreadyExists",
+            "A user with this email already exists");
+
+        public static Error CreationFailed => Error.Create(
+            "User.CreationFailed",
+            "Failed to create user account");
     }
 
     /// <summary>
@@ -568,5 +624,83 @@ public static class DomainErrors
         public static Error InvalidPageSize => Error.Create(
             "Validation.InvalidPageSize",
             "Page size must be between 1 and 100");
+    }
+
+    /// <summary>
+    /// Webhook-related errors
+    /// </summary>
+    public static class Webhook
+    {
+        public static Error PayloadTooLarge => Error.Create(
+            "Webhook.PayloadTooLarge",
+            "Webhook payload exceeds maximum allowed size");
+
+        public static Error InvalidPayloadFormat => Error.Create(
+            "Webhook.InvalidPayloadFormat",
+            "Invalid webhook payload format");
+
+        public static Error InvalidSignature => Error.Create(
+            "Webhook.InvalidSignature",
+            "Invalid webhook signature");
+
+        public static Error AlreadyProcessed => Error.Create(
+            "Webhook.AlreadyProcessed",
+            "Webhook event has already been processed");
+
+        public static Error ProcessingFailed => Error.Create(
+            "Webhook.ProcessingFailed",
+            "Failed to process webhook event");
+
+        public static Error SecretNotConfigured => Error.Create(
+            "Webhook.SecretNotConfigured",
+            "Webhook secret is not configured");
+
+        public static Error MissingSignature => Error.Create(
+            "Webhook.MissingSignature",
+            "Missing webhook signature header");
+
+        public static Error SignatureValidationFailed(string reason) => Error.Create(
+            "Webhook.SignatureValidationFailed",
+            $"Webhook signature validation failed: {reason}");
+
+        public static Error EventIdRequired => Error.Create(
+            "Webhook.EventIdRequired",
+            "Webhook event ID is required");
+
+        public static Error EventStatusCheckFailed(string reason) => Error.Create(
+            "Webhook.EventStatusCheckFailed",
+            $"Failed to check webhook event status: {reason}");
+
+        public static Error InvalidEventData => Error.Create(
+            "Webhook.InvalidEventData",
+            "Failed to parse webhook event data");
+
+        public static Error PaymentNotFound(string externalId) => Error.Create(
+            "Webhook.PaymentNotFound",
+            $"Payment not found for external ID: {externalId}");
+
+        public static Error SubscriptionNotFound(string externalId) => Error.Create(
+            "Webhook.SubscriptionNotFound",
+            $"Subscription not found for external ID: {externalId}");
+
+        public static Error MissingPaymentIntent => Error.Create(
+            "Webhook.MissingPaymentIntent",
+            "No payment intent associated with charge");
+
+        public static Error MissingMetadata(string field) => Error.Create(
+            "Webhook.MissingMetadata",
+            $"Missing {field} in payment intent metadata");
+
+        public static Error ProviderSubscriptionNotFound(Guid providerId) => Error.Create(
+            "Webhook.ProviderSubscriptionNotFound",
+            $"Provider subscription not found for provider: {providerId}");
+
+        public static Error PlatformPlanNotFound(Guid planId) => Error.Create(
+            "Webhook.PlatformPlanNotFound",
+            $"Platform plan not found: {planId}");
+
+        public static Error EventHandlingFailed(string eventType, string reason) => Error.Create(
+            "Webhook.EventHandlingFailed",
+            $"Error handling {eventType}: {reason}");
     }
 }

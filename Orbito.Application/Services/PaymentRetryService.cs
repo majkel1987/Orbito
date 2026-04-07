@@ -19,19 +19,22 @@ namespace Orbito.Application.Services
         private readonly ITenantProvider _tenantProvider;
         private readonly ILogger<PaymentRetryService> _logger;
         private readonly PaymentRetryOptions _options;
+        private readonly IPaymentProcessingService _paymentProcessingService;
 
         public PaymentRetryService(
             IPaymentRetryRepository retryRepository,
             IPaymentRepository paymentRepository,
             ITenantProvider tenantProvider,
             ILogger<PaymentRetryService> logger,
-            IOptions<PaymentRetryOptions> options)
+            IOptions<PaymentRetryOptions> options,
+            IPaymentProcessingService paymentProcessingService)
         {
             _retryRepository = retryRepository;
             _paymentRepository = paymentRepository;
             _tenantProvider = tenantProvider;
             _logger = logger;
             _options = options.Value;
+            _paymentProcessingService = paymentProcessingService;
         }
 
         /// <summary>
@@ -317,25 +320,85 @@ namespace Orbito.Application.Services
         }
 
         /// <summary>
-        /// Attempts to retry a payment
-        /// NOTE: This is a placeholder - actual payment retry integration not implemented yet
+        /// Attempts to retry a payment by processing it through the payment gateway
         /// </summary>
         private async Task<(bool Success, string? ErrorMessage)> AttemptPaymentRetryAsync(Payment payment, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Attempting to retry payment {PaymentId}", payment.Id);
-
-            if (!_options.EnablePaymentProcessing)
+            try
             {
-                _logger.LogWarning("Payment processing disabled (EnablePaymentProcessing=false). Simulating failure for dev/test.");
-                await Task.Delay(100, cancellationToken);
-                return (false, "Payment processing disabled in configuration (development/testing mode)");
-            }
+                _logger.LogInformation("Attempting to retry payment {PaymentId} for subscription {SubscriptionId}",
+                    payment.Id, payment.SubscriptionId);
 
-            // TODO: Implement actual payment retry logic with Stripe
-            throw new NotImplementedException(
-                "Payment retry integration not implemented yet. " +
-                "Integrate with payment gateway (e.g., Stripe) to process the retry. " +
-                "Set EnablePaymentProcessing=false in appsettings.json to simulate retries without actual payment processing.");
+                // FEATURE FLAG: Check if payment processing is enabled
+                if (!_options.EnablePaymentProcessing)
+                {
+                    _logger.LogWarning("Payment processing disabled (EnablePaymentProcessing=false). Simulating retry for dev/test.");
+                    await Task.Delay(100, cancellationToken); // Simulate processing time
+                    return (false, "Payment processing disabled in configuration (development/testing mode)");
+                }
+
+                // STEP 1: Get default payment method for client
+                var paymentMethodId = await _paymentProcessingService.GetDefaultPaymentMethodAsync(
+                    payment.ClientId,
+                    cancellationToken);
+
+                if (paymentMethodId == null)
+                {
+                    _logger.LogWarning("No default payment method found for client {ClientId}", payment.ClientId);
+                    return (false, "No default payment method found for client");
+                }
+
+                // STEP 2: Validate payment method can be used
+                var isValidPaymentMethod = await _paymentProcessingService.ValidatePaymentMethodAsync(
+                    paymentMethodId.Value,
+                    payment.ClientId,
+                    cancellationToken);
+
+                if (!isValidPaymentMethod)
+                {
+                    _logger.LogWarning("Payment method {PaymentMethodId} cannot be used for client {ClientId}",
+                        paymentMethodId.Value, payment.ClientId);
+                    return (false, "Payment method is expired or invalid");
+                }
+
+                // STEP 3: Check rate limiting
+                var rateLimitDelay = await _paymentProcessingService.GetRateLimitDelayAsync(
+                    payment.ClientId,
+                    cancellationToken);
+
+                if (rateLimitDelay.HasValue)
+                {
+                    _logger.LogWarning("Rate limit exceeded for client {ClientId}. Delay: {Delay}",
+                        payment.ClientId, rateLimitDelay.Value);
+                    return (false, $"Rate limit exceeded. Please try again in {rateLimitDelay.Value.TotalMinutes:F1} minutes");
+                }
+
+                // STEP 4: Process payment through payment gateway
+                var result = await _paymentProcessingService.ProcessSubscriptionPaymentAsync(
+                    subscriptionId: payment.SubscriptionId,
+                    amount: payment.Amount,
+                    paymentMethodId: paymentMethodId.Value,
+                    description: $"Payment retry for subscription {payment.SubscriptionId}",
+                    cancellationToken: cancellationToken);
+
+                // STEP 5: Handle result
+                if (result.IsSuccess)
+                {
+                    _logger.LogInformation("Payment retry successful for payment {PaymentId}", payment.Id);
+                    return (true, null);
+                }
+                else
+                {
+                    _logger.LogWarning("Payment retry failed for payment {PaymentId}: {ErrorMessage}",
+                        payment.Id, result.ErrorMessage);
+                    return (false, result.ErrorMessage ?? "Payment processing failed");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception during payment retry for payment {PaymentId}", payment.Id);
+                return (false, $"Payment retry failed: {ex.Message}");
+            }
         }
     }
 }

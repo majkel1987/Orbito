@@ -1,95 +1,51 @@
 using MediatR;
-using Orbito.Application.Common.Interfaces;
 using Orbito.Domain.Common;
-using Orbito.Domain.ValueObjects;
 
-namespace Orbito.Application.Features.Payments.Commands
+namespace Orbito.Application.Features.Payments.Commands;
+
+/// <summary>
+/// Command to refund a payment
+/// </summary>
+public record RefundPaymentCommand : IRequest<Result<RefundPaymentResult>>
 {
     /// <summary>
-    /// Komenda do zwrotu płatności
+    /// Payment ID
     /// </summary>
-    public record RefundPaymentCommand : IRequest<Result<RefundPaymentResult>>
-    {
-        /// <summary>
-        /// ID płatności
-        /// </summary>
-        public Guid PaymentId { get; init; }
-
-        /// <summary>
-        /// ID klienta (security: ClientId verification)
-        /// </summary>
-        public Guid ClientId { get; init; }
-
-        /// <summary>
-        /// Kwota zwrotu
-        /// </summary>
-        public decimal Amount { get; init; }
-
-        /// <summary>
-        /// Waluta
-        /// </summary>
-        public string Currency { get; init; } = string.Empty;
-
-        /// <summary>
-        /// Powód zwrotu
-        /// </summary>
-        public string Reason { get; init; } = string.Empty;
-    }
+    public required Guid PaymentId { get; init; }
 
     /// <summary>
-    /// Wynik zwrotu płatności
+    /// Client ID (security: ClientId verification)
     /// </summary>
-    public record RefundPaymentResult
-    {
-        /// <summary>
-        /// Czy operacja zakończyła się sukcesem
-        /// </summary>
-        public bool IsSuccess { get; init; }
+    public required Guid ClientId { get; init; }
 
-        /// <summary>
-        /// Komunikat błędu (jeśli wystąpił)
-        /// </summary>
-        public string? ErrorMessage { get; init; }
+    /// <summary>
+    /// Refund amount
+    /// </summary>
+    public required decimal Amount { get; init; }
 
-        /// <summary>
-        /// Kod błędu (jeśli wystąpił)
-        /// </summary>
-        public string? ErrorCode { get; init; }
+    /// <summary>
+    /// Currency code
+    /// </summary>
+    public required string Currency { get; init; }
 
-        /// <summary>
-        /// Zewnętrzny ID zwrotu
-        /// </summary>
-        public string? ExternalRefundId { get; init; }
+    /// <summary>
+    /// Refund reason
+    /// </summary>
+    public required string Reason { get; init; }
+}
 
-        /// <summary>
-        /// Status zwrotu
-        /// </summary>
-        public string? Status { get; init; }
+/// <summary>
+/// Result of refund payment command
+/// </summary>
+public record RefundPaymentResult
+{
+    /// <summary>
+    /// External refund ID from payment gateway
+    /// </summary>
+    public required string ExternalRefundId { get; init; }
 
-        /// <summary>
-        /// Konstruktor dla sukcesu
-        /// </summary>
-        public static RefundPaymentResult Success(string externalRefundId, string status)
-        {
-            return new RefundPaymentResult
-            {
-                IsSuccess = true,
-                ExternalRefundId = externalRefundId,
-                Status = status
-            };
-        }
-
-        /// <summary>
-        /// Konstruktor dla błędu
-        /// </summary>
-        public static RefundPaymentResult Failure(string errorMessage, string? errorCode = null)
-        {
-            return new RefundPaymentResult
-            {
-                IsSuccess = false,
-                ErrorMessage = errorMessage,
-                ErrorCode = errorCode
-            };
-        }
-    }
+    /// <summary>
+    /// Refund status
+    /// </summary>
+    public required string Status { get; init; }
 }

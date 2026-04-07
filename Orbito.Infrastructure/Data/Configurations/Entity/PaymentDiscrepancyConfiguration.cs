@@ -18,12 +18,10 @@ public class PaymentDiscrepancyConfiguration : IEntityTypeConfiguration<PaymentD
         builder.HasKey(d => d.Id);
 
         builder.Property(d => d.Id)
-            .HasColumnName("id")
             .IsRequired();
 
         // TenantId configuration
         builder.Property(d => d.TenantId)
-            .HasColumnName("tenant_id")
             .HasConversion(
                 tenantId => tenantId.Value,
                 value => TenantId.Create(value))
@@ -31,73 +29,57 @@ public class PaymentDiscrepancyConfiguration : IEntityTypeConfiguration<PaymentD
 
         // Reconciliation report reference
         builder.Property(d => d.ReconciliationReportId)
-            .HasColumnName("reconciliation_report_id")
             .IsRequired();
 
         // Payment reference
-        builder.Property(d => d.PaymentId)
-            .HasColumnName("payment_id");
+        builder.Property(d => d.PaymentId);
 
         builder.Property(d => d.ExternalPaymentId)
-            .HasColumnName("external_payment_id")
             .HasMaxLength(255);
 
         // Discrepancy details
         builder.Property(d => d.Type)
-            .HasColumnName("type")
             .HasConversion<int>()
             .IsRequired();
 
         builder.Property(d => d.Resolution)
-            .HasColumnName("resolution")
             .HasConversion<int>()
             .IsRequired();
 
         // Status comparison
         builder.Property(d => d.OrbitoStatus)
-            .HasColumnName("orbito_status")
             .HasConversion<int>();
 
         builder.Property(d => d.StripeStatus)
-            .HasColumnName("stripe_status")
             .HasMaxLength(100);
 
         // Amount comparison
         builder.Property(d => d.OrbitoAmount)
-            .HasColumnName("orbito_amount")
             .HasPrecision(18, 2);
 
         builder.Property(d => d.OrbitoCurrency)
-            .HasColumnName("orbito_currency")
             .HasMaxLength(3);
 
         builder.Property(d => d.StripeAmount)
-            .HasColumnName("stripe_amount")
             .HasPrecision(18, 2);
 
         builder.Property(d => d.StripeCurrency)
-            .HasColumnName("stripe_currency")
             .HasMaxLength(3);
 
         // Resolution details
         builder.Property(d => d.ResolutionNotes)
-            .HasColumnName("resolution_notes")
             .HasMaxLength(2000);
 
-        builder.Property(d => d.ResolvedAt)
-            .HasColumnName("resolved_at");
+        builder.Property(d => d.ResolvedAt);
 
         builder.Property(d => d.ResolvedBy)
-            .HasColumnName("resolved_by")
             .HasMaxLength(255);
 
         // Additional metadata
         builder.Property(d => d.AdditionalData)
-            .HasColumnName("additional_data")
             .HasMaxLength(4000);
 
         builder.Property(d => d.DetectedAt)
-            .HasColumnName("detected_at")
             .IsRequired();
 
         // Navigation properties

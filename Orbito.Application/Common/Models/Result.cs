@@ -1,3 +1,5 @@
+using Orbito.Domain.Common;
+
 namespace Orbito.Application.Common.Models
 {
     /// <summary>
@@ -62,24 +64,46 @@ namespace Orbito.Application.Common.Models
         };
 
         /// <summary>
+        /// Create a failed result from Domain Error
+        /// </summary>
+        public static Result<T> Failure(Error error) => new()
+        {
+            IsSuccess = false,
+            ErrorMessage = error.Message,
+            ErrorCode = error.Code
+        };
+
+        /// <summary>
         /// Create a failed result from exception
         /// </summary>
-        public static Result<T> Failure(Exception exception, string? errorCode = null) => new()
+        public static Result<T> Failure(Exception exception, string? errorCode = null, bool includeStackTrace = false) => new()
         {
             IsSuccess = false,
             ErrorMessage = exception.Message,
             ErrorCode = errorCode ?? exception.GetType().Name,
-            ErrorDetails = new Dictionary<string, string>
-            {
-                ["ExceptionType"] = exception.GetType().Name,
-                ["StackTrace"] = exception.StackTrace ?? string.Empty
-            }
+            ErrorDetails = CreateErrorDetails(exception, includeStackTrace)
         };
 
+        private static Dictionary<string, string> CreateErrorDetails(Exception exception, bool includeStackTrace)
+        {
+            var details = new Dictionary<string, string>
+            {
+                ["ExceptionType"] = exception.GetType().Name
+            };
+
+            // Only include stack trace when explicitly requested (development mode)
+            if (includeStackTrace && exception.StackTrace != null)
+            {
+                details["StackTrace"] = exception.StackTrace;
+            }
+
+            return details;
+        }
+
         /// <summary>
-        /// Implicit conversion from value to success result
+        /// Explicit conversion from value to success result
         /// </summary>
-        public static implicit operator Result<T>(T value) => Success(value);
+        public static explicit operator Result<T>(T value) => Success(value);
 
         /// <summary>
         /// Implicit conversion from exception to failure result
@@ -137,19 +161,39 @@ namespace Orbito.Application.Common.Models
         };
 
         /// <summary>
-        /// Create a failed result from exception
+        /// Create a failed result from Domain Error
         /// </summary>
-        public static Result Failure(Exception exception, string? errorCode = null) => new()
+        public static Result Failure(Error error) => new()
         {
             IsSuccess = false,
-            ErrorMessage = exception.Message,
-            ErrorCode = errorCode ?? exception.GetType().Name,
-            ErrorDetails = new Dictionary<string, string>
-            {
-                ["ExceptionType"] = exception.GetType().Name,
-                ["StackTrace"] = exception.StackTrace ?? string.Empty
-            }
+            ErrorMessage = error.Message,
+            ErrorCode = error.Code
         };
+
+        /// <summary>
+        /// Create a failed result from exception
+        /// </summary>
+        public static Result Failure(Exception exception, string? errorCode = null, bool includeStackTrace = false)
+        {
+            var details = new Dictionary<string, string>
+            {
+                ["ExceptionType"] = exception.GetType().Name
+            };
+
+            // Only include stack trace when explicitly requested (development mode)
+            if (includeStackTrace && exception.StackTrace != null)
+            {
+                details["StackTrace"] = exception.StackTrace;
+            }
+
+            return new()
+            {
+                IsSuccess = false,
+                ErrorMessage = exception.Message,
+                ErrorCode = errorCode ?? exception.GetType().Name,
+                ErrorDetails = details
+            };
+        }
 
         /// <summary>
         /// Implicit conversion from exception to failure result

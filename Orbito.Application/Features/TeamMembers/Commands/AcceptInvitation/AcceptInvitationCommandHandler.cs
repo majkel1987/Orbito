@@ -35,12 +35,7 @@ public class AcceptInvitationCommandHandler : IRequestHandler<AcceptInvitationCo
     {
         _logger.LogInformation("Processing invitation acceptance for token");
 
-        // Validate token is provided
-        if (string.IsNullOrWhiteSpace(request.Token))
-        {
-            _logger.LogWarning("Attempt to accept invitation with empty token");
-            return Result.Failure<TeamMemberDto>(DomainErrors.Validation.Required("Invitation token"));
-        }
+        // Note: Token validation (empty/length) is handled by AcceptInvitationCommandValidator in MediatR pipeline
 
         // Get current user ID from authentication context
         var currentUserId = _userContextService.GetCurrentUserId();
@@ -83,9 +78,13 @@ public class AcceptInvitationCommandHandler : IRequestHandler<AcceptInvitationCo
         }
 
         // Accept the invitation
-        // Note: AcceptInvitation may throw InvalidOperationException if already accepted or expired
-        // Let it propagate to GlobalExceptionHandler
-        teamMember.AcceptInvitation(currentUserId.Value);
+        var acceptResult = teamMember.AcceptInvitation(currentUserId.Value);
+        if (acceptResult.IsFailure)
+        {
+            _logger.LogWarning("Failed to accept invitation for team member {TeamMemberId}: {Error}",
+                teamMember.Id, acceptResult.Error.Message);
+            return Result.Failure<TeamMemberDto>(acceptResult.Error);
+        }
 
         // Update in repository
         await _teamMemberRepository.UpdateAsync(teamMember, cancellationToken);

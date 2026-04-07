@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.Features.TeamMembers.DTOs;
@@ -8,26 +9,41 @@ using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
 using Orbito.Domain.Errors;
 using Orbito.Domain.Interfaces;
-using Orbito.Domain.ValueObjects;
 
 namespace Orbito.Application.Features.TeamMembers.Commands.InviteTeamMember;
 
 /// <summary>
 /// Handler for inviting a new team member to a provider organization.
+/// Creates the team member record and sends an invitation email.
 /// </summary>
 public class InviteTeamMemberCommandHandler : IRequestHandler<InviteTeamMemberCommand, Result<TeamMemberDto>>
 {
     private readonly ITeamMemberRepository _teamMemberRepository;
+    private readonly IProviderRepository _providerRepository;
     private readonly ITenantContext _tenantContext;
+    private readonly IUserContextService _userContextService;
+    private readonly IEmailService _emailService;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<InviteTeamMemberCommandHandler> _logger;
 
     public InviteTeamMemberCommandHandler(
         ITeamMemberRepository teamMemberRepository,
+        IProviderRepository providerRepository,
         ITenantContext tenantContext,
+        IUserContextService userContextService,
+        IEmailService emailService,
+        IUnitOfWork unitOfWork,
+        IConfiguration configuration,
         ILogger<InviteTeamMemberCommandHandler> logger)
     {
         _teamMemberRepository = teamMemberRepository;
+        _providerRepository = providerRepository;
         _tenantContext = tenantContext;
+        _userContextService = userContextService;
+        _emailService = emailService;
+        _unitOfWork = unitOfWork;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -71,8 +87,9 @@ public class InviteTeamMemberCommandHandler : IRequestHandler<InviteTeamMemberCo
             request.FirstName,
             request.LastName);
 
-        // Add to repository
+        // Add to repository and save FIRST (DB save before email - email failure should not block invitation)
         await _teamMemberRepository.AddAsync(teamMember, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
             "Team member {Email} invited to tenant {TenantId} with role {Role}",
@@ -80,6 +97,58 @@ public class InviteTeamMemberCommandHandler : IRequestHandler<InviteTeamMemberCo
             tenantId,
             request.Role);
 
+        // Send invitation email (after DB save - non-blocking)
+        await SendInvitationEmailAsync(teamMember, request.Message, cancellationToken);
+
         return Result.Success(teamMember.ToDto());
+    }
+
+    private async Task SendInvitationEmailAsync(
+        TeamMember teamMember,
+        string? personalMessage,
+        CancellationToken cancellationToken)
+    {
+        // Get provider name for the email
+        var provider = await _providerRepository.GetByIdAsync(teamMember.TenantId, cancellationToken);
+        var providerName = provider?.BusinessName ?? "Your organization";
+
+        // Get inviter name
+        var inviterName = _userContextService.GetCurrentUserName() ?? "A team administrator";
+
+        // Build invitation link
+        var frontendBaseUrl = _configuration["App:FrontendBaseUrl"] ?? "http://localhost:3000";
+        var invitationLink = $"{frontendBaseUrl}/accept-invitation?token={teamMember.InvitationToken}";
+
+        // Build invitee name
+        var inviteeName = !string.IsNullOrWhiteSpace(teamMember.FirstName)
+            ? $"{teamMember.FirstName} {teamMember.LastName}".Trim()
+            : teamMember.Email;
+
+        var emailResult = await _emailService.SendTeamMemberInvitationAsync(
+            teamMember.Email,
+            inviteeName,
+            providerName,
+            inviterName,
+            teamMember.Role.ToString(),
+            invitationLink,
+            personalMessage,
+            cancellationToken);
+
+        if (emailResult.IsFailure)
+        {
+            // Log error but don't fail the operation - invitation is saved in DB
+            _logger.LogError(
+                "Failed to send invitation email to {Email} for tenant {TenantId}: {Error}",
+                teamMember.Email,
+                teamMember.TenantId,
+                emailResult.Error);
+        }
+        else
+        {
+            _logger.LogInformation(
+                "Sent invitation email to {Email} for tenant {TenantId}",
+                teamMember.Email,
+                teamMember.TenantId);
+        }
     }
 }

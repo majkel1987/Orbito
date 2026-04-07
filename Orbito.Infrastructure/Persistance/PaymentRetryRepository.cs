@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
@@ -254,11 +253,13 @@ namespace Orbito.Infrastructure.Persistance
         }
 
         /// <summary>
-        /// Begins a database transaction
+        /// Begins a database transaction.
+        /// Returns ITransactionScope abstraction to avoid EF Core leak in Application layer.
         /// </summary>
-        public async Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+        public async Task<ITransactionScope> BeginTransactionAsync(CancellationToken cancellationToken = default)
         {
-            return await _context.Database.BeginTransactionAsync(cancellationToken);
+            var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+            return new TransactionScopeAdapter(transaction);
         }
     }
 }

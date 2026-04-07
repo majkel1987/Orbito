@@ -5,6 +5,7 @@ using Orbito.Application.Common.Authorization;
 using Microsoft.Extensions.Caching.Memory;
 using Orbito.Application.Features.Payments.Commands;
 using Orbito.Application.Features.Payments.Queries;
+using Orbito.Application.Features.Payments.Queries.DTOs;
 using Orbito.Application.Common.Interfaces;
 using Orbito.Application.Common.Models;
 
@@ -306,9 +307,9 @@ namespace Orbito.API.Controllers
 
                 var result = await Mediator.Send(command, cancellationToken);
 
-                if (!result.Success)
+                if (!result.IsSuccess)
                 {
-                    return BadRequest(new { error = result.ErrorMessage });
+                    return BadRequest(new { error = result.Error?.Message ?? "Failed to cancel retry" });
                 }
 
                 Logger.LogInformation("Successfully cancelled retry schedule {ScheduleId}", scheduleId);

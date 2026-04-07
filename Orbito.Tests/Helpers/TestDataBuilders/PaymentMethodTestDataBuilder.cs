@@ -1,3 +1,4 @@
+using System.Reflection;
 using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
 using Orbito.Domain.ValueObjects;
@@ -85,10 +86,16 @@ public class PaymentMethodTestDataBuilder
             _expiryDate,
             _isDefault);
         
-        // Set the specific ID if provided
-        paymentMethod.Id = _id;
-        
+        // Set the specific ID using reflection (private setter)
+        SetPrivateProperty(paymentMethod, "Id", _id);
+
         return paymentMethod;
+    }
+
+    private static void SetPrivateProperty<T>(object obj, string propertyName, T value)
+    {
+        var property = obj.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
+        property?.SetValue(obj, value);
     }
 
     // Predefined scenarios for common test cases

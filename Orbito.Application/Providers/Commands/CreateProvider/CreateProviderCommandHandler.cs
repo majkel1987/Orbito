@@ -42,155 +42,133 @@ public class CreateProviderCommandHandler : IRequestHandler<CreateProviderComman
 
     public async Task<Result<CreateProviderResult>> Handle(CreateProviderCommand request, CancellationToken cancellationToken)
     {
-        try
+        var user = await _userManager.FindByIdAsync(request.UserId.ToString());
+        if (user == null)
         {
-            // Wykonaj walidacje
-            var user = await _userManager.FindByIdAsync(request.UserId.ToString());
-            if (user == null)
-            {
-                return Result.Failure<CreateProviderResult>(DomainErrors.User.NotFound);
-            }
-
-            if (user.Provider != null)
-            {
-                return Result.Failure<CreateProviderResult>(DomainErrors.Provider.UserAlreadyHasProvider);
-            }
-
-            // Sanitize subdomain slug - remove any non-alphanumeric characters except hyphens
-            var sanitizedSubdomain = SanitizeSubdomain(request.SubdomainSlug);
-
-            var existingProvider = await _providerRepository.GetBySubdomainSlugAsync(sanitizedSubdomain, cancellationToken);
-            if (existingProvider != null)
-            {
-                return Result.Failure<CreateProviderResult>(DomainErrors.Provider.SubdomainAlreadyExists);
-            }
-
-            // Waliduj wybrany plan platformowy (jeśli podany)
-            PlatformPlan? selectedPlan = null;
-            if (request.SelectedPlatformPlanId.HasValue)
-            {
-                selectedPlan = await _platformPlanRepository.GetByIdAsync(request.SelectedPlatformPlanId.Value, cancellationToken);
-                if (selectedPlan == null)
-                {
-                    return Result.Failure<CreateProviderResult>(DomainErrors.ProviderSubscription.PlanNotFound);
-                }
-                if (!selectedPlan.IsActive)
-                {
-                    return Result.Failure<CreateProviderResult>(DomainErrors.PlatformPlan.Inactive);
-                }
-            }
-
-            // Sprawdź czy użytkownik już ma rolę Provider
-            var userRoles = await _userManager.GetRolesAsync(user);
-            var needsProviderRole = !userRoles.Contains("Provider");
-
-            // Utwórz nowego providera
-            var provider = Provider.Create(
-                request.UserId,
-                request.BusinessName,
-                sanitizedSubdomain);
-
-            // Ustaw dodatkowe właściwości
-            if (!string.IsNullOrEmpty(request.Description))
-                provider.Description = request.Description;
-
-            if (!string.IsNullOrEmpty(request.Avatar))
-                provider.Avatar = request.Avatar;
-
-            if (!string.IsNullOrEmpty(request.CustomDomain))
-                provider.CustomDomain = request.CustomDomain;
-
-            // Dodaj providera do kontekstu
-            await _providerRepository.AddAsync(provider, cancellationToken);
-
-            // Zaktualizuj użytkownika - przypisz TenantId
-            user.TenantId = provider.TenantId;
-
-            // Dodaj rolę Provider tylko jeśli użytkownik jeszcze jej nie ma
-            if (needsProviderRole)
-            {
-                await _userManager.AddToRoleAsync(user, "Provider");
-            }
-
-            // Utwórz TeamMember z rolą Owner - śledź w kontekście bez osobnego SaveChanges
-            var ownerTeamMember = new TeamMember(
-                provider.TenantId,
-                request.UserId,
-                TeamMemberRole.Owner,
-                user.Email!,
-                user.FirstName,
-                user.LastName);
-
-            await _unitOfWork.GetRepository<TeamMember>().AddAsync(ownerTeamMember, cancellationToken);
-
-            // Utwórz ProviderSubscription (trial) jeśli plan został wybrany
-            if (selectedPlan != null)
-            {
-                var providerSubscription = ProviderSubscription.CreateTrial(
-                    provider.Id,
-                    selectedPlan.Id,
-                    selectedPlan.TrialDays);
-
-                await _providerSubscriptionRepository.AddAsync(providerSubscription, cancellationToken);
-
-                _logger.LogInformation(
-                    "Created trial subscription for Provider {ProviderId}: Plan={PlanName}, TrialDays={TrialDays}, TrialEndDate={TrialEndDate}",
-                    provider.Id, selectedPlan.Name, selectedPlan.TrialDays, providerSubscription.TrialEndDate);
-            }
-
-            // Utwórz Provider jako Client w tenancie PlatformAdmin
-            var adminTenantId = await _providerRepository.GetPlatformAdminTenantIdAsync(cancellationToken);
-            if (adminTenantId.HasValue)
-            {
-                var providerAsClient = Client.CreateDirect(
-                    TenantId.Create(adminTenantId.Value),
-                    request.Email,
-                    request.FirstName,
-                    request.LastName,
-                    request.BusinessName);
-
-                // Provider jako klient Admina jest od razu aktywny (sam się zarejestrował)
-                providerAsClient.Activate();
-
-                await _clientRepository.AddAsync(providerAsClient, cancellationToken);
-
-                _logger.LogInformation(
-                    "Created Provider {ProviderId} as Client in PlatformAdmin tenant {AdminTenantId}",
-                    provider.Id, adminTenantId.Value);
-            }
-            else
-            {
-                _logger.LogWarning(
-                    "PlatformAdmin tenant not found - Provider {ProviderId} will not be added as Admin's client",
-                    provider.Id);
-            }
-
-            // SaveChanges - zapisuje Provider + TeamMember + ProviderSubscription + Client atomowo
-            var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-            if (!saveResult.IsSuccess)
-            {
-                _logger.LogError("Błąd podczas zapisywania providera");
-                return Result.Failure<CreateProviderResult>(DomainErrors.General.UnexpectedError);
-            }
-
-            _logger.LogInformation("Provider utworzony: {BusinessName} (TenantId: {TenantId})",
-                provider.BusinessName, provider.TenantId.Value);
-
-            var result = new CreateProviderResult(
-                provider.Id,
-                provider.TenantId,
-                provider.BusinessName,
-                provider.SubdomainSlug,
-                provider.IsActive);
-
-            return Result.Success(result);
+            return Result.Failure<CreateProviderResult>(DomainErrors.User.NotFound);
         }
-        catch (Exception ex)
+
+        if (user.Provider != null)
         {
-            _logger.LogError(ex, "Błąd podczas tworzenia providera dla użytkownika {UserId}", request.UserId);
+            return Result.Failure<CreateProviderResult>(DomainErrors.Provider.UserAlreadyHasProvider);
+        }
+
+        var sanitizedSubdomain = SanitizeSubdomain(request.SubdomainSlug);
+
+        var existingProvider = await _providerRepository.GetBySubdomainSlugAsync(sanitizedSubdomain, cancellationToken);
+        if (existingProvider != null)
+        {
+            return Result.Failure<CreateProviderResult>(DomainErrors.Provider.SubdomainAlreadyExists);
+        }
+
+        PlatformPlan? selectedPlan = null;
+        if (request.SelectedPlatformPlanId.HasValue)
+        {
+            selectedPlan = await _platformPlanRepository.GetByIdAsync(request.SelectedPlatformPlanId.Value, cancellationToken);
+            if (selectedPlan == null)
+            {
+                return Result.Failure<CreateProviderResult>(DomainErrors.ProviderSubscription.PlanNotFound);
+            }
+            if (!selectedPlan.IsActive)
+            {
+                return Result.Failure<CreateProviderResult>(DomainErrors.PlatformPlan.Inactive);
+            }
+        }
+
+        var userRoles = await _userManager.GetRolesAsync(user);
+        var needsProviderRole = !userRoles.Contains("Provider");
+
+        var provider = Provider.Create(
+            request.UserId,
+            request.BusinessName,
+            sanitizedSubdomain);
+
+        if (!string.IsNullOrEmpty(request.Description))
+            provider.SetDescription(request.Description);
+
+        if (!string.IsNullOrEmpty(request.Avatar))
+            provider.SetAvatar(request.Avatar);
+
+        if (!string.IsNullOrEmpty(request.CustomDomain))
+            provider.SetCustomDomain(request.CustomDomain);
+
+        await _providerRepository.AddAsync(provider, cancellationToken);
+
+        user.TenantId = provider.TenantId;
+
+        if (needsProviderRole)
+        {
+            await _userManager.AddToRoleAsync(user, "Provider");
+        }
+
+        var ownerTeamMember = new TeamMember(
+            provider.TenantId,
+            request.UserId,
+            TeamMemberRole.Owner,
+            user.Email!,
+            user.FirstName,
+            user.LastName);
+
+        await _unitOfWork.GetRepository<TeamMember>().AddAsync(ownerTeamMember, cancellationToken);
+
+        if (selectedPlan != null)
+        {
+            var providerSubscription = ProviderSubscription.CreateTrial(
+                provider.Id,
+                selectedPlan.Id,
+                selectedPlan.TrialDays);
+
+            await _providerSubscriptionRepository.AddAsync(providerSubscription, cancellationToken);
+
+            _logger.LogInformation(
+                "Created trial subscription for Provider {ProviderId}: Plan={PlanName}, TrialDays={TrialDays}, TrialEndDate={TrialEndDate}",
+                provider.Id, selectedPlan.Name, selectedPlan.TrialDays, providerSubscription.TrialEndDate);
+        }
+
+        var adminTenantId = await _providerRepository.GetPlatformAdminTenantIdAsync(cancellationToken);
+        if (adminTenantId.HasValue)
+        {
+            var providerAsClient = Client.CreateDirect(
+                TenantId.Create(adminTenantId.Value),
+                request.Email,
+                request.FirstName,
+                request.LastName,
+                request.BusinessName);
+
+            providerAsClient.Activate();
+
+            await _clientRepository.AddAsync(providerAsClient, cancellationToken);
+
+            _logger.LogInformation(
+                "Created Provider {ProviderId} as Client in PlatformAdmin tenant {AdminTenantId}",
+                provider.Id, adminTenantId.Value);
+        }
+        else
+        {
+            _logger.LogWarning(
+                "PlatformAdmin tenant not found - Provider {ProviderId} will not be added as Admin's client",
+                provider.Id);
+        }
+
+        var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        if (!saveResult.IsSuccess)
+        {
+            _logger.LogError("Failed to save provider for user {UserId}", request.UserId);
             return Result.Failure<CreateProviderResult>(DomainErrors.General.UnexpectedError);
         }
+
+        _logger.LogInformation("Provider created: {BusinessName} (TenantId: {TenantId})",
+            provider.BusinessName, provider.TenantId.Value);
+
+        var result = new CreateProviderResult(
+            provider.Id,
+            provider.TenantId.Value,
+            provider.BusinessName,
+            provider.SubdomainSlug,
+            provider.IsActive);
+
+        return Result.Success(result);
     }
 
     private static string SanitizeSubdomain(string subdomain)
@@ -198,11 +176,11 @@ public class CreateProviderCommandHandler : IRequestHandler<CreateProviderComman
         if (string.IsNullOrWhiteSpace(subdomain))
             return string.Empty;
 
-        // Remove any HTML/script tags and their content (including script tags)
+        // Remove any HTML/script tags and their content
         var sanitized = Regex.Replace(subdomain, @"<script[^>]*>.*?</script>", string.Empty, RegexOptions.IgnoreCase | RegexOptions.Singleline);
         sanitized = Regex.Replace(sanitized, @"<[^>]+>", string.Empty, RegexOptions.IgnoreCase);
 
-        // Remove common XSS keywords and dangerous words
+        // Remove common XSS keywords
         var dangerousWords = new[] { "alert", "script", "javascript", "onerror", "onload", "onclick", "eval", "expression" };
         foreach (var word in dangerousWords)
         {

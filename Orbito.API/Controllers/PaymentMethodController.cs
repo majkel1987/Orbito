@@ -61,9 +61,9 @@ public class PaymentMethodController : ControllerBase
 
         var result = await _mediator.Send(query);
 
-        if (!result.IsSuccess)
+        if (result.IsFailure)
         {
-            return BadRequest(new { error = result.ErrorMessage });
+            return BadRequest(new { error = result.Error.Message });
         }
 
         return Ok(result.Value);
@@ -99,9 +99,9 @@ public class PaymentMethodController : ControllerBase
 
         var result = await _mediator.Send(query);
 
-        if (!result.IsSuccess)
+        if (result.IsFailure)
         {
-            return BadRequest(new { error = result.ErrorMessage });
+            return BadRequest(new { error = result.Error.Message });
         }
 
         return Ok(result.Value);

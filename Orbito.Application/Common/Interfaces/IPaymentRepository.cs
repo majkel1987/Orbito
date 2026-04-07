@@ -1,12 +1,15 @@
-using System;
 using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
 using Orbito.Domain.ValueObjects;
 
-namespace Orbito.Application.Common.Interfaces
+namespace Orbito.Application.Common.Interfaces;
+
+/// <summary>
+/// Repository interface for Payment entity operations.
+/// Provides secure CRUD and query operations with tenant isolation.
+/// </summary>
+public interface IPaymentRepository
 {
-    public interface IPaymentRepository
-    {
         // DEPRECATED: Read operations without client verification - SECURITY RISK!
         [Obsolete("SECURITY RISK: This method allows access to any payment without client verification. Use GetByIdForClientAsync instead.")]
         Task<Payment?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
@@ -106,8 +109,6 @@ namespace Orbito.Application.Common.Interfaces
         // Batch operations
         Task<Dictionary<Guid, Payment>> GetByIdsForClientAsync(List<Guid> paymentIds, Guid clientId, CancellationToken cancellationToken = default);
 
-        // Metrics operations - SECURE (tenant + provider filtering)
-        Task<IQueryable<Payment>> GetPaymentsForMetricsAsync(TenantId tenantId, DateTime startDate, DateTime endDate, Guid? providerId, CancellationToken cancellationToken = default);
 
         // BACKGROUND JOB METHODS: Explicit TenantId for multi-tenant operations
         /// <summary>
@@ -149,20 +150,22 @@ namespace Orbito.Application.Common.Interfaces
         /// that have been verified by signature middleware (e.g., Stripe webhooks).
         /// CALLER MUST verify tenant after retrieving the payment.
         /// </summary>
-        Task<Payment?> GetByExternalPaymentIdUnsafeAsync(string externalPaymentId, CancellationToken cancellationToken = default);
-    }
+    Task<Payment?> GetByExternalPaymentIdUnsafeAsync(string externalPaymentId, CancellationToken cancellationToken = default);
+}
 
-    public record PaymentStats
-    {
-        public int TotalPayments { get; init; }
-        public int CompletedPayments { get; init; }
-        public int FailedPayments { get; init; }
-        public int PendingPayments { get; init; }
-        public int ProcessingPayments { get; init; }
-        public int RefundedPayments { get; init; }
-        public decimal TotalRevenue { get; init; }
-        public decimal TotalRefunded { get; init; }
-        public string Currency { get; init; } = string.Empty;
-        public DateTime LastUpdated { get; init; }
-    }
+/// <summary>
+/// Represents aggregated payment statistics.
+/// </summary>
+public record PaymentStats
+{
+    public int TotalPayments { get; init; }
+    public int CompletedPayments { get; init; }
+    public int FailedPayments { get; init; }
+    public int PendingPayments { get; init; }
+    public int ProcessingPayments { get; init; }
+    public int RefundedPayments { get; init; }
+    public decimal TotalRevenue { get; init; }
+    public decimal TotalRefunded { get; init; }
+    public string Currency { get; init; } = string.Empty;
+    public DateTime LastUpdated { get; init; }
 }

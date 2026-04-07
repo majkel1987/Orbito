@@ -9,31 +9,32 @@ namespace Orbito.Domain.Entities;
 /// </summary>
 public class ReconciliationReport : IMustHaveTenant
 {
-    public Guid Id { get; set; }
-    public TenantId TenantId { get; set; }
+    public Guid Id { get; private set; }
+    public TenantId TenantId { get; private set; }
 
     // Report metadata
-    public DateTime RunDate { get; set; }
-    public DateTime PeriodStart { get; set; }
-    public DateTime PeriodEnd { get; set; }
-    public ReconciliationStatus Status { get; set; }
+    public DateTime RunDate { get; private set; }
+    public DateTime PeriodStart { get; private set; }
+    public DateTime PeriodEnd { get; private set; }
+    public ReconciliationStatus Status { get; private set; }
 
     // Statistics
-    public int TotalPayments { get; set; }
-    public int MatchedPayments { get; set; }
-    public int MismatchedPayments { get; set; }
-    public int DiscrepanciesCount { get; set; }
-    public int AutoResolvedCount { get; set; }
-    public int ManualReviewCount { get; set; }
+    public int TotalPayments { get; private set; }
+    public int MatchedPayments { get; private set; }
+    public int MismatchedPayments { get; private set; }
+    public int DiscrepanciesCount { get; private set; }
+    public int AutoResolvedCount { get; private set; }
+    public int ManualReviewCount { get; private set; }
 
     // Execution details
-    public DateTime? StartedAt { get; set; }
-    public DateTime? CompletedAt { get; set; }
-    public TimeSpan? Duration { get; set; }
-    public string? ErrorMessage { get; set; }
+    public DateTime? StartedAt { get; private set; }
+    public DateTime? CompletedAt { get; private set; }
+    public TimeSpan? Duration { get; private set; }
+    public string? ErrorMessage { get; private set; }
 
     // Navigation properties
-    public ICollection<PaymentDiscrepancy> Discrepancies { get; set; } = new List<PaymentDiscrepancy>();
+    private readonly List<PaymentDiscrepancy> _discrepancies = [];
+    public IReadOnlyCollection<PaymentDiscrepancy> Discrepancies => _discrepancies.AsReadOnly();
 
     private ReconciliationReport() { }
 
@@ -102,6 +103,22 @@ public class ReconciliationReport : IMustHaveTenant
     }
 
     /// <summary>
+    /// Sets the total payments count
+    /// </summary>
+    public void SetTotalPayments(int count)
+    {
+        TotalPayments = count;
+    }
+
+    /// <summary>
+    /// Sets the matched payments count
+    /// </summary>
+    public void SetMatchedPayments(int count)
+    {
+        MatchedPayments = count;
+    }
+
+    /// <summary>
     /// Updates statistics based on discrepancies
     /// </summary>
     public void UpdateStatistics()
@@ -129,7 +146,7 @@ public class ReconciliationReport : IMustHaveTenant
         if (Status != ReconciliationStatus.InProgress)
             throw new InvalidOperationException("Cannot add discrepancies to a completed reconciliation");
 
-        Discrepancies.Add(discrepancy);
+        _discrepancies.Add(discrepancy);
         UpdateStatistics();
     }
 }
