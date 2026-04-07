@@ -53,7 +53,7 @@ public class PlatformPlanConfiguration : IEntityTypeConfiguration<PlatformPlan>
                 .IsRequired()
                 .HasConversion(
                     currency => currency.Code,
-                    code => Currency.Create(code, GetSymbolForCode(code), 2));
+                    code => Currency.Create(code, CurrencySymbolHelper.GetSymbolForCode(code), 2));
         });
 
         // BillingPeriod Value Object
@@ -79,12 +79,4 @@ public class PlatformPlanConfiguration : IEntityTypeConfiguration<PlatformPlan>
             .HasDatabaseName("IX_PlatformPlans_SortOrder");
     }
 
-    private static string GetSymbolForCode(string code) => code.ToUpperInvariant() switch
-    {
-        "PLN" => "zł",
-        "USD" => "$",
-        "EUR" => "€",
-        "GBP" => "£",
-        _ => code
-    };
 }

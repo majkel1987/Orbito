@@ -25,57 +25,57 @@ public class TeamMemberConfiguration : IEntityTypeConfiguration<TeamMember>
                 v => v.Value,
                 v => TenantId.Create(v))
             .IsRequired()
-            .HasColumnName("tenant_id");
+            .HasColumnName("TenantId");
 
         builder.Property(tm => tm.UserId)
             .IsRequired()
-            .HasColumnName("user_id");
+            .HasColumnName("UserId");
 
         builder.Property(tm => tm.Role)
             .HasConversion(
                 v => v.ToString(),
                 v => Enum.Parse<TeamMemberRole>(v))
             .IsRequired()
-            .HasColumnName("role");
+            .HasColumnName("Role");
 
         builder.Property(tm => tm.Email)
             .IsRequired()
             .HasMaxLength(255)
-            .HasColumnName("email");
+            .HasColumnName("Email");
 
         builder.Property(tm => tm.FirstName)
             .HasMaxLength(100)
-            .HasColumnName("first_name");
+            .HasColumnName("FirstName");
 
         builder.Property(tm => tm.LastName)
             .HasMaxLength(100)
-            .HasColumnName("last_name");
+            .HasColumnName("LastName");
 
         builder.Property(tm => tm.IsActive)
             .IsRequired()
             .HasDefaultValue(true)
-            .HasColumnName("is_active");
+            .HasColumnName("IsActive");
 
         builder.Property(tm => tm.InvitedAt)
             .IsRequired()
-            .HasColumnName("invited_at");
+            .HasColumnName("InvitedAt");
 
         builder.Property(tm => tm.LastActiveAt)
             .IsRequired()
-            .HasColumnName("last_active_at");
+            .HasColumnName("LastActiveAt");
 
         builder.Property(tm => tm.AcceptedAt)
-            .HasColumnName("accepted_at");
+            .HasColumnName("AcceptedAt");
 
         builder.Property(tm => tm.RemovedAt)
-            .HasColumnName("removed_at");
+            .HasColumnName("RemovedAt");
 
         builder.Property(tm => tm.InvitationToken)
             .HasMaxLength(100)
-            .HasColumnName("invitation_token");
+            .HasColumnName("InvitationToken");
 
         builder.Property(tm => tm.InvitationExpiresAt)
-            .HasColumnName("invitation_expires_at");
+            .HasColumnName("InvitationExpiresAt");
 
         // Indexes
         builder.HasIndex(tm => new { tm.TenantId, tm.UserId })
