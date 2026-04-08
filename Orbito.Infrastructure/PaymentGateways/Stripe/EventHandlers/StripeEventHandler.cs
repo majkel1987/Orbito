@@ -115,6 +115,22 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
                     return Result.Failure(DomainErrors.Webhook.PaymentNotFound(paymentIntent.Id));
                 }
 
+                // CRITICAL: Verify tenant from webhook metadata
+                if (paymentIntent.Metadata.TryGetValue("tenant_id", out var tenantIdStr) &&
+                    Guid.TryParse(tenantIdStr, out var expectedTenantId))
+                {
+                    if (payment.TenantId != expectedTenantId)
+                    {
+                        _logger.LogError("Tenant mismatch in payment webhook: PaymentId={PaymentId}, Expected={ExpectedTenantId}, Actual={ActualTenantId}",
+                            payment.Id, expectedTenantId, payment.TenantId);
+                        return Result.Failure(DomainErrors.General.Unauthorized);
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("Missing tenant_id in payment intent metadata: {PaymentIntentId}", paymentIntent.Id);
+                }
+
                 // Verify payment is in correct state
                 if (payment.IsCompleted)
                 {
@@ -305,6 +321,18 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
                     return Result.Failure(DomainErrors.Webhook.PaymentNotFound(paymentIntent.Id));
                 }
 
+                // CRITICAL: Verify tenant from webhook metadata
+                if (paymentIntent.Metadata.TryGetValue("tenant_id", out var tenantIdStr) &&
+                    Guid.TryParse(tenantIdStr, out var expectedTenantId))
+                {
+                    if (payment.TenantId != expectedTenantId)
+                    {
+                        _logger.LogError("Tenant mismatch in payment failed webhook: PaymentId={PaymentId}, Expected={ExpectedTenantId}, Actual={ActualTenantId}",
+                            payment.Id, expectedTenantId, payment.TenantId);
+                        return Result.Failure(DomainErrors.General.Unauthorized);
+                    }
+                }
+
                 // Build detailed failure reason
                 var failureReason = BuildPaymentFailureReason(paymentIntent);
 
@@ -366,6 +394,18 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
                     return Result.Failure(DomainErrors.Webhook.PaymentNotFound(paymentIntent.Id));
                 }
 
+                // CRITICAL: Verify tenant from webhook metadata
+                if (paymentIntent.Metadata.TryGetValue("tenant_id", out var tenantIdStr) &&
+                    Guid.TryParse(tenantIdStr, out var expectedTenantId))
+                {
+                    if (payment.TenantId != expectedTenantId)
+                    {
+                        _logger.LogError("Tenant mismatch in payment canceled webhook: PaymentId={PaymentId}, Expected={ExpectedTenantId}, Actual={ActualTenantId}",
+                            payment.Id, expectedTenantId, payment.TenantId);
+                        return Result.Failure(DomainErrors.General.Unauthorized);
+                    }
+                }
+
                 payment.MarkAsCancelled();
                 await _unitOfWork.Payments.UpdateAsync(payment, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -409,6 +449,18 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers
                 {
                     _logger.LogWarning("Payment not found for payment intent: {PaymentIntentId}", charge.PaymentIntent);
                     return Result.Failure(DomainErrors.Webhook.PaymentNotFound(charge.PaymentIntent));
+                }
+
+                // CRITICAL: Verify tenant from webhook metadata
+                if (charge.Metadata.TryGetValue("tenant_id", out var tenantIdStr) &&
+                    Guid.TryParse(tenantIdStr, out var expectedTenantId))
+                {
+                    if (payment.TenantId != expectedTenantId)
+                    {
+                        _logger.LogError("Tenant mismatch in charge refunded webhook: PaymentId={PaymentId}, Expected={ExpectedTenantId}, Actual={ActualTenantId}",
+                            payment.Id, expectedTenantId, payment.TenantId);
+                        return Result.Failure(DomainErrors.General.Unauthorized);
+                    }
                 }
 
                 // Handle full vs partial refund
@@ -649,7 +701,7 @@ private async Task<Result> HandleCustomerSubscriptionDeletedAsync(StripeWebhookD
 
         // Cancel the subscription
         internalSubscription.Cancel();
-        internalSubscription.MarkAsDeleted(); // If you have this method
+        // Note: MarkAsDeleted() method doesn't exist - Cancel() is sufficient
 
         await _unitOfWork.Subscriptions.UpdateAsync(internalSubscription, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -702,6 +754,18 @@ private async Task<Result> HandleInvoicePaymentSucceededAsync(StripeWebhookData 
         {
             _logger.LogWarning("Payment not found for payment intent: {PaymentIntentId}", invoice.PaymentIntent);
             return Result.Failure(DomainErrors.Webhook.PaymentNotFound(invoice.PaymentIntent));
+        }
+
+        // CRITICAL: Verify tenant from webhook metadata
+        if (invoice.Metadata.TryGetValue("tenant_id", out var tenantIdStr) &&
+            Guid.TryParse(tenantIdStr, out var expectedTenantId))
+        {
+            if (payment.TenantId != expectedTenantId)
+            {
+                _logger.LogError("Tenant mismatch in invoice payment succeeded webhook: PaymentId={PaymentId}, Expected={ExpectedTenantId}, Actual={ActualTenantId}",
+                    payment.Id, expectedTenantId, payment.TenantId);
+                return Result.Failure(DomainErrors.General.Unauthorized);
+            }
         }
 
         // Verify payment is not already completed
@@ -763,6 +827,18 @@ private async Task<Result> HandleInvoicePaymentFailedAsync(StripeWebhookData web
         {
             _logger.LogWarning("Payment not found for payment intent: {PaymentIntentId}", invoice.PaymentIntent);
             return Result.Failure(DomainErrors.Webhook.PaymentNotFound(invoice.PaymentIntent));
+        }
+
+        // CRITICAL: Verify tenant from webhook metadata
+        if (invoice.Metadata.TryGetValue("tenant_id", out var tenantIdStr) &&
+            Guid.TryParse(tenantIdStr, out var expectedTenantId))
+        {
+            if (payment.TenantId != expectedTenantId)
+            {
+                _logger.LogError("Tenant mismatch in invoice payment failed webhook: PaymentId={PaymentId}, Expected={ExpectedTenantId}, Actual={ActualTenantId}",
+                    payment.Id, expectedTenantId, payment.TenantId);
+                return Result.Failure(DomainErrors.General.Unauthorized);
+            }
         }
 
         // Build failure reason with attempt count

@@ -30,8 +30,10 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
         /// </summary>
         public bool IsValid()
         {
-            return !string.IsNullOrWhiteSpace(SecretKey) && 
-                   !string.IsNullOrWhiteSpace(PublishableKey);
+            return !string.IsNullOrWhiteSpace(SecretKey) &&
+                   !string.IsNullOrWhiteSpace(PublishableKey) &&
+                   SecretKey.StartsWith("sk_", StringComparison.OrdinalIgnoreCase) &&
+                   PublishableKey.StartsWith("pk_", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>

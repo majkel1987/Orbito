@@ -56,7 +56,7 @@ namespace Orbito.Infrastructure.Persistance
         public IPaymentMethodRepository PaymentMethods => _paymentMethods ??= new PaymentMethodRepository(_context, _tenantContext);
         public IPaymentRetryRepository PaymentRetries => _paymentRetries ??= new PaymentRetryRepository(_context, _tenantProvider);
         public IWebhookLogRepository WebhookLogs => _webhookLogs ??= new WebhookLogRepository(_context, _tenantContext);
-        public IEmailNotificationRepository EmailNotifications => _emailNotifications ??= new EmailNotificationRepository(_context);
+        public IEmailNotificationRepository EmailNotifications => _emailNotifications ??= new EmailNotificationRepository(_context, _tenantContext);
         public ITeamMemberRepository TeamMembers => _teamMembers ??= new TeamMemberRepository(_context);
 
         public bool HasActiveTransaction => _transaction != null;

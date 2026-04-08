@@ -33,16 +33,16 @@ namespace Orbito.Infrastructure.Persistance
             return entities;
         }
 
-        public virtual async Task UpdateAsync(T entity, CancellationToken cancellationToken = default)
+        public virtual Task UpdateAsync(T entity, CancellationToken cancellationToken = default)
         {
             _dbSet.Update(entity);
-            await Task.CompletedTask;
+            return Task.CompletedTask;
         }
 
-        public virtual async Task DeleteAsync(T entity, CancellationToken cancellationToken = default)
+        public virtual Task DeleteAsync(T entity, CancellationToken cancellationToken = default)
         {
             _dbSet.Remove(entity);
-            await Task.CompletedTask;
+            return Task.CompletedTask;
         }
 
         public virtual async Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)

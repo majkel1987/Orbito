@@ -7,6 +7,7 @@ using Orbito.Domain.Entities;
 using Orbito.Domain.Enums;
 using Orbito.Domain.Errors;
 using Orbito.Infrastructure.PaymentGateways.Stripe.EventHandlers;
+using Orbito.Infrastructure.PaymentGateways.Stripe.Extensions;
 using Orbito.Infrastructure.PaymentGateways.Stripe.Models;
 using Stripe;
 using System.Security.Cryptography;
@@ -354,7 +355,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
                 _logger.LogDebug("Marked webhook event {EventId} as processed", eventId);
                 return Result.Success();
             }
-            catch (DbUpdateException ex) when (IsDuplicateKeyException(ex))
+            catch (DbUpdateException ex) when (ex.IsUniqueConstraintViolation())
             {
                 // Race condition - another process already marked it as processed
                 _logger.LogInformation("Webhook event {EventId} already marked as processed by another process", eventId);
@@ -423,20 +424,6 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
                 _logger.LogError(ex, "Error logging failed webhook {EventId}", eventId);
                 return Result.Failure(DomainErrors.General.UnexpectedError);
             }
-        }
-
-        /// <summary>
-        /// Checks if exception is a duplicate key exception
-        /// </summary>
-        private bool IsDuplicateKeyException(Exception ex)
-        {
-            // Check for common duplicate key error messages
-            var message = ex.Message.ToLowerInvariant();
-            return message.Contains("duplicate key") ||
-                   message.Contains("unique constraint") ||
-                   message.Contains("cannot insert duplicate") ||
-                   message.Contains("violates unique constraint") ||
-                   ex.InnerException?.Message.ToLowerInvariant().Contains("duplicate") == true;
         }
 
         /// <summary>

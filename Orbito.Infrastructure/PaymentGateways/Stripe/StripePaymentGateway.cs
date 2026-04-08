@@ -91,7 +91,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
                 var requestOptions = new RequestOptions
                 {
                     ApiKey = _configuration.SecretKey,
-                    IdempotencyKey = $"payment_{request.PaymentId}_{DateTime.UtcNow:yyyyMMdd}"
+                    IdempotencyKey = $"payment_{request.PaymentId}" // Payment ID is unique, no need for date
                 };
 
                 var paymentIntent = await ExecuteWithRetryAsync(async () =>
@@ -108,7 +108,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
                     var confirmRequestOptions = new RequestOptions
                     {
                         ApiKey = _configuration.SecretKey,
-                        IdempotencyKey = $"confirm_{request.PaymentId}_{DateTime.UtcNow:yyyyMMdd}"
+                        IdempotencyKey = $"confirm_{request.PaymentId}" // Payment ID is unique
                     };
 
                     paymentIntent = await ExecuteWithRetryAsync(async () =>
@@ -184,7 +184,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
                 var requestOptions = new RequestOptions
                 {
                     ApiKey = _configuration.SecretKey,
-                    IdempotencyKey = $"refund_{request.PaymentId}_{DateTime.UtcNow:yyyyMMdd}"
+                    IdempotencyKey = $"refund_{request.PaymentId}" // Payment ID is unique
                 };
 
                 var refund = await ExecuteWithRetryAsync(async () =>
@@ -285,7 +285,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
                 var requestOptions = new RequestOptions
                 {
                     ApiKey = _configuration.SecretKey,
-                    IdempotencyKey = $"customer_{request.ClientId}_{DateTime.UtcNow:yyyyMMdd}"
+                    IdempotencyKey = $"customer_{request.ClientId}" // Client ID is unique
                 };
 
                 var customer = await ExecuteWithRetryAsync(async () =>
@@ -381,7 +381,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
                 var requestOptions = new RequestOptions
                 {
                     ApiKey = _configuration.SecretKey,
-                    IdempotencyKey = $"pi_{request.SubscriptionId}_{DateTime.UtcNow:yyyyMMddHH}"
+                    IdempotencyKey = $"pi_{request.SubscriptionId}_{DateTime.UtcNow:yyyyMMddHHmmss}" // Include timestamp for recurring payments
                 };
 
                 var paymentIntent = await ExecuteWithRetryAsync(
@@ -545,11 +545,19 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
             try
             {
                 // Sprawdź czy klient już ma Stripe Customer ID
-                var client = await _unitOfWork.Clients.GetByIdAsync(request.ClientId);
+                var client = await _unitOfWork.Clients.GetByIdAsync(request.ClientId, CancellationToken.None);
                 if (client == null)
                 {
                     _logger.LogWarning("Client {ClientId} not found", request.ClientId);
                     return null;
+                }
+
+                // CRITICAL: Verify tenant ownership to prevent cross-tenant access
+                if (client.TenantId != request.TenantId)
+                {
+                    _logger.LogError("SECURITY VIOLATION: Tenant mismatch for client {ClientId}: expected {ExpectedTenantId}, got {ActualTenantId}",
+                        request.ClientId, request.TenantId, client.TenantId);
+                    throw new UnauthorizedAccessException($"Tenant validation failed for client {request.ClientId}");
                 }
 
                 // Jeśli klient ma już Stripe Customer ID, zwróć go
@@ -585,9 +593,9 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
                     {
                         _logger.LogError("Failed to set Stripe customer ID for client {ClientId}: {Error}",
                             client.Id, setResult.Error.Message);
-                        return null;
+                        throw new InvalidOperationException($"Failed to set Stripe customer ID for client {client.Id}: {setResult.Error.Message}");
                     }
-                    await _unitOfWork.Clients.UpdateAsync(client);
+                    await _unitOfWork.Clients.UpdateAsync(client, CancellationToken.None);
 
                     var saveResult = await _unitOfWork.SaveChangesAsync();
                     if (saveResult.IsSuccess)
@@ -600,7 +608,7 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
                     {
                         _logger.LogError("Failed to save Stripe customer ID for client {ClientId}: {Error}",
                             client.Id, saveResult.ErrorMessage);
-                        return null;
+                        throw new InvalidOperationException($"Failed to save Stripe customer ID for client {client.Id}: {saveResult.ErrorMessage}");
                     }
                 }
                 else
