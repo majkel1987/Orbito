@@ -29,65 +29,33 @@ namespace Orbito.API.Middleware
             // Only apply to webhook endpoints
             if (context.Request.Path.StartsWithSegments("/api/webhook"))
             {
-                var originalBodyStream = context.Request.Body;
-                Stream? memoryStream = null;
-                
-                try
+                // Enable request body buffering to allow multiple reads
+                context.Request.EnableBuffering();
+
+                // Read the request body
+                using var reader = new StreamReader(context.Request.Body, Encoding.UTF8, leaveOpen: true);
+                var body = await reader.ReadToEndAsync();
+                context.Request.Body.Position = 0;
+
+                // Verify Stripe signature
+                if (context.Request.Path.Value?.Contains("/stripe") == true)
                 {
-                    // Read the request body
-                    memoryStream = new MemoryStream();
-                    await context.Request.Body.CopyToAsync(memoryStream);
-                    memoryStream.Position = 0;
-
-                    var body = await new StreamReader(memoryStream).ReadToEndAsync();
-                    memoryStream.Position = 0;
-
-                    // Replace the request body stream
-                    context.Request.Body = memoryStream;
-
-                    // Verify Stripe signature
-                    if (context.Request.Path.Value?.Contains("/stripe") == true)
+                    var signature = context.Request.Headers["Stripe-Signature"].FirstOrDefault();
+                    if (string.IsNullOrEmpty(signature))
                     {
-                        var signature = context.Request.Headers["Stripe-Signature"].FirstOrDefault();
-                        if (string.IsNullOrEmpty(signature))
-                        {
-                            _logger.LogWarning("Missing Stripe signature in webhook request");
-                            context.Response.StatusCode = 401;
-                            await context.Response.WriteAsync("Missing signature");
-                            return;
-                        }
-
-                        if (!IsValidStripeSignature(body, signature))
-                        {
-                            _logger.LogWarning("Invalid Stripe signature in webhook request");
-                            context.Response.StatusCode = 401;
-                            await context.Response.WriteAsync("Invalid signature");
-                            return;
-                        }
+                        _logger.LogWarning("Missing Stripe signature in webhook request");
+                        context.Response.StatusCode = 401;
+                        await context.Response.WriteAsync("Missing signature");
+                        return;
                     }
 
-                    // Restore the original body stream before calling next middleware
-                    context.Request.Body = originalBodyStream;
-                    
-                    // Dispose memory stream after use
-                    await memoryStream.DisposeAsync();
-                    memoryStream = null;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error processing webhook signature verification");
-                    
-                    // Ensure original stream is restored even on exception
-                    context.Request.Body = originalBodyStream;
-                    
-                    // Dispose memory stream if it was created
-                    if (memoryStream != null)
+                    if (!IsValidStripeSignature(body, signature))
                     {
-                        await memoryStream.DisposeAsync();
+                        _logger.LogWarning("Invalid Stripe signature in webhook request");
+                        context.Response.StatusCode = 401;
+                        await context.Response.WriteAsync("Invalid signature");
+                        return;
                     }
-                    
-                    // Re-throw to let global exception handler deal with it
-                    throw;
                 }
             }
 

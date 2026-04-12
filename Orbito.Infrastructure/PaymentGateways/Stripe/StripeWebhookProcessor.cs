@@ -228,7 +228,8 @@ namespace Orbito.Infrastructure.PaymentGateways.Stripe
                         payload,
                         signature,
                         _configuration.WebhookSecret,
-                        _webhookSettings.SignatureToleranceSeconds
+                        _webhookSettings.SignatureToleranceSeconds,
+                        throwOnApiVersionMismatch: false
                     );
 
                     _logger.LogDebug("Webhook signature validation passed for event {EventId}", stripeEvent.Id);
